@@ -1,4 +1,23 @@
-# Supabase
+# Supabase local development files
 .branches
 .temp
-.env
+.env.local
+
+# Logs
+*.log
+
+# Docker volumes (if using custom docker-compose)
+volumes/
+
+# Backup files
+*.backup
+*.dump
+*.sql.gz
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
