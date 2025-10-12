@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, Bot, Sprout, Droplets, Shield, MapPin, CheckCircle2, ArrowRight, LayoutDashboard } from 'lucide-react';
+import { AddressSearch } from '@/components/ui/address-search';
+import { Bot, Sprout, Droplets, Shield, MapPin, CheckCircle2, ArrowRight, LayoutDashboard, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
@@ -13,10 +13,18 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
-  const [coverageResults, setCoverageResults] = useState(null);
+  const [coverageResults, setCoverageResults] = useState(() => {
+    // Load from localStorage on mount
+    const saved = localStorage.getItem('coverageResults');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [hasOrganization, setHasOrganization] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState(() => {
+    // Load from localStorage on mount
+    const saved = localStorage.getItem('lastSearchedAddress_full');
+    return saved ? JSON.parse(saved) : null;
+  });
 
   useEffect(() => {
     checkUserOrganization();
@@ -41,21 +49,35 @@ export default function LandingPage() {
     }
   };
 
-  const handleCoverageSearch = async (e) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
+  const handleClearCoverage = () => {
+    setCoverageResults(null);
+    setSelectedAddress(null);
+    localStorage.removeItem('coverageResults');
+    localStorage.removeItem('lastSearchedAddress');
+    localStorage.removeItem('lastSearchedAddress_full');
+    toast({
+      title: "Search cleared",
+      description: "You can search for a new address now.",
+    });
+  };
 
+  const handleAddressSelect = async (address) => {
+    setSelectedAddress(address);
     setSearching(true);
+    
     try {
+      // Check coverage using city, province, and postal code
       const { data, error } = await supabase.rpc('check_coverage_area', {
-        search_city: searchQuery,
-        search_province: searchQuery,
-        search_postal_code: searchQuery
+        search_city: address.city || '',
+        search_province: address.province || '',
+        search_postal_code: address.postal_code || ''
       });
 
       if (error) throw error;
 
       setCoverageResults(data);
+      // Save to localStorage
+      localStorage.setItem('coverageResults', JSON.stringify(data));
       
       if (data && data.length > 0) {
         toast({
@@ -86,7 +108,7 @@ export default function LandingPage() {
       icon: <Sprout className="h-8 w-8" />,
       title: "Mow Bot",
       description: "Autonomous lawn mowing with precision cutting, boundary detection, and scheduled operations.",
-      features: ["Smart navigation", "Weather-aware", "Multiple patterns", "Real-time tracking"]
+      features: ["Smart navigation", "Multiple patterns", "Real-time tracking", "Scheduled service"]
     },
     {
       icon: <Droplets className="h-8 w-8" />,
@@ -188,20 +210,33 @@ export default function LandingPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleCoverageSearch} className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="e.g. Durban, KwaZulu-Natal, 4001"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
+              <div className="space-y-4">
+                <AddressSearch
+                  onAddressSelect={handleAddressSelect}
+                  placeholder="Start typing your address (e.g. 123 Main St, Durban)"
+                  storageKey="lastSearchedAddress"
+                />
+                {searching && (
+                  <p className="text-sm text-muted-foreground text-center">
+                    Checking coverage in your area...
+                  </p>
+                )}
+              </div>
+
+              {coverageResults && coverageResults.length > 0 && (
+                <div className="mt-4 flex items-center justify-between">
+                  <h4 className="text-sm font-semibold">Coverage Results:</h4>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearCoverage}
+                    className="h-8 gap-1"
+                  >
+                    <X className="h-3 w-3" />
+                    Clear Results
+                  </Button>
                 </div>
-                <Button type="submit" disabled={searching}>
-                  {searching ? 'Searching...' : 'Search'}
-                </Button>
-              </form>
+              )}
 
               {coverageResults && coverageResults.length > 0 && (
                 <div className="mt-4 space-y-2">

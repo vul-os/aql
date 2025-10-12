@@ -44,7 +44,10 @@ const AcceptInvite = lazyImport(() => import('./pages/auth/accept-invite'));
 const DashboardPage = lazyImport(() => import('./pages/dashboard/dashboard-page'));
 const ServicesPage = lazyImport(() => import('./pages/services/services-page'));
 const GardenDetailPage = lazyImport(() => import('./pages/services/garden-detail-page'));
+const AddServicePage = lazyImport(() => import('./pages/services/add-service-page'));
+const AddServicePublic = lazyImport(() => import('./pages/services/add-service-public'));
 const SettingsPage = lazyImport(() => import('./pages/settings/settings-page'));
+const BillingPage = lazyImport(() => import('./pages/settings/billing-page'));
 const MembersPage = lazyImport(() => import('./pages/members/members-page'));
 
 // Docs pages
@@ -86,6 +89,9 @@ const AppRoutes = () => {
           <Route path="/signup" element={<Navigate to="/auth/register" replace />} />
         </Route>
 
+        {/* Public add service route (for landing page) */}
+        <Route path="/add-service" element={<AddServicePublic />} />
+
         {/* Protected portal routes */}
         <Route path="/portal" element={
           <Protected>
@@ -97,10 +103,14 @@ const AppRoutes = () => {
           
           {/* Services */}
           <Route path="services" element={<ServicesPage />} />
+          <Route path="services/add" element={<AddServicePage />} />
           <Route path="garden/:id" element={<GardenDetailPage />} />
           
           {/* Settings */}
           <Route path="settings" element={<SettingsPage />} />
+          
+          {/* Billing */}
+          <Route path="billing" element={<BillingPage />} />
           
           {/* Members */}
           <Route path="members" element={<MembersPage />} />

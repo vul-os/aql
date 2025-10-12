@@ -308,25 +308,32 @@ All pricing in ZAR (South African Rand):
 
 *Premium areas (e.g., Umhlanga) have higher rates*
 
-## Payment Integration (Ozow Pay)
+## Payment Integration (Paystack)
 
-The `payments` table supports Ozow Pay integration with fields for:
-- `ozow_transaction_id` - Unique transaction ID from Ozow
-- `ozow_site_code` - Your Ozow merchant site code
-- `ozow_payment_status` - Payment status from Ozow
-- `ozow_reference` - Payment reference
-- `ozow_response` - Full response JSON from Ozow API
+The `payments` table supports Paystack integration with fields for:
+- `paystack_reference` - Unique transaction reference from Paystack
+- `paystack_authorization_code` - Authorization code for recurring charges
+- `paystack_transaction_id` - Transaction ID from Paystack
+- `paystack_customer_code` - Customer code for user
+- `paystack_response` - Full response JSON from Paystack API
+
+The `payment_authorizations` table stores saved cards:
+- Card details (last4, exp_month, exp_year, card_type, bank)
+- Authorization codes for charging
+- Default payment method flag
+- Soft delete support (users can remove cards)
 
 ## Next Steps
 
 1. ✅ Create initial schema (complete)
 2. ✅ Add coverage areas, pricing, payments (complete)
-3. ⬜ Add Row Level Security (RLS) policies
-4. ⬜ Add database functions for common operations
-5. ⬜ Set up real-time subscriptions
-6. ⬜ Add storage buckets for images and documents
-7. ⬜ Create database views for complex queries
-8. ⬜ Integrate Ozow Pay webhook handlers
+3. ✅ Paystack payment integration (complete)
+4. ✅ Service fees from database (complete)
+5. ⬜ Add Row Level Security (RLS) policies
+6. ⬜ Add database functions for common operations
+7. ⬜ Set up real-time subscriptions
+8. ⬜ Add storage buckets for images and documents
+9. ⬜ Create database views for complex queries
 
 ## Resources
 

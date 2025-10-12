@@ -36,8 +36,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState({
     full_name: '',
-    phone: '',
-    avatar_url: ''
+    phone: ''
   });
 
   // Notification preferences
@@ -70,8 +69,7 @@ export default function SettingsPage() {
       if (data) {
         setProfile({
           full_name: data.full_name || '',
-          phone: data.phone || '',
-          avatar_url: data.avatar_url || ''
+          phone: data.phone || ''
         });
       }
     } catch (error) {
@@ -96,8 +94,7 @@ export default function SettingsPage() {
         .from('profiles')
         .update({
           full_name: profile.full_name,
-          phone: profile.phone,
-          avatar_url: profile.avatar_url
+          phone: profile.phone
         })
         .eq('id', user.id);
 
@@ -162,14 +159,10 @@ export default function SettingsPage() {
 
       {/* Settings Tabs */}
       <Tabs defaultValue="profile" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 lg:w-auto">
+        <TabsList className="grid w-full grid-cols-2 lg:w-auto">
           <TabsTrigger value="profile">
             <User className="h-4 w-4 mr-2" />
             Profile
-          </TabsTrigger>
-          <TabsTrigger value="appearance">
-            <Palette className="h-4 w-4 mr-2" />
-            Appearance
           </TabsTrigger>
           <TabsTrigger value="notifications">
             <Bell className="h-4 w-4 mr-2" />
@@ -188,41 +181,19 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleProfileUpdate} className="space-y-6">
-                {/* Avatar Section */}
+                {/* Avatar Section (Read-only) */}
                 <div className="flex items-center gap-4">
                   <Avatar className="h-20 w-20">
                     <AvatarImage src={profile.avatar_url} alt={profile.full_name} />
                     <AvatarFallback className="text-lg">{getUserInitials()}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <Label htmlFor="avatar_url">Avatar URL</Label>
-                    <Input
-                      id="avatar_url"
-                      type="url"
-                      value={profile.avatar_url}
-                      onChange={(e) => setProfile({ ...profile, avatar_url: e.target.value })}
-                      placeholder="https://example.com/avatar.jpg"
-                      className="mt-1"
-                    />
+                    <p className="font-medium">{profile.full_name || user?.email}</p>
+                    <p className="text-sm text-muted-foreground">{user?.email}</p>
                   </div>
                 </div>
 
                 <Separator />
-
-                {/* Email (read-only) */}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={user?.email || ''}
-                    disabled
-                    className="bg-muted"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Email cannot be changed
-                  </p>
-                </div>
 
                 {/* Full Name */}
                 <div className="space-y-2">
@@ -253,104 +224,6 @@ export default function SettingsPage() {
                   {loading ? 'Saving...' : 'Save Changes'}
                 </Button>
               </form>
-            </CardContent>
-          </Card>
-
-          {/* Account Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Account Information</CardTitle>
-              <CardDescription>
-                Your account details and status
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-sm font-medium">User ID</p>
-                  <p className="text-sm text-muted-foreground">{user?.id}</p>
-                </div>
-              </div>
-              <Separator />
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-sm font-medium">Account Created</p>
-                  <p className="text-sm text-muted-foreground">
-                    {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Appearance Tab */}
-        <TabsContent value="appearance" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Theme</CardTitle>
-              <CardDescription>
-                Customize the appearance of the application
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <Label>Color Theme</Label>
-                <Select value={theme} onValueChange={setTheme}>
-                  <SelectTrigger className="w-full md:w-[250px]">
-                    <div className="flex items-center gap-2">
-                      {getThemeIcon()}
-                      <SelectValue />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="light">
-                      <div className="flex items-center gap-2">
-                        <Sun className="h-4 w-4" />
-                        <span>Light</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="dark">
-                      <div className="flex items-center gap-2">
-                        <Moon className="h-4 w-4" />
-                        <span>Dark</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="system">
-                      <div className="flex items-center gap-2">
-                        <Monitor className="h-4 w-4" />
-                        <span>System</span>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground">
-                  Select your preferred color theme or use system settings
-                </p>
-              </div>
-
-              <Separator />
-
-              {/* Theme Preview */}
-              <div className="space-y-4">
-                <Label>Preview</Label>
-                <div className="rounded-lg border p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">Sample Card</p>
-                      <p className="text-sm text-muted-foreground">This is how your theme looks</p>
-                    </div>
-                    <Button size="sm">Action</Button>
-                  </div>
-                  <Separator />
-                  <div className="flex gap-2">
-                    <div className="h-8 w-8 rounded bg-primary" />
-                    <div className="h-8 w-8 rounded bg-secondary" />
-                    <div className="h-8 w-8 rounded bg-muted" />
-                    <div className="h-8 w-8 rounded bg-accent" />
-                  </div>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>

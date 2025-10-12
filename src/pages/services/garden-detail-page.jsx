@@ -13,6 +13,16 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   ArrowLeft,
   Sprout,
   MapPin,
@@ -21,8 +31,13 @@ import {
   Bot,
   TrendingUp,
   Activity,
-  AlertTriangle
+  AlertTriangle,
+  Pause,
+  Play,
+  Loader2,
+  AlertOctagon
 } from 'lucide-react';
+import { useAuth } from '@/context/auth-context';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -31,11 +46,15 @@ export default function GardenDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [garden, setGarden] = useState(null);
   const [location, setLocation] = useState(null);
   const [assignedBots, setAssignedBots] = useState([]);
   const [recentSessions, setRecentSessions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pausingService, setPausingService] = useState(false);
+  const [showStopBotsDialog, setShowStopBotsDialog] = useState(false);
+  const [stoppingBots, setStoppingBots] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -52,7 +71,10 @@ export default function GardenDetailPage() {
         garden_uuid: id
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('RPC error:', error);
+        throw error;
+      }
 
       if (!data) {
         toast({
@@ -64,10 +86,13 @@ export default function GardenDetailPage() {
         return;
       }
 
-      setGarden(data.garden);
-      setLocation(data.location);
-      setAssignedBots(data.assigned_bots || []);
-      setRecentSessions(data.recent_sessions || []);
+      // Parse JSON response if needed
+      const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
+      setGarden(parsedData.garden);
+      setLocation(parsedData.location);
+      setAssignedBots(parsedData.assigned_bots || []);
+      setRecentSessions(parsedData.recent_sessions || []);
 
     } catch (error) {
       console.error('Error loading garden:', error);
@@ -78,6 +103,100 @@ export default function GardenDetailPage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePause = async () => {
+    setPausingService(true);
+    try {
+      const { error } = await supabase.rpc('pause_garden_service', {
+        p_garden_id: id,
+        p_user_id: user.id,
+        p_reason: 'Paused by user'
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Service paused',
+        description: 'Garden service has been paused. No charges will apply.',
+      });
+
+      loadGardenDetails();
+    } catch (error) {
+      console.error('Error pausing service:', error);
+      toast({
+        title: 'Failed to pause',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setPausingService(false);
+    }
+  };
+
+  const handleResume = async () => {
+    setPausingService(true);
+    try {
+      const { error } = await supabase.rpc('resume_garden_service', {
+        p_garden_id: id,
+        p_user_id: user.id
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Service resumed',
+        description: 'Garden service has been resumed. Billing will continue.',
+      });
+
+      loadGardenDetails();
+    } catch (error) {
+      console.error('Error resuming service:', error);
+      toast({
+        title: 'Failed to resume',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setPausingService(false);
+    }
+  };
+
+  const handleStopBots = async () => {
+    setStoppingBots(true);
+    try {
+      // Send stop command to all assigned bots
+      const stopCommands = assignedBots.map(bot => ({
+        bot_id: bot.id,
+        issued_by: user.id,
+        command_type: 'stop',
+        command_payload: { reason: 'Emergency stop from garden detail page' },
+        status: 'pending'
+      }));
+
+      const { error } = await supabase
+        .from('bot_commands')
+        .insert(stopCommands);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Stop command sent',
+        description: `Stop command sent to ${assignedBots.length} bot${assignedBots.length !== 1 ? 's' : ''}`,
+      });
+
+      setShowStopBotsDialog(false);
+      loadGardenDetails();
+    } catch (error) {
+      console.error('Error stopping bots:', error);
+      toast({
+        title: 'Failed to stop bots',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setStoppingBots(false);
     }
   };
 
@@ -154,12 +273,40 @@ export default function GardenDetailPage() {
             </p>
           )}
         </div>
-        {garden.requires_maintenance && (
-          <Badge variant="destructive">Requires Maintenance</Badge>
-        )}
-        {garden.is_active && (
-          <Badge variant="outline">Active</Badge>
-        )}
+        <div className="flex items-center gap-2">
+          {garden.is_paused ? (
+            <Badge variant="outline" className="gap-1">
+              <Pause className="h-3 w-3" />
+              Paused
+            </Badge>
+          ) : (
+            <>
+              {garden.requires_maintenance && (
+                <Badge variant="destructive">Requires Maintenance</Badge>
+              )}
+              <Badge variant="default">Active</Badge>
+            </>
+          )}
+          
+          {/* Stop Bots Button (Emergency) */}
+          {assignedBots.length > 0 && !garden.is_paused && (
+            <Button
+              variant="destructive"
+              onClick={() => setShowStopBotsDialog(true)}
+              disabled={stoppingBots}
+              className="gap-2"
+            >
+              {stoppingBots ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <AlertOctagon className="h-4 w-4" />
+                  Stop Bots
+                </>
+              )}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Main Info Card */}
@@ -179,66 +326,30 @@ export default function GardenDetailPage() {
             </>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-            <div className="space-y-1">
-              <InfoRow
-                label="Area"
-                value={garden.area_sqm ? `${garden.area_sqm} m²` : null}
-                icon={<Ruler className="h-4 w-4" />}
-              />
-              <Separator />
-              <InfoRow
-                label="Perimeter"
-                value={garden.perimeter_m ? `${garden.perimeter_m} m` : null}
-                icon={<Ruler className="h-4 w-4" />}
-              />
-              <Separator />
-              <InfoRow
-                label="Grass Type"
-                value={garden.grass_type}
-                icon={<Sprout className="h-4 w-4" />}
-              />
-              <Separator />
-              <InfoRow
-                label="Terrain Type"
-                value={garden.terrain_type ? garden.terrain_type.charAt(0).toUpperCase() + garden.terrain_type.slice(1) : null}
-              />
-              <Separator />
-              <InfoRow
-                label="Difficulty Level"
-                value={garden.difficulty_level ? garden.difficulty_level.charAt(0).toUpperCase() + garden.difficulty_level.slice(1) : null}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <InfoRow
-                label="Preferred Cut Height"
-                value={garden.preferred_cut_height_mm ? `${garden.preferred_cut_height_mm} mm` : null}
-              />
-              <Separator />
-              <InfoRow
-                label="Preferred Pattern"
-                value={garden.preferred_pattern ? garden.preferred_pattern.charAt(0).toUpperCase() + garden.preferred_pattern.slice(1) : null}
-              />
-              <Separator />
-              <InfoRow
-                label="Mowing Frequency"
-                value={garden.mowing_frequency_days ? `Every ${garden.mowing_frequency_days} days` : null}
-                icon={<Calendar className="h-4 w-4" />}
-              />
-              <Separator />
-              <InfoRow
-                label="Last Mowed"
-                value={garden.last_mowed_at ? format(new Date(garden.last_mowed_at), 'MMM d, yyyy') : 'Never'}
-                icon={<Calendar className="h-4 w-4" />}
-              />
-              <Separator />
-              <InfoRow
-                label="Next Scheduled Mow"
-                value={garden.next_scheduled_mow ? format(new Date(garden.next_scheduled_mow), 'MMM d, yyyy') : 'Not scheduled'}
-                icon={<Calendar className="h-4 w-4" />}
-              />
-            </div>
+          <div className="space-y-1">
+            <InfoRow
+              label="Area"
+              value={garden.area_sqm ? `${garden.area_sqm} m²` : null}
+              icon={<Ruler className="h-4 w-4" />}
+            />
+            <Separator />
+            <InfoRow
+              label="Service Frequency"
+              value={garden.service_frequency ? (garden.service_frequency === 'bi-weekly' ? 'Bi-Weekly (Every 2 Weeks)' : 'Monthly (Every 4 Weeks)') : null}
+              icon={<Calendar className="h-4 w-4" />}
+            />
+            <Separator />
+            <InfoRow
+              label="Last Mowed"
+              value={garden.last_mowed_at ? format(new Date(garden.last_mowed_at), 'MMM d, yyyy') : 'Never'}
+              icon={<Calendar className="h-4 w-4" />}
+            />
+            <Separator />
+            <InfoRow
+              label="Next Scheduled Mow"
+              value={garden.next_scheduled_mow ? format(new Date(garden.next_scheduled_mow), 'MMM d, yyyy') : 'Not scheduled'}
+              icon={<Calendar className="h-4 w-4" />}
+            />
           </div>
 
           {garden.has_obstacles && (
@@ -387,6 +498,107 @@ export default function GardenDetailPage() {
           )}
         </CardContent>
       </Card>
+      {/* Pause/Resume Service - At Bottom */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Service Control</CardTitle>
+          <CardDescription>
+            {garden.is_paused 
+              ? 'Service is currently paused. No charges apply while paused.' 
+              : 'Pause this service to stop billing temporarily'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {garden.is_paused ? (
+            <div className="space-y-4">
+              {garden.paused_at && (
+                <div className="p-3 bg-muted/50 rounded text-sm">
+                  <p className="text-muted-foreground">
+                    Paused since {format(new Date(garden.paused_at), 'MMM d, yyyy')}
+                  </p>
+                  {garden.pause_reason && (
+                    <p className="text-muted-foreground mt-1">
+                      Reason: {garden.pause_reason}
+                    </p>
+                  )}
+                </div>
+              )}
+              <Button
+                onClick={handleResume}
+                disabled={pausingService}
+                size="lg"
+                className="w-full gap-2"
+              >
+                {pausingService ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Play className="h-4 w-4" />
+                    Resume Service
+                  </>
+                )}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={handlePause}
+              disabled={pausingService}
+              size="lg"
+              className="w-full gap-2"
+            >
+              {pausingService ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Pause className="h-4 w-4" />
+                  Pause Service
+                </>
+              )}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Stop Bots Confirmation Dialog */}
+      <AlertDialog open={showStopBotsDialog} onOpenChange={setShowStopBotsDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertOctagon className="h-5 w-5" />
+              Stop All Bots?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will send an emergency stop command to all {assignedBots.length} bot{assignedBots.length !== 1 ? 's' : ''} servicing this garden.
+              The bot{assignedBots.length !== 1 ? 's' : ''} will stop immediately and return to {assignedBots.length !== 1 ? 'their' : 'its'} charging station.
+              <div className="mt-3 p-3 bg-destructive/10 border border-destructive/20 rounded">
+                <p className="font-semibold text-sm">⚠️ This is an emergency action</p>
+                <p className="text-sm mt-1">Only use this if there's an immediate safety concern or emergency.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleStopBots}
+              className="bg-destructive hover:bg-destructive/90"
+              disabled={stoppingBots}
+            >
+              {stoppingBots ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Stopping...
+                </>
+              ) : (
+                <>
+                  <AlertOctagon className="h-4 w-4 mr-2" />
+                  Yes, Stop All Bots
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

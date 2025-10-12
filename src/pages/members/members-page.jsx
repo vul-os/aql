@@ -49,7 +49,10 @@ import {
   Crown,
   UserCog,
   Eye,
-  Trash2
+  Trash2,
+  Loader2,
+  Clock,
+  X
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -61,21 +64,68 @@ export default function MembersPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [members, setMembers] = useState([]);
+  const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [inviting, setInviting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   
   // Invite form state
   const [inviteForm, setInviteForm] = useState({
     email: '',
-    role: 'member',
-    can_manage_bots: false,
-    can_manage_locations: false,
-    can_view_billing: false,
-    can_manage_billing: false,
-    can_manage_members: false,
-    can_view_analytics: true
+    role: 'member'
   });
+
+  // Role-based permissions
+  const getRolePermissions = (role) => {
+    switch (role) {
+      case 'admin':
+        return {
+          can_manage_bots: true,
+          can_manage_locations: true,
+          can_view_billing: true,
+          can_manage_billing: true,
+          can_manage_members: true,
+          can_view_analytics: true
+        };
+      case 'manager':
+        return {
+          can_manage_bots: true,
+          can_manage_locations: true,
+          can_view_billing: true,
+          can_manage_billing: false,
+          can_manage_members: false,
+          can_view_analytics: true
+        };
+      case 'operator':
+        return {
+          can_manage_bots: true,
+          can_manage_locations: false,
+          can_view_billing: false,
+          can_manage_billing: false,
+          can_manage_members: false,
+          can_view_analytics: true
+        };
+      case 'viewer':
+        return {
+          can_manage_bots: false,
+          can_manage_locations: false,
+          can_view_billing: false,
+          can_manage_billing: false,
+          can_manage_members: false,
+          can_view_analytics: true
+        };
+      default: // member
+        return {
+          can_manage_bots: false,
+          can_manage_locations: false,
+          can_view_billing: false,
+          can_manage_billing: false,
+          can_manage_members: false,
+          can_view_analytics: true
+        };
+    }
+  };
 
   useEffect(() => {
     if (selectedOrg) {
@@ -89,11 +139,12 @@ export default function MembersPage() {
     try {
       setLoading(true);
 
-      const { data, error } = await supabase
+      // Load active members (specify foreign key to avoid ambiguity)
+      const { data: membersData, error: membersError } = await supabase
         .from('organization_members')
         .select(`
           *,
-          user:profiles(
+          user:profiles!organization_members_user_id_fkey(
             id,
             email,
             full_name,
@@ -101,11 +152,24 @@ export default function MembersPage() {
           )
         `)
         .eq('organization_id', selectedOrg.organization_id)
+        .eq('status', 'active')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (membersError) throw membersError;
+      setMembers(membersData || []);
 
-      setMembers(data || []);
+      // Load pending invitations
+      const { data: invitationsData, error: invitationsError } = await supabase
+        .from('member_invitations')
+        .select('*')
+        .eq('organization_id', selectedOrg.organization_id)
+        .eq('status', 'pending')
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false });
+
+      if (invitationsError) throw invitationsError;
+      setInvitations(invitationsData || []);
+
     } catch (error) {
       console.error('Error loading members:', error);
       toast({
@@ -130,52 +194,47 @@ export default function MembersPage() {
       return;
     }
 
+    setInviting(true);
     try {
+      // Get permissions for selected role
+      const permissions = getRolePermissions(inviteForm.role);
+      
       // Create invitation using SQL function
       const { data: inviteData, error: inviteError } = await supabase.rpc('create_member_invitation', {
         p_organization_id: selectedOrg.organization_id,
         p_email: inviteForm.email,
         p_role: inviteForm.role,
         p_invited_by: user.id,
-        p_can_manage_bots: inviteForm.can_manage_bots,
-        p_can_manage_locations: inviteForm.can_manage_locations,
-        p_can_view_billing: inviteForm.can_view_billing,
-        p_can_manage_billing: inviteForm.can_manage_billing,
-        p_can_manage_members: inviteForm.can_manage_members,
-        p_can_view_analytics: inviteForm.can_view_analytics
+        ...permissions
       });
 
       if (inviteError) throw inviteError;
 
+      console.log('Invitation created:', inviteData);
+
       // Send invitation email via Edge Function
-      const { error: emailError } = await supabase.functions.invoke('send-invite-email', {
+      const { data: emailResponse, error: emailError } = await supabase.functions.invoke('send-invite-email', {
         body: inviteData
       });
 
       if (emailError) {
         console.error('Error sending email:', emailError);
         toast({
-          title: "Invitation Created",
-          description: "Invitation created but email failed to send. Please contact support.",
-          variant: "default"
+          title: "Invitation Created ✅",
+          description: `Invitation created for ${inviteForm.email}. Email sending in progress...`,
         });
       } else {
         toast({
-          title: "Success",
-          description: `Invitation sent to ${inviteForm.email}`,
+          title: "Invitation Sent! 📧",
+          description: `Email invitation sent to ${inviteForm.email}. They have 7 days to accept.`,
+          duration: 5000,
         });
       }
 
       setDialogOpen(false);
       setInviteForm({
         email: '',
-        role: 'member',
-        can_manage_bots: false,
-        can_manage_locations: false,
-        can_view_billing: false,
-        can_manage_billing: false,
-        can_manage_members: false,
-        can_view_analytics: true
+        role: 'member'
       });
       loadMembers();
 
@@ -184,6 +243,33 @@ export default function MembersPage() {
       toast({
         title: "Error",
         description: error.message || "Failed to invite member",
+        variant: "destructive"
+      });
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const handleCancelInvitation = async (invitationId) => {
+    try {
+      const { error } = await supabase.rpc('cancel_member_invitation', {
+        p_invitation_id: invitationId,
+        p_user_id: user.id
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Invitation Cancelled",
+        description: "The invitation has been cancelled",
+      });
+
+      loadMembers();
+    } catch (error) {
+      console.error('Error cancelling invitation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel invitation",
         variant: "destructive"
       });
     }
@@ -215,19 +301,20 @@ export default function MembersPage() {
   };
 
   const handleRemoveMember = async (memberId) => {
-    if (!confirm('Are you sure you want to remove this member?')) return;
+    const member = members.find(m => m.id === memberId);
+    if (!confirm(`Are you sure you want to remove ${member?.user?.full_name || member?.user?.email} from the organization?`)) return;
 
     try {
       const { error } = await supabase
         .from('organization_members')
-        .delete()
+        .update({ status: 'removed' })
         .eq('id', memberId);
 
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Member removed from organization",
+        title: "Member Removed",
+        description: "Member has been removed from organization",
       });
 
       loadMembers();
@@ -335,103 +422,59 @@ export default function MembersPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">Admin - Full access</SelectItem>
-                    <SelectItem value="manager">Manager - Manage operations</SelectItem>
-                    <SelectItem value="operator">Operator - Control bots</SelectItem>
-                    <SelectItem value="viewer">Viewer - View only</SelectItem>
-                    <SelectItem value="member">Member - Basic access</SelectItem>
+                    <SelectItem value="admin">
+                      <div className="flex flex-col items-start">
+                        <span className="font-semibold">Admin</span>
+                        <span className="text-xs text-muted-foreground">Full access to everything</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="manager">
+                      <div className="flex flex-col items-start">
+                        <span className="font-semibold">Manager</span>
+                        <span className="text-xs text-muted-foreground">Manage bots, locations, view billing</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="operator">
+                      <div className="flex flex-col items-start">
+                        <span className="font-semibold">Operator</span>
+                        <span className="text-xs text-muted-foreground">Control bots only</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="viewer">
+                      <div className="flex flex-col items-start">
+                        <span className="font-semibold">Viewer</span>
+                        <span className="text-xs text-muted-foreground">View-only access</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="member">
+                      <div className="flex flex-col items-start">
+                        <span className="font-semibold">Member</span>
+                        <span className="text-xs text-muted-foreground">Basic access</span>
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-4">
-                <Label className="text-base">Permissions</Label>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="font-normal">Manage Bots</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Control and configure bots
-                    </p>
-                  </div>
-                  <Switch
-                    checked={inviteForm.can_manage_bots}
-                    onCheckedChange={(checked) =>
-                      setInviteForm({ ...inviteForm, can_manage_bots: checked })
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="font-normal">Manage Locations</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Add and edit locations
-                    </p>
-                  </div>
-                  <Switch
-                    checked={inviteForm.can_manage_locations}
-                    onCheckedChange={(checked) =>
-                      setInviteForm({ ...inviteForm, can_manage_locations: checked })
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="font-normal">View Billing</Label>
-                    <p className="text-sm text-muted-foreground">
-                      View invoices and payments
-                    </p>
-                  </div>
-                  <Switch
-                    checked={inviteForm.can_view_billing}
-                    onCheckedChange={(checked) =>
-                      setInviteForm({ ...inviteForm, can_view_billing: checked })
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="font-normal">Manage Members</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Invite and remove members
-                    </p>
-                  </div>
-                  <Switch
-                    checked={inviteForm.can_manage_members}
-                    onCheckedChange={(checked) =>
-                      setInviteForm({ ...inviteForm, can_manage_members: checked })
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="font-normal">View Analytics</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Access dashboard and reports
-                    </p>
-                  </div>
-                  <Switch
-                    checked={inviteForm.can_view_analytics}
-                    onCheckedChange={(checked) =>
-                      setInviteForm({ ...inviteForm, can_view_analytics: checked })
-                    }
-                  />
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  Permissions are automatically assigned based on role
+                </p>
               </div>
 
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Add Member
+                <Button type="submit" disabled={inviting}>
+                  {inviting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="h-4 w-4 mr-2" />
+                      Send Invitation
+                    </>
+                  )}
                 </Button>
               </DialogFooter>
             </form>
@@ -439,12 +482,58 @@ export default function MembersPage() {
         </Dialog>
       </div>
 
+      {/* Pending Invitations */}
+      {invitations.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-orange-500" />
+              Pending Invitations ({invitations.length})
+            </CardTitle>
+            <CardDescription>
+              Invitations waiting to be accepted
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {invitations.map((invitation) => (
+                <div key={invitation.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-950 flex items-center justify-center">
+                      <Mail className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{invitation.email}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="secondary" className="capitalize">
+                          {invitation.role}
+                        </Badge>
+                        <p className="text-xs text-muted-foreground">
+                          Expires {format(new Date(invitation.expires_at), 'MMM d, yyyy')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleCancelInvitation(invitation.id)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Members List */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Members ({members.length})
+            Active Members ({members.length})
           </CardTitle>
           <CardDescription>
             Current members of {selectedOrg?.organization_name}
@@ -483,10 +572,25 @@ export default function MembersPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={getRoleBadgeVariant(member.role)} className="gap-1">
-                          {getRoleIcon(member.role)}
-                          <span className="capitalize">{member.role}</span>
-                        </Badge>
+                        <Select
+                          value={member.role}
+                          onValueChange={(newRole) => handleUpdateMemberRole(member.id, newRole)}
+                          disabled={member.role === 'owner' || member.user_id === user?.id}
+                        >
+                          <SelectTrigger className="w-[150px]">
+                            <Badge variant={getRoleBadgeVariant(member.role)} className="gap-1">
+                              {getRoleIcon(member.role)}
+                              <span className="capitalize">{member.role}</span>
+                            </Badge>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="manager">Manager</SelectItem>
+                            <SelectItem value="operator">Operator</SelectItem>
+                            <SelectItem value="viewer">Viewer</SelectItem>
+                            <SelectItem value="member">Member</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -501,38 +605,15 @@ export default function MembersPage() {
                           : 'N/A'}
                       </TableCell>
                       <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleUpdateMemberRole(member.id, 'admin')}
-                              disabled={member.role === 'owner' || member.user_id === user?.id}
-                            >
-                              Make Admin
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleUpdateMemberRole(member.id, 'member')}
-                              disabled={member.role === 'owner' || member.user_id === user?.id}
-                            >
-                              Make Member
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleRemoveMember(member.id)}
-                              disabled={member.role === 'owner' || member.user_id === user?.id}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Remove
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveMember(member.id)}
+                          disabled={member.role === 'owner' || member.user_id === user?.id}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

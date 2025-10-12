@@ -63,7 +63,7 @@ export default function FAQPage() {
       questions: [
         {
           q: 'How much does Bot Korp cost?',
-          a: 'Bot Korp operates on a subscription model. Pricing varies by bot type, property size, and region. Contact us for a customized quote based on your specific needs. We offer monthly, quarterly, and annual payment options with discounts for longer commitments.'
+          a: 'Bot Korp operates on a subscription model with monthly billing. Pricing varies by bot type, property size, service frequency (bi-weekly or monthly), and region. Contact us for a customized quote based on your specific needs. No long-term commitment required - cancel anytime.'
         },
         {
           q: 'What\'s included in the subscription?',

@@ -577,12 +577,6 @@ CREATE TABLE IF NOT EXISTS organization_members (
     role TEXT NOT NULL DEFAULT 'member' CHECK (role IN (
         'owner', 'admin', 'manager', 'operator', 'viewer', 'member'
     )),
-    can_manage_bots BOOLEAN DEFAULT false,
-    can_manage_locations BOOLEAN DEFAULT false,
-    can_view_billing BOOLEAN DEFAULT false,
-    can_manage_billing BOOLEAN DEFAULT false,
-    can_manage_members BOOLEAN DEFAULT false,
-    can_view_analytics BOOLEAN DEFAULT true,
     status TEXT DEFAULT 'active' CHECK (status IN ('active', 'invited', 'suspended', 'removed')),
     invited_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
     invited_at TIMESTAMPTZ,

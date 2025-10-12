@@ -18,7 +18,9 @@ import {
   Droplets, 
   Plus, 
   MapPin, 
-  Calendar,
+  Calendar, 
+  Pause, 
+  Play,
   Eye,
   Loader2,
   CircleDot,
@@ -28,6 +30,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { format } from 'date-fns';
+import ServiceWizard from '@/components/services/service-wizard';
 
 export default function ServicesPage() {
   const { selectedOrg } = useOutletContext();
@@ -37,6 +40,9 @@ export default function ServicesPage() {
   const [gardens, setGardens] = useState([]);
   const [pools, setPools] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [pausingId, setPausingId] = useState(null);
+  const [resumingId, setResumingId] = useState(null);
 
   useEffect(() => {
     if (selectedOrg) {
@@ -104,6 +110,63 @@ export default function ServicesPage() {
     }
   };
 
+  const handlePauseGarden = async (gardenId) => {
+    setPausingId(gardenId);
+    try {
+      const { data, error } = await supabase.rpc('pause_garden_service', {
+        p_garden_id: gardenId,
+        p_user_id: user.id,
+        p_reason: 'Paused by user'
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Service paused',
+        description: 'Garden service has been paused. No charges will apply.',
+      });
+
+      loadData();
+    } catch (error) {
+      console.error('Error pausing service:', error);
+      toast({
+        title: 'Failed to pause',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setPausingId(null);
+    }
+  };
+
+  const handleResumeGarden = async (gardenId) => {
+    setResumingId(gardenId);
+    try {
+      const { data, error } = await supabase.rpc('resume_garden_service', {
+        p_garden_id: gardenId,
+        p_user_id: user.id
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Service resumed',
+        description: 'Garden service has been resumed. Billing will continue.',
+      });
+
+      loadData();
+    } catch (error) {
+      console.error('Error resuming service:', error);
+      toast({
+        title: 'Failed to resume',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setResumingId(null);
+    }
+  };
+
   const GardenCard = ({ garden }) => (
     <Card className="hover:shadow-lg transition-all">
       <CardHeader>
@@ -163,16 +226,52 @@ export default function ServicesPage() {
           )}
         </div>
 
-        <div className="pt-4 border-t">
+        <div className="flex gap-2 pt-4 border-t">
           <Button
             variant="outline"
             size="sm"
-            className="w-full"
+            className="flex-1"
             onClick={() => navigate(`/portal/garden/${garden.id}`)}
           >
             <Eye className="h-4 w-4 mr-1" />
             View Details
           </Button>
+          
+          {garden.is_paused ? (
+            <Button
+              variant="default"
+              size="sm"
+              className="flex-1 gap-1"
+              onClick={() => handleResumeGarden(garden.id)}
+              disabled={resumingId === garden.id}
+            >
+              {resumingId === garden.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Play className="h-4 w-4" />
+                  Resume
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 gap-1"
+              onClick={() => handlePauseGarden(garden.id)}
+              disabled={pausingId === garden.id}
+            >
+              {pausingId === garden.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Pause className="h-4 w-4" />
+                  Pause
+                </>
+              )}
+            </Button>
+          )}
         </div>
 
         {garden.is_paused && garden.paused_at && (
@@ -194,7 +293,7 @@ export default function ServicesPage() {
             Manage your automated services and schedules
           </p>
         </div>
-        <Button onClick={() => navigate('/portal/services/add')} size="lg" className="gap-2">
+        <Button onClick={() => setWizardOpen(true)} size="lg" className="gap-2">
           <Plus className="h-5 w-5" />
           Add New Service
         </Button>
@@ -213,7 +312,7 @@ export default function ServicesPage() {
             <p className="text-muted-foreground text-center mb-6">
               Get started by adding your first automated service
             </p>
-            <Button onClick={() => navigate('/portal/services/add')} size="lg">
+            <Button onClick={() => setWizardOpen(true)} size="lg">
               <Plus className="h-4 w-4 mr-2" />
               Add Your First Service
             </Button>
@@ -226,7 +325,7 @@ export default function ServicesPage() {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Sprout className="h-5 w-5 text-green-600" />
-                <h2 className="text-xl font-semibold">Services</h2>
+                <h2 className="text-xl font-semibold">Garden Services</h2>
                 <Badge variant="secondary">{gardens.length}</Badge>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -242,7 +341,7 @@ export default function ServicesPage() {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Droplets className="h-5 w-5 text-blue-600" />
-                <h2 className="text-xl font-semibold">Pools</h2>
+                <h2 className="text-xl font-semibold">Pool Services</h2>
                 <Badge variant="secondary">{pools.length}</Badge>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -278,6 +377,16 @@ export default function ServicesPage() {
         </>
       )}
 
+      {/* Service Wizard */}
+      <ServiceWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        organizationId={selectedOrg?.organization_id}
+        onComplete={() => {
+          loadData();
+          setWizardOpen(false);
+        }}
+      />
     </div>
   );
 }

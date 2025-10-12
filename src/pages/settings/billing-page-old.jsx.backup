@@ -1,0 +1,430 @@
+import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { 
+  CreditCard, 
+  Plus, 
+  Trash2, 
+  Check, 
+  AlertCircle, 
+  Loader2,
+  Star,
+  Calendar,
+  Building,
+  DollarSign,
+  Bot as BotIcon
+} from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { usePaymentAuthorizations, usePaystack, formatCardNumber, formatExpiryDate, getCardIcon, isCardExpired } from '@/hooks/use-paystack';
+import { useAuth } from '@/context/auth-context';
+import { useToast } from '@/hooks/use-toast';
+
+export default function BillingPage() {
+  const { organization } = useOutletContext();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { authorizations, loading, refreshAuthorizations } = usePaymentAuthorizations();
+  const { 
+    addPaymentMethod, 
+    deleteAuthorization, 
+    setDefaultAuthorization,
+    processing 
+  } = usePaystack();
+
+  const [deletingId, setDeletingId] = useState(null);
+  const [settingDefaultId, setSettingDefaultId] = useState(null);
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [loadingSubscriptions, setLoadingSubscriptions] = useState(true);
+
+  useEffect(() => {
+    if (organization?.id) {
+      loadSubscriptions();
+    }
+  }, [organization]);
+
+  const loadSubscriptions = async () => {
+    if (!organization?.id) return;
+    
+    try {
+      setLoadingSubscriptions(true);
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select(`
+          *,
+          bot:bots(name, bot_type, identifier),
+          pricing:bot_pricing(tier)
+        `)
+        .eq('organization_id', organization.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setSubscriptions(data || []);
+    } catch (error) {
+      console.error('Error loading subscriptions:', error);
+    } finally {
+      setLoadingSubscriptions(false);
+    }
+  };
+
+  const handleAddCard = async () => {
+    if (!user?.email || !organization?.id) {
+      toast({
+        title: "Error",
+        description: "Missing user or organization information",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await addPaymentMethod(user.email, organization.id);
+      // User will be redirected to Paystack
+      toast({
+        title: "Redirecting to Paystack",
+        description: "You'll be charged R1 to verify your card",
+      });
+    } catch (error) {
+      console.error('Error adding card:', error);
+      toast({
+        title: "Failed to add card",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteCard = async (authId) => {
+    try {
+      const success = await deleteAuthorization(authId);
+      
+      if (success) {
+        toast({
+          title: "Card removed",
+          description: "Payment method has been removed successfully",
+        });
+        refreshAuthorizations();
+      } else {
+        throw new Error('Failed to delete authorization');
+      }
+    } catch (error) {
+      console.error('Error deleting card:', error);
+      toast({
+        title: "Failed to remove card",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleSetDefault = async (authId) => {
+    setSettingDefaultId(authId);
+    try {
+      await setDefaultAuthorization(authId);
+      toast({
+        title: "Default card updated",
+        description: "This card will be used for automatic payments",
+      });
+      refreshAuthorizations();
+    } catch (error) {
+      console.error('Error setting default:', error);
+      toast({
+        title: "Failed to set default",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setSettingDefaultId(null);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold">Billing & Payment Methods</h1>
+        <p className="text-muted-foreground mt-2">
+          Manage your payment methods and view billing information
+        </p>
+      </div>
+
+      {/* Monthly Billing Summary */}
+      {organization && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-muted-foreground" />
+              <CardTitle>Monthly Billing Summary</CardTitle>
+            </div>
+            <CardDescription>
+              Your current subscriptions and monthly charges
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingSubscriptions ? (
+              <div className="flex justify-center py-6">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : subscriptions.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-muted-foreground">No active subscriptions</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Add a service to get started
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Subscription Items */}
+                <div className="space-y-3">
+                  {subscriptions.map((sub) => (
+                    <div key={sub.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <BotIcon className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="font-medium">
+                            {sub.bot?.name || 'Bot Service'}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {sub.bot?.bot_type?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            {sub.bot?.identifier && ` • ${sub.bot.identifier}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold">R{parseFloat(sub.amount).toFixed(2)}</p>
+                        <p className="text-xs text-muted-foreground">per month</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Total */}
+                <div className="pt-3 border-t">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-lg">Total Monthly</p>
+                      <p className="text-sm text-muted-foreground">{subscriptions.length} active subscription{subscriptions.length !== 1 ? 's' : ''}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold">
+                        R{subscriptions.reduce((sum, sub) => sum + parseFloat(sub.amount), 0).toFixed(2)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">billed monthly</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t">
+                  <p className="text-xs text-muted-foreground text-center">
+                    Next billing date: {subscriptions[0]?.next_billing_date 
+                      ? new Date(subscriptions[0].next_billing_date).toLocaleDateString('en-ZA', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })
+                      : 'Not scheduled'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Payment Methods Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Payment Methods
+              </CardTitle>
+              <CardDescription>
+                Manage your cards for automatic billing. R1 verification charge applies when adding a new card.
+              </CardDescription>
+            </div>
+            <Button 
+              onClick={handleAddCard} 
+              disabled={processing}
+              className="gap-2"
+            >
+              {processing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4" />
+                  Add Card
+                </>
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : authorizations.length === 0 ? (
+            <div className="text-center py-12">
+              <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-lg font-semibold mb-2">No payment methods</p>
+              <p className="text-muted-foreground mb-6">
+                Add a card to enable automatic billing for your subscriptions
+              </p>
+              <Button onClick={handleAddCard} disabled={processing}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Card
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {authorizations.map((auth) => {
+                const expired = isCardExpired(auth.exp_month, auth.exp_year);
+                
+                return (
+                  <div
+                    key={auth.id}
+                    className={`p-4 border rounded-lg ${
+                      auth.is_default ? 'border-primary bg-primary/5' : 'border-border'
+                    } ${expired ? 'opacity-60' : ''}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                          <CreditCard className="h-6 w-6 text-primary" />
+                        </div>
+                        
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-semibold">
+                              {getCardIcon(auth.card_type)} {formatCardNumber(auth.last4)}
+                            </p>
+                            {auth.is_default && (
+                              <Badge variant="default" className="gap-1">
+                                <Star className="h-3 w-3" />
+                                Default
+                              </Badge>
+                            )}
+                            {expired && (
+                              <Badge variant="destructive">Expired</Badge>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              Expires {formatExpiryDate(auth.exp_month, auth.exp_year)}
+                            </span>
+                            {auth.bank && <span>• {auth.bank}</span>}
+                            {auth.last_used_at && (
+                              <span>
+                                • Last used {new Date(auth.last_used_at).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {!auth.is_default && !expired && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSetDefault(auth.id)}
+                            disabled={settingDefaultId === auth.id}
+                          >
+                            {settingDefaultId === auth.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Check className="h-4 w-4 mr-1" />
+                                Set Default
+                              </>
+                            )}
+                          </Button>
+                        )}
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeletingId(auth.id)}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {expired && (
+                      <Alert className="mt-3" variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          This card has expired. Please add a new card and remove this one.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Info Alert */}
+          <Alert className="mt-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Card Verification:</strong> When adding a new card, we'll charge R1 to verify it. 
+              This amount may be refunded by your bank or appear as a pending transaction.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingId} onOpenChange={() => setDeletingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Payment Method?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove this card? This action cannot be undone.
+              {authorizations.find(a => a.id === deletingId)?.is_default && (
+                <span className="block mt-2 text-destructive font-semibold">
+                  Warning: This is your default payment method. You'll need to set a new default.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => handleDeleteCard(deletingId)}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Remove Card
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+

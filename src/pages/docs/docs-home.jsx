@@ -56,7 +56,7 @@ export default function DocsHome() {
       icon: <Sprout className="h-8 w-8 text-green-600" />,
       name: 'Mow Bot',
       description: 'Autonomous lawn mowing with smart scheduling, boundary detection, and weather-aware operation.',
-      features: ['Precision cutting', 'Pattern variety', 'Obstacle detection', 'Real-time tracking']
+      features: ['Precision cutting', 'Pattern variety', 'Obstacle detection', 'Session history']
     },
     {
       icon: <Droplets className="h-8 w-8 text-blue-600" />,

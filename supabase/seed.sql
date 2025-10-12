@@ -111,16 +111,9 @@ ON CONFLICT (id) DO NOTHING;
 
 -- =====================================================
 -- SERVICE FEES (in ZAR)
+-- Note: Service fees are now managed via migration 20251012000010_ensure_service_fees.sql
+-- This ensures fees are always in sync with the database
 -- =====================================================
-INSERT INTO service_fees (id, fee_type, fee_name, description, amount, currency, billing_type, applies_to, is_active, tax_rate) VALUES
-    ('50000000-0000-0000-0000-000000000001', 'maintenance', 'Standard Maintenance', 'Quarterly maintenance service', 250.00, 'ZAR', 'per_incident', 'all', true, 15.00),
-    ('50000000-0000-0000-0000-000000000002', 'repair', 'Standard Repair', 'Basic repair service', 450.00, 'ZAR', 'per_incident', 'all', true, 15.00),
-    ('50000000-0000-0000-0000-000000000003', 'emergency_callout', 'Emergency Callout', '24/7 emergency response', 850.00, 'ZAR', 'per_incident', 'all', true, 15.00),
-    ('50000000-0000-0000-0000-000000000004', 'late_payment', 'Late Payment Fee', 'Fee for overdue invoices', 150.00, 'ZAR', 'per_incident', 'all', true, 15.00),
-    ('50000000-0000-0000-0000-000000000005', 'data_storage', 'Data Storage (per GB)', 'Monthly data storage for telemetry and logs', 2.50, 'ZAR', 'per_unit', 'all', true, 15.00),
-    ('50000000-0000-0000-0000-000000000006', 'relocation', 'Bot Relocation', 'Move bot to new location', 350.00, 'ZAR', 'per_incident', 'all', true, 15.00),
-    ('50000000-0000-0000-0000-000000000007', 'training', 'On-site Training', 'Staff training session', 650.00, 'ZAR', 'per_incident', 'all', true, 15.00)
-ON CONFLICT (id) DO NOTHING;
 
 -- =====================================================
 -- ORGANIZATION MEMBERS

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Bot,
   Sprout,
@@ -11,10 +12,15 @@ import {
   Calendar,
   Activity,
   TrendingUp,
-  MapPin
+  MapPin,
+  CheckCircle,
+  Info,
+  Sparkles,
+  Plus
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/auth-context';
 import {
   LineChart,
   Line,
@@ -34,6 +40,7 @@ import { format } from 'date-fns';
 
 export default function DashboardPage() {
   const { selectedOrg } = useOutletContext();
+  const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [analytics, setAnalytics] = useState(null);
@@ -45,6 +52,117 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6'];
+
+  // Get greeting based on time of day
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  // Get user's first name
+  const getUserName = () => {
+    const fullName = user?.user_metadata?.full_name;
+    if (fullName) {
+      return fullName.split(' ')[0];
+    }
+    return 'there';
+  };
+
+  // Generate insights based on analytics data
+  const insights = useMemo(() => {
+    if (!analytics) return [];
+
+    const messages = [];
+
+    // Check if they have no bots yet
+    if (analytics.total_bots === 0) {
+      messages.push({
+        type: 'info',
+        icon: <Info className="h-5 w-5" />,
+        message: "You haven't added any bots yet. Get started by adding your first bot to automate your property maintenance!"
+      });
+      return messages;
+    }
+
+    // All bots operational - great news!
+    if (analytics.operational_bots === analytics.total_bots && analytics.total_bots > 0) {
+      messages.push({
+        type: 'success',
+        icon: <CheckCircle className="h-5 w-5" />,
+        message: `Excellent! All ${analytics.total_bots} of your bots are operational and ready to work.`
+      });
+    }
+
+    // Some bots offline
+    if (analytics.offline_bots > 0) {
+      messages.push({
+        type: 'warning',
+        icon: <AlertTriangle className="h-5 w-5" />,
+        message: `${analytics.offline_bots} bot${analytics.offline_bots > 1 ? 's are' : ' is'} currently offline. Check their connection status.`
+      });
+    }
+
+    // Bots with errors
+    if (analytics.error_bots > 0) {
+      messages.push({
+        type: 'error',
+        icon: <AlertTriangle className="h-5 w-5" />,
+        message: `${analytics.error_bots} bot${analytics.error_bots > 1 ? 's need' : ' needs'} attention due to errors.`
+      });
+    }
+
+    // Critical alerts
+    if (analytics.critical_alerts_count > 0) {
+      messages.push({
+        type: 'error',
+        icon: <AlertTriangle className="h-5 w-5" />,
+        message: `You have ${analytics.critical_alerts_count} critical alert${analytics.critical_alerts_count > 1 ? 's' : ''} that require immediate attention.`
+      });
+    }
+
+    // Upcoming services
+    if (analytics.upcoming_services_count > 0 && analytics.next_service_date) {
+      const daysUntil = Math.ceil((new Date(analytics.next_service_date) - new Date()) / (1000 * 60 * 60 * 24));
+      if (daysUntil <= 7) {
+        messages.push({
+          type: 'info',
+          icon: <Calendar className="h-5 w-5" />,
+          message: `Your next service is coming up ${daysUntil === 0 ? 'today' : daysUntil === 1 ? 'tomorrow' : `in ${daysUntil} days`} on ${format(new Date(analytics.next_service_date), 'MMM d')}.`
+        });
+      }
+    }
+
+    // Gardens needing maintenance
+    if (analytics.gardens_needing_maintenance > 0) {
+      messages.push({
+        type: 'warning',
+        icon: <Sprout className="h-5 w-5" />,
+        message: `${analytics.gardens_needing_maintenance} garden${analytics.gardens_needing_maintenance > 1 ? 's require' : ' requires'} maintenance.`
+      });
+    }
+
+    // Pools needing maintenance
+    if (analytics.pools_needing_maintenance > 0) {
+      messages.push({
+        type: 'warning',
+        icon: <Droplets className="h-5 w-5" />,
+        message: `${analytics.pools_needing_maintenance} pool${analytics.pools_needing_maintenance > 1 ? 's need' : ' needs'} maintenance.`
+      });
+    }
+
+    // Everything is good
+    if (messages.length === 0 && analytics.total_bots > 0) {
+      messages.push({
+        type: 'success',
+        icon: <Sparkles className="h-5 w-5" />,
+        message: "Everything looks great! All systems are running smoothly."
+      });
+    }
+
+    return messages;
+  }, [analytics]);
 
   useEffect(() => {
     if (selectedOrg) {
@@ -58,59 +176,41 @@ export default function DashboardPage() {
     try {
       setLoading(true);
 
-      // Load main analytics
-      const { data: analyticsData, error: analyticsError } = await supabase.rpc(
-        'get_organization_dashboard_analytics',
-        { org_id: selectedOrg.organization_id }
-      );
+      // Load all data in parallel for faster loading
+      const [
+        analyticsResult,
+        statusResult,
+        typeResult,
+        mowingResult,
+        servicesResult,
+        alertsResult
+      ] = await Promise.all([
+        supabase.rpc('get_organization_dashboard_analytics', { org_id: selectedOrg.organization_id }),
+        supabase.rpc('get_bot_status_distribution', { org_id: selectedOrg.organization_id }),
+        supabase.rpc('get_bot_type_distribution', { org_id: selectedOrg.organization_id }),
+        supabase.rpc('get_mowing_activity_last_30_days', { org_id: selectedOrg.organization_id }),
+        supabase.rpc('get_upcoming_services', { org_id: selectedOrg.organization_id, days_ahead: 30 }),
+        supabase.rpc('get_recent_alerts', { org_id: selectedOrg.organization_id, limit_count: 5 })
+      ]);
 
-      if (analyticsError) throw analyticsError;
-      setAnalytics(analyticsData);
+      // Check for errors and set data
+      if (analyticsResult.error) throw analyticsResult.error;
+      setAnalytics(analyticsResult.data);
 
-      // Load bot status distribution
-      const { data: statusData, error: statusError } = await supabase.rpc(
-        'get_bot_status_distribution',
-        { org_id: selectedOrg.organization_id }
-      );
+      if (statusResult.error) console.warn('Status data error:', statusResult.error);
+      setBotStatusData(statusResult.data || []);
 
-      if (statusError) throw statusError;
-      setBotStatusData(statusData || []);
+      if (typeResult.error) console.warn('Type data error:', typeResult.error);
+      setBotTypeData(typeResult.data || []);
 
-      // Load bot type distribution
-      const { data: typeData, error: typeError } = await supabase.rpc(
-        'get_bot_type_distribution',
-        { org_id: selectedOrg.organization_id }
-      );
+      if (mowingResult.error) console.warn('Mowing data error:', mowingResult.error);
+      setMowingActivity((mowingResult.data || []).reverse());
 
-      if (typeError) throw typeError;
-      setBotTypeData(typeData || []);
+      if (servicesResult.error) console.warn('Services data error:', servicesResult.error);
+      setUpcomingServices(servicesResult.data || []);
 
-      // Load mowing activity
-      const { data: mowingData, error: mowingError } = await supabase.rpc(
-        'get_mowing_activity_last_30_days',
-        { org_id: selectedOrg.organization_id }
-      );
-
-      if (mowingError) throw mowingError;
-      setMowingActivity((mowingData || []).reverse());
-
-      // Load upcoming services
-      const { data: servicesData, error: servicesError } = await supabase.rpc(
-        'get_upcoming_services',
-        { org_id: selectedOrg.organization_id, days_ahead: 30 }
-      );
-
-      if (servicesError) throw servicesError;
-      setUpcomingServices(servicesData || []);
-
-      // Load recent alerts
-      const { data: alertsData, error: alertsError } = await supabase.rpc(
-        'get_recent_alerts',
-        { org_id: selectedOrg.organization_id, limit_count: 5 }
-      );
-
-      if (alertsError) throw alertsError;
-      setRecentAlerts(alertsData || []);
+      if (alertsResult.error) console.warn('Alerts data error:', alertsResult.error);
+      setRecentAlerts(alertsResult.data || []);
 
     } catch (error) {
       console.error('Error loading dashboard:', error);
@@ -163,18 +263,115 @@ export default function DashboardPage() {
     );
   }
 
+  // Get services summary
+  const getServicesSummary = () => {
+    if (!analytics) return '';
+    
+    const services = [];
+    if (analytics.total_gardens > 0) services.push(`${analytics.total_gardens} garden${analytics.total_gardens > 1 ? 's' : ''}`);
+    if (analytics.total_pools > 0) services.push(`${analytics.total_pools} pool${analytics.total_pools > 1 ? 's' : ''}`);
+    if (analytics.total_locations > 0) services.push(`${analytics.total_locations} location${analytics.total_locations > 1 ? 's' : ''}`);
+    
+    if (services.length === 0) return '';
+    if (services.length === 1) return services[0];
+    if (services.length === 2) return services.join(' and ');
+    return services.slice(0, -1).join(', ') + ', and ' + services[services.length - 1];
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Overview of your Bot Korp operations
+      {/* Personalized Header */}
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">
+          {getGreeting()}, {getUserName()}! 👋
+        </h1>
+        <p className="text-muted-foreground text-lg">
+          {analytics?.total_bots > 0 ? (
+            <>
+              You're managing <span className="font-semibold text-foreground">{analytics.total_bots} bot{analytics.total_bots > 1 ? 's' : ''}</span>
+              {getServicesSummary() && (
+                <> across {getServicesSummary()}</>
+              )}
+              {analytics.total_area_managed_sqm > 0 && (
+                <>, covering <span className="font-semibold text-foreground">{Math.round(analytics.total_area_managed_sqm).toLocaleString()} m²</span></>
+              )}
+              .
+            </>
+          ) : (
+            <>Welcome to your Bot Korp dashboard. Let's get started by adding your first bot!</>
+          )}
         </p>
+        {/* Upcoming Service Text */}
+        {analytics?.upcoming_services_count > 0 && analytics?.next_service_date && (
+          <p className="text-muted-foreground">
+            <Calendar className="h-4 w-4 inline mr-2" />
+            Next service: <span className="font-semibold text-foreground">
+              {format(new Date(analytics.next_service_date), 'MMMM d, yyyy')}
+            </span> ({analytics.upcoming_services_count} service{analytics.upcoming_services_count > 1 ? 's' : ''} scheduled)
+          </p>
+        )}
+      </div>
+
+      {/* Insights Section */}
+      {insights.length > 0 && (
+        <div className="space-y-3">
+          {insights.map((insight, index) => (
+            <Alert 
+              key={index}
+              variant={insight.type === 'error' ? 'destructive' : 'default'}
+              className={
+                insight.type === 'success' ? 'border-green-500 bg-green-50 text-green-900' :
+                insight.type === 'warning' ? 'border-yellow-500 bg-yellow-50 text-yellow-900' :
+                insight.type === 'error' ? '' :
+                'border-blue-500 bg-blue-50 text-blue-900'
+              }
+            >
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5">{insight.icon}</div>
+                <AlertDescription className="text-base">
+                  {insight.message}
+                </AlertDescription>
+              </div>
+            </Alert>
+          ))}
+        </div>
+      )}
+
+      {/* Empty State - No Services */}
+      {!loading && analytics?.total_gardens === 0 && analytics?.total_pools === 0 ? (
+        <Card className="border-dashed border-2">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center space-y-6">
+            <div className="rounded-full bg-primary/10 p-8">
+              <Sprout className="h-16 w-16 text-primary" />
+            </div>
+            <div className="space-y-3">
+              <h3 className="text-3xl font-bold">Get Started with Your First Service</h3>
+              <p className="text-muted-foreground max-w-md text-lg">
+                Add a garden, pool, or security service to start automating your property maintenance with Bot Korp.
+              </p>
+            </div>
+            <Button size="lg" onClick={() => navigate('/portal/services/add')} className="text-lg px-8 py-6">
+              <Plus className="h-6 w-6 mr-2" />
+              Add Your First Service
+            </Button>
+          </CardContent>
+        </Card>
+      ) : !loading && (
+        <>
+          {/* Quick Action Buttons */}
+          <div className="flex items-center justify-end gap-3">
+            <Button variant="destructive" size="lg">
+              <AlertTriangle className="h-5 w-5 mr-2" />
+              Emergency Stop All Bots
+            </Button>
+            <Button onClick={() => navigate('/portal/services/add')} size="lg">
+              <Plus className="h-5 w-5 mr-2" />
+              Add Service
+            </Button>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           title="Operational Bots"
           value={analytics?.operational_bots || 0}
@@ -185,7 +382,7 @@ export default function DashboardPage() {
           title="Total Gardens"
           value={analytics?.total_gardens || 0}
           icon={<Sprout className="h-4 w-4 text-muted-foreground" />}
-          description={`${analytics?.total_area_managed_sqm || 0} m² managed`}
+          description={`${Math.round(analytics?.total_area_managed_sqm || 0)} m² managed`}
         />
         <StatCard
           title="Total Pools"
@@ -193,20 +390,10 @@ export default function DashboardPage() {
           icon={<Droplets className="h-4 w-4 text-muted-foreground" />}
           description={`${analytics?.pools_needing_maintenance || 0} need maintenance`}
         />
-        <StatCard
-          title="Next Service"
-          value={analytics?.upcoming_services_count || 0}
-          icon={<Calendar className="h-4 w-4 text-muted-foreground" />}
-          description={
-            analytics?.next_service_date
-              ? `${format(new Date(analytics.next_service_date), 'MMM d')}`
-              : 'No upcoming services'
-          }
-        />
       </div>
 
       {/* Secondary Stats */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           title="Total Locations"
           value={analytics?.total_locations || 0}
@@ -222,12 +409,6 @@ export default function DashboardPage() {
           value={analytics?.offline_bots || 0}
           icon={<AlertTriangle className="h-4 w-4 text-muted-foreground" />}
           description={`${analytics?.error_bots || 0} with errors`}
-        />
-        <StatCard
-          title="Unread Alerts"
-          value={analytics?.unread_alerts_count || 0}
-          icon={<AlertTriangle className="h-4 w-4 text-muted-foreground" />}
-          description={`${analytics?.critical_alerts_count || 0} critical`}
         />
       </div>
 
@@ -329,95 +510,97 @@ export default function DashboardPage() {
                   strokeWidth={2}
                 />
               </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      )}
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
 
-      {/* Bottom Row: Upcoming Services & Recent Alerts */}
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-        {/* Upcoming Services */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Upcoming Services</CardTitle>
-            <CardDescription>Bots scheduled for maintenance</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {upcomingServices.length > 0 ? (
-              <div className="space-y-3">
-                {upcomingServices.slice(0, 5).map((service) => (
-                  <div
-                    key={service.bot_id}
-                    className="flex items-start justify-between p-3 rounded-lg border"
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium">{service.bot_name}</p>
-                      <p className="text-sm text-muted-foreground">{service.location_name}</p>
-                      <Badge variant="outline" className="mt-1">
-                        {service.bot_type.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium">
-                        {format(new Date(service.next_service_date), 'MMM d')}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        in {service.days_until_service} days
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No upcoming services
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Recent Alerts */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Alerts</CardTitle>
-            <CardDescription>Latest notifications from your bots</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {recentAlerts.length > 0 ? (
-              <div className="space-y-3">
-                {recentAlerts.map((alert) => (
-                  <div
-                    key={alert.alert_id}
-                    className="flex items-start gap-3 p-3 rounded-lg border"
-                  >
-                    <AlertTriangle className={`h-5 w-5 flex-shrink-0 ${
-                      alert.severity === 'critical' ? 'text-destructive' : 'text-yellow-500'
-                    }`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium text-sm">{alert.title}</p>
-                        <Badge variant={getSeverityColor(alert.severity)} className="text-xs">
-                          {alert.severity}
-                        </Badge>
+          {/* Bottom Row: Upcoming Services & Recent Alerts */}
+          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+            {/* Upcoming Services */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Upcoming Services</CardTitle>
+                <CardDescription>Bots scheduled for maintenance</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {upcomingServices.length > 0 ? (
+                  <div className="space-y-3">
+                    {upcomingServices.slice(0, 5).map((service) => (
+                      <div
+                        key={service.bot_id}
+                        className="flex items-start justify-between p-3 rounded-lg border"
+                      >
+                        <div className="flex-1">
+                          <p className="font-medium">{service.bot_name}</p>
+                          <p className="text-sm text-muted-foreground">{service.location_name}</p>
+                          <Badge variant="outline" className="mt-1">
+                            {service.bot_type.replace('_', ' ')}
+                          </Badge>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium">
+                            {format(new Date(service.next_service_date), 'MMM d')}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            in {service.days_until_service} days
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {alert.bot_name} • {alert.location_name}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {format(new Date(alert.created_at), 'MMM d, h:mm a')}
-                      </p>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No recent alerts
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No upcoming services
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Recent Alerts */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Alerts</CardTitle>
+                <CardDescription>Latest notifications from your bots</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {recentAlerts.length > 0 ? (
+                  <div className="space-y-3">
+                    {recentAlerts.map((alert) => (
+                      <div
+                        key={alert.alert_id}
+                        className="flex items-start gap-3 p-3 rounded-lg border"
+                      >
+                        <AlertTriangle className={`h-5 w-5 flex-shrink-0 ${
+                          alert.severity === 'critical' ? 'text-destructive' : 'text-yellow-500'
+                        }`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium text-sm">{alert.title}</p>
+                            <Badge variant={getSeverityColor(alert.severity)} className="text-xs">
+                              {alert.severity}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {alert.bot_name} • {alert.location_name}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {format(new Date(alert.created_at), 'MMM d, h:mm a')}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No recent alerts
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   );
 }
