@@ -1,0 +1,525 @@
+import React, { useState, useEffect } from 'react';
+import { useOutletContext, useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Sprout, Droplets, Plus, MapPin, Calendar } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+
+export default function ServicesPage() {
+  const { selectedOrg } = useOutletContext();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [locations, setLocations] = useState([]);
+  const [gardens, setGardens] = useState([]);
+  const [pools, setPools] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [serviceType, setServiceType] = useState('garden');
+
+  // Garden form state
+  const [gardenForm, setGardenForm] = useState({
+    location_id: '',
+    name: '',
+    description: '',
+    area_sqm: '',
+    grass_type: '',
+    terrain_type: 'flat',
+    difficulty_level: 'easy',
+    preferred_cut_height_mm: '30',
+    mowing_frequency_days: '7',
+    notes: ''
+  });
+
+  useEffect(() => {
+    if (selectedOrg) {
+      loadData();
+    }
+  }, [selectedOrg]);
+
+  const loadData = async () => {
+    if (!selectedOrg?.organization_id) return;
+
+    try {
+      setLoading(true);
+
+      // Load locations
+      const { data: locationsData, error: locationsError } = await supabase
+        .from('locations')
+        .select('*')
+        .eq('organization_id', selectedOrg.organization_id)
+        .eq('is_active', true)
+        .order('name');
+
+      if (locationsError) throw locationsError;
+      setLocations(locationsData || []);
+
+      // Load gardens
+      const { data: gardensData, error: gardensError } = await supabase
+        .from('gardens')
+        .select(`
+          *,
+          location:locations(name, city)
+        `)
+        .in('location_id', (locationsData || []).map(l => l.id))
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (gardensError) throw gardensError;
+      setGardens(gardensData || []);
+
+      // Load pools
+      const { data: poolsData, error: poolsError } = await supabase
+        .from('pools')
+        .select(`
+          *,
+          location:locations(name, city)
+        `)
+        .in('location_id', (locationsData || []).map(l => l.id))
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (poolsError) throw poolsError;
+      setPools(poolsData || []);
+
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load services data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGardenSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!gardenForm.location_id || !gardenForm.name) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gardens')
+        .insert([{
+          ...gardenForm,
+          area_sqm: gardenForm.area_sqm ? parseFloat(gardenForm.area_sqm) : null,
+          preferred_cut_height_mm: parseInt(gardenForm.preferred_cut_height_mm),
+          mowing_frequency_days: parseInt(gardenForm.mowing_frequency_days),
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Garden added successfully!",
+      });
+
+      setDialogOpen(false);
+      setGardenForm({
+        location_id: '',
+        name: '',
+        description: '',
+        area_sqm: '',
+        grass_type: '',
+        terrain_type: 'flat',
+        difficulty_level: 'easy',
+        preferred_cut_height_mm: '30',
+        mowing_frequency_days: '7',
+        notes: ''
+      });
+      loadData();
+
+    } catch (error) {
+      console.error('Error adding garden:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add garden",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const GardenCard = ({ garden }) => (
+    <Card 
+      className="hover:shadow-md transition-shadow cursor-pointer"
+      onClick={() => navigate(`/portal/garden/${garden.id}`)}
+    >
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <CardTitle className="flex items-center gap-2">
+              <Sprout className="h-5 w-5 text-green-600" />
+              {garden.name}
+            </CardTitle>
+            <CardDescription className="flex items-center gap-1 mt-1">
+              <MapPin className="h-3 w-3" />
+              {garden.location?.name}
+            </CardDescription>
+          </div>
+          {garden.requires_maintenance && (
+            <Badge variant="destructive">Maintenance</Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          {garden.area_sqm && (
+            <div>
+              <p className="text-muted-foreground">Area</p>
+              <p className="font-medium">{garden.area_sqm} m²</p>
+            </div>
+          )}
+          {garden.grass_type && (
+            <div>
+              <p className="text-muted-foreground">Grass Type</p>
+              <p className="font-medium">{garden.grass_type}</p>
+            </div>
+          )}
+          {garden.terrain_type && (
+            <div>
+              <p className="text-muted-foreground">Terrain</p>
+              <p className="font-medium capitalize">{garden.terrain_type}</p>
+            </div>
+          )}
+          {garden.mowing_frequency_days && (
+            <div>
+              <p className="text-muted-foreground">Frequency</p>
+              <p className="font-medium">Every {garden.mowing_frequency_days} days</p>
+            </div>
+          )}
+        </div>
+        {garden.last_mowed_at && (
+          <div className="mt-4 pt-4 border-t flex items-center gap-2 text-sm text-muted-foreground">
+            <Calendar className="h-4 w-4" />
+            Last mowed: {format(new Date(garden.last_mowed_at), 'MMM d, yyyy')}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const PoolCard = ({ pool }) => (
+    <Card className="opacity-50 cursor-not-allowed">
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <CardTitle className="flex items-center gap-2">
+              <Droplets className="h-5 w-5 text-blue-600" />
+              {pool.name}
+            </CardTitle>
+            <CardDescription className="flex items-center gap-1 mt-1">
+              <MapPin className="h-3 w-3" />
+              {pool.location?.name}
+            </CardDescription>
+          </div>
+          <Badge variant="secondary">Coming Soon</Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          {pool.pool_type && (
+            <div>
+              <p className="text-muted-foreground">Type</p>
+              <p className="font-medium capitalize">{pool.pool_type}</p>
+            </div>
+          )}
+          {pool.volume_liters && (
+            <div>
+              <p className="text-muted-foreground">Volume</p>
+              <p className="font-medium">{pool.volume_liters} L</p>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 md:p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Services</h1>
+          <p className="text-muted-foreground">
+            Manage your gardens and pools
+          </p>
+        </div>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Service
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Add New Service</DialogTitle>
+              <DialogDescription>
+                Add a garden to be serviced by your bots. Pool services coming soon.
+              </DialogDescription>
+            </DialogHeader>
+
+            <Tabs value={serviceType} onValueChange={setServiceType} className="mt-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="garden">
+                  <Sprout className="h-4 w-4 mr-2" />
+                  Garden
+                </TabsTrigger>
+                <TabsTrigger value="pool" disabled>
+                  <Droplets className="h-4 w-4 mr-2" />
+                  Pool (Coming Soon)
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="garden" className="space-y-4 mt-4">
+                <form onSubmit={handleGardenSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Location *</Label>
+                    <Select
+                      value={gardenForm.location_id}
+                      onValueChange={(value) => setGardenForm({ ...gardenForm, location_id: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locations.map((location) => (
+                          <SelectItem key={location.id} value={location.id}>
+                            {location.name} - {location.city}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Garden Name *</Label>
+                    <Input
+                      id="name"
+                      value={gardenForm.name}
+                      onChange={(e) => setGardenForm({ ...gardenForm, name: e.target.value })}
+                      placeholder="e.g., Front Lawn, Back Garden"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={gardenForm.description}
+                      onChange={(e) => setGardenForm({ ...gardenForm, description: e.target.value })}
+                      placeholder="Brief description of the garden"
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="area">Area (m²)</Label>
+                      <Input
+                        id="area"
+                        type="number"
+                        step="0.01"
+                        value={gardenForm.area_sqm}
+                        onChange={(e) => setGardenForm({ ...gardenForm, area_sqm: e.target.value })}
+                        placeholder="100"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="grass_type">Grass Type</Label>
+                      <Input
+                        id="grass_type"
+                        value={gardenForm.grass_type}
+                        onChange={(e) => setGardenForm({ ...gardenForm, grass_type: e.target.value })}
+                        placeholder="e.g., Kikuyu, LM"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="terrain">Terrain Type</Label>
+                      <Select
+                        value={gardenForm.terrain_type}
+                        onValueChange={(value) => setGardenForm({ ...gardenForm, terrain_type: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="flat">Flat</SelectItem>
+                          <SelectItem value="sloped">Sloped</SelectItem>
+                          <SelectItem value="mixed">Mixed</SelectItem>
+                          <SelectItem value="hilly">Hilly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="difficulty">Difficulty Level</Label>
+                      <Select
+                        value={gardenForm.difficulty_level}
+                        onValueChange={(value) => setGardenForm({ ...gardenForm, difficulty_level: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="easy">Easy</SelectItem>
+                          <SelectItem value="moderate">Moderate</SelectItem>
+                          <SelectItem value="difficult">Difficult</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="cut_height">Preferred Cut Height (mm)</Label>
+                      <Input
+                        id="cut_height"
+                        type="number"
+                        value={gardenForm.preferred_cut_height_mm}
+                        onChange={(e) => setGardenForm({ ...gardenForm, preferred_cut_height_mm: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="frequency">Mowing Frequency (days)</Label>
+                      <Input
+                        id="frequency"
+                        type="number"
+                        value={gardenForm.mowing_frequency_days}
+                        onChange={(e) => setGardenForm({ ...gardenForm, mowing_frequency_days: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">Notes</Label>
+                    <Textarea
+                      id="notes"
+                      value={gardenForm.notes}
+                      onChange={(e) => setGardenForm({ ...gardenForm, notes: e.target.value })}
+                      placeholder="Any special instructions or notes"
+                      rows={2}
+                    />
+                  </div>
+
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit">Add Garden</Button>
+                  </DialogFooter>
+                </form>
+              </TabsContent>
+            </Tabs>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Services Tabs */}
+      <Tabs defaultValue="gardens" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="gardens">
+            <Sprout className="h-4 w-4 mr-2" />
+            Gardens ({gardens.length})
+          </TabsTrigger>
+          <TabsTrigger value="pools" disabled>
+            <Droplets className="h-4 w-4 mr-2" />
+            Pools ({pools.length}) - Coming Soon
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="gardens" className="space-y-4">
+          {gardens.length > 0 ? (
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+              {gardens.map((garden) => (
+                <GardenCard key={garden.id} garden={garden} />
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Sprout className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No gardens yet</h3>
+                <p className="text-muted-foreground text-center mb-4">
+                  Add your first garden to get started with Bot Korp services
+                </p>
+                <Button onClick={() => setDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Garden
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="pools" className="space-y-4">
+          {pools.length > 0 ? (
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+              {pools.map((pool) => (
+                <PoolCard key={pool.id} pool={pool} />
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Droplets className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Pool services coming soon</h3>
+                <p className="text-muted-foreground text-center">
+                  Pool bot services will be available in a future update
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+

@@ -60,7 +60,7 @@ const UpdatePassword = () => {
         setSuccess(true)
         // Redirect to dashboard after a short delay
         setTimeout(() => {
-          navigate('/dashboard')
+          navigate('/portal')
         }, 2000)
       }
     } catch (err) {
@@ -92,8 +92,8 @@ const UpdatePassword = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <Bot className="h-8 w-8 text-green-600" />
-            <span className="text-2xl font-bold text-gray-900">Botserv</span>
+            <Bot className="h-8 w-8 text-primary" />
+            <span className="text-2xl font-bold">Bot Korp</span>
           </div>
           <CardTitle>Update Password</CardTitle>
           <CardDescription>

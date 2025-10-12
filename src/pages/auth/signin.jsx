@@ -29,7 +29,7 @@ const SignIn = () => {
       if (error) {
         setError(error.message)
       } else if (data.user) {
-        navigate('/dashboard')
+        navigate('/portal')
       }
     } catch (err) {
       setError('An unexpected error occurred')
@@ -43,8 +43,8 @@ const SignIn = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <Bot className="h-8 w-8 text-green-600" />
-            <span className="text-2xl font-bold text-gray-900">Botserv</span>
+            <Bot className="h-8 w-8 text-primary" />
+            <span className="text-2xl font-bold">Bot Korp</span>
           </div>
           <CardTitle>Welcome Back</CardTitle>
           <CardDescription>
@@ -118,7 +118,7 @@ const SignIn = () => {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
-              <Link to="/auth/signup" className="text-green-600 hover:text-green-700 font-medium">
+              <Link to="/auth/register" className="text-primary hover:text-primary/80 font-medium">
                 Sign up
               </Link>
             </p>

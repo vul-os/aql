@@ -36,7 +36,7 @@ const VerifyEmail = () => {
           setSuccess(true)
           // Redirect to dashboard after a short delay
           setTimeout(() => {
-            navigate('/dashboard')
+            navigate('/portal')
           }, 3000)
         }
       } catch (err) {
@@ -85,8 +85,8 @@ const VerifyEmail = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <Bot className="h-8 w-8 text-green-600" />
-            <span className="text-2xl font-bold text-gray-900">Botserv</span>
+            <Bot className="h-8 w-8 text-primary" />
+            <span className="text-2xl font-bold">Bot Korp</span>
           </div>
           <CardTitle>Email Verification</CardTitle>
           <CardDescription>
@@ -113,7 +113,7 @@ const VerifyEmail = () => {
             </ul>
             <div className="pt-4">
               <Button 
-                onClick={() => navigate('/auth/signin')}
+                onClick={() => navigate('/auth/login')}
                 className="w-full"
               >
                 Back to Sign In

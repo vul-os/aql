@@ -14,7 +14,7 @@ const StaffProtectedRoute = ({ children }) => {
   }
 
   if (!user) {
-    return <Navigate to="/auth/signin" replace />
+    return <Navigate to="/auth/login" replace />
   }
 
   // For now, we'll allow all authenticated users

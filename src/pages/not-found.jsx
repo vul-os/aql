@@ -10,8 +10,8 @@ const NotFound = () => {
       <Card className="w-full max-w-md text-center">
         <CardHeader>
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <Bot className="h-8 w-8 text-green-600" />
-            <span className="text-2xl font-bold text-gray-900">Botserv</span>
+            <Bot className="h-8 w-8 text-primary" />
+            <span className="text-2xl font-bold">Bot Korp</span>
           </div>
           <CardTitle className="text-6xl font-bold text-gray-900">404</CardTitle>
           <CardDescription className="text-xl">

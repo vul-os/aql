@@ -1,9 +1,10 @@
 import React from 'react'
+import { Outlet } from 'react-router-dom'
 
-const BlankLayout = ({ children }) => {
+const BlankLayout = () => {
   return (
     <div className="min-h-screen">
-      {children}
+      <Outlet />
     </div>
   )
 }

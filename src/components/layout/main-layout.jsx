@@ -55,8 +55,8 @@ const MainLayout = ({ children }) => {
           <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
             <div className="flex-shrink-0 flex items-center px-4">
               <div className="flex items-center space-x-2">
-                <Bot className="h-8 w-8 text-green-600" />
-                <span className="text-xl font-bold text-gray-900">Botserv</span>
+                <Bot className="h-8 w-8 text-primary" />
+                <span className="text-xl font-bold">Bot Korp</span>
               </div>
             </div>
             <nav className="mt-5 px-2 space-y-1">
@@ -114,7 +114,7 @@ const MainLayout = ({ children }) => {
               <div className="flex items-center flex-shrink-0 px-4">
                 <div className="flex items-center space-x-2">
                   <Bot className="h-8 w-8 text-green-600" />
-                  <span className="text-xl font-bold text-gray-900">Botserv</span>
+                  <span className="text-xl font-bold text-gray-900">Bot Korp</span>
                 </div>
               </div>
               <nav className="mt-5 flex-1 px-2 space-y-1">

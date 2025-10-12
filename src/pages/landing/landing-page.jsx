@@ -1,19 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, Bot, Sprout, Droplets, Shield, MapPin, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Search, Bot, Sprout, Droplets, Shield, MapPin, CheckCircle2, ArrowRight, LayoutDashboard } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [coverageResults, setCoverageResults] = useState(null);
+  const [hasOrganization, setHasOrganization] = useState(false);
+
+  useEffect(() => {
+    checkUserOrganization();
+  }, [user]);
+
+  const checkUserOrganization = async () => {
+    if (!user) {
+      setHasOrganization(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('get_user_organizations', {
+        user_uuid: user.id
+      });
+
+      if (!error && data && data.length > 0) {
+        setHasOrganization(true);
+      }
+    } catch (error) {
+      console.error('Error checking organizations:', error);
+    }
+  };
 
   const handleCoverageSearch = async (e) => {
     e.preventDefault();
@@ -94,19 +120,43 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
             <Bot className="h-8 w-8 text-primary" />
             <h1 className="text-2xl font-bold">Bot Korp</h1>
           </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => navigate('/auth/login')}>
-              Login
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" onClick={() => navigate('/docs')} className="hidden sm:flex">
+              Docs
             </Button>
-            <Button onClick={() => navigate('/auth/register')}>
-              Get Started
-            </Button>
+            {user && hasOrganization ? (
+              <Button 
+                size="lg"
+                onClick={() => navigate('/portal')}
+                className="gap-2 shadow-lg hover:shadow-xl transition-all"
+              >
+                <LayoutDashboard className="h-5 w-5" />
+                Go to Portal
+              </Button>
+            ) : user ? (
+              <Button onClick={() => navigate('/portal')}>
+                Dashboard
+              </Button>
+            ) : (
+              <>
+                <Button variant="ghost" onClick={() => navigate('/auth/login')}>
+                  Login
+                </Button>
+                <Button 
+                  size="lg"
+                  onClick={() => navigate('/auth/register')}
+                  className="shadow-lg hover:shadow-xl transition-all"
+                >
+                  Get Started
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -261,13 +311,47 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t bg-background">
         <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Bot className="h-6 w-6 text-primary" />
-              <span className="font-semibold">Bot Korp</span>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Bot className="h-6 w-6 text-primary" />
+                <span className="font-semibold">Bot Korp</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Smart property automation with autonomous bots.
+              </p>
             </div>
+            <div>
+              <h3 className="font-semibold mb-3">Product</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="/#services" className="hover:text-primary">Services</a></li>
+                <li><a href="/#benefits" className="hover:text-primary">Benefits</a></li>
+                <li><a href="/#coverage" className="hover:text-primary">Coverage</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-3">Resources</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="/docs" className="hover:text-primary">Documentation</a></li>
+                <li><a href="/docs/faq" className="hover:text-primary">FAQ</a></li>
+                <li><a href="mailto:support@botkorp.com" className="hover:text-primary">Support</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-3">Legal</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="/docs/privacy-policy" className="hover:text-primary">Privacy Policy</a></li>
+                <li><a href="/docs/terms-of-service" className="hover:text-primary">Terms of Service</a></li>
+                <li><a href="/docs/cookie-policy" className="hover:text-primary">Cookie Policy</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
               © 2024 Bot Korp. All rights reserved.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Made with ❤️ in South Africa
             </p>
           </div>
         </div>

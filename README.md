@@ -1,6 +1,6 @@
-# Botserv Platform
+# Bot Korp Platform
 
-A comprehensive platform for managing bots and smart home devices. Botserv provides centralized control for mowing bots, pool cleaners, weather stations, and a wide range of smart home devices including lights, plugs, air conditioners, TVs, and more.
+A comprehensive platform for managing autonomous bots and smart property automation. Bot Korp provides centralized control for mowing bots, pool cleaners, security bots, weather stations, and complete property management automation.
 
 ## Features
 
@@ -64,7 +64,7 @@ A comprehensive platform for managing bots and smart home devices. Botserv provi
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd botserv-mono
+   cd botkorp-mono
    ```
 
 2. **Install dependencies**
@@ -174,7 +174,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Support
 
 For support and questions:
-- Email: botservza@gmail.com
+- Email: support@botkorp.com
 - Create an issue in the repository
 
 ## Roadmap

@@ -49,7 +49,7 @@ const ForgotPassword = () => {
             <p className="text-sm text-gray-500 mb-6">
               Click the link in the email to reset your password. The link will expire in 1 hour.
             </p>
-            <Link to="/auth/signin">
+            <Link to="/auth/login">
               <Button variant="outline" className="w-full">
                 Back to Sign In
               </Button>
@@ -65,8 +65,8 @@ const ForgotPassword = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <Bot className="h-8 w-8 text-green-600" />
-            <span className="text-2xl font-bold text-gray-900">Botserv</span>
+            <Bot className="h-8 w-8 text-primary" />
+            <span className="text-2xl font-bold">Bot Korp</span>
           </div>
           <CardTitle>Reset Password</CardTitle>
           <CardDescription>
@@ -101,8 +101,8 @@ const ForgotPassword = () => {
           
           <div className="mt-6 text-center">
             <Link 
-              to="/auth/signin" 
-              className="text-sm text-green-600 hover:text-green-700 flex items-center justify-center space-x-1"
+              to="/auth/login" 
+              className="text-sm text-primary hover:text-primary/80 flex items-center justify-center space-x-1"
             >
               <ArrowLeft className="h-4 w-4" />
               <span>Back to Sign In</span>
