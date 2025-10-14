@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Bot, ArrowLeft, CheckCircle } from 'lucide-react'
 import { useAuth } from '@/context/auth-context'
+import AuthLayout from '@/components/layout/auth-layout'
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('')
@@ -38,8 +39,8 @@ const ForgotPassword = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+      <AuthLayout>
+        <Card className="glass-effect border border-white/20 shadow-xl">
           <CardContent className="pt-6 text-center">
             <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Check Your Email</h2>
@@ -56,15 +57,15 @@ const ForgotPassword = () => {
             </Link>
           </CardContent>
         </Card>
-      </div>
+      </AuthLayout>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex items-center justify-center space-x-2 mb-4">
+    <AuthLayout title="Reset Password" subtitle="Enter your email address and we'll send you a link to reset your password">
+      <Card className="glass-effect border border-white/20 shadow-xl">
+        <CardHeader className="text-center lg:text-left">
+          <div className="flex items-center justify-center lg:justify-start space-x-2 mb-4">
             <Bot className="h-8 w-8 text-primary" />
             <span className="text-2xl font-bold">Bot Korp</span>
           </div>
@@ -110,7 +111,7 @@ const ForgotPassword = () => {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </AuthLayout>
   )
 }
 

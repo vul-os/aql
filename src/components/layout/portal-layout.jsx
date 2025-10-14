@@ -27,7 +27,9 @@ import {
   Building2,
   CreditCard,
   Moon,
-  Sun
+  Sun,
+  Bell,
+  Search
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { supabase } from '@/lib/supabase';
@@ -35,6 +37,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useTheme } from '@/components/theme-provider';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 export default function PortalLayout() {
   const navigate = useNavigate();
@@ -151,60 +154,92 @@ export default function PortalLayout() {
   };
 
   const Sidebar = ({ mobile = false }) => (
-    <div className={`flex flex-col h-full ${mobile ? '' : 'border-r bg-muted/10'}`}>
+    <div className={`flex flex-col h-full bg-gradient-to-b from-botkorp-grey-900 to-botkorp-grey-700 text-white relative`}>
+      {/* Background overlays for subtle pattern and shine */}
+      {!mobile && (
+        <>
+          <div className="pointer-events-none absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_20%_20%,_rgba(255,255,255,0.15),_transparent_40%)]" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-white/10" />
+        </>
+      )}
+
       {/* Logo - Clickable to landing */}
       <div 
-        className="p-4 border-b flex items-center gap-2 cursor-pointer hover:bg-accent transition-colors"
+        className="p-4 border-b border-white/10 flex items-center gap-3 cursor-pointer hover:bg-white/10 backdrop-blur-sm transition-colors"
         onClick={() => {
           navigate('/');
           if (mobile) setMobileMenuOpen(false);
         }}
       >
-        <Bot className="h-8 w-8 text-primary" />
-        <h1 className="text-xl font-bold">Bot Korp</h1>
+        <div className="relative">
+          <div className="absolute -inset-2 rounded-full shadow-glow-green" />
+          <Bot className="relative h-8 w-8 text-botkorp-green-500 drop-shadow" />
+        </div>
+        <h1 className="text-xl font-bold tracking-tight">Bot Korp</h1>
       </div>
 
       {/* Main Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-3 space-y-2">
         {mainNavItems.map((item) => (
-          <Button
+          <button
             key={item.path}
-            variant={isActivePath(item.path) ? 'default' : 'ghost'}
-            className="w-full justify-start"
+            className={`w-full flex items-center justify-start gap-3 px-3 py-2 rounded-xl transition-all group ${
+              isActivePath(item.path)
+                ? 'bg-gradient-to-r from-botkorp-green-500 to-botkorp-green-600 text-white shadow-lg'
+                : 'text-white/80 hover:bg-white/10 hover:backdrop-blur-sm'
+            }`}
             onClick={() => {
               navigate(item.path);
               if (mobile) setMobileMenuOpen(false);
             }}
           >
-            {item.icon}
-            <span className="ml-2">{item.label}</span>
-          </Button>
+            <span className={`inline-flex items-center justify-center h-8 w-8 rounded-lg ${
+              isActivePath(item.path)
+                ? 'bg-white/20'
+                : 'bg-white/5 group-hover:bg-white/10'
+            }`}>
+              {item.icon}
+            </span>
+            <span className="ml-1 font-medium">{item.label}</span>
+            {isActivePath(item.path) && (
+              <span className="ml-auto h-6 w-1.5 rounded-full bg-white/80" />
+            )}
+          </button>
         ))}
       </nav>
 
       {/* Bottom Navigation - Settings */}
-      <div className="p-4 border-t">
+      <div className="p-4 border-t border-white/10 mt-auto">
         {bottomNavItems.map((item) => (
-          <Button
+          <button
             key={item.path}
-            variant={isActivePath(item.path) ? 'default' : 'ghost'}
-            className="w-full justify-start"
+            className={`w-full flex items-center justify-start gap-3 px-3 py-2 rounded-xl transition-all ${
+              isActivePath(item.path)
+                ? 'bg-gradient-to-r from-botkorp-green-500 to-botkorp-green-600 text-white shadow-lg'
+                : 'text-white/80 hover:bg-white/10 hover:backdrop-blur-sm'
+            }`}
             onClick={() => {
               navigate(item.path);
               if (mobile) setMobileMenuOpen(false);
             }}
           >
-            {item.icon}
-            <span className="ml-2">{item.label}</span>
-          </Button>
+            <span className={`inline-flex items-center justify-center h-8 w-8 rounded-lg ${
+              isActivePath(item.path)
+                ? 'bg-white/20'
+                : 'bg-white/5'
+            }`}>
+              {item.icon}
+            </span>
+            <span className="ml-1 font-medium">{item.label}</span>
+          </button>
         ))}
-        
+
         {/* Organization Info (mobile only) */}
         {mobile && selectedOrg && (
-          <div className="mt-4 pt-4 border-t">
-            <p className="text-sm text-muted-foreground mb-2">Organization</p>
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <p className="text-sm text-white/70 mb-2">Organization</p>
             <p className="font-semibold">{selectedOrg.organization_name}</p>
-            <p className="text-xs text-muted-foreground capitalize">{selectedOrg.member_role}</p>
+            <p className="text-xs text-white/60 capitalize">{selectedOrg.member_role}</p>
           </div>
         )}
       </div>
@@ -244,8 +279,8 @@ export default function PortalLayout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Toolbar */}
-        <header className="border-b bg-background">
-          <div className="flex items-center justify-between p-4">
+        <header className="border-b bg-background/80 supports-[backdrop-filter]:bg-background/60 backdrop-blur shadow-sm">
+          <div className="flex items-center justify-between p-4 gap-3">
             {/* Mobile Menu Button */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild className="md:hidden">
@@ -289,62 +324,86 @@ export default function PortalLayout() {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* Search bar */}
+            <div className="hidden md:flex flex-1 mx-2">
+              <div className="relative w-full max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search..."
+                  className="pl-9 rounded-xl bg-white/70 dark:bg-white/5 backdrop-blur border"
+                />
+              </div>
+            </div>
+
             {/* User Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email} />
-                    <AvatarFallback>{getUserInitials()}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64">
-                <DropdownMenuLabel>
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {user?.user_metadata?.full_name || 'User'}
-                    </p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {user?.email}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                
-                {/* Dark Mode Toggle */}
-                <div className="px-2 py-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {theme === 'dark' ? (
-                        <Moon className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <Sun className="h-4 w-4 text-muted-foreground" />
-                      )}
-                      <Label htmlFor="dark-mode" className="text-sm font-normal cursor-pointer">
-                        Dark Mode
-                      </Label>
+            <div className="flex items-center gap-2">
+              {/* Notifications */}
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
+                <span className="absolute -top-0.5 -right-0.5">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                  </span>
+                </span>
+              </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email} />
+                      <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {user?.user_metadata?.full_name || 'User'}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user?.email}
+                      </p>
                     </div>
-                    <Switch
-                      id="dark-mode"
-                      checked={theme === 'dark'}
-                      onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-                    />
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  
+                  {/* Dark Mode Toggle */}
+                  <div className="px-2 py-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {theme === 'dark' ? (
+                          <Moon className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Sun className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <Label htmlFor="dark-mode" className="text-sm font-normal cursor-pointer">
+                          Dark Mode
+                        </Label>
+                      </div>
+                      <Switch
+                        id="dark-mode"
+                        checked={theme === 'dark'}
+                        onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                      />
+                    </div>
                   </div>
-                </div>
-                
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/portal/settings')}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/portal/settings')}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </header>
 

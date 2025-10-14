@@ -129,8 +129,10 @@ export default function AcceptInvitePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+      <div className="relative min-h-screen flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-[url('/images/lawn.webp')] bg-cover bg-center" />
+        <div className="absolute inset-0 bg-black/50" />
+        <Card className="relative z-10 w-full max-w-md glass-effect border border-white/20 shadow-xl">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
             <p className="text-muted-foreground">Loading invitation...</p>
@@ -142,8 +144,10 @@ export default function AcceptInvitePage() {
 
   if (error || !invitation) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+      <div className="relative min-h-screen flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-[url('/images/lawn.webp')] bg-cover bg-center" />
+        <div className="absolute inset-0 bg-black/50" />
+        <Card className="relative z-10 w-full max-w-md glass-effect border border-white/20 shadow-xl">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
               <XCircle className="h-6 w-6 text-destructive" />
@@ -166,8 +170,10 @@ export default function AcceptInvitePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl">
+    <div className="relative min-h-screen flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-[url('/images/lawn.webp')] bg-cover bg-center" />
+      <div className="absolute inset-0 bg-black/50" />
+      <Card className="relative z-10 w-full max-w-2xl glass-effect border border-white/20 shadow-xl">
         {/* Header */}
         <CardHeader className="text-center space-y-4">
           <div className="flex items-center justify-center gap-2 mb-2">

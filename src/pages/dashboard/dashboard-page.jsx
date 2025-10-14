@@ -10,6 +10,7 @@ import {
   Droplets,
   AlertTriangle,
   Calendar,
+  Home,
   Activity,
   TrendingUp,
   MapPin,
@@ -234,19 +235,19 @@ export default function DashboardPage() {
     }
   };
 
-  const StatCard = ({ title, value, icon, description, trend }) => (
-    <Card>
+  const StatCard = ({ title, value, icon, description, trend, className, onDark = false }) => (
+    <Card className={className}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <CardTitle className={`text-sm font-medium ${onDark ? 'text-white/90' : ''}`}>{title}</CardTitle>
         {icon}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className={`text-3xl font-bold ${onDark ? 'text-white' : ''}`}>{value}</div>
         {description && (
-          <p className="text-xs text-muted-foreground mt-1">{description}</p>
+          <p className={`text-xs mt-1 ${onDark ? 'text-white/80' : 'text-muted-foreground'}`}>{description}</p>
         )}
         {trend && (
-          <div className="flex items-center text-xs text-muted-foreground mt-1">
+          <div className={`flex items-center text-xs mt-1 ${onDark ? 'text-white/80' : 'text-muted-foreground'}`}>
             <TrendingUp className="h-3 w-3 mr-1" />
             {trend}
           </div>
@@ -310,6 +311,41 @@ export default function DashboardPage() {
             </span> ({analytics.upcoming_services_count} service{analytics.upcoming_services_count > 1 ? 's' : ''} scheduled)
           </p>
         )}
+      </div>
+
+      {/* Top Stats (Tech-Nature Fusion brief) */}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Active Services"
+          value={analytics?.operational_bots ?? 0}
+          icon={<Bot className="h-5 w-5 text-white/90" />}
+          description={`${analytics?.total_bots ?? 0} total bots`}
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-botkorp-green-500 to-botkorp-green-600 text-white shadow-lg hover:shadow-xl transition-transform hover:-translate-y-0.5"
+          onDark
+        />
+        <StatCard
+          title="Next Service"
+          value={analytics?.next_service_date ? format(new Date(analytics.next_service_date), 'MMM d, yyyy') : '—'}
+          icon={<Calendar className="h-5 w-5 text-white/90" />}
+          description={analytics?.upcoming_services_count ? `${analytics.upcoming_services_count} scheduled` : 'No upcoming'}
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#42A5F5] to-blue-600 text-white shadow-lg hover:shadow-xl transition-transform hover:-translate-y-0.5"
+          onDark
+        />
+        <StatCard
+          title="Total Properties"
+          value={analytics?.total_locations ?? 0}
+          icon={<Home className="h-5 w-5 text-white/90" />}
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#AB47BC] to-purple-600 text-white shadow-lg hover:shadow-xl transition-transform hover:-translate-y-0.5"
+          onDark
+        />
+        <StatCard
+          title="This Month"
+          value={analytics?.services_completed_this_month ?? 0}
+          icon={<Activity className="h-5 w-5 text-white/90" />}
+          description="Services completed"
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#FF9800] to-orange-600 text-white shadow-lg hover:shadow-xl transition-transform hover:-translate-y-0.5"
+          onDark
+        />
       </div>
 
       {/* Insights Section */}

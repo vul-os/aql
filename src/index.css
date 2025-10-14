@@ -31,34 +31,34 @@
   }
 
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%; /* Dark slate for text */
+    --background: 0 0% 100%; /* Clean White */
+    --foreground: 200 17% 20%; /* Slate Grey (deep) for text: #546E7A-ish */
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 200 17% 20%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    
-    /* Bot Korp Optimized Color Scheme - Tech/Automation focused */
-    --primary: 158 64% 52%; /* Primary Green: #10b981 - vibrant tech green */
+    --popover-foreground: 200 17% 20%;
+
+    /* Tech-Nature Fusion */
+    --primary: 88 46% 49%; /* Fresh Grass Green: #7CB342 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 217 33% 17%; /* Secondary: #1e293b - dark slate */
+    --secondary: 200 17% 39%; /* Slate Grey: #546E7A */
     --secondary-foreground: 0 0% 100%;
-    --muted: 210 40% 98%; /* Background Light: #f8fafc - clean sections */
-    --muted-foreground: 215 20% 65%; /* Tertiary Text: #94a3b8 - subtle text */
-    --accent: 199 89% 48%; /* Accent Blue: #0ea5e9 - tech blue */
+    --muted: 200 15% 96%; /* Soft slate tint for subtle sections */
+    --muted-foreground: 200 10% 45%; /* Muted slate text */
+    --accent: 88 35% 60%; /* Lighter Grass Green accent */
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%; /* Error Red: #ef4444 */
+    --destructive: 0 84% 60%; /* Error Red */
     --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 91%; /* Border Light: #e2e8f0 */
-    --input: 214 32% 91%;
-    --ring: 158 64% 52%; /* Primary Green focus ring */
-    
-    /* Updated chart colors using tech palette */
-    --chart-1: 158 64% 52%; /* Primary Green */
-    --chart-2: 199 89% 48%; /* Accent Blue */
-    --chart-3: 262 83% 58%; /* Purple */
+    --border: 200 15% 90%; /* Light slate border */
+    --input: 200 15% 90%;
+    --ring: 88 46% 49%; /* Grass Green focus ring */
+
+    /* Charts aligned to Tech-Nature Fusion */
+    --chart-1: 88 46% 49%; /* Grass Green */
+    --chart-2: 200 17% 39%; /* Slate Grey */
+    --chart-3: 88 35% 60%; /* Lighter Green */
     --chart-4: 43 96% 56%; /* Amber */
-    --chart-5: 339 80% 58%; /* Pink */
+    --chart-5: 199 89% 48%; /* Tech Blue */
     --radius: 0.75rem;
     
     /* Custom BeepBite variables with vibrant orange palette */
@@ -81,32 +81,32 @@
   }
 
   .dark {
-    --background: 222 47% 11%; /* Dark slate background */
-    --foreground: 210 40% 98%; /* Light text */
-    --card: 217 33% 17%; /* Darker slate card */
-    --card-foreground: 210 40% 98%;
-    --popover: 217 33% 17%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 158 64% 52%; /* Keep bright Primary Green in dark mode */
-    --primary-foreground: 222 47% 11%;
-    --secondary: 215 25% 27%; /* Lighter slate */
-    --secondary-foreground: 210 40% 98%;
-    --muted: 215 25% 27%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 199 89% 48%; /* Accent Blue */
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 84% 60%; /* Error Red */
-    --destructive-foreground: 210 40% 98%;
-    --border: 215 25% 27%;
-    --input: 215 25% 27%;
-    --ring: 158 64% 52%; /* Primary Green */
-    
-    /* Updated dark mode chart colors */
-    --chart-1: 158 64% 52%; /* Primary Green */
-    --chart-2: 199 89% 48%; /* Accent Blue */
-    --chart-3: 262 83% 58%; /* Purple */
-    --chart-4: 43 96% 56%; /* Amber */
-    --chart-5: 339 80% 58%; /* Pink */
+    --background: 200 17% 12%; /* Deep Slate Grey */
+    --foreground: 0 0% 100%; /* Clean White text */
+    --card: 200 17% 16%;
+    --card-foreground: 0 0% 100%;
+    --popover: 200 17% 16%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 88 46% 49%; /* Grass Green retained for brand */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 200 12% 25%; /* Softer slate */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 200 12% 25%;
+    --muted-foreground: 200 10% 65%;
+    --accent: 88 35% 60%; /* Lighter Green accent */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 200 12% 25%;
+    --input: 200 12% 25%;
+    --ring: 88 46% 49%;
+
+    /* Dark mode chart colors */
+    --chart-1: 88 46% 49%;
+    --chart-2: 200 12% 65%;
+    --chart-3: 88 35% 60%;
+    --chart-4: 43 96% 56%;
+    --chart-5: 199 89% 48%;
   }
 
   /* Apply border and background styles */

@@ -11,7 +11,8 @@ export function AddressSearch({
   placeholder = "Search for an address...",
   className,
   defaultValue = "",
-  storageKey = "lastSearchedAddress" // localStorage key
+  storageKey = "lastSearchedAddress", // localStorage key
+  inputClassName = ""
 }) {
   // Load from localStorage on mount
   const [query, setQuery] = useState(() => {
@@ -184,7 +185,7 @@ export function AddressSearch({
                 setShowDropdown(true);
               }
             }}
-            className="pl-9 pr-9"
+            className={cn("pl-9 pr-9", inputClassName)}
           />
           {isLoading && (
             <Loader2 className="absolute right-3 top-3 h-4 w-4 text-muted-foreground animate-spin" />

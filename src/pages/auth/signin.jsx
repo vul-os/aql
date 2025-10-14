@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Bot, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/context/auth-context'
+import AuthLayout from '@/components/layout/auth-layout'
 
 const SignIn = () => {
   const [email, setEmail] = useState('')
@@ -39,17 +40,15 @@ const SignIn = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex items-center justify-center space-x-2 mb-4">
+    <AuthLayout title="Welcome Back" subtitle="Sign in to your account to manage your bots">
+      <Card className="glass-effect border border-white/20 shadow-xl">
+        <CardHeader className="text-center lg:text-left">
+          <div className="flex items-center justify-center lg:justify-start space-x-2 mb-4">
             <Bot className="h-8 w-8 text-primary" />
             <span className="text-2xl font-bold">Bot Korp</span>
           </div>
-          <CardTitle>Welcome Back</CardTitle>
-          <CardDescription>
-            Sign in to your account to manage your bots
-          </CardDescription>
+          <CardTitle>Sign In</CardTitle>
+          <CardDescription>Use your email and password</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -103,7 +102,7 @@ const SignIn = () => {
             
             <div className="flex items-center justify-between">
               <Link 
-                to="/forgot-password" 
+                to="/auth/forgot-password" 
                 className="text-sm text-green-600 hover:text-green-700"
               >
                 Forgot password?
@@ -125,7 +124,7 @@ const SignIn = () => {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </AuthLayout>
   )
 }
 

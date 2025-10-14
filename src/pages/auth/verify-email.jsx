@@ -51,8 +51,10 @@ const VerifyEmail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+      <div className="relative min-h-screen flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-[url('/images/lawn.webp')] bg-cover bg-center" />
+        <div className="absolute inset-0 bg-black/50" />
+        <Card className="relative z-10 w-full max-w-md glass-effect border border-white/20 shadow-xl">
           <CardContent className="pt-6 text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-600 mx-auto mb-4"></div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Verifying Email...</h2>
@@ -65,8 +67,10 @@ const VerifyEmail = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+      <div className="relative min-h-screen flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-[url('/images/lawn.webp')] bg-cover bg-center" />
+        <div className="absolute inset-0 bg-black/50" />
+        <Card className="relative z-10 w-full max-w-md glass-effect border border-white/20 shadow-xl">
           <CardContent className="pt-6 text-center">
             <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Email Verified!</h2>
@@ -81,8 +85,10 @@ const VerifyEmail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className="relative min-h-screen flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-[url('/images/lawn.webp')] bg-cover bg-center" />
+      <div className="absolute inset-0 bg-black/50" />
+      <Card className="relative z-10 w-full max-w-md glass-effect border border-white/20 shadow-xl">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center space-x-2 mb-4">
             <Bot className="h-8 w-8 text-primary" />

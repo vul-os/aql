@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Bot, Eye, EyeOff, CheckCircle } from 'lucide-react'
 import { useAuth } from '@/context/auth-context'
+import AuthLayout from '@/components/layout/auth-layout'
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -80,8 +81,8 @@ const SignUp = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+      <AuthLayout>
+        <Card className="glass-effect border border-white/20 shadow-xl">
           <CardContent className="pt-6 text-center">
             <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Account Created!</h2>
@@ -91,22 +92,20 @@ const SignUp = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
           </CardContent>
         </Card>
-      </div>
+      </AuthLayout>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex items-center justify-center space-x-2 mb-4">
+    <AuthLayout title="Create Account" subtitle="Sign up to start managing your bots">
+      <Card className="glass-effect border border-white/20 shadow-xl">
+        <CardHeader className="text-center lg:text-left">
+          <div className="flex items-center justify-center lg:justify-start space-x-2 mb-4">
             <Bot className="h-8 w-8 text-primary" />
             <span className="text-2xl font-bold">Bot Korp</span>
           </div>
-          <CardTitle>Create Account</CardTitle>
-          <CardDescription>
-            Sign up to start managing your bots
-          </CardDescription>
+          <CardTitle>Sign Up</CardTitle>
+          <CardDescription>It only takes a minute</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -219,7 +218,7 @@ const SignUp = () => {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </AuthLayout>
   )
 }
 
