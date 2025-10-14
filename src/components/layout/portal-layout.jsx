@@ -24,11 +24,10 @@ import {
   Menu,
   ChevronDown,
   LogOut,
-  Building2,
+  Building, // swapped from Building2 for a fresher org icon
   CreditCard,
   Moon,
   Sun,
-  Bell,
   Search
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
@@ -279,7 +278,7 @@ export default function PortalLayout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Toolbar */}
-        <header className="border-b bg-background/80 supports-[backdrop-filter]:bg-background/60 backdrop-blur shadow-sm">
+        <header className="relative border-b bg-gradient-to-r from-botkorp-green-50 to-white dark:from-botkorp-grey-900 dark:to-botkorp-grey-700/80 backdrop-blur supports-[backdrop-filter]:bg-transparent shadow-md">
           <div className="flex items-center justify-between p-4 gap-3">
             {/* Mobile Menu Button */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -296,8 +295,17 @@ export default function PortalLayout() {
             {/* Organization Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Building2 className="h-4 w-4" />
+                <Button
+                  variant="outline"
+                  className="gap-2 rounded-xl bg-white/70 dark:bg-white/5 backdrop-blur border-white/60 hover:bg-white/90 dark:hover:bg-white/10 shadow-sm"
+                >
+                  <span
+                    className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-gradient-to-br from-botkorp-green-500 to-accent-blue text-white text-[11px] font-semibold shadow"
+                    aria-hidden
+                  >
+                    {selectedOrg.organization_name?.[0]?.toUpperCase()}
+                  </span>
+                  <Building className="h-4 w-4 text-botkorp-grey-700 dark:text-white/80" />
                   <span className="hidden sm:inline max-w-[150px] md:max-w-[200px] truncate">
                     {selectedOrg.organization_name}
                   </span>
@@ -337,17 +345,6 @@ export default function PortalLayout() {
 
             {/* User Menu */}
             <div className="flex items-center gap-2">
-              {/* Notifications */}
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute -top-0.5 -right-0.5">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
-                  </span>
-                </span>
-              </Button>
-
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
