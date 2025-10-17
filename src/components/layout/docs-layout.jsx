@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { useTheme } from '@/components/theme-provider';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import {
   Bot,
   Menu,
@@ -13,7 +16,10 @@ import {
   FileText,
   Search,
   ArrowLeft,
-  ChevronRight
+  ChevronRight,
+  LayoutDashboard,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -21,41 +27,55 @@ export default function DocsLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
 
-  const navigation = [
+  // Detect whether we're rendering under the client portal
+  const isPortalDocs = location.pathname.startsWith('/portal/docs');
+  const basePath = isPortalDocs ? '/portal/docs' : '/docs';
+
+  const navigation = useMemo(() => ([
     {
       title: 'Getting Started',
       items: [
-        { title: 'Home', href: '/docs', icon: <Home className="h-4 w-4" /> },
-        { title: 'FAQ', href: '/docs/faq', icon: <HelpCircle className="h-4 w-4" /> },
+        { title: 'Home', href: `${basePath}` , icon: <Home className="h-4 w-4" /> },
+        { title: 'FAQ', href: `${basePath}/faq`, icon: <HelpCircle className="h-4 w-4" /> },
       ]
     },
     {
       title: 'Legal',
       items: [
-        { title: 'Privacy Policy', href: '/docs/privacy-policy', icon: <Shield className="h-4 w-4" /> },
-        { title: 'Terms of Service', href: '/docs/terms-of-service', icon: <FileText className="h-4 w-4" /> },
-        { title: 'Cookie Policy', href: '/docs/cookie-policy', icon: <Cookie className="h-4 w-4" /> },
+        { title: 'Privacy Policy', href: `${basePath}/privacy-policy`, icon: <Shield className="h-4 w-4" /> },
+        { title: 'Terms of Service', href: `${basePath}/terms-of-service`, icon: <FileText className="h-4 w-4" /> },
+        { title: 'Cookie Policy', href: `${basePath}/cookie-policy`, icon: <Cookie className="h-4 w-4" /> },
       ]
     }
-  ];
+  ]), [basePath]);
 
   const isActive = (href) => {
-    if (href === '/docs') {
-      return location.pathname === '/docs' || location.pathname === '/docs/';
+    if (href === basePath) {
+      return location.pathname === basePath || location.pathname === `${basePath}/`;
     }
     return location.pathname === href;
   };
 
   const Sidebar = ({ mobile = false }) => (
-    <div className="flex flex-col h-full">
+    <div className={cn(
+      "flex flex-col h-full",
+      isPortalDocs && !mobile
+        ? "bg-gradient-to-b from-secondary to-muted text-secondary-foreground"
+        : ""
+    )}>
       {/* Search */}
-      <div className="p-4 border-b">
+      <div className={cn("p-4 border-b",
+        isPortalDocs ? "border-white/10" : "")}
+      >
         <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Search className={cn("absolute left-3 top-3 h-4 w-4",
+            isPortalDocs ? "text-white/70" : "text-muted-foreground")} />
           <Input
             placeholder="Search docs..."
-            className="pl-9"
+            className={cn("pl-9",
+              isPortalDocs ? "bg-white/10 border-white/10 text-white placeholder:text-white/60" : "")}
             disabled
           />
         </div>
@@ -65,7 +85,9 @@ export default function DocsLayout() {
       <nav className="flex-1 overflow-y-auto p-4 space-y-6">
         {navigation.map((section) => (
           <div key={section.title}>
-            <h3 className="font-semibold text-sm text-muted-foreground mb-2 px-2">
+            <h3 className={cn("font-semibold text-sm mb-2 px-2",
+              isPortalDocs ? "text-white/70" : "text-muted-foreground")}
+            >
               {section.title}
             </h3>
             <ul className="space-y-1">
@@ -77,14 +99,14 @@ export default function DocsLayout() {
                     className={cn(
                       "flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors",
                       isActive(item.href)
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted"
+                        ? (isPortalDocs ? "bg-white/15 text-white" : "bg-primary text-primary-foreground")
+                        : (isPortalDocs ? "hover:bg-white/10 text-white/90" : "hover:bg-muted")
                     )}
                   >
                     {item.icon}
                     <span>{item.title}</span>
                     {isActive(item.href) && (
-                      <ChevronRight className="h-4 w-4 ml-auto" />
+                      <ChevronRight className={cn("h-4 w-4 ml-auto", isPortalDocs ? "text-white/80" : "")} />
                     )}
                   </Link>
                 </li>
@@ -95,17 +117,19 @@ export default function DocsLayout() {
       </nav>
 
       {/* Back to Home */}
-      <div className="p-4 border-t">
+      <div className={cn("p-4 border-t", isPortalDocs ? "border-white/10" : "")}
+      >
         <Button
-          variant="outline"
-          className="w-full justify-start gap-2"
+          variant={isPortalDocs ? "secondary" : "outline"}
+          className={cn("w-full justify-start gap-2",
+            isPortalDocs ? "bg-white/10 text-white hover:bg-white/15" : "")}
           onClick={() => {
-            navigate('/');
+            navigate(isPortalDocs ? '/portal' : '/');
             if (mobile) setMobileMenuOpen(false);
           }}
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Home
+          {isPortalDocs ? 'Back to Portal' : 'Back to Home'}
         </Button>
       </div>
     </div>
@@ -114,7 +138,12 @@ export default function DocsLayout() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className={cn(
+        "sticky top-0 z-50 border-b backdrop-blur supports-[backdrop-filter]:bg-background/60",
+        isPortalDocs
+          ? "bg-gradient-to-r from-primary/10 to-background dark:from-secondary dark:to-muted/80"
+          : "bg-background/95"
+      )}>
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             {/* Mobile Menu */}
@@ -132,21 +161,37 @@ export default function DocsLayout() {
             {/* Logo */}
             <div
               className="flex items-center gap-2 cursor-pointer"
-              onClick={() => navigate('/')}
+              onClick={() => navigate(isPortalDocs ? '/portal' : '/')}
             >
-              <Bot className="h-6 w-6 text-primary" />
+              <Bot className={cn("h-6 w-6",
+                isPortalDocs ? "text-primary dark:text-primary" : "text-primary")} />
               <span className="font-bold hidden sm:inline">Bot Korp</span>
               <span className="text-sm text-muted-foreground hidden md:inline">/ Docs</span>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={() => navigate('/')}>
-              Home
-            </Button>
-            <Button onClick={() => navigate('/portal')}>
-              Portal
+          <div className="flex items-center gap-3">
+            {/* Theme toggle */}
+            <div className="hidden sm:flex items-center gap-2 pr-2 border-r">
+              {theme === 'dark' ? (
+                <Moon className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <Sun className="h-4 w-4 text-muted-foreground" />
+              )}
+              <Switch
+                id="docs-dark-mode"
+                checked={theme === 'dark'}
+                onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+              />
+            </div>
+
+            {!isPortalDocs && (
+              <Button variant="ghost" onClick={() => navigate('/')}>Home</Button>
+            )}
+            <Button onClick={() => navigate(isPortalDocs ? '/portal' : '/portal')} className="gap-2">
+              <LayoutDashboard className="h-4 w-4" />
+              {isPortalDocs ? 'Portal' : 'Portal'}
             </Button>
           </div>
         </div>

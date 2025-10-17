@@ -24,7 +24,8 @@ import {
   RotateCcw,
   Play,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Calendar
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -32,6 +33,8 @@ import { useAuth } from '@/context/auth-context';
 import { usePaymentAuthorizations, usePaystack } from '@/hooks/use-paystack';
 import PriceCalculator from '@/components/services/price-calculator';
 import LocationChecker from '@/components/services/location-checker';
+import ScheduleSelector from '@/components/services/schedule-selector';
+import LocationWizard from '@/components/services/location-wizard';
 
 const STORAGE_KEY = 'addServiceWizardData';
 
@@ -65,34 +68,32 @@ export default function AddServicePage() {
   const [loading, setLoading] = useState(false);
   const [locations, setLocations] = useState([]);
   const [showNewLocation, setShowNewLocation] = useState(initialData?.showNewLocation !== undefined ? initialData.showNewLocation : true);
+  const [showLocationWizard, setShowLocationWizard] = useState(false);
 
   // Get passed location from landing page
   const passedLocation = location.state?.location;
 
-  // Always 5 steps
+  // Now 5 steps (removed location step)
   const totalSteps = 5;
   const hasPaymentMethod = !authLoading && authorizations.length > 0;
 
   // Form state
   const [formData, setFormData] = useState(initialData?.formData || {
     locationId: '',
-    selectedLocation: passedLocation || null,
-    newLocation: {
-      name: 'Location 1',
-      address: passedLocation?.address || '',
-      city: '',
-      province: 'KwaZulu-Natal',
-      postalCode: '',
-      latitude: passedLocation?.latitude || null,
-      longitude: passedLocation?.longitude || null
-    },
     serviceType: 'garden',
     gardens: [
       {
         name: 'Garden 1',
         area_sqm: ''
       }
-    ]
+    ],
+    schedule: {
+      scheduleType: 'weekly',
+      weeklyDays: [],
+      monthlyDays: [],
+      preferredTime: '10:00',
+      isValid: false
+    }
   });
 
   const [calculatedPricing, setCalculatedPricing] = useState(null);
@@ -123,19 +124,6 @@ export default function AddServicePage() {
     }
   }, [selectedOrg]);
 
-  // Update default location name based on existing locations count
-  useEffect(() => {
-    if (locations.length > 0 && formData.newLocation.name === 'Location 1') {
-      setFormData({
-        ...formData,
-        newLocation: {
-          ...formData.newLocation,
-          name: `Location ${locations.length + 1}`
-        }
-      });
-    }
-  }, [locations]);
-
   const loadLocations = async () => {
     try {
       const { data, error } = await supabase
@@ -148,9 +136,9 @@ export default function AddServicePage() {
       if (error) throw error;
       setLocations(data || []);
       
-      // If we have locations and no passed location, default to showing location selector
-      if (data && data.length > 0 && !passedLocation) {
-        setShowNewLocation(false);
+      // Auto-select first location if none is selected
+      if (data && data.length > 0 && !formData.locationId) {
+        setFormData(prev => ({ ...prev, locationId: data[0].id }));
       }
     } catch (error) {
       console.error('Error loading locations:', error);
@@ -185,25 +173,17 @@ export default function AddServicePage() {
 
   const handleNext = () => {
     if (step === 1) {
-      if (!formData.locationId && !showNewLocation) {
+      if (!formData.locationId) {
         toast({
           title: 'Location Required',
-          description: 'Please select or create a location',
-          variant: 'destructive'
-        });
-        return;
-      }
-      if (showNewLocation && (!formData.newLocation.name || !formData.newLocation.address)) {
-        toast({
-          title: 'Location Details Required',
-          description: 'Please fill in the location name and address',
+          description: 'Please select a location',
           variant: 'destructive'
         });
         return;
       }
     }
 
-    if (step === 2 && !formData.serviceType) {
+    if (step === 1 && !formData.serviceType) {
       toast({
         title: 'Service Type Required',
         description: 'Please select a service type',
@@ -212,13 +192,25 @@ export default function AddServicePage() {
       return;
     }
 
-    if (step === 3) {
+    if (step === 2) {
       // Check if at least one garden has name and area
       const hasValidGarden = formData.gardens.some(g => g.name && g.area_sqm);
       if (!hasValidGarden) {
         toast({
           title: 'Garden Details Required',
           description: 'Please fill in at least one garden with name and area',
+          variant: 'destructive'
+        });
+        return;
+      }
+    }
+
+    if (step === 3) {
+      // Validate schedule
+      if (!formData.schedule || !formData.schedule.isValid) {
+        toast({
+          title: 'Schedule Required',
+          description: 'Please set up a valid service schedule',
           variant: 'destructive'
         });
         return;
@@ -235,29 +227,27 @@ export default function AddServicePage() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      let locationId = formData.locationId;
+      const locationId = formData.locationId;
 
-      // Create new location if needed
-      if (showNewLocation) {
-        const locationData = {
-          organization_id: selectedOrg.organization_id,
-          name: formData.newLocation.name,
-          address: formData.newLocation.address,
-          city: formData.newLocation.city,
-          province: formData.newLocation.province,
-          postal_code: formData.newLocation.postalCode, // Database uses postal_code (snake_case)
-          latitude: formData.selectedLocation?.latitude || formData.newLocation.latitude,
-          longitude: formData.selectedLocation?.longitude || formData.newLocation.longitude
-        };
+      // Check if service already exists at this location
+      const { data: existingCheck, error: checkError } = await supabase
+        .rpc('check_service_exists_at_location', {
+          p_location_id: locationId,
+          p_service_type: formData.serviceType
+        });
 
-        const { data: newLoc, error: locError } = await supabase
-          .from('locations')
-          .insert(locationData)
-          .select()
-          .single();
-
-        if (locError) throw locError;
-        locationId = newLoc.id;
+      if (checkError) {
+        console.error('Error checking existing service:', checkError);
+        // Continue anyway if function doesn't exist yet
+      } else if (existingCheck) {
+        toast({
+          title: 'Service Already Exists',
+          description: `A ${formData.serviceType} service already exists at this location. You can only have one service of each type per location.`,
+          variant: 'destructive',
+          duration: 5000
+        });
+        setLoading(false);
+        return;
       }
 
       // Create gardens
@@ -277,6 +267,30 @@ export default function AddServicePage() {
           .select();
 
         if (gardenError) throw gardenError;
+
+        // Create schedules for each garden
+        if (formData.schedule && formData.schedule.isValid && gardens) {
+          const schedulesToInsert = gardens.map(garden => ({
+            organization_id: selectedOrg.organization_id,
+            location_id: locationId,
+            garden_id: garden.id,
+            schedule_type: formData.schedule.scheduleType,
+            weekly_days: formData.schedule.weeklyDays || [],
+            monthly_days: formData.schedule.monthlyDays || [],
+            preferred_time: formData.schedule.preferredTime,
+            max_services_per_month: calculatedPricing?.services_per_month || 4,
+            created_by: user.id
+          }));
+
+          const { error: scheduleError } = await supabase
+            .from('service_schedules')
+            .insert(schedulesToInsert);
+
+          if (scheduleError) {
+            console.error('Error creating schedules:', scheduleError);
+            // Don't throw, just log - service is created
+          }
+        }
 
         toast({
           title: 'Service Created Successfully! 🎉',
@@ -301,6 +315,43 @@ export default function AddServicePage() {
     }
   };
 
+  // If no locations exist, redirect to services page
+  if (!loading && locations.length === 0) {
+    return (
+      <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-6">
+        <Card className="border-2 border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center space-y-6">
+            <div className="rounded-full bg-orange-100 dark:bg-orange-950 p-8">
+              <MapPin className="h-16 w-16 text-orange-600 dark:text-orange-400" />
+            </div>
+            <div className="space-y-3 max-w-xl">
+              <h3 className="text-3xl font-bold">Location Required First</h3>
+              <p className="text-muted-foreground text-lg">
+                Before you can add services, you need to create a location for your property. 
+              </p>
+            </div>
+            
+            <Alert className="max-w-xl">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Go back to the Services page or Dashboard to create your first location.
+              </AlertDescription>
+            </Alert>
+
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => navigate('/portal')}>
+                Go to Dashboard
+              </Button>
+              <Button onClick={() => navigate('/portal/services')}>
+                Go to Services
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-6">
       {/* Header */}
@@ -309,9 +360,9 @@ export default function AddServicePage() {
           <h1 className="text-3xl font-bold tracking-tight">Add New Service</h1>
           <p className="text-muted-foreground">
             Step {step} of {totalSteps}: {
-              step === 1 ? 'Choose Location' :
-              step === 2 ? 'Select Service Type' :
-              step === 3 ? 'Service Details' :
+              step === 1 ? 'Select Location & Service Type' :
+              step === 2 ? 'Service Details' :
+              step === 3 ? 'Schedule Setup' :
               step === 4 ? 'Review & Pricing' :
               'Payment Method'
             }
@@ -324,13 +375,17 @@ export default function AddServicePage() {
             onClick={() => {
               localStorage.removeItem(STORAGE_KEY);
               setStep(1);
-              setShowNewLocation(true);
               setFormData({
-                locationId: '',
-                selectedLocation: null,
-                newLocation: { name: 'Location 1', address: '', city: '', province: 'KwaZulu-Natal', postalCode: '', latitude: null, longitude: null },
+                locationId: locations[0]?.id || '',
                 serviceType: 'garden',
-                gardens: [{ name: 'Garden 1', area_sqm: '' }]
+                gardens: [{ name: 'Garden 1', area_sqm: '' }],
+                schedule: {
+                  scheduleType: 'weekly',
+                  weeklyDays: [],
+                  monthlyDays: [],
+                  preferredTime: '10:00',
+                  isValid: false
+                }
               });
               toast({ title: "Progress cleared", description: "Starting fresh" });
             }}
@@ -361,197 +416,108 @@ export default function AddServicePage() {
         )}
       </div>
 
-      {/* Step 1: Location */}
+      {/* Step 1: Location & Service Type */}
       {step === 1 && (
         <div className="space-y-6">
-          {/* Location Checker with Map - Always show */}
-          <LocationChecker
-            initialAddress={formData.newLocation.address}
-            onLocationSelect={(loc) => {
-              setFormData({
-                ...formData,
-                selectedLocation: loc,
-                newLocation: {
-                  ...formData.newLocation,
-                  address: loc.address,
-                  latitude: loc.latitude,
-                  longitude: loc.longitude
-                }
-              });
-              // Auto-enable new location creation if location selected
-              if (!formData.locationId) {
-                setShowNewLocation(true);
-              }
-            }}
-            embedded={true}
-          />
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                {showNewLocation ? 'New Location Details' : 'Or Select Existing'}
-              </span>
-            </div>
-          </div>
-
-          {!showNewLocation && locations.length > 0 ? (
-            <>
+          {/* Location Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-primary" />
+                Select Location
+              </CardTitle>
+              <CardDescription>
+                Choose which property location this service will be for
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
               <div className="space-y-2">
-                <Label>Select Existing Location</Label>
-                <Select 
-                  value={formData.locationId} 
-                  onValueChange={(value) => setFormData({...formData, locationId: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locations.map((loc) => (
-                      <SelectItem key={loc.id} value={loc.id}>
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
-                          {loc.name} - {loc.city || loc.address}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => setShowNewLocation(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create New Location Instead
-              </Button>
-            </>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Location Details</h3>
-                {locations.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowNewLocation(false)}
+                <Label>Location *</Label>
+                <div className="flex gap-2">
+                  <Select 
+                    value={formData.locationId} 
+                    onValueChange={(value) => setFormData({...formData, locationId: value})}
                   >
-                    Use Existing Location
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Choose a location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {locations.map((loc) => (
+                        <SelectItem key={loc.id} value={loc.id}>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4" />
+                            {loc.name} - {loc.city || loc.address}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setShowLocationWizard(true)}
+                    title="Add new location"
+                  >
+                    <Plus className="h-4 w-4" />
                   </Button>
+                </div>
+                {formData.locationId && (
+                  <p className="text-xs text-muted-foreground">
+                    ✓ Location selected: {locations.find(l => l.id === formData.locationId)?.name}
+                  </p>
                 )}
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="loc-name">Location Name *</Label>
-                  <Input
-                    id="loc-name"
-                    placeholder={`Location ${locations.length + 1}`}
-                    value={formData.newLocation.name}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      newLocation: {...formData.newLocation, name: e.target.value}
-                    })}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    e.g., Home, Office, Main Property
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="loc-address">Address *</Label>
-                  <Input
-                    id="loc-address"
-                    placeholder="123 Main Street"
-                    value={formData.newLocation.address}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      newLocation: {...formData.newLocation, address: e.target.value}
-                    })}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="loc-city">City</Label>
-                    <Input
-                      id="loc-city"
-                      placeholder="Durban"
-                      value={formData.newLocation.city}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        newLocation: {...formData.newLocation, city: e.target.value}
-                      })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="loc-postal">Postal Code</Label>
-                    <Input
-                      id="loc-postal"
-                      placeholder="4001"
-                      value={formData.newLocation.postalCode}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        newLocation: {...formData.newLocation, postalCode: e.target.value}
-                      })}
-                    />
-                  </div>
-                </div>
-              </div>
+          {/* Service Type Selection */}
+          <div>
+            <h3 className="font-semibold text-lg mb-4">Choose Service Type</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {serviceTypes.map((service) => (
+                <Card
+                  key={service.id}
+                  className={`cursor-pointer transition-all ${
+                    !service.available
+                      ? 'opacity-50 cursor-not-allowed'
+                      : formData.serviceType === service.id
+                      ? 'border-primary border-2 bg-primary/5'
+                      : 'hover:border-primary/50'
+                  }`}
+                  onClick={() => service.available && setFormData({...formData, serviceType: service.id})}
+                >
+                  <CardContent className="p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className={service.available ? 'text-primary' : 'text-muted-foreground'}>
+                        {service.icon}
+                      </div>
+                      {service.comingSoon && (
+                        <Badge variant="secondary">
+                          <Lock className="h-3 w-3 mr-1" />
+                          Soon
+                        </Badge>
+                      )}
+                      {formData.serviceType === service.id && (
+                        <CheckCircle className="h-5 w-5 text-primary" />
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">{service.name}</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {service.description}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          )}
+          </div>
         </div>
       )}
 
-      {/* Step 2: Service Type */}
-      {step === 2 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {serviceTypes.map((service) => (
-            <Card
-              key={service.id}
-              className={`cursor-pointer transition-all ${
-                !service.available
-                  ? 'opacity-50 cursor-not-allowed'
-                  : formData.serviceType === service.id
-                  ? 'border-primary border-2 bg-primary/5'
-                  : 'hover:border-primary/50'
-              }`}
-              onClick={() => service.available && setFormData({...formData, serviceType: service.id})}
-            >
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className={service.available ? 'text-primary' : 'text-muted-foreground'}>
-                    {service.icon}
-                  </div>
-                  {service.comingSoon && (
-                    <Badge variant="secondary">
-                      <Lock className="h-3 w-3 mr-1" />
-                      Soon
-                    </Badge>
-                  )}
-                  {formData.serviceType === service.id && (
-                    <CheckCircle className="h-5 w-5 text-primary" />
-                  )}
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg">{service.name}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {service.description}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Step 3: Garden Details */}
-      {step === 3 && formData.serviceType === 'garden' && (
+      {/* Step 2: Garden Details */}
+      {step === 2 && formData.serviceType === 'garden' && (
         <div className="space-y-6">
           {formData.gardens.map((garden, index) => (
             <Card key={index}>
@@ -636,6 +602,23 @@ export default function AddServicePage() {
         </div>
       )}
 
+      {/* Step 3: Schedule Setup */}
+      {step === 3 && (
+        <div className="max-w-3xl mx-auto">
+          <ScheduleSelector
+            schedule={formData.schedule}
+            onChange={(scheduleData) => {
+              setFormData({
+                ...formData,
+                schedule: scheduleData
+              });
+            }}
+            maxServicesPerMonth={calculatedPricing?.services_per_month || 4}
+            basePrice={calculatedPricing?.monthly_total || 0}
+          />
+        </div>
+      )}
+
       {/* Step 4: Review & Pricing */}
       {step === 4 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -650,12 +633,10 @@ export default function AddServicePage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Location</p>
                   <p className="font-medium">
-                    {showNewLocation 
-                      ? formData.newLocation.name || 'New Location'
-                      : locations.find(l => l.id === formData.locationId)?.name}
+                    {locations.find(l => l.id === formData.locationId)?.name}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {formData.newLocation.address}
+                    {locations.find(l => l.id === formData.locationId)?.address}
                   </p>
                 </div>
                 <div>
@@ -681,6 +662,54 @@ export default function AddServicePage() {
                       </div>
                     </div>
                   ))}
+              </CardContent>
+            </Card>
+
+            {/* Schedule Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Service Schedule
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Schedule Type</p>
+                    <p className="font-medium capitalize">{formData.schedule?.scheduleType || 'Not set'}</p>
+                  </div>
+                  {formData.schedule?.weeklyDays?.length > 0 && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Weekly Days</p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {formData.schedule.weeklyDays.map(day => {
+                          const dayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][day];
+                          return <Badge key={day} variant="secondary">{dayName}</Badge>;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {formData.schedule?.monthlyDays?.length > 0 && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Monthly Days</p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {formData.schedule.monthlyDays.map(day => (
+                          <Badge key={day} variant="secondary">{day}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm text-muted-foreground">Preferred Time</p>
+                    <p className="font-medium">{formData.schedule?.preferredTime || '10:00'}</p>
+                  </div>
+                  <div className="mt-3 p-2 bg-muted rounded-md">
+                    <p className="text-sm">
+                      <span className="font-medium">~{formData.schedule?.estimatedServices || 0}</span> services per month
+                    </p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -839,6 +868,29 @@ export default function AddServicePage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Location Wizard Modal */}
+      {showLocationWizard && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-background rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <LocationWizard
+              embedded={true}
+              onComplete={(newLocation) => {
+                // Reload locations and select the new one
+                loadLocations().then(() => {
+                  setFormData({...formData, locationId: newLocation.id});
+                  setShowLocationWizard(false);
+                  toast({
+                    title: 'Location Added',
+                    description: `${newLocation.name} has been added and selected`,
+                  });
+                });
+              }}
+              onCancel={() => setShowLocationWizard(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

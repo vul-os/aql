@@ -17,11 +17,14 @@ import {
   CheckCircle,
   Info,
   Sparkles,
-  Plus
+  Plus,
+  ArrowRight
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
+import LocationWizard from '@/components/services/location-wizard';
+import LegalProfileWizard from '@/components/services/legal-profile-wizard';
 import {
   LineChart,
   Line,
@@ -38,6 +41,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { format } from 'date-fns';
+import PageHeader from '@/components/ui/page-header';
 
 export default function DashboardPage() {
   const { selectedOrg } = useOutletContext();
@@ -51,8 +55,12 @@ export default function DashboardPage() {
   const [upcomingServices, setUpcomingServices] = useState([]);
   const [recentAlerts, setRecentAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [locations, setLocations] = useState([]);
+  const [showLocationWizard, setShowLocationWizard] = useState(false);
+  const [showLegalWizard, setShowLegalWizard] = useState(false);
+  const [createdLocation, setCreatedLocation] = useState(null);
 
-  const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6'];
+  const COLORS = ['#2563eb', '#1f2937', '#3b82f6', '#0f172a', '#93c5fd'];
 
   // Get greeting based on time of day
   const getGreeting = () => {
@@ -177,6 +185,21 @@ export default function DashboardPage() {
     try {
       setLoading(true);
 
+      // Check for locations first
+      const { data: locationsData } = await supabase
+        .from('locations')
+        .select('*')
+        .eq('organization_id', selectedOrg.organization_id)
+        .eq('is_active', true);
+
+      setLocations(locationsData || []);
+
+      // If no locations, stop here - we'll show the welcome screen
+      if (!locationsData || locationsData.length === 0) {
+        setLoading(false);
+        return;
+      }
+
       // Load all data in parallel for faster loading
       const [
         analyticsResult,
@@ -264,6 +287,148 @@ export default function DashboardPage() {
     );
   }
 
+  // Welcome Screen - No Locations
+  if (locations.length === 0 && !showLocationWizard) {
+    return (
+      <div className="p-4 md:p-6 space-y-6">
+        <PageHeader
+          title={`${getGreeting()}, ${getUserName()}! 👋`}
+          subtitle="Welcome to Bot Korp. Let's get you started with automated property care."
+          icon={<Bot className="h-6 w-6 text-primary" />}
+        />
+
+        <Card className="border-2 border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center space-y-6">
+            <div className="rounded-full bg-primary/10 p-8">
+              <MapPin className="h-16 w-16 text-primary" />
+            </div>
+            <div className="space-y-3 max-w-2xl">
+              <h3 className="text-3xl font-bold">Let's Start with Your Location</h3>
+              <p className="text-muted-foreground text-lg">
+                Before we can set up any services, we need to know where your property is located. 
+                This helps us ensure coverage and deploy the right bots for your area.
+              </p>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <Button size="lg" onClick={() => setShowLocationWizard(true)} className="text-lg px-8 py-6">
+                <MapPin className="h-6 w-6 mr-2" />
+                Add Your First Location
+                <ArrowRight className="h-6 w-6 ml-2" />
+              </Button>
+            </div>
+
+            <div className="pt-8 border-t w-full max-w-xl">
+              <h4 className="font-semibold mb-3">What happens next?</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-left">
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                    1
+                  </div>
+                  <div>
+                    <p className="font-medium">Add Location</p>
+                    <p className="text-muted-foreground text-xs">Tell us where your property is</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                    2
+                  </div>
+                  <div>
+                    <p className="font-medium">Choose Services</p>
+                    <p className="text-muted-foreground text-xs">Select lawn, pool, or security</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                    3
+                  </div>
+                  <div>
+                    <p className="font-medium">Relax</p>
+                    <p className="text-muted-foreground text-xs">Let the bots handle it!</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Legal Profile Wizard Modal - Show after location created
+  if (showLegalWizard && createdLocation) {
+    return (
+      <div className="p-4 md:p-6 space-y-6">
+        <LegalProfileWizard
+          locationAddress={{
+            address: createdLocation.address,
+            city: createdLocation.city,
+            province: createdLocation.province,
+            postal_code: createdLocation.postal_code
+          }}
+          onComplete={() => {
+            setShowLegalWizard(false);
+            toast({
+              title: 'Perfect! You\'re all set',
+              description: 'Your legal profile is complete. Now you can add services.',
+            });
+            // Navigate to add service page
+            setTimeout(() => {
+              navigate('/portal/services/add');
+            }, 1000);
+          }}
+          onSkip={() => {
+            setShowLegalWizard(false);
+            toast({
+              title: 'Legal profile skipped',
+              description: 'You can complete it later in settings. Redirecting to add service...',
+            });
+            setTimeout(() => {
+              navigate('/portal/services/add');
+            }, 1000);
+          }}
+          embedded={false}
+        />
+      </div>
+    );
+  }
+
+  // Location Wizard Modal
+  if (showLocationWizard) {
+    return (
+      <div className="p-4 md:p-6 space-y-6">
+        <LocationWizard
+          organizationId={selectedOrg.organization_id}
+          onComplete={(newLocation) => {
+            setShowLocationWizard(false);
+            setCreatedLocation(newLocation);
+            loadDashboardData();
+            
+            // Check if legal profile is complete
+            if (!profile?.legal_profile_completed) {
+              toast({
+                title: 'Great! Location created',
+                description: 'Next, let\'s complete your legal profile for service contracts.',
+              });
+              setShowLegalWizard(true);
+            } else {
+              toast({
+                title: 'Great! Location created',
+                description: 'Now you can add your first service',
+              });
+              setTimeout(() => {
+                navigate('/portal/services/add');
+              }, 1000);
+            }
+          }}
+          onCancel={() => setShowLocationWizard(false)}
+          embedded={false}
+        />
+      </div>
+    );
+  }
+
   // Get services summary
   const getServicesSummary = () => {
     if (!analytics) return '';
@@ -281,37 +446,26 @@ export default function DashboardPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      {/* Personalized Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">
-          {getGreeting()}, {getUserName()}! 👋
-        </h1>
-        <p className="text-muted-foreground text-lg">
-          {analytics?.total_bots > 0 ? (
-            <>
-              You're managing <span className="font-semibold text-foreground">{analytics.total_bots} bot{analytics.total_bots > 1 ? 's' : ''}</span>
-              {getServicesSummary() && (
-                <> across {getServicesSummary()}</>
-              )}
-              {analytics.total_area_managed_sqm > 0 && (
-                <>, covering <span className="font-semibold text-foreground">{Math.round(analytics.total_area_managed_sqm).toLocaleString()} m²</span></>
-              )}
-              .
-            </>
-          ) : (
-            <>Welcome to your Bot Korp dashboard. Let's get started by adding your first bot!</>
-          )}
+      <PageHeader
+        title={`${getGreeting()}, ${getUserName()}! 👋`}
+        subtitle={
+          analytics?.total_bots > 0
+            ? `You're managing ${analytics.total_bots} bot${analytics.total_bots > 1 ? 's' : ''}` +
+              `${getServicesSummary() ? ` across ${getServicesSummary()}` : ''}` +
+              `${analytics.total_area_managed_sqm > 0 ? `, covering ${Math.round(analytics.total_area_managed_sqm).toLocaleString()} m²` : ''}.`
+            : "Welcome to your Bot Korp dashboard. Let's get started by adding your first bot!"
+        }
+        icon={<Bot className="h-6 w-6 text-primary" />}
+      />
+      {/* Upcoming Service Text */}
+      {analytics?.upcoming_services_count > 0 && analytics?.next_service_date && (
+        <p className="text-muted-foreground">
+          <Calendar className="h-4 w-4 inline mr-2" />
+          Next service: <span className="font-semibold text-foreground">
+            {format(new Date(analytics.next_service_date), 'MMMM d, yyyy')}
+          </span> ({analytics.upcoming_services_count} service{analytics.upcoming_services_count > 1 ? 's' : ''} scheduled)
         </p>
-        {/* Upcoming Service Text */}
-        {analytics?.upcoming_services_count > 0 && analytics?.next_service_date && (
-          <p className="text-muted-foreground">
-            <Calendar className="h-4 w-4 inline mr-2" />
-            Next service: <span className="font-semibold text-foreground">
-              {format(new Date(analytics.next_service_date), 'MMMM d, yyyy')}
-            </span> ({analytics.upcoming_services_count} service{analytics.upcoming_services_count > 1 ? 's' : ''} scheduled)
-          </p>
-        )}
-      </div>
+      )}
 
       {/* Top Stats (Tech-Nature Fusion brief) */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
@@ -320,7 +474,7 @@ export default function DashboardPage() {
           value={analytics?.operational_bots ?? 0}
           icon={<Bot className="h-5 w-5 text-white/90" />}
           description={`${analytics?.total_bots ?? 0} total bots`}
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-botkorp-green-500 to-botkorp-green-600 text-white shadow-lg hover:shadow-xl transition-transform hover:-translate-y-0.5"
+          className="relative overflow-hidden rounded-2xl bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-transform hover:-translate-y-0.5"
           onDark
         />
         <StatCard
@@ -328,14 +482,14 @@ export default function DashboardPage() {
           value={analytics?.next_service_date ? format(new Date(analytics.next_service_date), 'MMM d, yyyy') : '—'}
           icon={<Calendar className="h-5 w-5 text-white/90" />}
           description={analytics?.upcoming_services_count ? `${analytics.upcoming_services_count} scheduled` : 'No upcoming'}
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#42A5F5] to-blue-600 text-white shadow-lg hover:shadow-xl transition-transform hover:-translate-y-0.5"
+          className="relative overflow-hidden rounded-2xl bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-transform hover:-translate-y-0.5"
           onDark
         />
         <StatCard
           title="Total Properties"
           value={analytics?.total_locations ?? 0}
           icon={<Home className="h-5 w-5 text-white/90" />}
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#AB47BC] to-purple-600 text-white shadow-lg hover:shadow-xl transition-transform hover:-translate-y-0.5"
+          className="relative overflow-hidden rounded-2xl bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-transform hover:-translate-y-0.5"
           onDark
         />
         <StatCard
@@ -343,7 +497,7 @@ export default function DashboardPage() {
           value={analytics?.services_completed_this_month ?? 0}
           icon={<Activity className="h-5 w-5 text-white/90" />}
           description="Services completed"
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#FF9800] to-orange-600 text-white shadow-lg hover:shadow-xl transition-transform hover:-translate-y-0.5"
+          className="relative overflow-hidden rounded-2xl bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-transform hover:-translate-y-0.5"
           onDark
         />
       </div>
@@ -499,7 +653,7 @@ export default function DashboardPage() {
                   <XAxis dataKey="bot_type" />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="count" fill="#10b981" />
+                  <Bar dataKey="count" fill="#2563eb" />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -534,7 +688,7 @@ export default function DashboardPage() {
                 <Line 
                   type="monotone" 
                   dataKey="area_mowed" 
-                  stroke="#10b981" 
+                  stroke="#2563eb" 
                   name="Area (m²)"
                   strokeWidth={2}
                 />

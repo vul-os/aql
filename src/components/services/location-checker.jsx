@@ -309,19 +309,19 @@ export default function LocationChecker({ onLocationSelect, initialAddress = '',
                 </div>
               </Alert>
             ) : (
-              <Alert className="border-orange-500 bg-orange-50">
+              <Alert className="border border-primary/40 bg-primary/5">
                 <div className="flex items-start gap-3 w-full">
-                  <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                  <AlertCircle className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
-                    <div className="font-semibold text-orange-900 mb-1">
+                    <div className="font-semibold text-foreground mb-1">
                       We're expanding to your area soon!
                     </div>
-                    <AlertDescription className="text-orange-800 mb-3">
+                    <AlertDescription className="text-foreground/80 mb-3">
                       We're not quite in your neighborhood yet, but we're growing fast! Let us know you're interested and we'll prioritize your area.
                     </AlertDescription>
                     <Button
                       size="sm"
-                      className="bg-orange-600 hover:bg-orange-700"
+                      className="bg-primary hover:bg-primary/90"
                       onClick={() => {
                         const subject = encodeURIComponent('Request Coverage - Bot Korp Service');
                         const body = encodeURIComponent(
@@ -475,19 +475,19 @@ export default function LocationChecker({ onLocationSelect, initialAddress = '',
                 </div>
               </Alert>
             ) : (
-              <Alert className="border-orange-500 bg-orange-50">
+              <Alert className="border border-primary/40 bg-primary/5">
                 <div className="flex items-start gap-3 w-full">
-                  <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                  <AlertCircle className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
-                    <div className="font-semibold text-orange-900 mb-1">
+                    <div className="font-semibold text-foreground mb-1">
                       We're expanding to your area soon!
                     </div>
-                    <AlertDescription className="text-orange-800 mb-3">
+                    <AlertDescription className="text-foreground/80 mb-3">
                       We're not quite in your neighborhood yet, but we're growing fast! Let us know you're interested and we'll prioritize your area.
                     </AlertDescription>
                     <Button
                       size="sm"
-                      className="bg-orange-600 hover:bg-orange-700"
+                      className="bg-primary hover:bg-primary/90"
                       onClick={() => {
                         const subject = encodeURIComponent('Request Coverage - Bot Korp Service');
                         const body = encodeURIComponent(

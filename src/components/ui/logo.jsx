@@ -26,24 +26,24 @@ const Logo = ({ className = "", variant = "default" }) => {
       <div className="flex justify-center items-center mb-4">
         <div className="relative">
           {/* Main logo with icon.svg */}
-          <div className="w-20 h-20 beepbite-gradient rounded-2xl flex items-center justify-center shadow-xl transform hover:scale-105 transition-transform duration-300 border-4 border-white">
+          <div className="w-20 h-20 brand-gradient rounded-2xl flex items-center justify-center shadow-xl transform hover:scale-105 transition-transform duration-300 border-4 border-background">
             <img 
               src="/icon.svg" 
               alt="BeepBite Bell Icon" 
               className="w-12 h-12 filter brightness-0 invert"
             />
             {/* Small notification dot */}
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full animate-pulse shadow-lg"></div>
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-accent rounded-full animate-pulse shadow-lg"></div>
           </div>
         </div>
       </div>
       
       <div className="space-y-2">
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
-          <span className="beepbite-gradient-text">Beep</span>
-          <span className="text-gray-900">Bite</span>
+          <span className="brand-gradient-text">Beep</span>
+          <span className="text-foreground">Bite</span>
         </h1>
-        <p className="text-sm sm:text-base text-gray-600 font-semibold tracking-wide uppercase">
+        <p className="text-sm sm:text-base text-muted-foreground font-semibold tracking-wide uppercase">
           Restaurant Order Management
         </p>
       </div>

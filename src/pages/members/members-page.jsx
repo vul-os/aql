@@ -57,6 +57,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
+import PageHeader from '@/components/ui/page-header';
 import { format } from 'date-fns';
 
 export default function MembersPage() {
@@ -376,15 +377,19 @@ export default function MembersPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Team Members</h1>
-          <p className="text-muted-foreground">
-            Manage team members and their permissions
-          </p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <PageHeader
+          title="Team Members"
+          subtitle="Manage team members and their permissions"
+          actions={
+            <DialogTrigger asChild>
+              <Button>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Invite Member
+              </Button>
+            </DialogTrigger>
+          }
+        />
           <DialogTrigger asChild>
             <Button>
               <UserPlus className="h-4 w-4 mr-2" />
@@ -480,14 +485,13 @@ export default function MembersPage() {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
 
       {/* Pending Invitations */}
       {invitations.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-orange-500" />
+              <Clock className="h-5 w-5 text-primary" />
               Pending Invitations ({invitations.length})
             </CardTitle>
             <CardDescription>
@@ -499,8 +503,8 @@ export default function MembersPage() {
               {invitations.map((invitation) => (
                 <div key={invitation.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-950 flex items-center justify-center">
-                      <Mail className="h-5 w-5 text-orange-600" />
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Mail className="h-5 w-5 text-primary" />
                     </div>
                     <div>
                       <p className="font-medium">{invitation.email}</p>

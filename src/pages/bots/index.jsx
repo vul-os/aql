@@ -120,7 +120,7 @@ const BotsPage = () => {
     switch (type) {
       case 'mowbot': return <Bot className="h-6 w-6 text-green-600" />
       case 'poolbot': return <Bot className="h-6 w-6 text-blue-600" />
-      case 'weather_station': return <Activity className="h-6 w-6 text-purple-600" />
+      case 'weather_station': return <Activity className="h-6 w-6 text-primary" />
       default: return <Bot className="h-6 w-6" />
     }
   }

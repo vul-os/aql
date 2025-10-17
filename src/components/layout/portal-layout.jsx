@@ -28,8 +28,10 @@ import {
   CreditCard,
   Moon,
   Sun,
-  Search
+  Search,
+  Calendar
 } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -48,10 +50,13 @@ export default function PortalLayout() {
   const [selectedOrg, setSelectedOrg] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [locations, setLocations] = useState([]);
+  const [selectedLocation, setSelectedLocation] = useState(null);
 
   const mainNavItems = [
     { icon: <LayoutDashboard className="h-5 w-5" />, label: 'Dashboard', path: '/portal' },
     { icon: <Sprout className="h-5 w-5" />, label: 'Services', path: '/portal/services' },
+    { icon: <Calendar className="h-5 w-5" />, label: 'Schedules', path: '/portal/services/schedules' },
     { icon: <Users className="h-5 w-5" />, label: 'Members', path: '/portal/members' },
     { icon: <CreditCard className="h-5 w-5" />, label: 'Billing', path: '/portal/billing' },
   ];
@@ -63,6 +68,10 @@ export default function PortalLayout() {
   useEffect(() => {
     loadUserOrganizations();
   }, [user]);
+
+  useEffect(() => {
+    loadOrganizationLocations();
+  }, [selectedOrg]);
 
   const loadUserOrganizations = async () => {
     if (!user) return;
@@ -110,12 +119,53 @@ export default function PortalLayout() {
     }
   };
 
+  const loadOrganizationLocations = async () => {
+    try {
+      if (!selectedOrg?.organization_id) {
+        setLocations([]);
+        setSelectedLocation(null);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('locations')
+        .select('*')
+        .eq('organization_id', selectedOrg.organization_id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setLocations(data || []);
+
+      const savedLocationId = localStorage.getItem('selectedLocationId');
+      const locToSelect = (data || []).find(l => String(l.id) === String(savedLocationId)) || data?.[0] || null;
+      if (locToSelect) {
+        setSelectedLocation(locToSelect);
+        localStorage.setItem('selectedLocationId', locToSelect.id);
+      } else {
+        setSelectedLocation(null);
+      }
+    } catch (error) {
+      console.error('Error loading locations:', error);
+    }
+  };
+
   const handleOrgChange = (org) => {
     setSelectedOrg(org);
     localStorage.setItem('selectedOrgId', org.organization_id);
     toast({
       title: "Organization switched",
       description: `Now viewing ${org.organization_name}`,
+    });
+  };
+
+  const handleLocationChange = (loc) => {
+    setSelectedLocation(loc);
+    if (loc?.id) localStorage.setItem('selectedLocationId', loc.id);
+    toast({
+      title: 'Location selected',
+      description: loc?.name || 'Location changed',
     });
   };
 
@@ -158,7 +208,7 @@ export default function PortalLayout() {
       {!mobile && (
         <>
           <div className="pointer-events-none absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_20%_20%,_rgba(255,255,255,0.15),_transparent_40%)]" />
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-white/10" />
+          {/* Removed top shine overlay */}
         </>
       )}
 
@@ -233,6 +283,31 @@ export default function PortalLayout() {
           </button>
         ))}
 
+        {/* Organizations at bottom */}
+        {organizations?.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <p className="text-sm text-white/70 mb-2">Organizations</p>
+            <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+              {organizations.map((org) => (
+                <button
+                  key={org.organization_id}
+                  className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                    selectedOrg?.organization_id === org.organization_id
+                      ? 'bg-white/15 text-white'
+                      : 'text-white/80 hover:bg-white/10'
+                  }`}
+                  onClick={() => {
+                    handleOrgChange(org);
+                    if (mobile) setMobileMenuOpen(false);
+                  }}
+                >
+                  {org.organization_name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Organization Info (mobile only) */}
         {mobile && selectedOrg && (
           <div className="mt-4 pt-4 border-t border-white/10">
@@ -292,43 +367,47 @@ export default function PortalLayout() {
               </SheetContent>
             </Sheet>
 
-            {/* Organization Dropdown */}
+            {/* Location Dropdown (replaces Organization selector) */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
                   className="gap-2 rounded-xl bg-white/70 dark:bg-white/5 backdrop-blur border-white/60 hover:bg-white/90 dark:hover:bg-white/10 shadow-sm"
                 >
-                  <span
-                    className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-gradient-to-br from-botkorp-green-500 to-accent-blue text-white text-[11px] font-semibold shadow"
-                    aria-hidden
-                  >
-                    {selectedOrg.organization_name?.[0]?.toUpperCase()}
+                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-gradient-to-br from-botkorp-green-500 to-accent-blue text-white text-[11px] font-semibold shadow" aria-hidden>
+                    {selectedLocation?.name?.[0]?.toUpperCase() || 'L'}
                   </span>
-                  <Building className="h-4 w-4 text-botkorp-grey-700 dark:text-white/80" />
-                  <span className="hidden sm:inline max-w-[150px] md:max-w-[200px] truncate">
-                    {selectedOrg.organization_name}
+                  <MapPin className="h-4 w-4 text-botkorp-grey-700 dark:text-white/80" />
+                  <span className="hidden sm:inline max-w-[180px] truncate">
+                    {selectedLocation?.name || 'Select location'}
                   </span>
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-64">
-                <DropdownMenuLabel>Organizations</DropdownMenuLabel>
+                <DropdownMenuLabel>Locations</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {organizations.map((org) => (
-                  <DropdownMenuItem
-                    key={org.organization_id}
-                    onClick={() => handleOrgChange(org)}
-                    className="cursor-pointer"
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-medium">{org.organization_name}</span>
-                      <span className="text-xs text-muted-foreground capitalize">
-                        {org.member_role}
-                      </span>
-                    </div>
-                  </DropdownMenuItem>
-                ))}
+                {(locations && locations.length > 0) ? (
+                  locations.map((loc) => (
+                    <DropdownMenuItem
+                      key={loc.id}
+                      onClick={() => handleLocationChange(loc)}
+                      className="cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span className="font-medium">{loc.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {loc.city || loc.address}
+                          </span>
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <div className="px-2 py-3 text-sm text-muted-foreground">No locations found for this organization</div>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 

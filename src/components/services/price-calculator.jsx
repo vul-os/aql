@@ -4,36 +4,47 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Calculator, CheckCircle, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Calculator, CheckCircle, Loader2, Bot, Wrench, Info } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 export default function PriceCalculator({ 
   serviceType = 'garden', 
   onPriceChange, 
   totalArea = null, 
-  gardenCount = null 
+  gardenCount = null,
+  servicesPerMonth = 1 
 }) {
   const [area, setArea] = useState('');
   const [frequency, setFrequency] = useState('bi-weekly');
   const [loading, setLoading] = useState(false);
   const [pricing, setPricing] = useState({
-    monthly: 0,
-    setupFee: 0,
-    tier: '',
-    description: ''
+    monthly_total: 0,
+    bot_rental_total: 0,
+    service_total: 0,
+    bot_rental_per_bot: 0,
+    service_price_per_visit: 0,
+    setup_fee: 0,
+    number_of_bots: 0,
+    services_per_month: 0
   });
 
-  // Use totalArea prop if provided, otherwise use local state
-  const effectiveArea = totalArea !== null ? totalArea : area;
+  // Use provided props or local state
   const effectiveGardenCount = gardenCount !== null ? gardenCount : 1;
+  const effectiveServicesPerMonth = servicesPerMonth || 1;
 
   useEffect(() => {
     calculatePricing();
-  }, [effectiveArea, frequency, serviceType, totalArea, gardenCount]);
+  }, [gardenCount, servicesPerMonth, serviceType]);
 
   const calculatePricing = async () => {
-    if (!effectiveArea || parseFloat(effectiveArea) <= 0) {
-      const emptyPricing = { monthly: 0, setupFee: 0, tier: '', description: '' };
+    if (effectiveGardenCount <= 0) {
+      const emptyPricing = { 
+        monthly_total: 0, 
+        bot_rental_total: 0, 
+        service_total: 0, 
+        setup_fee: 0 
+      };
       setPricing(emptyPricing);
       if (onPriceChange) onPriceChange(emptyPricing);
       return;
@@ -41,19 +52,17 @@ export default function PriceCalculator({
 
     setLoading(true);
     try {
-      const areaSqm = parseFloat(effectiveArea);
-      
       // Map service type to bot_type
       const botType = serviceType === 'garden' ? 'mow_bot' : 
                       serviceType === 'pool' ? 'pool_bot' : 
                       serviceType === 'security' ? 'security_bot' : 
                       'mow_bot';
       
-      // Call the pricing calculation function
-      const { data, error } = await supabase.rpc('calculate_total_pricing', {
+      // Call the NEW tier pricing function
+      const { data, error } = await supabase.rpc('get_tier_pricing', {
         p_bot_type: botType,
-        p_total_area_sqm: areaSqm,
-        p_garden_count: effectiveGardenCount
+        p_number_of_bots: effectiveGardenCount, // 1 bot per garden
+        p_services_per_month: effectiveServicesPerMonth
       });
 
       if (error) {
@@ -62,20 +71,17 @@ export default function PriceCalculator({
       }
 
       if (data) {
-        // Apply frequency multiplier to monthly rate
-        const frequencyMultiplier = {
-          'bi-weekly': 1.8,    // More frequent = higher cost
-          'monthly': 1.0       // Base rate
-        };
-
-        const baseMonthly = parseFloat(data.monthly);
-        const adjustedMonthly = Math.round(baseMonthly * (frequencyMultiplier[frequency] || 1));
-
         const newPricing = {
-          monthly: adjustedMonthly,
-          setupFee: parseFloat(data.setupFee),
-          tier: data.tier || '',
-          description: data.description || ''
+          monthly_total: parseFloat(data.monthly_total || 0),
+          bot_rental_total: parseFloat(data.bot_rental_total || 0),
+          service_total: parseFloat(data.service_total || 0),
+          bot_rental_per_bot: parseFloat(data.bot_rental_per_bot || 150),
+          service_price_per_visit: parseFloat(data.service_price_per_visit || 0),
+          setup_fee: parseFloat(data.setup_fee || 0),
+          number_of_bots: effectiveGardenCount,
+          services_per_month: effectiveServicesPerMonth,
+          tier_name: data.tier_name || '',
+          pricing_type: data.pricing_type || 'calculated'
         };
 
         setPricing(newPricing);
@@ -84,7 +90,12 @@ export default function PriceCalculator({
     } catch (error) {
       console.error('Error calculating pricing:', error);
       // Fallback to zero pricing on error
-      const fallbackPricing = { monthly: 0, setupFee: 0, tier: '', description: '' };
+      const fallbackPricing = { 
+        monthly_total: 0, 
+        bot_rental_total: 0, 
+        service_total: 0, 
+        setup_fee: 0 
+      };
       setPricing(fallbackPricing);
       if (onPriceChange) onPriceChange(fallbackPricing);
     } finally {

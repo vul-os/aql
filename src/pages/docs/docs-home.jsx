@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,31 +23,33 @@ import {
 
 export default function DocsHome() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const basePath = location.pathname.startsWith('/portal/docs') ? '/portal/docs' : '/docs';
 
   const quickLinks = [
     {
       icon: <HelpCircle className="h-6 w-6" />,
       title: 'FAQ',
       description: 'Frequently asked questions about Bot Korp',
-      href: '/docs/faq'
+      href: `${basePath}/faq`
     },
     {
       icon: <ShieldLock className="h-6 w-6" />,
       title: 'Privacy Policy',
       description: 'How we handle and protect your data',
-      href: '/docs/privacy-policy'
+      href: `${basePath}/privacy-policy`
     },
     {
       icon: <FileText className="h-6 w-6" />,
       title: 'Terms of Service',
       description: 'Terms and conditions for using Bot Korp',
-      href: '/docs/terms-of-service'
+      href: `${basePath}/terms-of-service`
     },
     {
       icon: <Cookie className="h-6 w-6" />,
       title: 'Cookie Policy',
       description: 'Information about cookies we use',
-      href: '/docs/cookie-policy'
+      href: `${basePath}/cookie-policy`
     }
   ];
 
@@ -248,7 +250,7 @@ export default function DocsHome() {
           Can't find what you're looking for? We're here to help.
         </p>
         <div className="flex flex-col sm:flex-row gap-4">
-          <Button variant="outline" onClick={() => navigate('/docs/faq')}>
+          <Button variant="outline" onClick={() => navigate(`${basePath}/faq`)}>
             <HelpCircle className="mr-2 h-4 w-4" />
             View FAQ
           </Button>

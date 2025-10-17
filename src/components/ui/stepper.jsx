@@ -22,38 +22,38 @@ const Stepper = ({
     const status = getStepStatus(stepIndex);
     
     if (status === 'completed') {
-      return <Check className="w-5 h-5 text-white" />;
+      return <Check className="w-5 h-5 text-primary-foreground" />;
     }
     
     if (status === 'current') {
       return step.icon ? (
-        <step.icon className="w-5 h-5 text-white" />
+        <step.icon className="w-5 h-5 text-primary-foreground" />
       ) : showStepNumbers ? (
-        <span className="text-white font-semibold text-sm">{stepIndex + 1}</span>
+        <span className="text-primary-foreground font-semibold text-sm">{stepIndex + 1}</span>
       ) : (
-        <Clock className="w-5 h-5 text-white" />
+        <Clock className="w-5 h-5 text-primary-foreground" />
       );
     }
     
     return step.icon ? (
-      <step.icon className="w-5 h-5 text-gray-400" />
+      <step.icon className="w-5 h-5 text-muted-foreground" />
     ) : showStepNumbers ? (
-      <span className="text-gray-400 font-semibold text-sm">{stepIndex + 1}</span>
+      <span className="text-muted-foreground font-semibold text-sm">{stepIndex + 1}</span>
     ) : (
-      <Circle className="w-5 h-5 text-gray-400" />
+      <Circle className="w-5 h-5 text-muted-foreground" />
     );
   };
 
   const getStepIconBg = (stepIndex) => {
     const status = getStepStatus(stepIndex);
     
-    if (status === 'completed') return 'bg-gray-600 border-gray-600';
-    if (status === 'current') return 'beepbite-gradient border-orange-500';
-    return 'bg-white border-gray-300';
+    if (status === 'completed') return 'bg-foreground/70 border-foreground/70';
+    if (status === 'current') return 'brand-gradient border-accent';
+    return 'bg-background border-border';
   };
 
   const getConnectorColor = (stepIndex) => {
-    return stepIndex < currentStep ? 'bg-gray-600' : 'bg-gray-200';
+    return stepIndex < currentStep ? 'bg-foreground/70' : 'bg-border';
   };
 
   if (variant === 'cards') {
@@ -68,9 +68,9 @@ const Stepper = ({
                 key={index}
                 className={cn(
                   "border-2 transition-all duration-200",
-                  status === 'completed' && "border-gray-600 bg-gray-50",
-                  status === 'current' && "border-orange-500 bg-orange-50",
-                  status === 'upcoming' && "border-gray-200"
+                  status === 'completed' && "border-foreground/60 bg-muted",
+                  status === 'current' && "border-accent bg-accent/10",
+                  status === 'upcoming' && "border-border"
                 )}
               >
                 <CardContent className="p-4 sm:p-6">
@@ -88,9 +88,9 @@ const Stepper = ({
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className={cn(
                           "font-semibold text-lg",
-                          status === 'completed' && "text-gray-700",
-                          status === 'current' && "text-orange-700",
-                          status === 'upcoming' && "text-gray-500"
+                          status === 'completed' && "text-foreground",
+                          status === 'current' && "text-accent",
+                          status === 'upcoming' && "text-muted-foreground"
                         )}>
                           {step.title}
                         </h3>
@@ -99,9 +99,9 @@ const Stepper = ({
                           variant="outline"
                           className={cn(
                             "text-xs font-medium",
-                            status === 'completed' && "bg-gray-100 text-gray-700 border-gray-300",
-                            status === 'current' && "bg-orange-100 text-orange-700 border-orange-300",
-                            status === 'upcoming' && "bg-gray-50 text-gray-500 border-gray-200"
+                            status === 'completed' && "bg-muted text-foreground border-border",
+                            status === 'current' && "bg-accent/10 text-accent border-accent/30",
+                            status === 'upcoming' && "bg-muted text-muted-foreground border-border"
                           )}
                         >
                           {status === 'completed' ? 'Completed' : 
@@ -112,17 +112,17 @@ const Stepper = ({
                       {step.description && (
                         <p className={cn(
                           "text-sm",
-                          status === 'completed' && "text-gray-600",
-                          status === 'current' && "text-orange-600",
-                          status === 'upcoming' && "text-gray-400"
+                          status === 'completed' && "text-muted-foreground",
+                          status === 'current' && "text-accent",
+                          status === 'upcoming' && "text-muted-foreground"
                         )}>
                           {step.description}
                         </p>
                       )}
                       
                       {step.details && status === 'current' && (
-                        <div className="mt-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
-                          <p className="text-sm text-orange-700">{step.details}</p>
+                        <div className="mt-3 p-3 bg-accent/10 rounded-lg border border-accent/30">
+                          <p className="text-sm text-accent">{step.details}</p>
                         </div>
                       )}
                     </div>
@@ -166,20 +166,20 @@ const Stepper = ({
               <div className="flex-1 min-w-0 pb-8">
                 <h3 className={cn(
                   "font-semibold text-base mb-1",
-                  status === 'completed' && "text-gray-700",
-                  status === 'current' && "text-orange-700",
-                  status === 'upcoming' && "text-gray-500"
+                  status === 'completed' && "text-foreground",
+                  status === 'current' && "text-accent",
+                  status === 'upcoming' && "text-muted-foreground"
                 )}>
                   {step.title}
                 </h3>
                 
                 {step.description && (
-                  <p className={cn(
-                    "text-sm",
-                    status === 'completed' && "text-gray-600",
-                    status === 'current' && "text-orange-600",
-                    status === 'upcoming' && "text-gray-400"
-                  )}>
+                <p className={cn(
+                  "text-sm",
+                  status === 'completed' && "text-muted-foreground",
+                  status === 'current' && "text-accent",
+                  status === 'upcoming' && "text-muted-foreground"
+                )}>
                     {step.description}
                   </p>
                 )}
@@ -212,18 +212,18 @@ const Stepper = ({
                 <div className="flex-1 min-w-0">
                   <h3 className={cn(
                     "font-semibold text-sm",
-                    status === 'completed' && "text-gray-700",
-                    status === 'current' && "text-orange-700",
-                    status === 'upcoming' && "text-gray-500"
+                    status === 'completed' && "text-foreground",
+                    status === 'current' && "text-accent",
+                    status === 'upcoming' && "text-muted-foreground"
                   )}>
                     {step.title}
                   </h3>
                   {step.description && (
                     <p className={cn(
                       "text-xs mt-1",
-                      status === 'completed' && "text-gray-600",
-                      status === 'current' && "text-orange-600",
-                      status === 'upcoming' && "text-gray-400"
+                      status === 'completed' && "text-muted-foreground",
+                      status === 'current' && "text-accent",
+                      status === 'upcoming' && "text-muted-foreground"
                     )}>
                       {step.description}
                     </p>
@@ -246,7 +246,7 @@ const Stepper = ({
               <div key={index} className="flex flex-col items-center relative z-10">
                 {/* Icon */}
                 <div className={cn(
-                  "w-12 h-12 rounded-full border-2 flex items-center justify-center mb-3 bg-white",
+                  "w-12 h-12 rounded-full border-2 flex items-center justify-center mb-3 bg-background",
                   getStepIconBg(index)
                 )}>
                   {getStepIcon(index, step)}
@@ -256,9 +256,9 @@ const Stepper = ({
                 <div className="text-center max-w-32">
                   <h3 className={cn(
                     "font-semibold text-sm mb-1",
-                    status === 'completed' && "text-gray-700",
-                    status === 'current' && "text-orange-700",
-                    status === 'upcoming' && "text-gray-500"
+                    status === 'completed' && "text-foreground",
+                    status === 'current' && "text-accent",
+                    status === 'upcoming' && "text-muted-foreground"
                   )}>
                     {step.title}
                   </h3>
@@ -266,9 +266,9 @@ const Stepper = ({
                   {step.description && (
                     <p className={cn(
                       "text-xs",
-                      status === 'completed' && "text-gray-600",
-                      status === 'current' && "text-orange-600",
-                      status === 'upcoming' && "text-gray-400"
+                      status === 'completed' && "text-muted-foreground",
+                      status === 'current' && "text-accent",
+                      status === 'upcoming' && "text-muted-foreground"
                     )}>
                       {step.description}
                     </p>
@@ -279,9 +279,9 @@ const Stepper = ({
           })}
           
           {/* Connector lines */}
-          <div className="absolute top-6 left-6 right-6 h-0.5 bg-gray-200 -z-10" />
+          <div className="absolute top-6 left-6 right-6 h-0.5 bg-border -z-10" />
           <div 
-            className="absolute top-6 left-6 h-0.5 bg-gray-600 -z-10 transition-all duration-500"
+            className="absolute top-6 left-6 h-0.5 bg-foreground/70 -z-10 transition-all duration-500"
             style={{ 
               width: `${((currentStep) / (steps.length - 1)) * 100}%` 
             }}

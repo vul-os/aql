@@ -132,7 +132,7 @@ const BotDetailPage = () => {
     switch (type) {
       case 'mowbot': return <Bot className="h-8 w-8 text-green-600" />
       case 'poolbot': return <Bot className="h-8 w-8 text-blue-600" />
-      case 'weather_station': return <Activity className="h-8 w-8 text-purple-600" />
+      case 'weather_station': return <Activity className="h-8 w-8 text-primary" />
       default: return <Bot className="h-8 w-8" />
     }
   }
@@ -327,7 +327,7 @@ const BotDetailPage = () => {
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <Clock className="h-5 w-5 text-purple-600" />
+                    <Clock className="h-5 w-5 text-primary" />
                     <span className="text-sm font-medium">Commands Sent</span>
                   </div>
                   <span className="text-2xl font-bold">{commands.length}</span>

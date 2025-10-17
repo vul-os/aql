@@ -46,6 +46,7 @@ const ServicesPage = lazyImport(() => import('./pages/services/services-page'));
 const GardenDetailPage = lazyImport(() => import('./pages/services/garden-detail-page'));
 const AddServicePage = lazyImport(() => import('./pages/services/add-service-page'));
 const AddServicePublic = lazyImport(() => import('./pages/services/add-service-public'));
+const SchedulesPage = lazyImport(() => import('./pages/services/schedules-page'));
 const SettingsPage = lazyImport(() => import('./pages/settings/settings-page'));
 const BillingPage = lazyImport(() => import('./pages/settings/billing-page'));
 const MembersPage = lazyImport(() => import('./pages/members/members-page'));
@@ -104,6 +105,7 @@ const AppRoutes = () => {
           {/* Services */}
           <Route path="services" element={<ServicesPage />} />
           <Route path="services/add" element={<AddServicePage />} />
+          <Route path="services/schedules" element={<SchedulesPage />} />
           <Route path="garden/:id" element={<GardenDetailPage />} />
           
           {/* Settings */}
@@ -114,6 +116,15 @@ const AppRoutes = () => {
           
           {/* Members */}
           <Route path="members" element={<MembersPage />} />
+
+          {/* Docs inside portal with portal-styled sidebar */}
+          <Route path="docs" element={<DocsLayout />}>
+            <Route index element={<DocsHome />} />
+            <Route path="faq" element={<FAQPage />} />
+            <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
+            <Route path="terms-of-service" element={<TermsOfServicePage />} />
+            <Route path="cookie-policy" element={<CookiePolicyPage />} />
+          </Route>
         </Route>
 
         {/* Docs routes */}

@@ -1,10 +1,13 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Shield, Mail } from 'lucide-react';
 
 export default function PrivacyPolicyPage() {
+  const location = useLocation();
+  const basePath = location.pathname.startsWith('/portal/docs') ? '/portal/docs' : '/docs';
   return (
     <div className="max-w-3xl space-y-8">
       {/* Header */}
@@ -174,7 +177,7 @@ export default function PrivacyPolicyPage() {
         <section>
           <h2 className="text-2xl font-bold mb-4">8. Cookies and Tracking</h2>
           <p className="text-muted-foreground leading-relaxed">
-            We use cookies and similar tracking technologies to enhance your experience. For detailed information about our use of cookies, please see our <a href="/docs/cookie-policy" className="text-primary hover:underline">Cookie Policy</a>.
+            We use cookies and similar tracking technologies to enhance your experience. For detailed information about our use of cookies, please see our <a href={`${basePath}/cookie-policy`} className="text-primary hover:underline">Cookie Policy</a>.
           </p>
         </section>
 

@@ -28,6 +28,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from '@/components/theme-provider';
+import PageHeader from '@/components/ui/page-header';
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -149,13 +150,11 @@ export default function SettingsPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">
-          Manage your account settings and preferences
-        </p>
-      </div>
+      <PageHeader
+        title="Settings"
+        subtitle="Manage your account settings and preferences"
+        icon={<Settings className="h-6 w-6 text-primary" />}
+      />
 
       {/* Settings Tabs */}
       <Tabs defaultValue="profile" className="space-y-4">

@@ -29,3 +29,36 @@ it must lay out the agreement, and they must accept, a copy of rental contract s
 Invoices, have setup for with VAT and without VAT
 
 have a way to test 0 fees only deposit for a period 
+
+
+
+
+
+
+when no location, on home or dashboard page have a nice welcome text and guide user to make location
+if you have a location, then guide to make a service, look at auth context after location is made to update location
+for creating services, on service page if no location also it must guide to create for all of the use a common location wizzard component 
+for scheduling a service must be made first 
+step 1 of service wizzard remove becuase you need a location to do anything 
+
+
+
+
+on landing page, when location is typed, first check if in coverate map, if covered guide user to sign up and create a location with their location, use routes for this 
+
+after a while, it just goes blank, maybe an issue with supabase token refresh or something? 
+
+settle on a colour scheme
+
+landing page is too much like storenxtdoor, make it unique but still nice and comprehensive with a great ui but a unique to us, focus on robotics and wires connecting things. Have this theme throughout 
+
+footer looks ugly, make it more like stornxtdoor, link to docs
+
+fix docs, make more comprehensive about system, location first, then services then setting up schedules, even have a setup checklist, make it easy for a user to onboard or if they have issues. 
+docs must also look at service wizzard, explain stuff in more detail 
+
+also the service fee is too high, you need to seperate bot rental and service, bot rental is like roughly 150 per bot, 1 bot per garden, and then service which includes edge trimming and servicing the bot itself known as a bot swap. 1 service a month 2 bots should come to 500, 4 bots 8 services should be like 1750, come up with pricing structure in db, and fix frontend, also show pricing per garden and explain on frontend, also there are no contracts, you can pause and cancel at any time, full flexibility, have a winter graphic saying you can pause when you dont need us, we take the bots and leave the infrastructure. we also need table for rental contract, have db with a cdn url field and other info for this agreement, and dont worry about generation of pdf, just have it as last step of the wizzard, also have a field for their signature image, their legal information comes from the profile information set already. 
+
+
+
+resend api key re_HjE9aC37_P2q9RsQAr4F91i3cKHKEfwgN

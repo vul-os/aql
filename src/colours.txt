@@ -1,21 +1,64 @@
-# BEEPBITE VIBRANT ORANGE PALETTE
-# Designed for energy, appetite appeal, and modern restaurant branding
+# BOT KORP FRESH & TECH COLOR PALETTE
+# Designed for outdoor robotics, lawn care, and modern automation services
 
-Primary Orange: #F97316       # Bright vibrant orange (Tailwind orange-500)
-Secondary Orange: #FB923C     # Softer bright orange (Tailwind orange-400)  
-Accent Orange: #FDBA74        # Light warm orange (Tailwind orange-300)
+# === PRIMARY 3-COLOR SCHEME ===
 
-Primary Text: #1A1A1A         # Rich black for excellent readability
-Secondary Text: #4A4A4A       # Medium gray for secondary content  
-Tertiary Text: #6B7280        # Light gray for subtle text
+Primary Green (Emerald-500): #10B981    # Fresh, natural, growth - represents lawns and outdoor services
+Secondary Blue (Blue-500): #3B82F6      # Tech, trust, reliability - represents automation and technology
+Accent Slate (Slate-900): #0F172A       # Modern, professional depth - provides contrast and sophistication
 
-Background White: #FFFFFF     # Pure white for cleanliness
-Background Light: #FAFAFA     # Soft white for sections
-Background Cream: #FFF7ED     # Very light orange cream (Tailwind orange-50)
+# === EXTENDED PALETTE ===
 
-Success Green: #10B981        # For positive actions/status
-Warning Amber: #F59E0B        # For alerts (harmonizes with orange)
-Error Red: #EF4444            # For errors/urgent items
+# Green Variations
+Emerald-50: #ecfdf5          # Very light green for backgrounds
+Emerald-500: #10B981         # Primary green (main brand color)
+Emerald-600: #059669         # Darker green for hover states
 
-Border Light: #E5E7EB         # Light borders
-Border Medium: #D1D5DB        # Medium borders for definition
+# Blue Variations  
+Blue-500: #3B82F6            # Secondary blue (tech/trust)
+Blue-600: #2563EB            # Darker blue for emphasis
+
+# Slate/Neutral Variations
+Slate-700: #334155           # Medium dark slate
+Slate-800: #1E293B           # Dark slate for backgrounds
+Slate-900: #0F172A           # Accent slate (darkest)
+
+# === UTILITY COLORS ===
+
+White: #FFFFFF               # Pure white for cleanliness
+Light Background: #FAFAFA    # Soft white for sections
+Border Light: #E5E7EB        # Light borders
+
+Success Green: #10B981       # Same as primary - consistent messaging
+Warning Amber: #F59E0B       # For alerts/important notices
+Error Red: #EF4444           # For errors/urgent items
+
+# === USAGE GUIDELINES ===
+
+# Primary Actions: Use Emerald-500 (#10B981)
+# - CTA buttons
+# - Links
+# - Active states
+# - Success indicators
+
+# Secondary Actions: Use Blue-500 (#3B82F6)
+# - Secondary buttons
+# - Interactive elements
+# - Tech-focused features
+# - Informational badges
+
+# Backgrounds & Text: Use Slate variations
+# - Headers/navigation: Slate-900
+# - Dark sections: Slate-800
+# - Body text: Slate-700
+# - Light text on dark: White
+
+# Gradients:
+# - Hero sections: from-slate-900 via-slate-800 to-slate-700
+# - Glow effects: emerald-500 and blue-500
+# - Brand gradient: from-emerald-500 to-blue-500
+
+# === HSL VALUES (for CSS variables) ===
+--primary: 160 84% 39%       /* Emerald-500 */
+--secondary: 217 91% 60%     /* Blue-500 */
+--accent: 222 47% 11%        /* Slate-900 */

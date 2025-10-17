@@ -21,7 +21,7 @@
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--beepbite-border-medium) / 0.9);
+    background: hsl(var(--border) / 0.9);
   }
 
   /* Firefox */
@@ -31,82 +31,64 @@
   }
 
   :root {
-    --background: 0 0% 100%; /* Clean White */
-    --foreground: 200 17% 20%; /* Slate Grey (deep) for text: #546E7A-ish */
+    --background: 0 0% 100%; /* White */
+    --foreground: 222 47% 11%; /* Slate-900: #0F172A */
     --card: 0 0% 100%;
-    --card-foreground: 200 17% 20%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 200 17% 20%;
+    --popover-foreground: 222 47% 11%;
 
-    /* Tech-Nature Fusion */
-    --primary: 88 46% 49%; /* Fresh Grass Green: #7CB342 */
+    /* Brand 3-color scheme: Fresh & Tech */
+    --primary: 160 84% 39%; /* Primary Green (Emerald-500): #10B981 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 200 17% 39%; /* Slate Grey: #546E7A */
+    --secondary: 217 91% 60%; /* Secondary Blue (Blue-500): #3B82F6 */
     --secondary-foreground: 0 0% 100%;
-    --muted: 200 15% 96%; /* Soft slate tint for subtle sections */
-    --muted-foreground: 200 10% 45%; /* Muted slate text */
-    --accent: 88 35% 60%; /* Lighter Grass Green accent */
+    --muted: 220 14% 96%; /* Light slate for subtle sections */
+    --muted-foreground: 215 16% 47%; /* Muted slate text */
+    --accent: 222 47% 11%; /* Accent Slate (Slate-900): #0F172A */
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%; /* Error Red */
+    --destructive: 0 84% 60%; /* Red for errors */
     --destructive-foreground: 0 0% 100%;
-    --border: 200 15% 90%; /* Light slate border */
-    --input: 200 15% 90%;
-    --ring: 88 46% 49%; /* Grass Green focus ring */
+    --border: 220 13% 91%; /* Light slate border */
+    --input: 220 13% 91%;
+    --ring: 160 84% 39%; /* Primary green focus ring */
 
-    /* Charts aligned to Tech-Nature Fusion */
-    --chart-1: 88 46% 49%; /* Grass Green */
-    --chart-2: 200 17% 39%; /* Slate Grey */
-    --chart-3: 88 35% 60%; /* Lighter Green */
-    --chart-4: 43 96% 56%; /* Amber */
-    --chart-5: 199 89% 48%; /* Tech Blue */
+    /* Charts mapped to 3-color scheme */
+    --chart-1: 160 84% 39%; /* Primary Green */
+    --chart-2: 217 91% 60%; /* Secondary Blue */
+    --chart-3: 222 47% 11%; /* Accent Slate */
+    --chart-4: 160 84% 39%;
+    --chart-5: 217 91% 60%;
     --radius: 0.75rem;
-    
-    /* Custom BeepBite variables with vibrant orange palette */
-    --beepbite-orange: 25 95% 53%; /* Primary Orange: #F97316 */
-    --beepbite-orange-soft: 24 95% 61%; /* Secondary Orange: #FB923C */
-    --beepbite-accent: 32 91% 72%; /* Accent Orange: #FDBA74 */
-    --beepbite-text-primary: 0 0% 10%; /* Primary Text: #1A1A1A */
-    --beepbite-text-secondary: 0 0% 29%; /* Secondary Text: #4A4A4A */
-    --beepbite-text-tertiary: 220 13% 46%; /* Tertiary Text: #6B7280 */
-    --beepbite-background: 0 0% 100%; /* Background White */
-    --beepbite-background-light: 0 0% 98%; /* Background Light: #FAFAFA */
-    --beepbite-background-cream: 33 100% 97%; /* Background Cream: #FFF7ED */
-    --beepbite-success: 158 84% 39%; /* Success Green: #10B981 */
-    --beepbite-warning: 43 96% 50%; /* Warning Amber: #F59E0B */
-    --beepbite-error: 0 84% 60%; /* Error Red: #EF4444 */
-    --beepbite-border-light: 220 13% 91%; /* Border Light: #E5E7EB */
-    --beepbite-border-medium: 220 13% 83%; /* Border Medium: #D1D5DB */
-    --beepbite-gradient-start: 25 95% 53%; /* Primary Orange */
-    --beepbite-gradient-end: 24 95% 61%; /* Secondary Orange */
   }
 
   .dark {
-    --background: 200 17% 12%; /* Deep Slate Grey */
-    --foreground: 0 0% 100%; /* Clean White text */
-    --card: 200 17% 16%;
+    --background: 222 47% 11%; /* Slate-900 dark */
+    --foreground: 0 0% 100%; /* White text */
+    --card: 222 40% 14%;
     --card-foreground: 0 0% 100%;
-    --popover: 200 17% 16%;
+    --popover: 222 40% 14%;
     --popover-foreground: 0 0% 100%;
-    --primary: 88 46% 49%; /* Grass Green retained for brand */
+    --primary: 160 84% 39%; /* Primary Green (Emerald-500) */
     --primary-foreground: 0 0% 100%;
-    --secondary: 200 12% 25%; /* Softer slate */
+    --secondary: 217 91% 60%; /* Secondary Blue (Blue-500) */
     --secondary-foreground: 0 0% 100%;
-    --muted: 200 12% 25%;
-    --muted-foreground: 200 10% 65%;
-    --accent: 88 35% 60%; /* Lighter Green accent */
-    --accent-foreground: 0 0% 100%;
+    --muted: 222 25% 20%;
+    --muted-foreground: 222 10% 70%;
+    --accent: 220 13% 91%; /* Light slate for dark mode accent */
+    --accent-foreground: 222 47% 11%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 200 12% 25%;
-    --input: 200 12% 25%;
-    --ring: 88 46% 49%;
+    --border: 222 25% 20%;
+    --input: 222 25% 20%;
+    --ring: 160 84% 39%;
 
     /* Dark mode chart colors */
-    --chart-1: 88 46% 49%;
-    --chart-2: 200 12% 65%;
-    --chart-3: 88 35% 60%;
-    --chart-4: 43 96% 56%;
-    --chart-5: 199 89% 48%;
+    --chart-1: 160 84% 39%;
+    --chart-2: 217 91% 60%;
+    --chart-3: 0 0% 100%;
+    --chart-4: 160 84% 39%;
+    --chart-5: 217 91% 60%;
   }
 
   /* Apply border and background styles */
@@ -165,41 +147,18 @@
     }
   }
 
-  /* Custom BeepBite utility classes */
-  .beepbite-gradient {
-    background: linear-gradient(135deg, hsl(var(--beepbite-gradient-start)), hsl(var(--beepbite-gradient-end)));
+  /* Brand gradient helpers */
+  .brand-gradient {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
   }
-  
-  .beepbite-gradient-text {
-    background: linear-gradient(135deg, hsl(var(--beepbite-gradient-start)), hsl(var(--beepbite-gradient-end)));
+  .brand-gradient-text {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-
-  /* Restaurant-optimized color utility classes */
-  .beepbite-text-primary {
-    color: hsl(var(--beepbite-text-primary));
-  }
-  
-  .beepbite-text-secondary {
-    color: hsl(var(--beepbite-text-secondary));
-  }
-  
-  .beepbite-text-tertiary {
-    color: hsl(var(--beepbite-text-tertiary));
-  }
-  
-  .beepbite-bg-cream {
-    background-color: hsl(var(--beepbite-background-cream));
-  }
-  
-  .beepbite-border-light {
-    border-color: hsl(var(--beepbite-border-light));
-  }
-  
-  .beepbite-border-medium {
-    border-color: hsl(var(--beepbite-border-medium));
+  .brand-gradient-reverse {
+    background: linear-gradient(135deg, hsl(var(--secondary)), hsl(var(--primary)));
   }
 
   .glass-effect {

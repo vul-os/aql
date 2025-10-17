@@ -13,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Sprout, 
   Droplets, 
@@ -22,11 +23,15 @@ import {
   Eye,
   Loader2,
   CircleDot,
-  Ruler
+  Ruler,
+  ArrowRight,
+  AlertCircle
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
+import PageHeader from '@/components/ui/page-header';
+import LocationWizard from '@/components/services/location-wizard';
 import { format } from 'date-fns';
 
 export default function ServicesPage() {
@@ -37,6 +42,8 @@ export default function ServicesPage() {
   const [gardens, setGardens] = useState([]);
   const [pools, setPools] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [locations, setLocations] = useState([]);
+  const [showLocationWizard, setShowLocationWizard] = useState(false);
 
   useEffect(() => {
     if (selectedOrg) {
@@ -56,6 +63,8 @@ export default function ServicesPage() {
         .select('*')
         .eq('organization_id', selectedOrg.organization_id)
         .eq('is_active', true);
+
+      setLocations(locationsData || []);
 
       if (!locationsData || locationsData.length === 0) {
         setGardens([]);
@@ -184,27 +193,75 @@ export default function ServicesPage() {
     </Card>
   );
 
+  // Show location wizard if requested
+  if (showLocationWizard) {
+    return (
+      <div className="p-6 space-y-6">
+        <LocationWizard
+          organizationId={selectedOrg.organization_id}
+          onComplete={(newLocation) => {
+            setShowLocationWizard(false);
+            loadData();
+            toast({
+              title: 'Location Created!',
+              description: 'You can now add services to this location',
+            });
+          }}
+          onCancel={() => setShowLocationWizard(false)}
+          embedded={false}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Services</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage your automated services and schedules
-          </p>
-        </div>
-        <Button onClick={() => navigate('/portal/services/add')} size="lg" className="gap-2">
-          <Plus className="h-5 w-5" />
-          Add New Service
-        </Button>
-      </div>
+      <PageHeader
+        title="Services"
+        subtitle="Manage your automated services and schedules"
+        actions={
+          locations.length > 0 ? (
+            <Button onClick={() => navigate('/portal/services/add')} size="lg" className="gap-2">
+              <Plus className="h-5 w-5" />
+              Add New Service
+            </Button>
+          ) : null
+        }
+      />
 
       {/* Services Grid */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
+      ) : locations.length === 0 ? (
+        <Card className="border-2 border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center space-y-6">
+            <div className="rounded-full bg-orange-100 dark:bg-orange-950 p-8">
+              <MapPin className="h-16 w-16 text-orange-600 dark:text-orange-400" />
+            </div>
+            <div className="space-y-3 max-w-xl">
+              <h3 className="text-3xl font-bold">Location Required</h3>
+              <p className="text-muted-foreground text-lg">
+                Before you can add services, you need to create a location for your property. 
+                This tells us where to deploy your bots and ensures we service your area.
+              </p>
+            </div>
+            
+            <Alert className="max-w-xl">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                A location is required to add any service (lawn, pool, security). This ensures accurate coverage and bot deployment.
+              </AlertDescription>
+            </Alert>
+
+            <Button size="lg" onClick={() => setShowLocationWizard(true)} className="text-lg px-8 py-6">
+              <MapPin className="h-6 w-6 mr-2" />
+              Create Your First Location
+              <ArrowRight className="h-6 w-6 ml-2" />
+            </Button>
+          </CardContent>
+        </Card>
       ) : gardens.length === 0 && pools.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
@@ -252,7 +309,7 @@ export default function ServicesPage() {
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
                           <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                            <Droplets className="h-6 w-6 text-blue-600" />
+                            <img src="/images/pool-icon.png" alt="Pool" className="h-6 w-6" />
                           </div>
                           <div>
                             <CardTitle className="text-xl">{pool.name}</CardTitle>

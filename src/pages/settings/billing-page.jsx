@@ -33,6 +33,7 @@ import { supabase } from '@/lib/supabase';
 import { usePaymentAuthorizations, usePaystack, formatCardNumber, formatExpiryDate, getCardIcon, isCardExpired } from '@/hooks/use-paystack';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
+import PageHeader from '@/components/ui/page-header';
 
 export default function BillingPage() {
   const { organization } = useOutletContext();
@@ -159,13 +160,11 @@ export default function BillingPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-4xl font-bold">Billing & Payments</h1>
-        <p className="text-muted-foreground mt-2 text-lg">
-          Manage subscriptions, payment methods, and billing details
-        </p>
-      </div>
+      <PageHeader
+        title="Billing & Payments"
+        subtitle="Manage subscriptions, payment methods, and billing details"
+        icon={<CreditCard className="h-6 w-6 text-primary" />}
+      />
 
       {/* Monthly Overview - Hero Card */}
       <Card className="border-2 bg-gradient-to-br from-primary/5 via-background to-background">
