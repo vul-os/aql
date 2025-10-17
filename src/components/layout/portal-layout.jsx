@@ -286,26 +286,25 @@ export default function PortalLayout() {
   };
 
   const Sidebar = ({ mobile = false }) => (
-    <div className={`flex flex-col h-full bg-gradient-to-b from-botkorp-grey-900 to-botkorp-grey-700 text-white relative`}>
+    <div className={`flex flex-col h-full bg-gradient-to-b from-background to-muted dark:from-botkorp-black dark:to-botkorp-slate-blue text-foreground dark:text-white border-r relative`}>
       {/* Background overlays for subtle pattern and shine */}
       {!mobile && (
         <>
-          <div className="pointer-events-none absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_20%_20%,_rgba(255,255,255,0.15),_transparent_40%)]" />
-          {/* Removed top shine overlay */}
+          <div className="pointer-events-none absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_20%_20%,_rgba(0,0,0,0.05),_transparent_40%)] dark:bg-[radial-gradient(circle_at_20%_20%,_rgba(255,255,255,0.15),_transparent_40%)]" />
         </>
       )}
 
       {/* Logo - Clickable to landing */}
       <div 
-        className="p-4 border-b border-white/10 flex items-center gap-3 cursor-pointer hover:bg-white/10 backdrop-blur-sm transition-colors"
+        className="p-4 border-b border-border flex items-center gap-3 cursor-pointer hover:bg-muted/50 dark:hover:bg-white/10 backdrop-blur-sm transition-colors"
         onClick={() => {
           navigate('/');
           if (mobile) setMobileMenuOpen(false);
         }}
       >
         <div className="relative">
-          <div className="absolute -inset-2 rounded-full shadow-glow-green" />
-          <Bot className="relative h-8 w-8 text-botkorp-green-500 drop-shadow" />
+          <div className="absolute -inset-2 rounded-full shadow-glow-orange" />
+          <Bot className="relative h-8 w-8 text-accent drop-shadow" />
         </div>
         <h1 className="text-xl font-bold tracking-tight">Bot Korp</h1>
       </div>
@@ -317,8 +316,8 @@ export default function PortalLayout() {
             key={item.path}
             className={`w-full flex items-center justify-start gap-3 px-3 py-2 rounded-xl transition-all group ${
               isActivePath(item.path)
-                ? 'bg-gradient-to-r from-botkorp-green-500 to-botkorp-green-600 text-white shadow-lg'
-                : 'text-white/80 hover:bg-white/10 hover:backdrop-blur-sm'
+                ? 'bg-accent text-accent-foreground shadow-lg'
+                : 'text-foreground/70 dark:text-white/80 hover:bg-muted dark:hover:bg-white/10 hover:backdrop-blur-sm'
             }`}
             onClick={() => {
               navigate(item.path);
@@ -328,7 +327,7 @@ export default function PortalLayout() {
             <span className={`inline-flex items-center justify-center h-8 w-8 rounded-lg ${
               isActivePath(item.path)
                 ? 'bg-white/20'
-                : 'bg-white/5 group-hover:bg-white/10'
+                : 'bg-muted/50 dark:bg-white/5 group-hover:bg-muted dark:group-hover:bg-white/10'
             }`}>
               {item.icon}
             </span>
@@ -343,10 +342,10 @@ export default function PortalLayout() {
       {/* Admin Navigation (only visible to admins) */}
       {isAdmin && (
         <div className="px-3 pb-3">
-          <div className="border-t border-white/10 pt-3 mt-3">
+          <div className="border-t border-border pt-3 mt-3">
             <div className="flex items-center gap-2 px-3 mb-2">
-              <Shield className="h-4 w-4 text-white/70" />
-              <p className="text-xs font-semibold text-white/70 uppercase tracking-wider">Admin</p>
+              <Shield className="h-4 w-4 text-muted-foreground" />
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Admin</p>
             </div>
             <div className="space-y-1">
               {adminNavItems.map((item) => (
@@ -354,8 +353,8 @@ export default function PortalLayout() {
                   key={item.path}
                   className={`w-full flex items-center justify-start gap-3 px-3 py-2 rounded-xl transition-all group ${
                     isActivePath(item.path)
-                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg'
-                      : 'text-white/80 hover:bg-white/10 hover:backdrop-blur-sm'
+                      ? 'bg-secondary text-secondary-foreground shadow-lg'
+                      : 'text-foreground/70 dark:text-white/80 hover:bg-muted dark:hover:bg-white/10 hover:backdrop-blur-sm'
                   }`}
                   onClick={() => {
                     navigate(item.path);
@@ -365,7 +364,7 @@ export default function PortalLayout() {
                   <span className={`inline-flex items-center justify-center h-8 w-8 rounded-lg ${
                     isActivePath(item.path)
                       ? 'bg-white/20'
-                      : 'bg-white/5 group-hover:bg-white/10'
+                      : 'bg-muted/50 dark:bg-white/5 group-hover:bg-muted dark:group-hover:bg-white/10'
                   }`}>
                     {item.icon}
                   </span>
@@ -381,14 +380,14 @@ export default function PortalLayout() {
       )}
 
       {/* Bottom Navigation - Settings */}
-      <div className="p-4 border-t border-white/10 mt-auto">
+      <div className="p-4 border-t border-border mt-auto">
         {bottomNavItems.map((item) => (
           <button
             key={item.path}
             className={`w-full flex items-center justify-start gap-3 px-3 py-2 rounded-xl transition-all ${
               isActivePath(item.path)
-                ? 'bg-gradient-to-r from-botkorp-green-500 to-botkorp-green-600 text-white shadow-lg'
-                : 'text-white/80 hover:bg-white/10 hover:backdrop-blur-sm'
+                ? 'bg-accent text-accent-foreground shadow-lg'
+                : 'text-foreground/70 dark:text-white/80 hover:bg-muted dark:hover:bg-white/10 hover:backdrop-blur-sm'
             }`}
             onClick={() => {
               navigate(item.path);
@@ -398,7 +397,7 @@ export default function PortalLayout() {
             <span className={`inline-flex items-center justify-center h-8 w-8 rounded-lg ${
               isActivePath(item.path)
                 ? 'bg-white/20'
-                : 'bg-white/5'
+                : 'bg-muted/50 dark:bg-white/5'
             }`}>
               {item.icon}
             </span>
@@ -407,16 +406,16 @@ export default function PortalLayout() {
         ))}
 
         {/* Organizations at bottom */}
-        <div className="mt-4 pt-4 border-t border-white/10">
-          <p className="text-sm text-white/70 mb-2">Organizations</p>
+        <div className="mt-4 pt-4 border-t border-border">
+          <p className="text-sm text-muted-foreground mb-2">Organizations</p>
           <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
             {organizations.map((org) => (
               <button
                 key={org.organization_id}
                 className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
                   selectedOrg?.organization_id === org.organization_id
-                    ? 'bg-white/15 text-white'
-                    : 'text-white/80 hover:bg-white/10'
+                    ? 'bg-accent/10 text-accent font-medium'
+                    : 'text-foreground/80 dark:text-white/80 hover:bg-muted dark:hover:bg-white/10'
                 }`}
                 onClick={() => {
                   handleOrgChange(org);
@@ -428,7 +427,7 @@ export default function PortalLayout() {
             ))}
             {/* Create Organization Button */}
             <button
-              className="w-full text-left px-3 py-2 rounded-lg transition-colors text-white/80 hover:bg-white/10 border border-white/20 border-dashed flex items-center gap-2"
+              className="w-full text-left px-3 py-2 rounded-lg transition-colors text-foreground/80 dark:text-white/80 hover:bg-muted dark:hover:bg-white/10 border border-border border-dashed flex items-center gap-2"
               onClick={() => setShowCreateOrgDialog(true)}
             >
               <Plus className="h-4 w-4" />
@@ -439,10 +438,10 @@ export default function PortalLayout() {
 
         {/* Organization Info (mobile only) */}
         {mobile && selectedOrg && (
-          <div className="mt-4 pt-4 border-t border-white/10">
-            <p className="text-sm text-white/70 mb-2">Organization</p>
+          <div className="mt-4 pt-4 border-t border-border">
+            <p className="text-sm text-muted-foreground mb-2">Organization</p>
             <p className="font-semibold">{selectedOrg.organization_name}</p>
-            <p className="text-xs text-white/60 capitalize">{selectedOrg.member_role}</p>
+            <p className="text-xs text-muted-foreground capitalize">{selectedOrg.member_role}</p>
           </div>
         )}
       </div>
@@ -482,7 +481,7 @@ export default function PortalLayout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Toolbar */}
-        <header className="relative border-b bg-gradient-to-r from-botkorp-green-50 to-white dark:from-botkorp-grey-900 dark:to-botkorp-grey-700/80 backdrop-blur supports-[backdrop-filter]:bg-transparent shadow-md">
+        <header className="relative border-b bg-gradient-to-r from-background to-muted/20 dark:from-botkorp-black dark:to-botkorp-slate-blue/80 backdrop-blur supports-[backdrop-filter]:bg-transparent shadow-md">
           <div className="flex items-center justify-between p-4 gap-3">
             {/* Mobile Menu Button */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -503,10 +502,10 @@ export default function PortalLayout() {
                   variant="outline"
                   className="gap-2 rounded-xl bg-white/70 dark:bg-white/5 backdrop-blur border-white/60 hover:bg-white/90 dark:hover:bg-white/10 shadow-sm"
                 >
-                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-gradient-to-br from-botkorp-green-500 to-accent-blue text-white text-[11px] font-semibold shadow" aria-hidden>
+                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-gradient-to-br from-botkorp-orange to-botkorp-slate-blue text-white text-[11px] font-semibold shadow" aria-hidden>
                     {selectedLocation?.name?.[0]?.toUpperCase() || 'L'}
                   </span>
-                  <MapPin className="h-4 w-4 text-botkorp-grey-700 dark:text-white/80" />
+                  <MapPin className="h-4 w-4 text-botkorp-slate-blue dark:text-white/80" />
                   <span className="hidden sm:inline max-w-[180px] truncate">
                     {selectedLocation?.name || 'Select location'}
                   </span>

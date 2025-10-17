@@ -1,64 +1,82 @@
-# BOT KORP FRESH & TECH COLOR PALETTE
-# Designed for outdoor robotics, lawn care, and modern automation services
+# BOT KORP MODERN TECH COLOR PALETTE
+# Sleek, modern design with high contrast and striking accents
 
-# === PRIMARY 3-COLOR SCHEME ===
+# === PRIMARY COLOR SCHEME ===
 
-Primary Green (Emerald-500): #10B981    # Fresh, natural, growth - represents lawns and outdoor services
-Secondary Blue (Blue-500): #3B82F6      # Tech, trust, reliability - represents automation and technology
-Accent Slate (Slate-900): #0F172A       # Modern, professional depth - provides contrast and sophistication
+Matte Black: #121212             # Primary - Professional, modern, high-tech
+Bright Tangerine: #FF6B35        # Accent - Energy, innovation, action
+Slate Blue-Gray: #4F5D75         # Supporting - Stability, trust
+Cool Silver: #B0B3B8             # Supporting - Sophistication, neutrality
 
 # === EXTENDED PALETTE ===
 
-# Green Variations
-Emerald-50: #ecfdf5          # Very light green for backgrounds
-Emerald-500: #10B981         # Primary green (main brand color)
-Emerald-600: #059669         # Darker green for hover states
+# Black Variations
+Matte Black: #121212            # Primary black (main brand color)
+Black Light: #1a1a1a            # Slightly lighter black for cards
+Black Soft: #2a2a2a             # Even lighter for subtle contrast
 
-# Blue Variations  
-Blue-500: #3B82F6            # Secondary blue (tech/trust)
-Blue-600: #2563EB            # Darker blue for emphasis
+# Orange Variations  
+Bright Tangerine: #FF6B35       # Primary accent (main CTA color)
+Tangerine Dark: #E85A2A         # Darker orange for hover states
+Tangerine Light: #FF8A5C        # Lighter orange for highlights
 
-# Slate/Neutral Variations
-Slate-700: #334155           # Medium dark slate
-Slate-800: #1E293B           # Dark slate for backgrounds
-Slate-900: #0F172A           # Accent slate (darkest)
+# Supporting Color Variations
+Slate Blue-Gray: #4F5D75        # Secondary color
+Slate Blue Light: #6B7A94       # Lighter slate for subtle elements
+Cool Silver: #B0B3B8            # Neutral supporting color
+Silver Light: #D0D2D5           # Lighter silver for borders
 
 # === UTILITY COLORS ===
 
-White: #FFFFFF               # Pure white for cleanliness
-Light Background: #FAFAFA    # Soft white for sections
-Border Light: #E5E7EB        # Light borders
+White: #FFFFFF                  # Pure white for text on dark
+Off-White: #FAFAFA              # Soft white for light backgrounds
+Light Gray: #E5E7EB             # Light borders and dividers
 
-Success Green: #10B981       # Same as primary - consistent messaging
-Warning Amber: #F59E0B       # For alerts/important notices
-Error Red: #EF4444           # For errors/urgent items
+Success: #10B981                # Green for success states
+Warning: #F59E0B                # Amber for warnings
+Error: #EF4444                  # Red for errors
 
 # === USAGE GUIDELINES ===
 
-# Primary Actions: Use Emerald-500 (#10B981)
+# Primary Actions: Use Bright Tangerine (#FF6B35)
 # - CTA buttons
-# - Links
+# - Important actions
 # - Active states
-# - Success indicators
+# - Focus indicators
 
-# Secondary Actions: Use Blue-500 (#3B82F6)
+# Primary Backgrounds: Use Matte Black (#121212)
+# - Headers/navigation
+# - Dark sections
+# - Primary cards
+# - Hero sections
+
+# Secondary Elements: Use Slate Blue-Gray (#4F5D75)
 # - Secondary buttons
 # - Interactive elements
-# - Tech-focused features
+# - Supporting text
 # - Informational badges
 
-# Backgrounds & Text: Use Slate variations
-# - Headers/navigation: Slate-900
-# - Dark sections: Slate-800
-# - Body text: Slate-700
-# - Light text on dark: White
+# Neutral Elements: Use Cool Silver (#B0B3B8)
+# - Borders
+# - Dividers
+# - Muted text
+# - Disabled states
 
 # Gradients:
-# - Hero sections: from-slate-900 via-slate-800 to-slate-700
-# - Glow effects: emerald-500 and blue-500
-# - Brand gradient: from-emerald-500 to-blue-500
+# - Hero sections: from-botkorp-black via-botkorp-black-light to-botkorp-slate-blue
+# - Glow effects: botkorp-orange with opacity
+# - Brand gradient: from-botkorp-orange to-botkorp-slate-blue
+
+# === DARK MODE ===
+# Dark mode uses inverted hierarchy:
+# - Background: Matte Black (#121212)
+# - Primary: Bright Tangerine (#FF6B35)
+# - Text: White (#FFFFFF)
+# - Accents: Cool Silver (#B0B3B8)
 
 # === HSL VALUES (for CSS variables) ===
---primary: 160 84% 39%       /* Emerald-500 */
---secondary: 217 91% 60%     /* Blue-500 */
---accent: 222 47% 11%        /* Slate-900 */
+--primary-light: 0 0% 7%           /* Matte Black */
+--primary-dark: 17 100% 60%        /* Bright Tangerine */
+--secondary: 214 20% 38%           /* Slate Blue-Gray */
+--accent: 17 100% 60%              /* Bright Tangerine */
+--neutral: 210 6% 70%              /* Cool Silver */

@@ -403,8 +403,8 @@ export default function BillingPage() {
 
           {/* Info Card */}
           {authorizations.length > 0 && (
-            <Alert className="mt-6 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-              <AlertCircle className="h-4 w-4 text-blue-600" />
+            <Alert className="mt-6 bg-accent/5 dark:bg-accent/10 border-accent/20 dark:border-accent/30">
+              <AlertCircle className="h-4 w-4 text-accent" />
               <AlertDescription className="text-sm">
                 <strong>Card Verification:</strong> When adding a new card, we charge R1 to verify it. 
                 This may be refunded by your bank or appear as a pending transaction.

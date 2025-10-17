@@ -123,26 +123,30 @@ export default function ServiceDetailPage() {
       setService(serviceData);
       setNewServiceName(serviceData.name);
 
-      // Load existing schedule from service_schedules
-      const { data: scheduleRecords, error: scheduleError } = await supabase
-        .from('service_schedules')
-        .select('*')
-        .eq('service_id', id)
-        .limit(1);
+      // TODO: service_schedules table doesn't exist in current schema
+      // Commenting out until table is created or alternative solution is implemented
+      // See DATABASE_ISSUES_EXPLANATION.md for details
+      
+      // // Load existing schedule from service_schedules
+      // const { data: scheduleRecords, error: scheduleError } = await supabase
+      //   .from('service_schedules')
+      //   .select('*')
+      //   .eq('service_id', id)
+      //   .limit(1);
 
-      if (!scheduleError && scheduleRecords && scheduleRecords.length > 0) {
-        const record = scheduleRecords[0];
-        const loadedSchedule = {
-          scheduleType: record.schedule_type || 'weekly',
-          weeklyDays: record.weekly_days || [],
-          monthlyDays: record.monthly_days || [],
-          preferredTime: record.preferred_time || '10:00',
-          servicesPerMonth: record.max_services_per_month || 4,
-          isValid: true
-        };
-        setScheduleData(loadedSchedule);
-        setCurrentSchedule(loadedSchedule);
-      }
+      // if (!scheduleError && scheduleRecords && scheduleRecords.length > 0) {
+      //   const record = scheduleRecords[0];
+      //   const loadedSchedule = {
+      //     scheduleType: record.schedule_type || 'weekly',
+      //     weeklyDays: record.weekly_days || [],
+      //     monthlyDays: record.monthly_days || [],
+      //     preferredTime: record.preferred_time || '10:00',
+      //     servicesPerMonth: record.max_services_per_month || 4,
+      //     isValid: true
+      //   };
+      //   setScheduleData(loadedSchedule);
+      //   setCurrentSchedule(loadedSchedule);
+      // }
 
       const { data: gardensData } = await supabase
         .from('gardens')
@@ -438,12 +442,12 @@ export default function ServiceDetailPage() {
     }
     
     const statusMap = {
-      'pending_setup': { label: '⏳ Pending', className: 'bg-blue-100 text-blue-800' },
-      'pending_installation': { label: '⏳ Pending', className: 'bg-blue-100 text-blue-800' },
-      'installation_scheduled': { label: '📅 Scheduled', className: 'bg-purple-100 text-purple-800' },
-      'installing': { label: '🔧 Installing', className: 'bg-indigo-100 text-indigo-800' },
-      'active': { label: '✓ Active', className: 'bg-emerald-100 text-emerald-800' },
-      'cancelled': { label: '✗ Cancelled', className: 'bg-red-100 text-red-800' }
+      'pending_setup': { label: '⏳ Pending', className: 'bg-accent/10 text-accent dark:bg-accent/20' },
+      'pending_installation': { label: '⏳ Pending', className: 'bg-accent/10 text-accent dark:bg-accent/20' },
+      'installation_scheduled': { label: '📅 Scheduled', className: 'bg-secondary/10 text-secondary dark:bg-secondary/20' },
+      'installing': { label: '🔧 Installing', className: 'bg-secondary/10 text-secondary dark:bg-secondary/20' },
+      'active': { label: '✓ Active', className: 'bg-accent/10 text-accent dark:bg-accent/20' },
+      'cancelled': { label: '✗ Cancelled', className: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' }
     };
     
     const status = statusMap[service.status] || statusMap['active'];
@@ -537,9 +541,9 @@ export default function ServiceDetailPage() {
             )}
 
             {service.status === 'pending_setup' && (
-              <Alert className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-950/20">
-                <Info className="h-5 w-5 text-blue-600" />
-                <AlertDescription className="text-blue-900 dark:text-blue-200">
+              <Alert className="border-l-4 border-l-accent bg-gradient-to-r from-accent/5 to-transparent dark:from-accent/10">
+                <Info className="h-5 w-5 text-accent" />
+                <AlertDescription className="text-foreground/90">
                   <p className="font-semibold">Installation Pending</p>
                   <p className="text-sm mt-1">Our team will contact you within 24-48 hours to schedule setup</p>
                 </AlertDescription>
@@ -551,7 +555,7 @@ export default function ServiceDetailPage() {
               <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg">
+                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center shadow-lg">
                       <Sprout className="h-7 w-7 text-white" />
                     </div>
                   </div>
@@ -563,7 +567,7 @@ export default function ServiceDetailPage() {
               <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
+                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-secondary to-secondary/80 flex items-center justify-center shadow-lg">
                       <Bot className="h-7 w-7 text-white" />
                     </div>
                   </div>
@@ -575,8 +579,8 @@ export default function ServiceDetailPage() {
               <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg">
-                      <Ruler className="h-7 w-7 text-white" />
+                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-botkorp-silver to-muted flex items-center justify-center shadow-lg">
+                      <Ruler className="h-7 w-7 text-foreground" />
                     </div>
                   </div>
                   <p className="text-4xl font-bold text-slate-900 dark:text-white mb-1">{Math.round(totalArea)}</p>
@@ -637,10 +641,10 @@ export default function ServiceDetailPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
                 {gardens.map((garden, index) => (
                   <Card key={garden.id} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group">
-                    <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600" />
+                    <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-accent to-accent/80" />
                     <CardHeader className="pb-4 pt-6">
                       <div className="flex items-start gap-3">
-                        <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg flex-shrink-0 group-hover:scale-110 transition-transform">
+                        <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center shadow-lg flex-shrink-0 group-hover:scale-110 transition-transform">
                           <Sprout className="h-7 w-7 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -692,11 +696,11 @@ export default function ServiceDetailPage() {
                   const garden = gardens.find(g => g.id === agreement.garden_id);
                   return (
                     <Card key={agreement.id} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
-                      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 to-blue-600" />
+                      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-secondary to-secondary/80" />
                       <CardHeader className="pb-4 pt-6">
                         <div className="flex flex-col gap-3">
                           <div className="flex items-start gap-3">
-                            <div className="h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg flex-shrink-0">
+                            <div className="h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-gradient-to-br from-secondary to-secondary/80 flex items-center justify-center shadow-lg flex-shrink-0">
                               <FileText className="h-6 w-6 md:h-7 md:w-7 text-white" />
                             </div>
                             <div className="flex-1 min-w-0">
@@ -714,21 +718,21 @@ export default function ServiceDetailPage() {
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          <div className="p-3 md:p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900">
-                            <p className="text-[10px] md:text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-1">Monthly Total</p>
-                            <p className="text-xl md:text-2xl font-bold text-emerald-900 dark:text-emerald-100">
+                          <div className="p-3 md:p-4 rounded-xl bg-accent/5 dark:bg-accent/10 border border-accent/20 dark:border-accent/30">
+                            <p className="text-[10px] md:text-xs font-medium text-accent mb-1">Monthly Total</p>
+                            <p className="text-xl md:text-2xl font-bold text-foreground">
                               R{parseFloat(agreement.monthly_total || 0).toFixed(2)}
                             </p>
                           </div>
-                          <div className="p-3 md:p-4 rounded-xl bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900">
-                            <p className="text-[10px] md:text-xs font-medium text-blue-600 dark:text-blue-400 mb-1">Bot Rental</p>
-                            <p className="text-xl md:text-2xl font-bold text-blue-900 dark:text-blue-100">
+                          <div className="p-3 md:p-4 rounded-xl bg-secondary/5 dark:bg-secondary/10 border border-secondary/20 dark:border-secondary/30">
+                            <p className="text-[10px] md:text-xs font-medium text-secondary mb-1">Bot Rental</p>
+                            <p className="text-xl md:text-2xl font-bold text-foreground">
                               R{parseFloat(agreement.bot_rental_total || 0).toFixed(2)}
                             </p>
                           </div>
-                          <div className="p-3 md:p-4 rounded-xl bg-purple-50 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900">
-                            <p className="text-[10px] md:text-xs font-medium text-purple-600 dark:text-purple-400 mb-1">Service Fee</p>
-                            <p className="text-xl md:text-2xl font-bold text-purple-900 dark:text-purple-100">
+                          <div className="p-3 md:p-4 rounded-xl bg-muted border border-border">
+                            <p className="text-[10px] md:text-xs font-medium text-muted-foreground mb-1">Service Fee</p>
+                            <p className="text-xl md:text-2xl font-bold text-foreground">
                               R{parseFloat(agreement.service_total || 0).toFixed(2)}
                             </p>
                           </div>
@@ -736,7 +740,7 @@ export default function ServiceDetailPage() {
                         {agreement.agreement_pdf_url && (
                           <Button
                             variant="outline"
-                            className="w-full h-10 md:h-11 text-sm md:text-base hover:bg-blue-50 hover:border-blue-200 transition-colors"
+                            className="w-full h-10 md:h-11 text-sm md:text-base hover:bg-accent/5 hover:border-accent/30 transition-colors"
                             onClick={(e) => {
                               e.stopPropagation();
                               window.open(agreement.agreement_pdf_url, '_blank');
@@ -840,8 +844,8 @@ export default function ServiceDetailPage() {
             <Card className="border-0 shadow-lg">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-xl bg-purple-100 dark:bg-purple-950 flex items-center justify-center">
-                    <Calendar className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                  <div className="h-12 w-12 rounded-xl bg-secondary/10 dark:bg-secondary/20 flex items-center justify-center">
+                    <Calendar className="h-6 w-6 text-secondary" />
                   </div>
                   <div className="flex-1">
                     <CardTitle className="text-xl">Service Schedule</CardTitle>
@@ -870,9 +874,9 @@ export default function ServiceDetailPage() {
                     
                     {/* Billing Impact Alert */}
                     {scheduleData.servicesPerMonth !== currentSchedule?.servicesPerMonth && (
-                      <Alert className={scheduleData.servicesPerMonth > (currentSchedule?.servicesPerMonth || 4) ? 'border-orange-200 bg-orange-50 dark:bg-orange-950/20' : 'border-green-200 bg-green-50 dark:bg-green-950/20'}>
-                        <AlertCircle className={`h-4 w-4 ${scheduleData.servicesPerMonth > (currentSchedule?.servicesPerMonth || 4) ? 'text-orange-600' : 'text-green-600'}`} />
-                        <AlertDescription className={`text-sm ${scheduleData.servicesPerMonth > (currentSchedule?.servicesPerMonth || 4) ? 'text-orange-900 dark:text-orange-200' : 'text-green-900 dark:text-green-200'}`}>
+                      <Alert className={scheduleData.servicesPerMonth > (currentSchedule?.servicesPerMonth || 4) ? 'border-orange-200 bg-orange-50 dark:bg-orange-950/20' : 'border-accent/20 bg-accent/5 dark:bg-accent/10'}>
+                        <AlertCircle className={`h-4 w-4 ${scheduleData.servicesPerMonth > (currentSchedule?.servicesPerMonth || 4) ? 'text-orange-600' : 'text-accent'}`} />
+                        <AlertDescription className={`text-sm ${scheduleData.servicesPerMonth > (currentSchedule?.servicesPerMonth || 4) ? 'text-orange-900 dark:text-orange-200' : 'text-foreground/90'}`}>
                           <p className="font-semibold mb-1">Billing Change</p>
                           <p className="text-xs">
                             {scheduleData.servicesPerMonth > (currentSchedule?.servicesPerMonth || 4) ? (
@@ -914,7 +918,7 @@ export default function ServiceDetailPage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="p-5 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/20 dark:to-purple-900/10 border-2 border-purple-200 dark:border-purple-800">
+                    <div className="p-5 rounded-xl bg-gradient-to-br from-secondary/5 to-secondary/10 dark:from-secondary/10 dark:to-secondary/20 border-2 border-secondary/20 dark:border-secondary/30">
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">Type</span>
@@ -965,8 +969,8 @@ export default function ServiceDetailPage() {
             <Card className="border-0 shadow-lg">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
-                    <Bot className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                  <div className="h-12 w-12 rounded-xl bg-secondary/10 dark:bg-secondary/20 flex items-center justify-center">
+                    <Bot className="h-6 w-6 text-secondary" />
                   </div>
                   <div>
                     <CardTitle className="text-xl">Number of Gardens</CardTitle>
@@ -975,9 +979,9 @@ export default function ServiceDetailPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-5">
-                <Alert className="border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-950/20">
-                  <Info className="h-4 w-4 text-blue-600" />
-                  <AlertDescription className="text-sm text-blue-900 dark:text-blue-200">
+                <Alert className="border-l-4 border-l-accent bg-accent/5 dark:bg-accent/10">
+                  <Info className="h-4 w-4 text-accent" />
+                  <AlertDescription className="text-sm text-foreground/90">
                     Each garden requires one bot. Changes need admin approval and your signature.
                   </AlertDescription>
                 </Alert>
@@ -1013,7 +1017,7 @@ export default function ServiceDetailPage() {
                         variant="outline"
                         size="lg"
                         onClick={() => setNewGardenCount(newGardenCount + 1)}
-                        className="h-14 w-14 md:h-16 md:w-16 rounded-full border-2 hover:border-emerald-400 hover:bg-emerald-50 transition-all"
+                        className="h-14 w-14 md:h-16 md:w-16 rounded-full border-2 hover:border-accent hover:bg-accent/5 transition-all"
                       >
                         <Plus className="h-5 w-5 md:h-6 md:w-6" />
                       </Button>
@@ -1070,7 +1074,7 @@ export default function ServiceDetailPage() {
 
                 <Button
                   variant={service.is_paused ? "default" : "outline"}
-                  className={`w-full h-11 md:h-12 justify-start text-sm md:text-base font-medium ${service.is_paused ? 'bg-emerald-600 hover:bg-emerald-700 shadow-md' : ''}`}
+                  className={`w-full h-11 md:h-12 justify-start text-sm md:text-base font-medium ${service.is_paused ? 'bg-accent hover:bg-accent/90 shadow-md' : ''}`}
                   onClick={() => service.is_paused ? setShowResumeDialog(true) : setShowPauseDialog(true)}
                 >
                   {service.is_paused ? (
@@ -1128,7 +1132,7 @@ export default function ServiceDetailPage() {
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-xl">
-              <Play className="h-5 w-5 text-emerald-600" />
+              <Play className="h-5 w-5 text-accent" />
               Resume Service?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-base">
@@ -1137,7 +1141,7 @@ export default function ServiceDetailPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleResumeService} className="bg-emerald-600 hover:bg-emerald-700">
+            <AlertDialogAction onClick={handleResumeService} className="bg-accent hover:bg-accent/90">
               Resume Service
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1189,8 +1193,8 @@ export default function ServiceDetailPage() {
         <AlertDialogContent className="max-w-2xl max-h-[90vh]">
           <AlertDialogHeader className="pb-4">
             <AlertDialogTitle className="text-2xl flex items-center gap-3">
-              <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
-                <FileText className="h-6 w-6 text-blue-600" />
+              <div className="h-12 w-12 rounded-xl bg-secondary/10 dark:bg-secondary/20 flex items-center justify-center">
+                <FileText className="h-6 w-6 text-secondary" />
               </div>
               Amendment Request
             </AlertDialogTitle>
@@ -1221,7 +1225,7 @@ export default function ServiceDetailPage() {
               </div>
               <div className="text-center">
                 <p className="text-xs text-muted-foreground mb-1">New</p>
-                <p className="text-3xl font-bold text-blue-600">{newGardenCount}</p>
+                <p className="text-3xl font-bold text-accent">{newGardenCount}</p>
               </div>
             </div>
 
@@ -1232,15 +1236,15 @@ export default function ServiceDetailPage() {
                 {modifyAction === 'add' ? (
                   <>
                     <div className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                      <CheckCircle className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
                       <span>{newGardenCount - gardens.length} new bot{newGardenCount - gardens.length !== 1 ? 's' : ''} deployed</span>
                     </div>
                     <div className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                      <CheckCircle className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
                       <span>New agreements created</span>
                     </div>
                     <div className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                      <CheckCircle className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
                       <span>Installation scheduled (48hrs)</span>
                     </div>
                   </>
@@ -1323,7 +1327,7 @@ export default function ServiceDetailPage() {
                   setProcessing(false);
                 }
               }}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-accent hover:bg-accent/90"
             >
               {processing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
               Submit Request

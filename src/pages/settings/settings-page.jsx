@@ -38,7 +38,8 @@ import {
   AlertCircle,
   MapPin,
   Trash2,
-  Plus
+  Plus,
+  Building
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -59,6 +60,10 @@ export default function SettingsPage() {
   });
   const [locations, setLocations] = useState([]);
   const [showAddLocationDialog, setShowAddLocationDialog] = useState(false);
+  
+  // Organization settings
+  const [organizationName, setOrganizationName] = useState('');
+  const [updatingOrg, setUpdatingOrg] = useState(false);
 
   // Legal profile data (read-only)
   const [legalProfile, setLegalProfile] = useState({
@@ -89,6 +94,12 @@ export default function SettingsPage() {
     loadLegalProfile();
     loadNotificationPreferences();
   }, [user]);
+  
+  useEffect(() => {
+    if (selectedOrg?.organization_name) {
+      setOrganizationName(selectedOrg.organization_name);
+    }
+  }, [selectedOrg]);
 
   useEffect(() => {
     if (selectedOrg?.organization_id) {
@@ -247,6 +258,56 @@ export default function SettingsPage() {
       description: "Notification preferences saved",
     });
   };
+  
+  const handleOrganizationUpdate = async (e) => {
+    e.preventDefault();
+    
+    if (!organizationName.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Organization name cannot be empty",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!selectedOrg?.organization_id) {
+      toast({
+        title: "Error",
+        description: "No organization selected",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setUpdatingOrg(true);
+    try {
+      const { data, error } = await supabase.rpc('update_organization', {
+        p_user_id: user.id,
+        p_organization_id: selectedOrg.organization_id,
+        p_organization_name: organizationName.trim()
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Organization name updated successfully",
+      });
+      
+      // Trigger a reload of the layout to refresh organization name
+      window.location.reload();
+    } catch (error) {
+      console.error('Error updating organization:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update organization",
+        variant: "destructive"
+      });
+    } finally {
+      setUpdatingOrg(false);
+    }
+  };
 
   const getUserInitials = () => {
     if (profile.full_name) {
@@ -281,10 +342,14 @@ export default function SettingsPage() {
 
       {/* Settings Tabs */}
       <Tabs defaultValue={searchParams.get('tab') || 'profile'} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto">
+        <TabsList className="grid w-full grid-cols-5 lg:w-auto">
           <TabsTrigger value="profile">
             <User className="h-4 w-4 mr-2" />
             Profile
+          </TabsTrigger>
+          <TabsTrigger value="organization">
+            <Building className="h-4 w-4 mr-2" />
+            Organization
           </TabsTrigger>
           <TabsTrigger value="legal">
             <Shield className="h-4 w-4 mr-2" />
@@ -353,6 +418,120 @@ export default function SettingsPage() {
                   <Save className="h-4 w-4 mr-2" />
                   {loading ? 'Saving...' : 'Save Changes'}
                 </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Organization Tab */}
+        <TabsContent value="organization" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="h-5 w-5" />
+                Organization Settings
+              </CardTitle>
+              <CardDescription>
+                Manage your organization details and settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleOrganizationUpdate} className="space-y-6">
+                {/* Current Organization Info */}
+                <div className="bg-muted/50 border rounded-lg p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Current Organization</p>
+                      <p className="font-semibold text-lg">{selectedOrg?.organization_name}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground">Your Role</p>
+                      <p className="font-medium capitalize">{selectedOrg?.member_role || 'Member'}</p>
+                    </div>
+                  </div>
+                  {selectedOrg?.organization_slug && (
+                    <p className="text-xs text-muted-foreground">
+                      Organization ID: {selectedOrg.organization_slug}
+                    </p>
+                  )}
+                </div>
+
+                <Separator />
+
+                {/* Organization Name Update */}
+                {(selectedOrg?.member_role === 'owner' || selectedOrg?.member_role === 'admin') ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="organization_name">Organization Name</Label>
+                      <Input
+                        id="organization_name"
+                        type="text"
+                        value={organizationName}
+                        onChange={(e) => setOrganizationName(e.target.value)}
+                        placeholder="My Organization"
+                        disabled={updatingOrg}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        This is the name that will appear across the platform for your organization.
+                      </p>
+                    </div>
+
+                    <Button type="submit" disabled={updatingOrg || organizationName === selectedOrg?.organization_name}>
+                      <Save className="h-4 w-4 mr-2" />
+                      {updatingOrg ? 'Updating...' : 'Update Organization'}
+                    </Button>
+                  </>
+                ) : (
+                  <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                    <div className="flex gap-3">
+                      <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                      <div className="space-y-2 text-sm">
+                        <p className="font-semibold text-amber-900 dark:text-amber-100">
+                          Limited Permissions
+                        </p>
+                        <p className="text-amber-800 dark:text-amber-200">
+                          Only organization owners and admins can update organization settings. 
+                          Please contact your organization owner if you need to make changes.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <Separator />
+
+                {/* Additional Organization Info */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    Organization Details
+                  </h3>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-muted-foreground">Subscription Tier</Label>
+                      <div className="p-3 bg-muted/50 rounded-md border">
+                        <p className="font-medium capitalize">{selectedOrg?.subscription_tier || 'Free'}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-muted-foreground">Status</Label>
+                      <div className="p-3 bg-muted/50 rounded-md border">
+                        <p className="font-medium flex items-center gap-2">
+                          {selectedOrg?.is_active !== false ? (
+                            <>
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              Active
+                            </>
+                          ) : (
+                            <>
+                              <AlertCircle className="h-4 w-4 text-red-600" />
+                              Inactive
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </form>
             </CardContent>
           </Card>
@@ -468,25 +647,25 @@ export default function SettingsPage() {
                   <Separator />
 
                   {/* Information Notice */}
-                  <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                  <div className="bg-accent/5 dark:bg-accent/10 border border-accent/20 dark:border-accent/30 rounded-lg p-4">
                     <div className="flex gap-3">
-                      <FileText className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                      <FileText className="h-5 w-5 text-accent shrink-0 mt-0.5" />
                       <div className="space-y-2 text-sm">
-                        <p className="font-semibold text-blue-900 dark:text-blue-100">
+                        <p className="font-semibold text-foreground">
                           Why is this information read-only?
                         </p>
-                        <p className="text-blue-800 dark:text-blue-200">
+                        <p className="text-foreground/80">
                           Your legal profile information is used for official service contracts and rental agreements. 
                           Once verified, it cannot be changed for legal and compliance reasons.
                         </p>
-                        <p className="text-blue-800 dark:text-blue-200">
+                        <p className="text-foreground/80">
                           If you need to update this information, please contact support at{' '}
                           <a href="mailto:support@botkorp.co.za" className="underline font-medium">
                             support@botkorp.co.za
                           </a>
                         </p>
                         {legalProfile.updated_at && (
-                          <p className="text-xs text-blue-700 dark:text-blue-300 pt-2 border-t border-blue-200 dark:border-blue-800">
+                          <p className="text-xs text-muted-foreground pt-2 border-t border-border">
                             Last updated: {new Date(legalProfile.updated_at).toLocaleDateString('en-ZA', {
                               year: 'numeric',
                               month: 'long',

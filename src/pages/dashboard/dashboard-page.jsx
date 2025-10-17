@@ -69,7 +69,7 @@ export default function DashboardPage() {
   const [pendingInvitations, setPendingInvitations] = useState([]);
   const [loadingInvitations, setLoadingInvitations] = useState(true);
 
-  const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+  const COLORS = ['#FF6B35', '#4F5D75', '#B0B3B8', '#121212', '#F59E0B', '#EF4444'];
   
   // Custom Tooltip Components
   const CustomPieTooltip = ({ active, payload }) => {
@@ -652,26 +652,26 @@ export default function DashboardPage() {
       {!loadingInvitations && pendingInvitations.length > 0 && (
         <div className="space-y-3">
           {pendingInvitations.map((invitation) => (
-            <Alert key={invitation.id} className="border-2 border-blue-300 bg-blue-50 dark:bg-blue-950/30">
+            <Alert key={invitation.id} className="border-2 border-accent/30 bg-accent/5 dark:bg-accent/10">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3 flex-1">
-                  <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0">
-                    <Mail className="h-5 w-5 text-blue-600" />
+                  <div className="h-10 w-10 rounded-full bg-accent/10 dark:bg-accent/20 flex items-center justify-center shrink-0">
+                    <Mail className="h-5 w-5 text-accent" />
                   </div>
                   <div className="space-y-1 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-blue-900 dark:text-blue-100">
+                      <h3 className="font-semibold text-foreground">
                         Team Invitation
                       </h3>
-                      <Badge variant="secondary" className="bg-blue-200 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
+                      <Badge variant="secondary" className="bg-accent/20 text-accent-foreground">
                         {invitation.role}
                       </Badge>
                     </div>
-                    <AlertDescription className="text-blue-800 dark:text-blue-200">
+                    <AlertDescription className="text-foreground/80">
                       <strong>{invitation.inviter?.first_name} {invitation.inviter?.surname}</strong> invited you to join{' '}
                       <strong>{invitation.organization?.name}</strong>
                     </AlertDescription>
-                    <p className="text-xs text-blue-600 dark:text-blue-300">
+                    <p className="text-xs text-muted-foreground">
                       Expires {format(new Date(invitation.expires_at), 'MMM d, yyyy')}
                     </p>
                   </div>
@@ -680,7 +680,7 @@ export default function DashboardPage() {
                   <Button
                     size="sm"
                     variant="default"
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-accent hover:bg-accent/90"
                     onClick={() => handleAcceptInvitation(invitation.id)}
                   >
                     <Check className="h-4 w-4 mr-1" />
@@ -689,7 +689,7 @@ export default function DashboardPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border-blue-300"
+                    className="border-border"
                     onClick={() => handleDeclineInvitation(invitation.id)}
                   >
                     <X className="h-4 w-4 mr-1" />
@@ -741,7 +741,7 @@ export default function DashboardPage() {
               {/* Status indicators */}
               <div className="flex items-center justify-center gap-8 pt-4">
                 <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse" />
+                  <div className="h-3 w-3 rounded-full bg-accent animate-pulse" />
                   <span className="text-sm text-muted-foreground">Services Active</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -749,7 +749,7 @@ export default function DashboardPage() {
                   <span className="text-sm text-muted-foreground">Bots Deploying</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full bg-blue-500 animate-pulse" />
+                  <div className="h-3 w-3 rounded-full bg-secondary animate-pulse" />
                   <span className="text-sm text-muted-foreground">Team Notified</span>
                 </div>
               </div>
@@ -759,8 +759,8 @@ export default function DashboardPage() {
                 <p className="text-sm font-semibold text-primary mb-4">What's happening:</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
                   <div className="flex gap-3">
-                    <div className="flex-shrink-0 h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                      <Check className="h-4 w-4 text-green-600" />
+                    <div className="flex-shrink-0 h-8 w-8 rounded-full bg-accent/10 dark:bg-accent/20 flex items-center justify-center">
+                      <Check className="h-4 w-4 text-accent" />
                     </div>
                     <div>
                       <p className="font-medium text-sm">Services Configured</p>
@@ -777,8 +777,8 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div className="flex gap-3">
-                    <div className="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                      <Calendar className="h-4 w-4 text-blue-600" />
+                    <div className="flex-shrink-0 h-8 w-8 rounded-full bg-secondary/10 dark:bg-secondary/20 flex items-center justify-center">
+                      <Calendar className="h-4 w-4 text-secondary" />
                     </div>
                     <div>
                       <p className="font-medium text-sm">Installation Soon</p>
@@ -813,7 +813,7 @@ export default function DashboardPage() {
               value={analytics?.services_completed_this_month ?? 0}
               icon={<CheckCircle className="h-5 w-5 text-white/90" />}
               description="Completed services"
-              className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-lg hover:shadow-xl transition-transform hover:-translate-y-0.5"
+              className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-botkorp-orange to-botkorp-orange-dark text-white shadow-lg hover:shadow-xl transition-transform hover:-translate-y-0.5"
               onDark
             />
             <StatCard
@@ -829,7 +829,7 @@ export default function DashboardPage() {
               value={analytics?.next_service_date ? format(new Date(analytics.next_service_date), 'MMM d') : 'None'}
               icon={<Calendar className="h-5 w-5 text-white/90" />}
               description={analytics?.next_service_date ? format(new Date(analytics.next_service_date), 'yyyy') : 'No upcoming'}
-              className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-lg hover:shadow-xl transition-transform hover:-translate-y-0.5"
+              className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-botkorp-slate-blue to-botkorp-silver text-white shadow-lg hover:shadow-xl transition-transform hover:-translate-y-0.5"
               onDark
             />
             <StatCard
@@ -837,7 +837,7 @@ export default function DashboardPage() {
               value={analytics?.total_bots ?? 0}
               icon={<Bot className="h-5 w-5 text-white/90" />}
               description={`${analytics?.operational_bots ?? 0} operational`}
-              className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 text-white shadow-lg hover:shadow-xl transition-transform hover:-translate-y-0.5"
+              className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-botkorp-black to-botkorp-slate-blue text-white shadow-lg hover:shadow-xl transition-transform hover:-translate-y-0.5"
               onDark
             />
           </div>
@@ -900,12 +900,12 @@ export default function DashboardPage() {
                           ? 'bg-red-100 dark:bg-red-900/30' 
                           : alert.severity === 'warning'
                           ? 'bg-yellow-100 dark:bg-yellow-900/30'
-                          : 'bg-blue-100 dark:bg-blue-900/30'
+                          : 'bg-secondary/10 dark:bg-secondary/20'
                       }`}>
                         <AlertTriangle className={`h-5 w-5 ${
                           alert.severity === 'critical' ? 'text-red-600 dark:text-red-400' : 
                           alert.severity === 'warning' ? 'text-yellow-600 dark:text-yellow-400' :
-                          'text-blue-600 dark:text-blue-400'
+                          'text-secondary'
                         }`} />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -978,7 +978,7 @@ export default function DashboardPage() {
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
         {/* Bot Status Distribution */}
         <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
-          <CardHeader className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20">
+          <CardHeader className="bg-gradient-to-r from-accent/5 to-secondary/5 dark:from-accent/10 dark:to-secondary/10">
             <div className="flex items-center gap-2">
               <div className="h-10 w-10 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm">
                 <Activity className="h-5 w-5 text-primary" />
@@ -1051,7 +1051,7 @@ export default function DashboardPage() {
 
         {/* Bot Type Distribution */}
         <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
-          <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20">
+          <CardHeader className="bg-gradient-to-r from-secondary/5 to-muted dark:from-secondary/10 dark:to-muted">
             <div className="flex items-center gap-2">
               <div className="h-10 w-10 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm">
                 <Bot className="h-5 w-5 text-primary" />
@@ -1112,7 +1112,7 @@ export default function DashboardPage() {
       {/* Mowing Activity Chart */}
       {mowingActivity.length > 0 && (
         <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
-          <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20">
+          <CardHeader className="bg-gradient-to-r from-accent/5 to-accent/10 dark:from-accent/10 dark:to-accent/20">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="h-10 w-10 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm">
@@ -1212,7 +1212,7 @@ export default function DashboardPage() {
           {/* Upcoming Services Section */}
           {upcomingServices.length > 0 && (
             <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
-              <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20">
+              <CardHeader className="bg-gradient-to-r from-secondary/5 to-secondary/10 dark:from-secondary/10 dark:to-secondary/20">
                 <div className="flex items-center gap-2">
                   <div className="h-10 w-10 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm">
                     <Calendar className="h-5 w-5 text-primary" />
@@ -1231,7 +1231,7 @@ export default function DashboardPage() {
                       className="flex items-start justify-between p-4 rounded-xl border-2 border-gray-100 dark:border-gray-800 hover:border-primary/50 hover:bg-primary/5 dark:hover:bg-primary/10 transition-all duration-200 group"
                     >
                       <div className="flex items-start gap-3 flex-1">
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold text-sm shadow-md group-hover:scale-110 transition-transform">
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center text-white font-semibold text-sm shadow-md group-hover:scale-110 transition-transform">
                           {service.bot_name.charAt(0)}
                         </div>
                         <div>
@@ -1246,7 +1246,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <div className="text-right ml-4">
-                        <div className="px-3 py-1 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                        <div className="px-3 py-1 rounded-lg bg-accent/10 dark:bg-accent/20 text-accent">
                           <p className="text-sm font-bold">
                             {format(new Date(service.next_service_date), 'MMM d')}
                           </p>

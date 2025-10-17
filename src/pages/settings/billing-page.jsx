@@ -124,7 +124,7 @@ export default function BillingPage() {
       case 'paid':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
       case 'sent':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+        return 'bg-secondary/10 text-secondary dark:bg-secondary/20 dark:text-secondary';
       case 'overdue':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
       case 'draft':
@@ -511,8 +511,8 @@ export default function BillingPage() {
 
           {/* Info Card */}
           {authorizations.length > 0 && (
-            <Alert className="mt-6 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-              <AlertCircle className="h-4 w-4 text-blue-600" />
+            <Alert className="mt-6 bg-accent/5 dark:bg-accent/10 border-accent/20 dark:border-accent/30">
+              <AlertCircle className="h-4 w-4 text-accent" />
               <AlertDescription className="text-sm">
                 <strong>Card Verification:</strong> When adding a new card, we charge R1 to verify it. 
                 This may be refunded by your bank or appear as a pending transaction.

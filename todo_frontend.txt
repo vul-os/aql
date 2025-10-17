@@ -57,3 +57,24 @@ footer looks ugly, make it more like stornxtdoor, link to docs
 
 
 resend api key re_HjE9aC37_P2q9RsQAr4F91i3cKHKEfwgN
+
+BILLING SETUP AND TESTING
+invoices, generated and sent
+notifications system - for services, for alerts etc, tie into notificatoon settings
+
+RLS
+MAKE EVERYTHING MOBILE FRIENDLY
+add animations to landing page 
+SUPPORT TICKETS SYSTEM
+
+LOGO 
+loading graphics
+add picture of product to landing page
+fix index for seo, and for sharing on whatsapp etc 
+RESEND DOMAIN SETUP
+STATS FROM TEMP + HUMIDITY + RAIN SENSOR
+DISTANCE STATS 
+LOCATION ESTIMATE DATA FOR CUTTING? 
+META AND INSTAGRAM PAGES, AND LINKEDIN? AND TIKTOK? CENTRAL TOOL TO MANAGE IT?
+EMAIL SUPPORT@BOTKORP.COM gets sent to a specific email? 
+email footers for gmail?

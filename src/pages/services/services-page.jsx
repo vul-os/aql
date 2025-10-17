@@ -119,11 +119,11 @@ export default function ServicesPage() {
 
   const getServiceColor = (type) => {
     switch (type) {
-      case 'lawn': return { bg: 'bg-emerald-500', light: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-200' };
-      case 'pool': return { bg: 'bg-blue-500', light: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200' };
-      case 'security': return { bg: 'bg-purple-500', light: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-200' };
-      case 'weather': return { bg: 'bg-orange-500', light: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-200' };
-      default: return { bg: 'bg-slate-500', light: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200' };
+      case 'lawn': return { bg: 'bg-accent', light: 'bg-accent/5', text: 'text-accent', border: 'border-accent/20' };
+      case 'pool': return { bg: 'bg-secondary', light: 'bg-secondary/5', text: 'text-secondary', border: 'border-secondary/20' };
+      case 'security': return { bg: 'bg-botkorp-silver', light: 'bg-muted', text: 'text-foreground', border: 'border-border' };
+      case 'weather': return { bg: 'bg-accent', light: 'bg-accent/5', text: 'text-accent', border: 'border-accent/20' };
+      default: return { bg: 'bg-muted', light: 'bg-muted', text: 'text-muted-foreground', border: 'border-border' };
     }
   };
 
@@ -135,13 +135,13 @@ export default function ServicesPage() {
     switch (service.status) {
       case 'pending_setup':
       case 'pending_installation':
-        return { text: 'Pending', color: 'bg-blue-500/80' };
+        return { text: 'Pending', color: 'bg-accent/80' };
       case 'installation_scheduled':
-        return { text: 'Scheduled', color: 'bg-purple-500/80' };
+        return { text: 'Scheduled', color: 'bg-secondary/80' };
       case 'active':
-        return { text: 'Active', color: 'bg-emerald-500' };
+        return { text: 'Active', color: 'bg-accent' };
       default:
-        return { text: 'Active', color: 'bg-emerald-500' };
+        return { text: 'Active', color: 'bg-accent' };
     }
   };
 

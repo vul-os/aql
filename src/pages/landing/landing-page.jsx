@@ -284,7 +284,7 @@ export default function LandingPage() {
       </header>
 
       {/* Pilot Banner - Below Header */}
-      <div className="fixed top-16 sm:top-[72px] left-0 right-0 z-40 bg-gradient-to-r from-blue-50 via-primary/10 to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-b border-primary/20 backdrop-blur-sm">
+      <div className="fixed top-16 sm:top-[72px] left-0 right-0 z-40 bg-gradient-to-r from-muted/50 via-accent/10 to-muted/50 dark:from-botkorp-black dark:via-botkorp-slate-blue dark:to-botkorp-black border-b border-accent/20 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-2.5">
           <div className="flex items-center justify-center gap-2 text-sm">
             <span className="relative flex h-2 w-2">
@@ -372,9 +372,9 @@ export default function LandingPage() {
                   <p className="font-medium text-xs sm:text-sm">mowing service</p>
                           </div>
                         </div>
-              <div className="flex items-center bg-gray-900/80 backdrop-blur-sm rounded-xl sm:rounded-2xl px-4 sm:px-6 py-3 sm:py-4 border border-green-500/30 shadow-lg hover:shadow-xl hover:bg-gray-900/90 hover:border-green-500/50 transition-all w-full sm:w-auto">
-                <div className="bg-green-500/20 p-2 sm:p-3 rounded-full mr-3 sm:mr-4">
-                  <Sprout className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
+              <div className="flex items-center bg-gray-900/80 backdrop-blur-sm rounded-xl sm:rounded-2xl px-4 sm:px-6 py-3 sm:py-4 border border-accent/30 shadow-lg hover:shadow-xl hover:bg-gray-900/90 hover:border-accent/50 transition-all w-full sm:w-auto">
+                <div className="bg-accent/20 p-2 sm:p-3 rounded-full mr-3 sm:mr-4">
+                  <Sprout className="w-5 h-5 sm:w-6 sm:h-6 text-accent" />
                     </div>
                 <div className="text-white">
                   <p className="font-medium text-xs sm:text-sm">Professional results,</p>
@@ -386,15 +386,15 @@ export default function LandingPage() {
             {/* Trust Indicators */}
             <div className="mt-8 sm:mt-12 pt-4 sm:pt-6 border-t border-white/10 flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8 text-white/90 animate-[fadeIn_1s_ease-out_0.9s_both]">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
+                <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
                 <span className="text-xs sm:text-sm font-light">No Long-term Contracts</span>
               </div>
               <div className="flex items-center gap-2">
-                <Sprout className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                <Sprout className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
                 <span className="text-xs sm:text-sm font-light">Eco-friendly Technology</span>
               </div>
               <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
+                <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-secondary" />
                 <span className="text-xs sm:text-sm font-light">South African Based</span>
               </div>
             </div>
@@ -589,7 +589,7 @@ export default function LandingPage() {
 
       {/* How It Works - Split Layout with Preview */}
       <section id="how" className="relative overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-botkorp-black via-botkorp-slate-blue to-botkorp-black" />
         
         <div className="container mx-auto px-4 py-20 md:py-28">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center max-w-7xl mx-auto">
@@ -663,7 +663,7 @@ export default function LandingPage() {
                   
                   <div className="flex gap-4 md:gap-6 group">
                     <div className="flex-shrink-0">
-                      <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-green-600 text-white flex items-center justify-center text-xl font-bold shadow-lg group-hover:scale-110 transition-transform">
+                      <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-accent text-white flex items-center justify-center text-xl font-bold shadow-lg group-hover:scale-110 transition-transform">
                         3
                       </div>
                     </div>
@@ -693,7 +693,7 @@ export default function LandingPage() {
                   
                   <div className="flex gap-4 md:gap-6 group">
                     <div className="flex-shrink-0">
-                      <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-bold shadow-lg group-hover:scale-110 transition-transform">
+                      <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-secondary text-white flex items-center justify-center text-xl font-bold shadow-lg group-hover:scale-110 transition-transform">
                         2
                       </div>
                     </div>
@@ -707,7 +707,7 @@ export default function LandingPage() {
                   
                   <div className="flex gap-4 md:gap-6 group">
                     <div className="flex-shrink-0">
-                      <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-green-600 text-white flex items-center justify-center text-xl font-bold shadow-lg group-hover:scale-110 transition-transform">
+                      <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-accent text-white flex items-center justify-center text-xl font-bold shadow-lg group-hover:scale-110 transition-transform">
                         3
                       </div>
                     </div>
@@ -761,7 +761,7 @@ export default function LandingPage() {
                 </div>
 
                 {/* Decorative glow - subtle */}
-                <div className="absolute -inset-6 bg-gradient-to-r from-botkorp-green-600/10 via-accent-blue/10 to-primary/10 blur-3xl -z-10 opacity-60" />
+                <div className="absolute -inset-6 bg-gradient-to-r from-accent/10 via-secondary/10 to-accent/10 blur-3xl -z-10 opacity-60" />
               </div>
             </div>
 
@@ -1053,7 +1053,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gradient-to-b from-slate-900 to-slate-950 text-white/70 overflow-hidden border-t border-white/5">
+      <footer className="bg-gradient-to-b from-botkorp-black to-botkorp-slate-blue text-white/70 overflow-hidden border-t border-white/5">
         <div className="container mx-auto px-4 py-16">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
             {/* Brand + intro */}
