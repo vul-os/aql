@@ -25,13 +25,18 @@ import {
   ChevronDown,
   LogOut,
   Building, // swapped from Building2 for a fresher org icon
+  Building2,
   CreditCard,
   Moon,
   Sun,
   Search,
   Calendar,
   MapPin,
-  Plus
+  Plus,
+  Loader2,
+  Shield,
+  Wrench,
+  FileCheck
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { supabase } from '@/lib/supabase';
@@ -62,12 +67,21 @@ export default function PortalLayout() {
   const [locations, setLocations] = useState([]);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [showAddLocationDialog, setShowAddLocationDialog] = useState(false);
+  const [showCreateOrgDialog, setShowCreateOrgDialog] = useState(false);
+  const [creatingOrg, setCreatingOrg] = useState(false);
+  const [newOrgName, setNewOrgName] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const mainNavItems = [
     { icon: <LayoutDashboard className="h-5 w-5" />, label: 'Dashboard', path: '/portal' },
     { icon: <Sprout className="h-5 w-5" />, label: 'Services', path: '/portal/services' },
     { icon: <Users className="h-5 w-5" />, label: 'Members', path: '/portal/members' },
     { icon: <CreditCard className="h-5 w-5" />, label: 'Billing', path: '/portal/billing' },
+  ];
+
+  const adminNavItems = [
+    { icon: <FileCheck className="h-5 w-5" />, label: 'Approvals', path: '/admin/approvals' },
+    { icon: <Bot className="h-5 w-5" />, label: 'Bot Management', path: '/admin/bot-management' },
   ];
 
   const bottomNavItems = [
@@ -105,6 +119,15 @@ export default function PortalLayout() {
       }
 
       setOrganizations(data || []);
+      
+      // Check if user is admin
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, is_admin')
+        .eq('id', user.id)
+        .single();
+      
+      setIsAdmin(profile?.is_admin === true || profile?.role === 'admin');
       
       // Select first org or previously selected
       const savedOrgId = localStorage.getItem('selectedOrgId');
@@ -176,6 +199,57 @@ export default function PortalLayout() {
       title: 'Location selected',
       description: loc?.name || 'Location changed',
     });
+  };
+
+  const handleCreateOrganization = async (e) => {
+    e.preventDefault();
+    
+    if (!newOrgName.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter an organization name",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setCreatingOrg(true);
+    try {
+      const { data, error } = await supabase.rpc('create_organization', {
+        p_user_id: user.id,
+        p_organization_name: newOrgName.trim(),
+        p_organization_type: 'residential'
+      });
+
+      if (error) throw error;
+
+      toast({
+        variant: 'success',
+        title: "Organization Created! 🎉",
+        description: `${newOrgName} has been created and you are the admin.`,
+      });
+
+      // Reload organizations and select the new one
+      await loadUserOrganizations();
+      
+      // Find and select the newly created org
+      const newOrg = organizations.find(o => o.organization_id === data[0].organization_id);
+      if (newOrg) {
+        handleOrgChange(newOrg);
+      }
+
+      setShowCreateOrgDialog(false);
+      setNewOrgName('');
+    } catch (error) {
+      console.error('Error creating organization:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create organization",
+        variant: "destructive"
+      });
+    } finally {
+      setCreatingOrg(false);
+    }
   };
 
   const handleSignOut = async () => {
@@ -266,6 +340,46 @@ export default function PortalLayout() {
         ))}
       </nav>
 
+      {/* Admin Navigation (only visible to admins) */}
+      {isAdmin && (
+        <div className="px-3 pb-3">
+          <div className="border-t border-white/10 pt-3 mt-3">
+            <div className="flex items-center gap-2 px-3 mb-2">
+              <Shield className="h-4 w-4 text-white/70" />
+              <p className="text-xs font-semibold text-white/70 uppercase tracking-wider">Admin</p>
+            </div>
+            <div className="space-y-1">
+              {adminNavItems.map((item) => (
+                <button
+                  key={item.path}
+                  className={`w-full flex items-center justify-start gap-3 px-3 py-2 rounded-xl transition-all group ${
+                    isActivePath(item.path)
+                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg'
+                      : 'text-white/80 hover:bg-white/10 hover:backdrop-blur-sm'
+                  }`}
+                  onClick={() => {
+                    navigate(item.path);
+                    if (mobile) setMobileMenuOpen(false);
+                  }}
+                >
+                  <span className={`inline-flex items-center justify-center h-8 w-8 rounded-lg ${
+                    isActivePath(item.path)
+                      ? 'bg-white/20'
+                      : 'bg-white/5 group-hover:bg-white/10'
+                  }`}>
+                    {item.icon}
+                  </span>
+                  <span className="ml-1 font-medium text-sm">{item.label}</span>
+                  {isActivePath(item.path) && (
+                    <span className="ml-auto h-6 w-1.5 rounded-full bg-white/80" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Bottom Navigation - Settings */}
       <div className="p-4 border-t border-white/10 mt-auto">
         {bottomNavItems.map((item) => (
@@ -293,29 +407,35 @@ export default function PortalLayout() {
         ))}
 
         {/* Organizations at bottom */}
-        {organizations?.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-white/10">
-            <p className="text-sm text-white/70 mb-2">Organizations</p>
-            <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
-              {organizations.map((org) => (
-                <button
-                  key={org.organization_id}
-                  className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                    selectedOrg?.organization_id === org.organization_id
-                      ? 'bg-white/15 text-white'
-                      : 'text-white/80 hover:bg-white/10'
-                  }`}
-                  onClick={() => {
-                    handleOrgChange(org);
-                    if (mobile) setMobileMenuOpen(false);
-                  }}
-                >
-                  {org.organization_name}
-                </button>
-              ))}
-            </div>
+        <div className="mt-4 pt-4 border-t border-white/10">
+          <p className="text-sm text-white/70 mb-2">Organizations</p>
+          <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+            {organizations.map((org) => (
+              <button
+                key={org.organization_id}
+                className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                  selectedOrg?.organization_id === org.organization_id
+                    ? 'bg-white/15 text-white'
+                    : 'text-white/80 hover:bg-white/10'
+                }`}
+                onClick={() => {
+                  handleOrgChange(org);
+                  if (mobile) setMobileMenuOpen(false);
+                }}
+              >
+                {org.organization_name}
+              </button>
+            ))}
+            {/* Create Organization Button */}
+            <button
+              className="w-full text-left px-3 py-2 rounded-lg transition-colors text-white/80 hover:bg-white/10 border border-white/20 border-dashed flex items-center gap-2"
+              onClick={() => setShowCreateOrgDialog(true)}
+            >
+              <Plus className="h-4 w-4" />
+              Create Organization
+            </button>
           </div>
-        )}
+        </div>
 
         {/* Organization Info (mobile only) */}
         {mobile && selectedOrg && (
@@ -425,6 +545,13 @@ export default function PortalLayout() {
                   <Plus className="h-4 w-4 mr-2" />
                   Add New Location
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => navigate('/portal/settings?tab=locations')}
+                  className="cursor-pointer"
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Location Settings
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -532,6 +659,7 @@ export default function PortalLayout() {
               setShowAddLocationDialog(false);
               loadOrganizationLocations();
               toast({
+                variant: 'success',
                 title: 'Location Added! 🎉',
                 description: `${newLocation.name} has been added successfully.`,
               });
@@ -547,6 +675,60 @@ export default function PortalLayout() {
             title=""
             description=""
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Organization Dialog */}
+      <Dialog open={showCreateOrgDialog} onOpenChange={setShowCreateOrgDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building className="h-5 w-5 text-primary" />
+              Create New Organization
+            </DialogTitle>
+            <DialogDescription>
+              Create a new organization. You'll be added as the admin automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateOrganization} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="orgName">Organization Name *</Label>
+              <Input
+                id="orgName"
+                value={newOrgName}
+                onChange={(e) => setNewOrgName(e.target.value)}
+                placeholder="My Company Name"
+                required
+                disabled={creatingOrg}
+              />
+              <p className="text-xs text-muted-foreground">
+                This can be your company name, family name, or any identifier.
+              </p>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowCreateOrgDialog(false)}
+                disabled={creatingOrg}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={creatingOrg}>
+                {creatingOrg ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Organization
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

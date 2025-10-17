@@ -42,6 +42,9 @@ export default function LocationWizard({
     setFormData({
       ...formData,
       address: location.address,
+      city: location.city || formData.city,
+      province: location.province || formData.province,
+      postalCode: location.postalCode || formData.postalCode,
       latitude: location.latitude,
       longitude: location.longitude
     });

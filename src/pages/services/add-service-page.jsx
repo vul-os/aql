@@ -26,7 +26,8 @@ import {
   Loader2,
   AlertCircle,
   Calendar,
-  Info
+  Info,
+  FileText
 } from 'lucide-react';
 import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -37,6 +38,7 @@ import LocationChecker from '@/components/services/location-checker';
 import ScheduleSelector from '@/components/services/schedule-selector';
 import LocationWizard from '@/components/services/location-wizard';
 import SignaturePad from '@/components/services/signature-pad';
+import { API } from '@/lib/config';
 
 const STORAGE_KEY = 'addServiceWizardData';
 
@@ -82,11 +84,12 @@ export default function AddServicePage() {
   // Form state
   const [formData, setFormData] = useState(initialData?.formData || {
     locationId: '',
+    serviceName: '',  // NEW: Service name
     serviceType: 'garden',
     gardens: [
       {
         name: 'Garden 1',
-        area_sqm: ''
+        area_sqm: '100'
       }
     ],
     schedule: {
@@ -99,9 +102,7 @@ export default function AddServicePage() {
     signature: null
   });
 
-  const [calculatedPricing, setCalculatedPricing] = useState(null);
-  const [generatingPdf, setGeneratingPdf] = useState(false);
-  const [agreementPdfUrl, setAgreementPdfUrl] = useState(null);
+  const [calculatedPricing, setCalculatedPricing] = useState(initialData?.calculatedPricing || null);
 
   // Save to localStorage on every change
   useEffect(() => {
@@ -109,11 +110,12 @@ export default function AddServicePage() {
       step,
       formData,
       showNewLocation,
+      calculatedPricing,
       timestamp: Date.now()
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
     console.log('💾 Saved - Step:', step);
-  }, [step, formData, showNewLocation]);
+  }, [step, formData, showNewLocation, calculatedPricing]);
 
   useEffect(() => {
     if (selectedOrg?.organization_id) {
@@ -122,12 +124,33 @@ export default function AddServicePage() {
       // Show restore toast
       if (initialData && initialData.step > 1) {
         toast({
+          variant: "success",
           title: "Progress Restored",
           description: `Continuing from Step ${initialData.step}`,
         });
       }
     }
   }, [selectedOrg]);
+
+  // Auto-generate service name when location or service type changes
+  useEffect(() => {
+    if (formData.locationId && locations.length > 0) {
+      const selectedLocation = locations.find(l => l.id === formData.locationId);
+      if (selectedLocation) {
+        const serviceTypeMap = {
+          'garden': 'Lawn Care',
+          'pool': 'Pool Cleaning',
+          'security': 'Security Monitoring',
+          'weather': 'Weather Station'
+        };
+        const typeName = serviceTypeMap[formData.serviceType] || 'Service';
+        const autoName = `${selectedLocation.name} - ${typeName}`;
+        
+        // Always update the service name (removed the !formData.serviceName condition)
+        setFormData(prev => ({ ...prev, serviceName: autoName }));
+      }
+    }
+  }, [formData.locationId, formData.serviceType, locations]);
 
   const loadLocations = async () => {
     try {
@@ -222,96 +245,15 @@ export default function AddServicePage() {
       }
     }
 
-    // Step 5: Generate PDF and save signature after user signs
-    if (step === 5 && formData.signature) {
-      try {
-        setGeneratingPdf(true);
-        
-        // Validate required data
-        if (!user?.id) {
-          throw new Error('User ID is required');
-        }
-        if (!selectedOrg?.organization_id) {
-          throw new Error('Organization ID is required');
-        }
-        if (!formData.locationId) {
-          throw new Error('Location ID is required');
-        }
-
-        // Edge Function will fetch user profile, location, and calculate pricing
-        // We only send the essential service details
-        const requestBody = {
-          user_id: user.id,
-          organization_id: selectedOrg.organization_id,
-          location_id: formData.locationId,
-          signature_base64: formData.signature,
-          number_of_bots: formData.gardens.length,
-          services_per_month: calculatedPricing?.services_per_month || 4,
-        };
-        
-        console.log('Sending agreement data:', JSON.stringify(requestBody, null, 2));
-        
-        // Call Edge Function to generate PDF and save signature
-        const response = await fetch(
-          `${supabaseUrl}/functions/v1/generate-agreement-pdf`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${supabaseAnonKey}`,
-            },
-            body: JSON.stringify(requestBody)
-          }
-        );
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Edge Function error response:', errorText);
-          let errorData;
-          try {
-            errorData = JSON.parse(errorText);
-          } catch (e) {
-            errorData = { error: errorText };
-          }
-          throw new Error(errorData.error || `Failed to generate agreement PDF (${response.status})`);
-        }
-
-        const data = await response.json();
-        console.log('Edge Function response:', data);
-        
-        if (data.success) {
-          // Store URLs in form data
-          setFormData({
-            ...formData,
-            signatureUrl: data.signature_url,
-            pdfUrl: data.pdf_url,
-            signaturePath: data.signature_path,
-            pdfPath: data.pdf_path
-          });
-          
-          setAgreementPdfUrl(data.pdf_url);
-
-          toast({
-            title: 'Agreement Generated! ✓',
-            description: 'Your signature and rental agreement have been saved securely.',
-          });
-        } else {
-          throw new Error(data.error || 'Failed to generate PDF');
-        }
-        
-      } catch (error) {
-        console.error('Error generating agreement:', error);
-        toast({
-          title: 'Generation Failed',
-          description: error.message || 'Failed to generate agreement. Please try again.',
-          variant: 'destructive'
-        });
-        // Don't proceed if PDF generation failed
-        setGeneratingPdf(false);
-        return;
-      } finally {
-        setGeneratingPdf(false);
-      }
+    // Step 5: Just validate signature is present
+    // Agreement generation happens AFTER service and gardens are created in handleSubmit
+    if (step === 5 && !formData.signature) {
+      toast({
+        title: 'Signature Required',
+        description: 'Please sign the agreement before proceeding.',
+        variant: 'destructive'
+      });
+      return;
     }
 
     setStep(step + 1);
@@ -325,12 +267,15 @@ export default function AddServicePage() {
     setLoading(true);
     try {
       const locationId = formData.locationId;
+      
+      // Normalize service type (garden → lawn) for database
+      const serviceType = formData.serviceType === 'garden' ? 'lawn' : formData.serviceType;
 
       // Check if service already exists at this location
-      const { data: existingCheck, error: checkError } = await supabase
+      const { data: existingCheck, error: checkError} = await supabase
         .rpc('check_service_exists_at_location', {
           p_location_id: locationId,
-          p_service_type: formData.serviceType
+          p_service_type: serviceType  // Use normalized type
         });
 
       if (checkError) {
@@ -347,12 +292,51 @@ export default function AddServicePage() {
         return;
       }
 
-      // Create gardens
+      // STEP 1: Create SERVICE first
+      console.log('Creating service...');
+      const { data: service, error: serviceError } = await supabase
+        .from('services')
+        .insert({
+          organization_id: selectedOrg.organization_id,
+          location_id: locationId,
+          name: formData.serviceName || `${formData.serviceType} Service`,
+          service_type: serviceType,  // Use normalized type
+          service_frequency: formData.schedule?.scheduleType || 'weekly',
+          services_per_month: calculatedPricing?.services_per_month || 4,
+          status: 'active',  // Active since agreements will be signed
+          activation_date: new Date().toISOString(),
+          is_active: true
+        })
+        .select()
+        .single();
+
+      if (serviceError) {
+        // Check if it's a duplicate service error
+        if (serviceError.code === '23505' && serviceError.message.includes('services_organization_id_location_id_service_type_key')) {
+          toast({
+            title: 'Service Already Exists',
+            description: `A ${formData.serviceType} service already exists at this location. Please go to the Services page to view it.`,
+            variant: 'destructive',
+            duration: 7000,
+          });
+          setLoading(false);
+          setTimeout(() => {
+            navigate('/portal/services');
+          }, 2000);
+          return;
+        }
+        throw serviceError;
+      }
+      console.log('Service created:', service);
+
+      const serviceId = service.id;
+
+      // STEP 2: Create gardens/pools with service_id
       if (formData.serviceType === 'garden') {
-        // Filter out empty gardens
         const validGardens = formData.gardens.filter(g => g.name && g.area_sqm);
         
         const gardensToInsert = validGardens.map(garden => ({
+          service_id: serviceId,  // ← Link to service
           location_id: locationId,
           name: garden.name,
           area_sqm: parseFloat(garden.area_sqm)
@@ -364,13 +348,47 @@ export default function AddServicePage() {
           .select();
 
         if (gardenError) throw gardenError;
+        console.log('Gardens created:', gardens);
 
-        // Create schedules for each garden
+        // STEP 3: Generate rental agreements (one per garden)
+        if (formData.signature && gardens && gardens.length > 0) {
+          console.log('Generating rental agreements...');
+          
+          const agreementResponse = await fetch(API.GENERATE_AGREEMENT_PDF, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: user.id,
+              organization_id: selectedOrg.organization_id,
+              location_id: locationId,
+              service_id: serviceId,  // ← Pass service ID
+              signature_base64: formData.signature,
+              gardens: gardens.map(g => ({  // ← Pass gardens array
+                id: g.id,
+                name: g.name,
+                area_sqm: g.area_sqm
+              })),
+              services_per_month: calculatedPricing?.services_per_month || 4,
+            })
+          });
+
+          if (!agreementResponse.ok) {
+            const error = await agreementResponse.text();
+            console.error('Agreement generation error:', error);
+            // Don't throw - continue with service creation
+          } else {
+            const agreementData = await agreementResponse.json();
+            console.log(`✅ Generated ${agreementData.total_agreements} agreement(s)`);
+          }
+        }
+
+        // STEP 4: Create schedules for each garden
         if (formData.schedule && formData.schedule.isValid && gardens) {
           const schedulesToInsert = gardens.map(garden => ({
             organization_id: selectedOrg.organization_id,
             location_id: locationId,
             garden_id: garden.id,
+            service_id: serviceId,
             schedule_type: formData.schedule.scheduleType,
             weekly_days: formData.schedule.weeklyDays || [],
             monthly_days: formData.schedule.monthlyDays || [],
@@ -385,11 +403,12 @@ export default function AddServicePage() {
 
           if (scheduleError) {
             console.error('Error creating schedules:', scheduleError);
-            // Don't throw, just log - service is created
+            // Don't throw - service is created
           }
         }
 
         toast({
+          variant: 'success',
           title: 'Service Created Successfully! 🎉',
           description: 'You will receive communication regarding installation of your service within 24-48 hours. Our team will contact you to schedule the bot setup.',
           duration: 7000,
@@ -450,7 +469,32 @@ export default function AddServicePage() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-6 relative">
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
+          <Card className="w-full max-w-md border-2 border-primary/20 shadow-2xl">
+            <CardContent className="p-8 text-center space-y-4">
+              <div className="flex justify-center">
+                <Loader2 className="h-16 w-16 animate-spin text-primary" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold">
+                  Creating Your Service...
+                </h3>
+                <p className="text-muted-foreground">
+                  Setting up your service, creating gardens, and generating agreements. This may take a moment.
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                <CheckCircle className="h-4 w-4" />
+                <span>Secure • Encrypted • Professional</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -475,7 +519,7 @@ export default function AddServicePage() {
               setFormData({
                 locationId: locations[0]?.id || '',
                 serviceType: 'garden',
-                gardens: [{ name: 'Garden 1', area_sqm: '' }],
+                gardens: [{ name: 'Garden 1', area_sqm: '100' }],
                 schedule: {
                   scheduleType: 'weekly',
                   weeklyDays: [],
@@ -567,6 +611,36 @@ export default function AddServicePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Service Name */}
+          {formData.locationId && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  Service Name
+                </CardTitle>
+                <CardDescription>
+                  Give this service a friendly name (auto-generated, but you can edit it)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label htmlFor="serviceName">Service Name *</Label>
+                  <Input
+                    id="serviceName"
+                    value={formData.serviceName}
+                    onChange={(e) => setFormData({...formData, serviceName: e.target.value})}
+                    placeholder="e.g., Home - Lawn Care"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This name will appear on invoices and agreements
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Service Type Selection */}
           <div>
@@ -661,7 +735,7 @@ export default function AddServicePage() {
                     <Input
                       id={`garden-area-${index}`}
                       type="number"
-                      placeholder="250"
+                      placeholder="100"
                       value={garden.area_sqm}
                       onChange={(e) => {
                         const newGardens = [...formData.gardens];
@@ -687,7 +761,7 @@ export default function AddServicePage() {
                   ...formData.gardens,
                   {
                     name: `Garden ${nextIndex}`,
-                    area_sqm: ''
+                    area_sqm: '100'
                   }
                 ]
               });
@@ -746,9 +820,7 @@ export default function AddServicePage() {
 
       {/* Step 4: Review & Pricing */}
       {step === 4 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Summary */}
-          <div className="space-y-4">
+        <div className="max-w-3xl mx-auto space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Service Summary</CardTitle>
@@ -911,16 +983,6 @@ export default function AddServicePage() {
                 </CardContent>
               </Card>
             )}
-          </div>
-
-          {/* Price Calculator */}
-          <PriceCalculator 
-            serviceType={formData.serviceType}
-            totalArea={formData.gardens.reduce((sum, g) => sum + (parseFloat(g.area_sqm) || 0), 0)}
-            gardenCount={formData.gardens.filter(g => g.name && g.area_sqm).length}
-            servicesPerMonth={formData.schedule?.estimatedServices || 1}
-            onPriceChange={setCalculatedPricing}
-          />
         </div>
       )}
 
@@ -1019,33 +1081,13 @@ export default function AddServicePage() {
                 />
               </div>
 
-              {/* PDF Generation Status */}
-              {generatingPdf && (
-                <Alert>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <AlertDescription>
-                    Generating your rental agreement PDF...
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {agreementPdfUrl && (
-                <Alert className="border-green-500 bg-green-50">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <AlertDescription>
-                    <div className="flex items-center justify-between">
-                      <span className="text-green-800">Agreement PDF generated successfully!</span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(agreementPdfUrl, '_blank')}
-                      >
-                        View PDF
-                      </Button>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
+              {/* Info about next steps */}
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  Your agreement will be generated after you complete the setup in the next step.
+                </AlertDescription>
+              </Alert>
             </CardContent>
           </Card>
         </div>
@@ -1216,6 +1258,7 @@ export default function AddServicePage() {
                   setFormData({...formData, locationId: newLocation.id});
                   setShowLocationWizard(false);
                   toast({
+                    variant: 'success',
                     title: 'Location Added',
                     description: `${newLocation.name} has been added and selected`,
                   });

@@ -53,21 +53,31 @@ export default function LegalProfileWizard({
 
   const [errors, setErrors] = useState({});
 
-  // Load existing profile data
+  // Load existing profile data OR pre-fill from location
   useEffect(() => {
+    console.log('[LegalProfileWizard] Location address received:', locationAddress);
+    
     if (profile) {
       setFormData({
         first_name: profile.first_name || '',
         surname: profile.surname || '',
         id_number: profile.id_number || '',
-        physical_address: profile.physical_address || locationAddress?.address || '',
-        physical_city: profile.physical_city || locationAddress?.city || '',
-        physical_province: profile.physical_province || locationAddress?.province || 'KwaZulu-Natal',
-        physical_postal_code: profile.physical_postal_code || locationAddress?.postal_code || '',
+        // Always prefer location data for address fields if available
+        physical_address: locationAddress?.address || profile.physical_address || '',
+        physical_city: locationAddress?.city || profile.physical_city || '',
+        physical_province: locationAddress?.province || profile.physical_province || 'KwaZulu-Natal',
+        physical_postal_code: locationAddress?.postal_code || profile.physical_postal_code || '',
         cell_phone: profile.cell_phone || profile.phone || ''
       });
     } else if (locationAddress) {
       // Pre-fill from location if no profile data
+      console.log('[LegalProfileWizard] Pre-filling from location:', {
+        address: locationAddress.address,
+        city: locationAddress.city,
+        province: locationAddress.province,
+        postal_code: locationAddress.postal_code
+      });
+      
       setFormData(prev => ({
         ...prev,
         physical_address: locationAddress.address || '',

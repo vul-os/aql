@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
+import { useSearchParams, useOutletContext } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,13 @@ import {
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Settings,
   User,
   Bell,
@@ -27,22 +35,30 @@ import {
   Shield,
   FileText,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  MapPin,
+  Trash2,
+  Plus
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from '@/components/theme-provider';
 import PageHeader from '@/components/ui/page-header';
+import LocationWizard from '@/components/services/location-wizard';
 
 export default function SettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
+  const [searchParams] = useSearchParams();
+  const { selectedOrg } = useOutletContext();
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState({
     full_name: '',
     phone: ''
   });
+  const [locations, setLocations] = useState([]);
+  const [showAddLocationDialog, setShowAddLocationDialog] = useState(false);
 
   // Legal profile data (read-only)
   const [legalProfile, setLegalProfile] = useState({
@@ -73,6 +89,12 @@ export default function SettingsPage() {
     loadLegalProfile();
     loadNotificationPreferences();
   }, [user]);
+
+  useEffect(() => {
+    if (selectedOrg?.organization_id) {
+      loadLocations();
+    }
+  }, [selectedOrg]);
 
   const loadUserProfile = async () => {
     if (!user?.id) return;
@@ -133,6 +155,57 @@ export default function SettingsPage() {
     const saved = localStorage.getItem('notificationPreferences');
     if (saved) {
       setNotifications(JSON.parse(saved));
+    }
+  };
+
+  const loadLocations = async () => {
+    if (!selectedOrg?.organization_id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('*')
+        .eq('organization_id', selectedOrg.organization_id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setLocations(data || []);
+    } catch (error) {
+      console.error('Error loading locations:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load locations",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteLocation = async (locationId) => {
+    if (!confirm('Are you sure you want to delete this location? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('locations')
+        .update({ is_active: false })
+        .eq('id', locationId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Location deleted successfully",
+      });
+      
+      loadLocations();
+    } catch (error) {
+      console.error('Error deleting location:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete location",
+        variant: "destructive"
+      });
     }
   };
 
@@ -207,8 +280,8 @@ export default function SettingsPage() {
       />
 
       {/* Settings Tabs */}
-      <Tabs defaultValue="profile" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 lg:w-auto">
+      <Tabs defaultValue={searchParams.get('tab') || 'profile'} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-4 lg:w-auto">
           <TabsTrigger value="profile">
             <User className="h-4 w-4 mr-2" />
             Profile
@@ -216,6 +289,10 @@ export default function SettingsPage() {
           <TabsTrigger value="legal">
             <Shield className="h-4 w-4 mr-2" />
             Legal Profile
+          </TabsTrigger>
+          <TabsTrigger value="locations">
+            <MapPin className="h-4 w-4 mr-2" />
+            Locations
           </TabsTrigger>
           <TabsTrigger value="notifications">
             <Bell className="h-4 w-4 mr-2" />
@@ -437,6 +514,87 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
+        {/* Locations Tab */}
+        <TabsContent value="locations" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5" />
+                    Manage Locations
+                  </CardTitle>
+                  <CardDescription>
+                    View and manage your property locations
+                  </CardDescription>
+                </div>
+                <Button onClick={() => setShowAddLocationDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Location
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {locations.length > 0 ? (
+                <div className="space-y-4">
+                  {locations.map((location) => (
+                    <div
+                      key={location.id}
+                      className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <MapPin className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="font-semibold">{location.name}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {location.address}
+                            {location.city && `, ${location.city}`}
+                            {location.province && `, ${location.province}`}
+                          </p>
+                          {location.postal_code && (
+                            <p className="text-xs text-muted-foreground">
+                              Postal Code: {location.postal_code}
+                            </p>
+                          )}
+                          {location.area_size && (
+                            <p className="text-xs text-muted-foreground">
+                              Area: {location.area_size} m²
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteLocation(location.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <MapPin className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <h3 className="text-lg font-semibold mb-2">No Locations Yet</h3>
+                  <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                    You haven't added any locations yet. Add your first location to get started.
+                  </p>
+                  <Button onClick={() => setShowAddLocationDialog(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Your First Location
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Notifications Tab */}
         <TabsContent value="notifications" className="space-y-4">
           <Card>
@@ -558,6 +716,38 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Add Location Dialog */}
+      <Dialog open={showAddLocationDialog} onOpenChange={setShowAddLocationDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-primary" />
+              Add New Location
+            </DialogTitle>
+            <DialogDescription>
+              Add a new location for {selectedOrg?.organization_name}
+            </DialogDescription>
+          </DialogHeader>
+          <LocationWizard
+            organizationId={selectedOrg?.organization_id}
+            onComplete={(newLocation) => {
+              setShowAddLocationDialog(false);
+              loadLocations();
+              toast({
+                variant: 'success',
+                title: 'Location Added! 🎉',
+                description: `${newLocation.name} has been added successfully.`,
+              });
+            }}
+            onCancel={() => setShowAddLocationDialog(false)}
+            embedded={true}
+            showCancel={true}
+            title=""
+            description=""
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import ProtectedRoute from './components/auth/protected-route';
+import AdminProtectedRoute from './components/auth/admin-protected-route';
 
 // Layouts
 import BlankLayout from './components/layout/blank-layout';
@@ -43,12 +44,16 @@ const AcceptInvite = lazyImport(() => import('./pages/auth/accept-invite'));
 // Portal pages
 const DashboardPage = lazyImport(() => import('./pages/dashboard/dashboard-page'));
 const ServicesPage = lazyImport(() => import('./pages/services/services-page'));
-const GardenDetailPage = lazyImport(() => import('./pages/services/garden-detail-page'));
+const ServiceDetailPage = lazyImport(() => import('./pages/services/service-detail-page'));
 const AddServicePage = lazyImport(() => import('./pages/services/add-service-page'));
 const AddServicePublic = lazyImport(() => import('./pages/services/add-service-public'));
 const SettingsPage = lazyImport(() => import('./pages/settings/settings-page'));
 const BillingPage = lazyImport(() => import('./pages/settings/billing-page'));
 const MembersPage = lazyImport(() => import('./pages/members/members-page'));
+
+// Admin pages
+const ApprovalsPage = lazyImport(() => import('./pages/admin/approvals-page'));
+const BotManagementPage = lazyImport(() => import('./pages/admin/bot-management-page'));
 
 // Docs pages
 const DocsHome = lazyImport(() => import('./pages/docs/docs-home'));
@@ -64,6 +69,12 @@ const NotFound = lazyImport(() => import('./pages/not-found'));
 
 const Protected = ({ children }) => (
   <ProtectedRoute>{children}</ProtectedRoute>
+);
+
+const AdminProtected = ({ children }) => (
+  <AdminProtectedRoute>
+    <ProtectedRoute>{children}</ProtectedRoute>
+  </AdminProtectedRoute>
 );
 
 const AppRoutes = () => {
@@ -106,7 +117,7 @@ const AppRoutes = () => {
           {/* Services */}
           <Route path="services" element={<ServicesPage />} />
           <Route path="services/add" element={<AddServicePage />} />
-          <Route path="garden/:id" element={<GardenDetailPage />} />
+          <Route path="service/:id" element={<ServiceDetailPage />} />
           
           {/* Settings */}
           <Route path="settings" element={<SettingsPage />} />
@@ -138,6 +149,16 @@ const AppRoutes = () => {
           <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
           <Route path="terms-of-service" element={<TermsOfServicePage />} />
           <Route path="cookie-policy" element={<CookiePolicyPage />} />
+        </Route>
+
+        {/* Admin routes (protected by admin role) */}
+        <Route path="/admin" element={
+          <AdminProtected>
+            <PortalLayout />
+          </AdminProtected>
+        }>
+          <Route path="approvals" element={<ApprovalsPage />} />
+          <Route path="bot-management" element={<BotManagementPage />} />
         </Route>
 
         {/* Legacy dashboard redirect */}

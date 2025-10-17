@@ -1,16 +1,61 @@
-import React, { useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, FileText } from 'lucide-react';
-import { useReactToPrint } from 'react-to-print';
+import { Badge } from '@/components/ui/badge';
+import { Download, FileText, Eye, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/auth-context';
 
 export default function BotRentalTerms() {
-  const contentRef = useRef();
+  const { user } = useAuth();
+  const [agreement, setAgreement] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const handlePrint = useReactToPrint({
-    content: () => contentRef.current,
-    documentTitle: 'BotKorp-Bot-Rental-Terms-of-Service'
-  });
+  useEffect(() => {
+    loadAgreement();
+  }, [user]);
+
+  const loadAgreement = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Get user's most recent active agreement
+      const { data, error } = await supabase
+        .from('rental_agreements')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!error && data) {
+        setAgreement(data);
+      }
+    } catch (error) {
+      console.error('Error loading agreement:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownload = () => {
+    if (agreement?.agreement_pdf_url) {
+      const a = document.createElement('a');
+      a.href = agreement.agreement_pdf_url;
+      a.download = `${agreement.agreement_number}.pdf`;
+      a.click();
+    }
+  };
+
+  const handleView = () => {
+    if (agreement?.agreement_pdf_url) {
+      window.open(agreement.agreement_pdf_url, '_blank');
+    }
+  };
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -30,16 +75,37 @@ export default function BotRentalTerms() {
                 Last updated: October 17, 2025
               </p>
             </div>
-            <Button onClick={handlePrint} className="gap-2">
-              <Download className="h-4 w-4" />
-              Download PDF
-            </Button>
+            {loading ? (
+              <Button disabled className="gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading...
+              </Button>
+            ) : agreement?.agreement_pdf_url ? (
+              <div className="flex gap-2">
+                <Button onClick={handleView} variant="outline" className="gap-2">
+                  <Eye className="h-4 w-4" />
+                  View My Agreement
+                </Button>
+                <Button onClick={handleDownload} className="gap-2">
+                  <Download className="h-4 w-4" />
+                  Download PDF
+                </Button>
+              </div>
+            ) : user ? (
+              <Badge variant="outline" className="px-4 py-2">
+                No active agreement
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="px-4 py-2">
+                Sign in to view your agreement
+              </Badge>
+            )}
           </div>
         </CardContent>
       </Card>
 
       {/* Printable Content */}
-      <div ref={contentRef} className="bg-white p-8 rounded-lg print:p-0">
+      <div className="bg-white p-8 rounded-lg print:p-0">
         <div className="space-y-8">
           {/* Title for Print */}
           <div className="text-center mb-8 print:block hidden">

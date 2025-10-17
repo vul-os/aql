@@ -206,7 +206,12 @@ export default function MembersPage() {
         p_email: inviteForm.email,
         p_role: inviteForm.role,
         p_invited_by: user.id,
-        ...permissions
+        p_can_manage_bots: permissions.can_manage_bots,
+        p_can_manage_locations: permissions.can_manage_locations,
+        p_can_view_billing: permissions.can_view_billing,
+        p_can_manage_billing: permissions.can_manage_billing,
+        p_can_manage_members: permissions.can_manage_members,
+        p_can_view_analytics: permissions.can_view_analytics
       });
 
       if (inviteError) throw inviteError;
@@ -226,6 +231,7 @@ export default function MembersPage() {
         });
       } else {
         toast({
+          variant: 'success',
           title: "Invitation Sent! 📧",
           description: `Email invitation sent to ${inviteForm.email}. They have 7 days to accept.`,
           duration: 5000,

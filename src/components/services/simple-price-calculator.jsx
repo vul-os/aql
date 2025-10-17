@@ -3,24 +3,73 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Calculator, Plus, Minus, Bot, Wrench, ArrowRight } from 'lucide-react';
+import { Calculator, Plus, Minus, Bot, Wrench, ArrowRight, Loader2, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { API } from '@/lib/config';
 
 export default function SimplePriceCalculator() {
   const navigate = useNavigate();
   const [gardens, setGardens] = useState(1);
   const [servicesPerMonth, setServicesPerMonth] = useState(4);
+  const [pricing, setPricing] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Pricing constants (match backend)
-  const BOT_RENTAL_PER_BOT = 150;
-  const SERVICE_PRICE_PER_VISIT = 150;
-  const SETUP_FEE_FIRST = 450;
-  const SETUP_FEE_ADDITIONAL = 200;
+  // Fetch pricing from backend
+  useEffect(() => {
+    const fetchPricing = async () => {
+      try {
+        const response = await fetch(`${API.GET_PRICING}?bot_type=mow_bot`);
+        const data = await response.json();
+        if (data.success) {
+          setPricing(data.pricing);
+        } else {
+          throw new Error(data.error || 'Failed to fetch pricing');
+        }
+      } catch (error) {
+        console.error('Error fetching pricing:', error);
+        // Don't set fallback - let it show error state
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPricing();
+  }, []);
+
+  if (loading) {
+    return (
+      <Card className="max-w-4xl mx-auto border-2 border-primary/20 shadow-2xl">
+        <CardContent className="p-12 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!pricing) {
+    return (
+      <Card className="max-w-4xl mx-auto border-2 border-red-300 shadow-2xl">
+        <CardContent className="p-12 flex flex-col items-center justify-center space-y-4">
+          <AlertTriangle className="h-16 w-16 text-red-500" />
+          <div className="text-center space-y-2">
+            <h3 className="text-xl font-bold text-red-600">Pricing Unavailable</h3>
+            <p className="text-muted-foreground">
+              Unable to load pricing information. Please contact support.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const BOT_RENTAL_PER_BOT = pricing.bot_rental_monthly;
+  const SERVICE_PRICE_PER_VISIT = pricing.service_price_per_visit;
+  const SETUP_FEE_PER_BOT = pricing.setup_fee;
 
   const botRentalTotal = gardens * BOT_RENTAL_PER_BOT;
   const serviceTotal = gardens * servicesPerMonth * SERVICE_PRICE_PER_VISIT;
   const monthlyTotal = botRentalTotal + serviceTotal;
-  const setupFee = SETUP_FEE_FIRST + ((gardens - 1) * SETUP_FEE_ADDITIONAL);
+  const setupFee = gardens * SETUP_FEE_PER_BOT;
   const firstMonthTotal = monthlyTotal + setupFee;
 
   const serviceOptions = [
@@ -60,9 +109,13 @@ export default function SimplePriceCalculator() {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => setGardens(Math.max(1, gardens - 1))}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setGardens(prev => Math.max(1, prev - 1));
+                    }}
                     disabled={gardens <= 1}
                     className="h-12 w-12"
+                    type="button"
                   >
                     <Minus className="h-5 w-5" />
                   </Button>
@@ -75,9 +128,13 @@ export default function SimplePriceCalculator() {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => setGardens(Math.min(10, gardens + 1))}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setGardens(prev => Math.min(10, prev + 1));
+                    }}
                     disabled={gardens >= 10}
                     className="h-12 w-12"
+                    type="button"
                   >
                     <Plus className="h-5 w-5" />
                   </Button>
@@ -179,7 +236,7 @@ export default function SimplePriceCalculator() {
                 <div className="h-5 w-5 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <div className="h-2 w-2 rounded-full bg-green-600" />
                 </div>
-                <span className="text-muted-foreground">R500 refundable deposit per bot</span>
+                <span className="text-muted-foreground">R{SETUP_FEE_PER_BOT.toFixed(2)} setup fee per bot (one-time)</span>
               </div>
             </div>
 

@@ -27,7 +27,12 @@ import {
   DollarSign,
   Bot as BotIcon,
   Receipt,
-  TrendingUp
+  TrendingUp,
+  Download,
+  Eye,
+  FileText,
+  ArrowDown,
+  ArrowUp
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { usePaymentAuthorizations, usePaystack, formatCardNumber, formatExpiryDate, getCardIcon, isCardExpired } from '@/hooks/use-paystack';
@@ -51,10 +56,14 @@ export default function BillingPage() {
   const [settingDefaultId, setSettingDefaultId] = useState(null);
   const [subscriptions, setSubscriptions] = useState([]);
   const [loadingSubscriptions, setLoadingSubscriptions] = useState(true);
+  const [invoices, setInvoices] = useState([]);
+  const [loadingInvoices, setLoadingInvoices] = useState(true);
+  const [showAllSubscriptions, setShowAllSubscriptions] = useState(false);
 
   useEffect(() => {
     if (organization?.id) {
       loadSubscriptions();
+      loadInvoices();
     }
   }, [organization]);
 
@@ -64,22 +73,64 @@ export default function BillingPage() {
     try {
       setLoadingSubscriptions(true);
       const { data, error } = await supabase
-        .from('subscriptions')
-        .select(`
-          *,
-          bot:bots(name, bot_type, identifier),
-          pricing:bot_pricing(tier)
-        `)
+        .from('rental_agreements')
+        .select('*')
         .eq('organization_id', organization.id)
         .eq('status', 'active')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setSubscriptions(data || []);
+      
+      // Map rental agreements to subscription format for display
+      const mappedData = (data || []).map(agreement => ({
+        id: agreement.id,
+        name: `${agreement.number_of_bots} Bot${agreement.number_of_bots !== 1 ? 's' : ''} - ${agreement.bot_type.replace('_', ' ')}`,
+        amount: agreement.monthly_total,
+        next_billing_date: agreement.next_billing_date,
+        bot: { name: `${agreement.bot_type} Service`, bot_type: agreement.bot_type },
+        status: 'active'
+      }));
+      
+      setSubscriptions(mappedData);
     } catch (error) {
       console.error('Error loading subscriptions:', error);
     } finally {
       setLoadingSubscriptions(false);
+    }
+  };
+
+  const loadInvoices = async () => {
+    if (!organization?.id) return;
+    
+    try {
+      setLoadingInvoices(true);
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('organization_id', organization.id)
+        .order('issue_date', { ascending: false });
+
+      if (error) throw error;
+      setInvoices(data || []);
+    } catch (error) {
+      console.error('Error loading invoices:', error);
+    } finally {
+      setLoadingInvoices(false);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'paid':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+      case 'sent':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+      case 'overdue':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+      case 'draft':
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 
@@ -215,7 +266,8 @@ export default function BillingPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {subscriptions.map((sub, index) => (
+              {/* Show first 5 subscriptions */}
+              {subscriptions.slice(0, 5).map((sub, index) => (
                 <div key={sub.id}>
                   <div className="flex items-center justify-between py-4">
                     <div className="flex items-center gap-4">
@@ -237,9 +289,66 @@ export default function BillingPage() {
                       <p className="text-sm text-muted-foreground">per month</p>
                     </div>
                   </div>
-                  {index < subscriptions.length - 1 && <Separator />}
+                  {index < Math.min(4, subscriptions.length - 1) && <Separator />}
                 </div>
               ))}
+
+              {/* Collapsible section for remaining subscriptions */}
+              {subscriptions.length > 5 && (
+                <>
+                  {showAllSubscriptions ? (
+                    <>
+                      <Separator />
+                      {subscriptions.slice(5).map((sub, index) => (
+                        <div key={sub.id}>
+                          <div className="flex items-center justify-between py-4">
+                            <div className="flex items-center gap-4">
+                              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <BotIcon className="h-6 w-6 text-primary" />
+                              </div>
+                              <div>
+                                <p className="font-semibold text-lg">
+                                  {sub.bot?.name || 'Bot Service'}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {sub.bot?.bot_type?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                  {sub.bot?.identifier && ` • ${sub.bot.identifier}`}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-2xl font-bold">R{parseFloat(sub.amount).toFixed(2)}</p>
+                              <p className="text-sm text-muted-foreground">per month</p>
+                            </div>
+                          </div>
+                          {index < subscriptions.slice(5).length - 1 && <Separator />}
+                        </div>
+                      ))}
+                    </>
+                  ) : null}
+
+                  {/* Show More/Less Button */}
+                  <div className="pt-3">
+                    <Button
+                      variant="ghost"
+                      onClick={() => setShowAllSubscriptions(!showAllSubscriptions)}
+                      className="w-full"
+                    >
+                      {showAllSubscriptions ? (
+                        <>
+                          <ArrowUp className="h-4 w-4 mr-2" />
+                          Show Less
+                        </>
+                      ) : (
+                        <>
+                          <ArrowDown className="h-4 w-4 mr-2" />
+                          Show {subscriptions.length - 5} More Subscription{subscriptions.length - 5 > 1 ? 's' : ''}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </>
+              )}
               
               {/* Total */}
               <div className="pt-4 border-t-2">
@@ -413,23 +522,131 @@ export default function BillingPage() {
         </CardContent>
       </Card>
 
+      {/* Invoices Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-2xl flex items-center gap-2">
+                <Receipt className="h-6 w-6" />
+                Invoices
+              </CardTitle>
+              <CardDescription>
+                View and download your invoices
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingInvoices ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : invoices.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="h-20 w-20 rounded-full bg-muted mx-auto mb-6 flex items-center justify-center">
+                <FileText className="h-10 w-10 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">No invoices yet</h3>
+              <p className="text-muted-foreground max-w-sm mx-auto">
+                Your invoices will appear here once they are generated
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {invoices.map((invoice) => (
+                <div 
+                  key={invoice.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <FileText className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">{invoice.invoice_number}</p>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>{new Date(invoice.issue_date).toLocaleDateString('en-ZA', { 
+                          year: 'numeric', 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}</span>
+                        <span>•</span>
+                        <Badge className={getStatusColor(invoice.status)}>
+                          {invoice.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-lg font-bold">R{parseFloat(invoice.total_amount).toFixed(2)}</p>
+                      {invoice.status === 'paid' && invoice.paid_date && (
+                        <p className="text-xs text-muted-foreground">
+                          Paid {new Date(invoice.paid_date).toLocaleDateString()}
+                        </p>
+                      )}
+                      {invoice.status !== 'paid' && invoice.due_date && (
+                        <p className="text-xs text-muted-foreground">
+                          Due {new Date(invoice.due_date).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                    {invoice.invoice_pdf_url && (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(invoice.invoice_pdf_url, '_blank')}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const a = document.createElement('a');
+                            a.href = invoice.invoice_pdf_url;
+                            a.download = `${invoice.invoice_number}.pdf`;
+                            a.click();
+                          }}
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          Download
+                        </Button>
+                      </div>
+                    )}
+                    {!invoice.invoice_pdf_url && (
+                      <Badge variant="outline">Generating PDF...</Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deletingId} onOpenChange={() => setDeletingId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Payment Method?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove this card? This action cannot be undone.
-              {authorizations.find(a => a.id === deletingId)?.is_default && (
-                <div className="mt-3 p-3 bg-destructive/10 border border-destructive/20 rounded">
-                  <p className="font-semibold text-sm text-destructive">
-                    ⚠️ Warning: This is your default payment method.
-                  </p>
-                  <p className="text-sm mt-1">
-                    You'll need to set a new default card for automatic billing.
-                  </p>
-                </div>
-              )}
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>Are you sure you want to remove this card? This action cannot be undone.</p>
+                {authorizations.find(a => a.id === deletingId)?.is_default && (
+                  <div className="mt-3 p-3 bg-destructive/10 border border-destructive/20 rounded">
+                    <p className="font-semibold text-sm text-destructive">
+                      ⚠️ Warning: This is your default payment method.
+                    </p>
+                    <p className="text-sm mt-1">
+                      You'll need to set a new default card for automatic billing.
+                    </p>
+                  </div>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
