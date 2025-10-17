@@ -54,11 +54,6 @@ landing page is too much like storenxtdoor, make it unique but still nice and co
 
 footer looks ugly, make it more like stornxtdoor, link to docs
 
-fix docs, make more comprehensive about system, location first, then services then setting up schedules, even have a setup checklist, make it easy for a user to onboard or if they have issues. 
-docs must also look at service wizzard, explain stuff in more detail 
-
-also the service fee is too high, you need to seperate bot rental and service, bot rental is like roughly 150 per bot, 1 bot per garden, and then service which includes edge trimming and servicing the bot itself known as a bot swap. 1 service a month 2 bots should come to 500, 4 bots 8 services should be like 1750, come up with pricing structure in db, and fix frontend, also show pricing per garden and explain on frontend, also there are no contracts, you can pause and cancel at any time, full flexibility, have a winter graphic saying you can pause when you dont need us, we take the bots and leave the infrastructure. we also need table for rental contract, have db with a cdn url field and other info for this agreement, and dont worry about generation of pdf, just have it as last step of the wizzard, also have a field for their signature image, their legal information comes from the profile information set already. 
-
 
 
 resend api key re_HjE9aC37_P2q9RsQAr4F91i3cKHKEfwgN

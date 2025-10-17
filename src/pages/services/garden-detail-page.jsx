@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   ArrowLeft,
+  ArrowRight,
   Sprout,
   MapPin,
   Ruler,
@@ -54,6 +55,7 @@ export default function GardenDetailPage() {
   const [loading, setLoading] = useState(true);
   const [pausingService, setPausingService] = useState(false);
   const [showStopBotsDialog, setShowStopBotsDialog] = useState(false);
+  const [showPauseDialog, setShowPauseDialog] = useState(false);
   const [stoppingBots, setStoppingBots] = useState(false);
 
   useEffect(() => {
@@ -118,10 +120,12 @@ export default function GardenDetailPage() {
       if (error) throw error;
 
       toast({
-        title: 'Service paused',
-        description: 'Garden service has been paused. No charges will apply.',
+        title: 'Service Pause Scheduled',
+        description: 'Your bot will be collected at the next scheduled service visit. No further charges will apply after collection.',
+        duration: 7000,
       });
 
+      setShowPauseDialog(false);
       loadGardenDetails();
     } catch (error) {
       console.error('Error pausing service:', error);
@@ -250,6 +254,10 @@ export default function GardenDetailPage() {
     );
   }
 
+  // Check installation stage
+  const stage = garden.stage || 'pending_installation';
+  const isInstalled = ['installed', 'active'].includes(stage);
+
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
@@ -279,6 +287,18 @@ export default function GardenDetailPage() {
               <Pause className="h-3 w-3" />
               Paused
             </Badge>
+          ) : stage === 'pending_installation' ? (
+            <Badge variant="secondary" className="gap-1">
+              Pending Installation
+            </Badge>
+          ) : stage === 'installation_scheduled' ? (
+            <Badge variant="default" className="gap-1">
+              Installation Scheduled
+            </Badge>
+          ) : stage === 'installing' ? (
+            <Badge variant="default" className="gap-1">
+              Installing
+            </Badge>
           ) : (
             <>
               {garden.requires_maintenance && (
@@ -288,8 +308,8 @@ export default function GardenDetailPage() {
             </>
           )}
           
-          {/* Stop Bots Button (Emergency) */}
-          {assignedBots.length > 0 && !garden.is_paused && (
+          {/* Stop Bots Button (Emergency) - Only show if installed */}
+          {isInstalled && assignedBots.length > 0 && !garden.is_paused && (
             <Button
               variant="destructive"
               onClick={() => setShowStopBotsDialog(true)}
@@ -383,21 +403,54 @@ export default function GardenDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Assigned Bots */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Bot className="h-5 w-5" />
-                Assigned Bots
-              </CardTitle>
-              <CardDescription>Bots currently servicing this garden</CardDescription>
+      {/* Show installation status if not installed */}
+      {!isInstalled && (
+        <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+          <CardHeader>
+            <div className="flex items-start justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  {stage === 'pending_installation' && 'Installation Pending'}
+                  {stage === 'installation_scheduled' && 'Installation Scheduled'}
+                  {stage === 'installing' && 'Installation in Progress'}
+                </CardTitle>
+                <CardDescription className="mt-2">
+                  {stage === 'pending_installation' && 'We\'ll contact you within 24 hours'}
+                  {stage === 'installation_scheduled' && garden.installation_scheduled_date && `Scheduled for ${format(new Date(garden.installation_scheduled_date), 'MMM d, yyyy')}`}
+                  {stage === 'installing' && 'Our team is setting up your bot'}
+                </CardDescription>
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {assignedBots && assignedBots.length > 0 ? (
+          </CardHeader>
+          <CardContent>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/portal/docs/onboarding-guide')} 
+              className="w-full"
+            >
+              View Setup Guide
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Assigned Bots - Only show if installed */}
+      {isInstalled && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Bot className="h-5 w-5" />
+                  Assigned Bots
+                </CardTitle>
+                <CardDescription>Bots currently servicing this garden</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {assignedBots && assignedBots.length > 0 ? (
             <div className="space-y-3">
               {assignedBots.map((assignment) => (
                 <div
@@ -434,17 +487,19 @@ export default function GardenDetailPage() {
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Bot className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>No bots assigned to this garden yet</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Bot className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>No bots assigned to this garden yet</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Recent Mowing Sessions */}
-      <Card>
+      {/* Recent Mowing Sessions - Only show if installed */}
+      {isInstalled && (
+        <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5" />
@@ -490,16 +545,19 @@ export default function GardenDetailPage() {
                 </TableBody>
               </Table>
             </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Activity className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>No mowing sessions recorded yet</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      {/* Pause/Resume Service - At Bottom */}
-      <Card>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Activity className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>No mowing sessions recorded yet</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Pause/Resume Service - At Bottom - Only show if installed */}
+      {isInstalled && (
+        <Card>
         <CardHeader>
           <CardTitle>Service Control</CardTitle>
           <CardDescription>
@@ -542,7 +600,7 @@ export default function GardenDetailPage() {
           ) : (
             <Button
               variant="outline"
-              onClick={handlePause}
+              onClick={() => setShowPauseDialog(true)}
               disabled={pausingService}
               size="lg"
               className="w-full gap-2"
@@ -558,7 +616,61 @@ export default function GardenDetailPage() {
             </Button>
           )}
         </CardContent>
-      </Card>
+        </Card>
+      )}
+
+      {/* Pause Service Confirmation Dialog */}
+      <AlertDialog open={showPauseDialog} onOpenChange={setShowPauseDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Pause className="h-5 w-5 text-amber-600" />
+              Pause Service?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>When you pause your service:</p>
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded">
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-600">•</span>
+                    <span>Your bot will be <strong>collected at the next scheduled service visit</strong></span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-600">•</span>
+                    <span>No further charges will apply after bot collection</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-600">•</span>
+                    <span>You can resume service anytime - we'll schedule a new installation</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-600">•</span>
+                    <span>Your deposit remains held and will be refunded if you cancel</span>
+                  </li>
+                </ul>
+              </div>
+              <p className="text-sm">Our team will contact you to coordinate bot collection.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handlePause}
+              disabled={pausingService}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              {pausingService ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Pausing...
+                </>
+              ) : (
+                'Yes, Pause Service'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Stop Bots Confirmation Dialog */}
       <AlertDialog open={showStopBotsDialog} onOpenChange={setShowStopBotsDialog}>

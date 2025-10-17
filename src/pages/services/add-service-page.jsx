@@ -25,9 +25,10 @@ import {
   Play,
   Loader2,
   AlertCircle,
-  Calendar
+  Calendar,
+  Info
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { usePaymentAuthorizations, usePaystack } from '@/hooks/use-paystack';
@@ -35,6 +36,7 @@ import PriceCalculator from '@/components/services/price-calculator';
 import LocationChecker from '@/components/services/location-checker';
 import ScheduleSelector from '@/components/services/schedule-selector';
 import LocationWizard from '@/components/services/location-wizard';
+import SignaturePad from '@/components/services/signature-pad';
 
 const STORAGE_KEY = 'addServiceWizardData';
 
@@ -73,8 +75,8 @@ export default function AddServicePage() {
   // Get passed location from landing page
   const passedLocation = location.state?.location;
 
-  // Now 5 steps (removed location step)
-  const totalSteps = 5;
+  // Now 6 steps (added signature step)
+  const totalSteps = 6;
   const hasPaymentMethod = !authLoading && authorizations.length > 0;
 
   // Form state
@@ -93,10 +95,13 @@ export default function AddServicePage() {
       monthlyDays: [],
       preferredTime: '10:00',
       isValid: false
-    }
+    },
+    signature: null
   });
 
   const [calculatedPricing, setCalculatedPricing] = useState(null);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [agreementPdfUrl, setAgreementPdfUrl] = useState(null);
 
   // Save to localStorage on every change
   useEffect(() => {
@@ -171,7 +176,7 @@ export default function AddServicePage() {
     }
   ];
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step === 1) {
       if (!formData.locationId) {
         toast({
@@ -214,6 +219,98 @@ export default function AddServicePage() {
           variant: 'destructive'
         });
         return;
+      }
+    }
+
+    // Step 5: Generate PDF and save signature after user signs
+    if (step === 5 && formData.signature) {
+      try {
+        setGeneratingPdf(true);
+        
+        // Validate required data
+        if (!user?.id) {
+          throw new Error('User ID is required');
+        }
+        if (!selectedOrg?.organization_id) {
+          throw new Error('Organization ID is required');
+        }
+        if (!formData.locationId) {
+          throw new Error('Location ID is required');
+        }
+
+        // Edge Function will fetch user profile, location, and calculate pricing
+        // We only send the essential service details
+        const requestBody = {
+          user_id: user.id,
+          organization_id: selectedOrg.organization_id,
+          location_id: formData.locationId,
+          signature_base64: formData.signature,
+          number_of_bots: formData.gardens.length,
+          services_per_month: calculatedPricing?.services_per_month || 4,
+        };
+        
+        console.log('Sending agreement data:', JSON.stringify(requestBody, null, 2));
+        
+        // Call Edge Function to generate PDF and save signature
+        const response = await fetch(
+          `${supabaseUrl}/functions/v1/generate-agreement-pdf`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseAnonKey}`,
+            },
+            body: JSON.stringify(requestBody)
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Edge Function error response:', errorText);
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch (e) {
+            errorData = { error: errorText };
+          }
+          throw new Error(errorData.error || `Failed to generate agreement PDF (${response.status})`);
+        }
+
+        const data = await response.json();
+        console.log('Edge Function response:', data);
+        
+        if (data.success) {
+          // Store URLs in form data
+          setFormData({
+            ...formData,
+            signatureUrl: data.signature_url,
+            pdfUrl: data.pdf_url,
+            signaturePath: data.signature_path,
+            pdfPath: data.pdf_path
+          });
+          
+          setAgreementPdfUrl(data.pdf_url);
+
+          toast({
+            title: 'Agreement Generated! ✓',
+            description: 'Your signature and rental agreement have been saved securely.',
+          });
+        } else {
+          throw new Error(data.error || 'Failed to generate PDF');
+        }
+        
+      } catch (error) {
+        console.error('Error generating agreement:', error);
+        toast({
+          title: 'Generation Failed',
+          description: error.message || 'Failed to generate agreement. Please try again.',
+          variant: 'destructive'
+        });
+        // Don't proceed if PDF generation failed
+        setGeneratingPdf(false);
+        return;
+      } finally {
+        setGeneratingPdf(false);
       }
     }
 
@@ -599,6 +696,34 @@ export default function AddServicePage() {
             <Plus className="h-4 w-4 mr-2" />
             Add Another Garden
           </Button>
+
+          {/* Cost Preview */}
+          {formData.gardens.filter(g => g.name && g.area_sqm).length > 0 && (
+            <Alert className="bg-primary/5 border-primary">
+              <CreditCard className="h-4 w-4 text-primary" />
+              <AlertDescription>
+                <p className="font-semibold text-primary mb-2">Pricing Preview</p>
+                <div className="space-y-1 text-sm">
+                  <p>• <strong>Bot Rental:</strong> R150/bot/month (1 bot per garden)</p>
+                  <p>• <strong>Service Visits:</strong> Priced per visit based on schedule</p>
+                  <p>• <strong>Setup Fee:</strong> R450 first bot, R200 each additional</p>
+                </div>
+                <div className="mt-3 p-2 bg-background rounded-md">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">
+                      {formData.gardens.filter(g => g.name && g.area_sqm).length} Garden{formData.gardens.filter(g => g.name && g.area_sqm).length > 1 ? 's' : ''}
+                    </span>
+                    <span className="text-primary font-bold">
+                      From R{150 * formData.gardens.filter(g => g.name && g.area_sqm).length}/month*
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    *Plus service visit fees. Full pricing shown in next steps.
+                  </p>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
       )}
 
@@ -712,6 +837,80 @@ export default function AddServicePage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Invoice Preview */}
+            {calculatedPricing && calculatedPricing.monthly_total > 0 && (
+              <Card className="border-2 border-primary">
+                <CardHeader className="bg-primary/5">
+                  <CardTitle className="flex items-center gap-2 text-primary">
+                    <CreditCard className="h-5 w-5" />
+                    Invoice Preview
+                  </CardTitle>
+                  <CardDescription>What you'll be charged</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    {/* First Month */}
+                    <div className="pb-4 border-b">
+                      <p className="font-semibold text-sm mb-3">First Month Invoice</p>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span>Bot Rental ({calculatedPricing.number_of_bots} bot{calculatedPricing.number_of_bots > 1 ? 's' : ''})</span>
+                          <span>R{calculatedPricing.bot_rental_total?.toFixed(2) || '0.00'}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Service Visits ({calculatedPricing.services_per_month}x)</span>
+                          <span>R{calculatedPricing.service_total?.toFixed(2) || '0.00'}</span>
+                        </div>
+                        {calculatedPricing.setup_fee > 0 && (
+                          <div className="flex items-center justify-between text-amber-600">
+                            <span>Setup Fee (one-time)</span>
+                            <span>R{calculatedPricing.setup_fee?.toFixed(2) || '0.00'}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between pt-2 border-t font-bold text-base">
+                          <span>First Month Total</span>
+                          <span className="text-primary">
+                            R{((calculatedPricing.monthly_total || 0) + (calculatedPricing.setup_fee || 0)).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Recurring Monthly */}
+                    <div>
+                      <p className="font-semibold text-sm mb-3">Ongoing Monthly Invoice</p>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span>Bot Rental ({calculatedPricing.number_of_bots} bot{calculatedPricing.number_of_bots > 1 ? 's' : ''})</span>
+                          <span>R{calculatedPricing.bot_rental_total?.toFixed(2) || '0.00'}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Service Visits ({calculatedPricing.services_per_month}x)</span>
+                          <span>R{calculatedPricing.service_total?.toFixed(2) || '0.00'}</span>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t font-bold text-base">
+                          <span>Monthly Total</span>
+                          <span className="text-primary">R{calculatedPricing.monthly_total?.toFixed(2) || '0.00'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Billing Note */}
+                    <Alert>
+                      <Info className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        <p className="font-semibold mb-1">Billing Details:</p>
+                        <p>• Invoiced monthly on your chosen billing date</p>
+                        <p>• Payment auto-collected from your card</p>
+                        <p>• Invoice sent to your email each month</p>
+                        <p>• Cancel or pause anytime with no penalties</p>
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Price Calculator */}
@@ -719,13 +918,141 @@ export default function AddServicePage() {
             serviceType={formData.serviceType}
             totalArea={formData.gardens.reduce((sum, g) => sum + (parseFloat(g.area_sqm) || 0), 0)}
             gardenCount={formData.gardens.filter(g => g.name && g.area_sqm).length}
+            servicesPerMonth={formData.schedule?.estimatedServices || 1}
             onPriceChange={setCalculatedPricing}
           />
         </div>
       )}
 
-      {/* Step 5: Payment Method */}
+      {/* Step 5: Contract & Signature */}
       {step === 5 && (
+        <div className="max-w-3xl mx-auto space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5" />
+                Bot Rental Agreement
+              </CardTitle>
+              <CardDescription>
+                Review and sign your flexible rental agreement
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Agreement Summary */}
+              <div className="bg-muted/50 p-4 rounded-lg space-y-3">
+                <h3 className="font-semibold text-lg">Agreement Summary</h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Agreement Type</p>
+                    <p className="font-medium">Flexible Bot Rental</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Number of Bots</p>
+                    <p className="font-medium">{calculatedPricing?.number_of_bots || 0} bot(s)</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Monthly Rental</p>
+                    <p className="font-medium">R{calculatedPricing?.bot_rental_total?.toFixed(2) || '0.00'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Service Visits</p>
+                    <p className="font-medium">{calculatedPricing?.services_per_month || 0}x/month</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Monthly Total</p>
+                    <p className="font-bold text-lg text-primary">R{calculatedPricing?.monthly_total?.toFixed(2) || '0.00'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Contract Length</p>
+                    <p className="font-medium text-green-600">Month-to-Month</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Key Terms */}
+              <Alert>
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription>
+                  <p className="font-semibold mb-2">Flexible Agreement Benefits:</p>
+                  <ul className="space-y-1 text-sm">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span><strong>No Long-term Contract</strong> - Cancel anytime with 30 days notice</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span><strong>Pause Anytime</strong> - Pause service during winter months at no charge</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span><strong>Adjust Schedule</strong> - Change service frequency as your needs change</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span><strong>Bot Deposit</strong> - R500 refundable deposit per bot (refunded when you return the bot)</span>
+                    </li>
+                  </ul>
+                </AlertDescription>
+              </Alert>
+
+              {/* Full Terms Link */}
+              <div className="p-4 border rounded-lg">
+                <p className="text-sm mb-2">
+                  Please review the full terms and conditions before signing:
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open('/docs/terms-and-conditions', '_blank')}
+                >
+                  View Full Terms & Conditions
+                </Button>
+              </div>
+
+              {/* Signature Pad */}
+              <div>
+                <SignaturePad
+                  signature={formData.signature}
+                  onSignatureComplete={(signatureData) => {
+                    setFormData({ ...formData, signature: signatureData });
+                  }}
+                />
+              </div>
+
+              {/* PDF Generation Status */}
+              {generatingPdf && (
+                <Alert>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <AlertDescription>
+                    Generating your rental agreement PDF...
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {agreementPdfUrl && (
+                <Alert className="border-green-500 bg-green-50">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <AlertDescription>
+                    <div className="flex items-center justify-between">
+                      <span className="text-green-800">Agreement PDF generated successfully!</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(agreementPdfUrl, '_blank')}
+                      >
+                        View PDF
+                      </Button>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Step 6: Payment Method */}
+      {step === 6 && (
         <div className="max-w-2xl mx-auto">
           <Card>
             <CardHeader>
@@ -793,6 +1120,15 @@ export default function AddServicePage() {
                   <p className="text-sm text-muted-foreground text-center">
                     💳 Monthly automatic billing • Cancel anytime
                   </p>
+
+                  {!hasPaymentMethod && (
+                    <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-900/20">
+                      <AlertCircle className="h-4 w-4 text-amber-600" />
+                      <AlertDescription className="text-amber-900 dark:text-amber-100">
+                        <strong>Payment Method Required:</strong> You must add a payment method before completing setup. This ensures uninterrupted monthly billing for your bot service.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -824,9 +1160,9 @@ export default function AddServicePage() {
             )}
           </div>
 
-          {step < 5 ? (
-            <Button onClick={handleNext} disabled={loading}>
-              Next
+          {step < 6 ? (
+            <Button onClick={handleNext} disabled={loading || (step === 5 && !formData.signature)}>
+              {step === 5 && !formData.signature ? 'Sign Agreement First' : 'Next'}
               <ChevronRight className="h-4 w-4 ml-2" />
             </Button>
           ) : (
@@ -857,12 +1193,11 @@ export default function AddServicePage() {
               )}
               <Button 
                 onClick={handleSubmit} 
-                disabled={loading}
+                disabled={loading || !hasPaymentMethod}
                 size="lg"
                 className="flex-1"
-                variant={hasPaymentMethod ? "default" : "outline"}
               >
-                {loading ? 'Creating...' : (hasPaymentMethod ? 'Complete Setup' : 'Skip & Complete')}
+                {loading ? 'Creating...' : (hasPaymentMethod ? 'Complete Setup' : 'Add Payment Method to Continue')}
               </Button>
             </div>
           )}

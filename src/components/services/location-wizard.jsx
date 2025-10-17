@@ -23,6 +23,8 @@ export default function LocationWizard({
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const [coverage, setCoverage] = useState(null);
+  const [coverageChecked, setCoverageChecked] = useState(false);
   const [formData, setFormData] = useState({
     name: 'Home',
     address: '',
@@ -33,8 +35,10 @@ export default function LocationWizard({
     longitude: null
   });
 
-  const handleLocationSelect = (location) => {
+  const handleLocationSelect = (location, coverageData, checked) => {
     setSelectedLocation(location);
+    setCoverage(coverageData);
+    setCoverageChecked(checked);
     setFormData({
       ...formData,
       address: location.address,
@@ -50,6 +54,16 @@ export default function LocationWizard({
       toast({
         title: 'Missing Information',
         description: 'Please provide a location name and address',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Check if location is in coverage area
+    if (coverageChecked && !coverage?.is_inside) {
+      toast({
+        title: 'Location Not in Service Area',
+        description: 'This location is outside our current service area. Please contact us to request coverage.',
         variant: 'destructive'
       });
       return;
@@ -159,13 +173,22 @@ export default function LocationWizard({
       </div>
 
       {/* Coverage Status */}
-      {selectedLocation && (
-        <Alert className="border-green-500 bg-green-50">
-          <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800">
-            <strong>Location verified!</strong> You can now proceed to create this location.
-          </AlertDescription>
-        </Alert>
+      {selectedLocation && coverageChecked && (
+        coverage?.is_inside ? (
+          <Alert className="border-green-500 bg-green-50">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              <strong>Location verified!</strong> You can now proceed to create this location.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert className="border-red-500 bg-red-50">
+            <AlertDescription className="text-red-800">
+              <strong>Location Not in Service Area</strong>
+              <p className="mt-1">This location is outside our current coverage area. Please contact us to request service at this location.</p>
+            </AlertDescription>
+          </Alert>
+        )
       )}
 
       {/* Action Buttons */}
@@ -182,7 +205,7 @@ export default function LocationWizard({
         )}
         <Button
           type="submit"
-          disabled={loading || !formData.name || !formData.address}
+          disabled={loading || !formData.name || !formData.address || (coverageChecked && !coverage?.is_inside)}
           className="ml-auto"
         >
           {loading ? (

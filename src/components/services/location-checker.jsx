@@ -101,10 +101,10 @@ export default function LocationChecker({ onLocationSelect, initialAddress = '',
           
           setLocation(newLocation);
           setAddress(place.place_name);
-          await checkCoverage(latitude, longitude);
+          const coverageResult = await checkCoverage(latitude, longitude);
           
           if (onLocationSelect) {
-            onLocationSelect(newLocation);
+            onLocationSelect(newLocation, coverageResult.coverage, coverageResult.checked);
           }
         } catch (error) {
           console.error('Error reverse geocoding:', error);
@@ -165,10 +165,10 @@ export default function LocationChecker({ onLocationSelect, initialAddress = '',
     setSuggestions([]);
     setShowSuggestions(false);
     
-    await checkCoverage(latitude, longitude);
+    const coverageResult = await checkCoverage(latitude, longitude);
     
     if (onLocationSelect) {
-      onLocationSelect(newLocation);
+      onLocationSelect(newLocation, coverageResult.coverage, coverageResult.checked);
     }
   };
 
@@ -187,19 +187,18 @@ export default function LocationChecker({ onLocationSelect, initialAddress = '',
         console.error('Error checking coverage:', error);
         setCoverage(null);
         setCoverageChecked(true);
-        return;
+        return { coverage: null, checked: true };
       }
 
-      if (data && data.length > 0) {
-        setCoverage(data[0]); // Take first (highest priority) result
-      } else {
-        setCoverage(null);
-      }
+      const coverageData = (data && data.length > 0) ? data[0] : null;
+      setCoverage(coverageData);
       setCoverageChecked(true);
+      return { coverage: coverageData, checked: true };
     } catch (error) {
       console.error('Error checking coverage:', error);
       setCoverage(null);
       setCoverageChecked(true);
+      return { coverage: null, checked: true };
     }
   };
 

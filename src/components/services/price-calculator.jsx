@@ -183,87 +183,93 @@ export default function PriceCalculator({
         )}
 
         {/* Pricing Display */}
-        {!loading && pricing.monthly > 0 && (
+        {!loading && pricing.monthly_total > 0 && (
           <div className="pt-4 border-t space-y-4">
             {/* Tier Badge */}
-            {pricing.tier && (
+            {pricing.tier_name && (
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="capitalize">
-                  {pricing.tier} Tier
+                  {pricing.tier_name}
                 </Badge>
-                {pricing.description && (
-                  <span className="text-sm text-muted-foreground">{pricing.description}</span>
+                {pricing.pricing_type && (
+                  <Badge variant="secondary" className="text-xs">
+                    {pricing.pricing_type}
+                  </Badge>
                 )}
               </div>
             )}
             
-            <div className="space-y-3">
-              {/* Monthly Billing Only */}
-              <div className="p-6 border-2 border-primary rounded-lg bg-primary/5">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="font-semibold text-lg">Monthly Billing</p>
-                    <p className="text-sm text-muted-foreground">{getFrequencyLabel(frequency)}</p>
-                  </div>
-                  <Badge variant="default">Standard Plan</Badge>
+            {/* Cost Breakdown */}
+            <div className="space-y-3 bg-muted/50 p-4 rounded-lg">
+              <p className="font-semibold text-sm">Monthly Cost Breakdown</p>
+              
+              {/* Bot Rental */}
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <Bot className="h-4 w-4 text-muted-foreground" />
+                  <span>Bot Rental ({pricing.number_of_bots} bot{pricing.number_of_bots > 1 ? 's' : ''})</span>
                 </div>
-                <div className="flex items-baseline gap-2 mb-4">
-                  <p className="text-3xl font-bold">R{pricing.monthly}</p>
-                  <span className="text-sm text-muted-foreground">/month</span>
+                <span className="font-semibold">R{pricing.bot_rental_total?.toFixed(2) || '0.00'}</span>
+              </div>
+              <div className="pl-6 text-xs text-muted-foreground">
+                R{pricing.bot_rental_per_bot}/bot/month
+              </div>
+
+              {/* Service Visits */}
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <Wrench className="h-4 w-4 text-muted-foreground" />
+                  <span>Service Visits ({pricing.services_per_month}x/month)</span>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    Billed monthly
-                  </p>
-                  <p className="text-sm text-muted-foreground flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    Cancel anytime
-                  </p>
-                  <p className="text-sm text-muted-foreground flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    No long-term commitment
-                  </p>
+                <span className="font-semibold">R{pricing.service_total?.toFixed(2) || '0.00'}</span>
+              </div>
+              <div className="pl-6 text-xs text-muted-foreground">
+                R{pricing.service_price_per_visit}/visit (edge trimming + bot swap)
+              </div>
+
+              {/* Total */}
+              <div className="pt-3 border-t border-border">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold">Monthly Total</span>
+                  <span className="text-2xl font-bold text-primary">R{pricing.monthly_total?.toFixed(2) || '0.00'}</span>
                 </div>
               </div>
             </div>
 
             {/* Setup Fee */}
-            <div className="pt-2 border-t">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">
-                  One-time setup fee
-                  {gardenCount > 1 && ` (${gardenCount} gardens)`}
-                </span>
-                <span className="font-semibold">R{pricing.setupFee}</span>
-              </div>
-              {gardenCount > 1 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  R450 for first garden + R200 per additional garden
-                </p>
-              )}
-            </div>
+            {pricing.setup_fee > 0 && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">
+                      One-time Setup Fee ({pricing.number_of_bots} bot{pricing.number_of_bots > 1 ? 's' : ''})
+                    </span>
+                    <span className="font-semibold">R{pricing.setup_fee?.toFixed(2) || '0.00'}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Charged once during first month for installation
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
 
-            {/* Included Features */}
-            <div className="pt-2 space-y-2">
-              <p className="text-sm font-medium">Included:</p>
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            {/* Billing Info */}
+            <div className="p-4 border-2 border-primary rounded-lg bg-primary/5">
+              <div className="space-y-2">
+                <p className="font-semibold flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span>Bot installation & setup</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span>Real-time monitoring dashboard</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span>Regular maintenance & support</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span>Flexible scheduling options</span>
-                </div>
+                  Flexible Monthly Billing
+                </p>
+                <p className="text-sm text-muted-foreground flex items-center gap-2 pl-6">
+                  • Cancel anytime, no long-term contract
+                </p>
+                <p className="text-sm text-muted-foreground flex items-center gap-2 pl-6">
+                  • Pause service during winter months
+                </p>
+                <p className="text-sm text-muted-foreground flex items-center gap-2 pl-6">
+                  • Adjust schedule and services as needed
+                </p>
               </div>
             </div>
           </div>

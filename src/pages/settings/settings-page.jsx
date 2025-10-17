@@ -23,7 +23,11 @@ import {
   Moon,
   Sun,
   Monitor,
-  Save
+  Save,
+  Shield,
+  FileText,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -40,6 +44,20 @@ export default function SettingsPage() {
     phone: ''
   });
 
+  // Legal profile data (read-only)
+  const [legalProfile, setLegalProfile] = useState({
+    first_name: '',
+    surname: '',
+    id_number: '',
+    physical_address: '',
+    physical_city: '',
+    physical_province: '',
+    physical_postal_code: '',
+    cell_phone: '',
+    legal_profile_completed: false,
+    updated_at: null
+  });
+
   // Notification preferences
   const [notifications, setNotifications] = useState({
     email_alerts: true,
@@ -52,6 +70,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadUserProfile();
+    loadLegalProfile();
     loadNotificationPreferences();
   }, [user]);
 
@@ -75,6 +94,37 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error('Error loading profile:', error);
+    }
+  };
+
+  const loadLegalProfile = async () => {
+    if (!user?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('first_name, surname, id_number, physical_address, physical_city, physical_province, physical_postal_code, cell_phone, legal_profile_completed, updated_at')
+        .eq('id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      if (data) {
+        setLegalProfile({
+          first_name: data.first_name || '',
+          surname: data.surname || '',
+          id_number: data.id_number || '',
+          physical_address: data.physical_address || '',
+          physical_city: data.physical_city || '',
+          physical_province: data.physical_province || '',
+          physical_postal_code: data.physical_postal_code || '',
+          cell_phone: data.cell_phone || '',
+          legal_profile_completed: data.legal_profile_completed || false,
+          updated_at: data.updated_at
+        });
+      }
+    } catch (error) {
+      console.error('Error loading legal profile:', error);
     }
   };
 
@@ -158,10 +208,14 @@ export default function SettingsPage() {
 
       {/* Settings Tabs */}
       <Tabs defaultValue="profile" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:w-auto">
+        <TabsList className="grid w-full grid-cols-3 lg:w-auto">
           <TabsTrigger value="profile">
             <User className="h-4 w-4 mr-2" />
             Profile
+          </TabsTrigger>
+          <TabsTrigger value="legal">
+            <Shield className="h-4 w-4 mr-2" />
+            Legal Profile
           </TabsTrigger>
           <TabsTrigger value="notifications">
             <Bell className="h-4 w-4 mr-2" />
@@ -223,6 +277,162 @@ export default function SettingsPage() {
                   {loading ? 'Saving...' : 'Save Changes'}
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Legal Profile Tab */}
+        <TabsContent value="legal" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    Legal Profile Information
+                  </CardTitle>
+                  <CardDescription>
+                    Your legal information for service contracts (read-only)
+                  </CardDescription>
+                </div>
+                {legalProfile.legal_profile_completed ? (
+                  <div className="flex items-center gap-2 text-green-600">
+                    <CheckCircle className="h-5 w-5" />
+                    <span className="text-sm font-medium">Verified</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-amber-600">
+                    <AlertCircle className="h-5 w-5" />
+                    <span className="text-sm font-medium">Incomplete</span>
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {legalProfile.legal_profile_completed ? (
+                <>
+                  {/* Personal Information */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                      Personal Information
+                    </h3>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label className="text-muted-foreground">Legal First Name</Label>
+                        <div className="p-3 bg-muted/50 rounded-md border">
+                          <p className="font-medium">{legalProfile.first_name || 'Not set'}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-muted-foreground">Legal Surname</Label>
+                        <div className="p-3 bg-muted/50 rounded-md border">
+                          <p className="font-medium">{legalProfile.surname || 'Not set'}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-muted-foreground">ID Number</Label>
+                      <div className="p-3 bg-muted/50 rounded-md border">
+                        <p className="font-mono font-medium">{legalProfile.id_number || 'Not set'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Contact Information */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                      Contact Information
+                    </h3>
+                    <div className="space-y-1.5">
+                      <Label className="text-muted-foreground">Cell Phone</Label>
+                      <div className="p-3 bg-muted/50 rounded-md border">
+                        <p className="font-medium">{legalProfile.cell_phone || 'Not set'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Physical Address */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                      Physical Address
+                    </h3>
+                    <div className="space-y-1.5">
+                      <Label className="text-muted-foreground">Street Address</Label>
+                      <div className="p-3 bg-muted/50 rounded-md border">
+                        <p className="font-medium">{legalProfile.physical_address || 'Not set'}</p>
+                      </div>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-muted-foreground">City</Label>
+                        <div className="p-3 bg-muted/50 rounded-md border">
+                          <p className="font-medium">{legalProfile.physical_city || 'Not set'}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-muted-foreground">Province</Label>
+                        <div className="p-3 bg-muted/50 rounded-md border">
+                          <p className="font-medium">{legalProfile.physical_province || 'Not set'}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-muted-foreground">Postal Code</Label>
+                        <div className="p-3 bg-muted/50 rounded-md border">
+                          <p className="font-medium">{legalProfile.physical_postal_code || 'Not set'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Information Notice */}
+                  <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div className="flex gap-3">
+                      <FileText className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                      <div className="space-y-2 text-sm">
+                        <p className="font-semibold text-blue-900 dark:text-blue-100">
+                          Why is this information read-only?
+                        </p>
+                        <p className="text-blue-800 dark:text-blue-200">
+                          Your legal profile information is used for official service contracts and rental agreements. 
+                          Once verified, it cannot be changed for legal and compliance reasons.
+                        </p>
+                        <p className="text-blue-800 dark:text-blue-200">
+                          If you need to update this information, please contact support at{' '}
+                          <a href="mailto:support@botkorp.co.za" className="underline font-medium">
+                            support@botkorp.co.za
+                          </a>
+                        </p>
+                        {legalProfile.updated_at && (
+                          <p className="text-xs text-blue-700 dark:text-blue-300 pt-2 border-t border-blue-200 dark:border-blue-800">
+                            Last updated: {new Date(legalProfile.updated_at).toLocaleDateString('en-ZA', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-12">
+                  <Shield className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <h3 className="text-lg font-semibold mb-2">Legal Profile Not Completed</h3>
+                  <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                    You haven't completed your legal profile yet. This will be collected when you create your first service.
+                  </p>
+                  <Button onClick={() => window.location.href = '/portal/services/add'}>
+                    Create Your First Service
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

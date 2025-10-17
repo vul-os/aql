@@ -25,7 +25,9 @@ import {
   CircleDot,
   Ruler,
   ArrowRight,
-  AlertCircle
+  AlertCircle,
+  Pause,
+  Bot
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -73,19 +75,27 @@ export default function ServicesPage() {
         return;
       }
 
-      // Load gardens
+      // Load gardens with bot count
       const { data: gardensData, error: gardensError } = await supabase
         .from('gardens')
         .select(`
           *,
-          location:locations(name, city, province)
+          location:locations(name, city, province),
+          bot_garden_assignments(count)
         `)
         .in('location_id', locationsData.map(l => l.id))
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (gardensError) throw gardensError;
-      setGardens(gardensData || []);
+      
+      // Add bot count to each garden
+      const gardensWithBotCount = (gardensData || []).map(garden => ({
+        ...garden,
+        bot_count: garden.bot_garden_assignments?.[0]?.count || 0
+      }));
+      
+      setGardens(gardensWithBotCount);
 
       // Load pools
       const { data: poolsData, error: poolsError } = await supabase
@@ -113,85 +123,120 @@ export default function ServicesPage() {
     }
   };
 
-  const GardenCard = ({ garden }) => (
-    <Card className="hover:shadow-lg transition-all">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
-              <Sprout className="h-6 w-6 text-green-600" />
+  const GardenCard = ({ garden }) => {
+    // Determine service stage
+    const stage = garden.stage || 'pending_installation';
+    const isInstalled = ['installed', 'active'].includes(stage);
+    
+    // Count bots (placeholder - will be fetched with garden data)
+    const botCount = garden.bot_count || 1;
+    
+    // Stage badge configuration
+    const getStageDisplay = () => {
+      if (garden.is_paused) {
+        return { label: 'Paused', variant: 'outline', color: 'bg-amber-100 text-amber-700 border-amber-300' };
+      }
+      switch (stage) {
+        case 'pending_installation':
+          return { label: 'Pending Setup', variant: 'secondary', color: 'bg-blue-100 text-blue-700 border-blue-300' };
+        case 'installation_scheduled':
+          return { label: 'Setup Scheduled', variant: 'default', color: 'bg-purple-100 text-purple-700 border-purple-300' };
+        case 'installing':
+          return { label: 'Installing', variant: 'default', color: 'bg-indigo-100 text-indigo-700 border-indigo-300' };
+        case 'installed':
+        case 'active':
+          return { label: 'Active', variant: 'default', color: 'bg-green-100 text-green-700 border-green-300' };
+        default:
+          return { label: 'Active', variant: 'default', color: 'bg-green-100 text-green-700 border-green-300' };
+      }
+    };
+    
+    const stageDisplay = getStageDisplay();
+    
+    return (
+      <Card className="group hover:shadow-xl hover:scale-[1.02] transition-all duration-200 border-2 hover:border-primary/20">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3 flex-1 min-w-0">
+              <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shrink-0 shadow-md">
+                <Sprout className="h-7 w-7 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <CardTitle className="text-xl font-bold truncate">{garden.name}</CardTitle>
+                <CardDescription className="flex items-center gap-1.5 mt-1.5">
+                  <MapPin className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{garden.location?.name || 'Unknown Location'}</span>
+                </CardDescription>
+              </div>
             </div>
-            <div>
-              <CardTitle className="text-xl">{garden.name}</CardTitle>
-              <CardDescription className="flex items-center gap-2 mt-1">
-                <MapPin className="h-3 w-3" />
-                {garden.location?.name || 'Unknown Location'}
-              </CardDescription>
-            </div>
-          </div>
-          {garden.is_paused ? (
-            <Badge variant="outline" className="gap-1">
-              <Pause className="h-3 w-3" />
-              Paused
+            <Badge variant="secondary" className={`gap-1.5 px-2.5 py-1 font-medium shrink-0 ${stageDisplay.color} border`}>
+              {garden.is_paused ? (
+                <Pause className="h-3.5 w-3.5" />
+              ) : (
+                <CircleDot className="h-3.5 w-3.5" />
+              )}
+              {stageDisplay.label}
             </Badge>
-          ) : (
-            <Badge variant="default" className="gap-1">
-              <CircleDot className="h-3 w-3" />
-              Active
-            </Badge>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <p className="text-xs text-muted-foreground">Area</p>
-            <p className="font-medium flex items-center gap-1">
-              <Ruler className="h-3 w-3" />
-              {garden.area_sqm} m²
-            </p>
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Grass Type</p>
-            <p className="font-medium capitalize">{garden.grass_type || 'Not specified'}</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Bot Count & Quick Stats */}
+          <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+            <Bot className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">
+              {botCount} Bot{botCount !== 1 ? 's' : ''} • {garden.area_sqm} m²
+            </span>
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Service Frequency</p>
-            <p className="font-medium">
-              {garden.service_frequency === 'bi-weekly' ? 'Bi-Weekly' : 'Monthly'}
-            </p>
-          </div>
-          {garden.last_mowed_at && (
-            <div>
-              <p className="text-xs text-muted-foreground">Last Serviced</p>
-              <p className="font-medium flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {format(new Date(garden.last_mowed_at), 'MMM d, yyyy')}
-              </p>
-            </div>
-          )}
-        </div>
 
-        <div className="pt-4 border-t">
+          {/* Show installation message or stats */}
+          {!isInstalled ? (
+            <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+              <AlertCircle className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-sm text-blue-900 dark:text-blue-100">
+                {stage === 'pending_installation' && 'Awaiting installation - we\'ll contact you soon'}
+                {stage === 'installation_scheduled' && `Setup: ${garden.installation_scheduled_date ? format(new Date(garden.installation_scheduled_date), 'MMM d') : 'scheduled'}`}
+                {stage === 'installing' && 'Installation in progress'}
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Grass Type</p>
+                <p className="text-sm font-medium capitalize">{garden.grass_type || 'Standard'}</p>
+              </div>
+              {garden.last_mowed_at && (
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Last Service</p>
+                  <p className="text-sm font-medium flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    {format(new Date(garden.last_mowed_at), 'MMM d')}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Action Button */}
           <Button
-            variant="outline"
+            variant={isInstalled ? "default" : "outline"}
             size="sm"
-            className="w-full"
+            className="w-full group-hover:shadow-md transition-shadow"
             onClick={() => navigate(`/portal/garden/${garden.id}`)}
           >
-            <Eye className="h-4 w-4 mr-1" />
+            <Eye className="h-4 w-4 mr-2" />
             View Details
+            <ArrowRight className="h-4 w-4 ml-auto" />
           </Button>
-        </div>
 
-        {garden.is_paused && garden.paused_at && (
-          <div className="mt-3 p-2 bg-muted/50 rounded text-xs text-muted-foreground">
-            Paused since {format(new Date(garden.paused_at), 'MMM d, yyyy')}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+          {garden.is_paused && garden.paused_at && (
+            <p className="text-xs text-muted-foreground text-center pt-2 border-t">
+              Paused since {format(new Date(garden.paused_at), 'MMM d, yyyy')}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
 
   // Show location wizard if requested
   if (showLocationWizard) {

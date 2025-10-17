@@ -1,9 +1,9 @@
 -- =====================================================
--- Auto-create Organization and Membership on User Signup
--- Extends the profile creation trigger to also create an org
+-- Auth Triggers
+-- Auto-create profile, organization, and membership on signup
 -- =====================================================
 
--- Updated function to handle new user signup with organization creation
+-- Function to handle new user signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -95,9 +95,20 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- =====================================================
--- Comments
--- =====================================================
+-- Trigger to automatically create profile on user signup
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_new_user();
+
+-- Comments
 COMMENT ON FUNCTION public.handle_new_user IS 'Automatically creates profile, organization, and membership when a new user signs up. User becomes owner of their own organization.';
+
+-- Success message
+DO $$
+BEGIN
+    RAISE NOTICE 'Auth trigger created: auto profile/org/membership on signup';
+END $$;
 

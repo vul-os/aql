@@ -76,13 +76,13 @@ CREATE TABLE IF NOT EXISTS invoices (
 );
 
 -- Indexes
-CREATE INDEX idx_invoices_user ON invoices(user_id);
-CREATE INDEX idx_invoices_org ON invoices(organization_id);
-CREATE INDEX idx_invoices_agreement ON invoices(rental_agreement_id);
-CREATE INDEX idx_invoices_status ON invoices(status);
-CREATE INDEX idx_invoices_number ON invoices(invoice_number);
-CREATE INDEX idx_invoices_due_date ON invoices(due_date);
-CREATE INDEX idx_invoices_period ON invoices(period_start, period_end);
+CREATE INDEX IF NOT EXISTS idx_invoices_user ON invoices(user_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_org ON invoices(organization_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_agreement ON invoices(rental_agreement_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+CREATE INDEX IF NOT EXISTS idx_invoices_number ON invoices(invoice_number);
+CREATE INDEX IF NOT EXISTS idx_invoices_due_date ON invoices(due_date);
+CREATE INDEX IF NOT EXISTS idx_invoices_period ON invoices(period_start, period_end);
 
 -- Function to generate invoice number
 CREATE OR REPLACE FUNCTION generate_invoice_number()
@@ -341,6 +341,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Trigger to update updated_at
+DROP TRIGGER IF EXISTS update_invoices_updated_at ON invoices;
 CREATE TRIGGER update_invoices_updated_at
 BEFORE UPDATE ON invoices
 FOR EACH ROW

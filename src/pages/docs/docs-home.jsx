@@ -28,6 +28,19 @@ export default function DocsHome() {
 
   const quickLinks = [
     {
+      icon: <BookOpen className="h-6 w-6" />,
+      title: 'Getting Started Guide',
+      description: 'Complete step-by-step onboarding walkthrough',
+      href: `${basePath}/onboarding-guide`,
+      featured: true
+    },
+    {
+      icon: <FileText className="h-6 w-6" />,
+      title: 'Bot Rental Terms',
+      description: 'Complete bot rental terms and conditions',
+      href: `${basePath}/bot-rental-terms`
+    },
+    {
       icon: <HelpCircle className="h-6 w-6" />,
       title: 'FAQ',
       description: 'Frequently asked questions about Bot Korp',
@@ -42,7 +55,7 @@ export default function DocsHome() {
     {
       icon: <FileText className="h-6 w-6" />,
       title: 'Terms of Service',
-      description: 'Terms and conditions for using Bot Korp',
+      description: 'General terms and conditions for using Bot Korp',
       href: `${basePath}/terms-of-service`
     },
     {
@@ -123,16 +136,23 @@ export default function DocsHome() {
           {quickLinks.map((link) => (
             <Card
               key={link.href}
-              className="cursor-pointer hover:shadow-lg transition-shadow"
+              className={`cursor-pointer hover:shadow-lg transition-shadow ${
+                link.featured ? 'border-2 border-primary/40 bg-primary/5' : ''
+              }`}
               onClick={() => navigate(link.href)}
             >
               <CardHeader>
                 <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                  <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${
+                    link.featured ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary'
+                  }`}>
                     {link.icon}
                   </div>
-                  <div>
-                    <CardTitle className="text-lg">{link.title}</CardTitle>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-lg">{link.title}</CardTitle>
+                      {link.featured && <Badge>Start Here</Badge>}
+                    </div>
                     <CardDescription className="mt-1">{link.description}</CardDescription>
                   </div>
                 </div>

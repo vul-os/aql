@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import InteractivePreview from '@/components/ui/interactive-preview';
+import SimplePriceCalculator from '@/components/services/simple-price-calculator';
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -611,6 +612,29 @@ export default function LandingPage() {
             </div>
 
           </div>
+        </div>
+      </section>
+
+      {/* Pricing Calculator Section */}
+      <section className="relative overflow-hidden py-20 md:py-28 bg-gradient-to-br from-background via-muted/20 to-background">
+        {/* Decorative background */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-20 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-20 left-1/4 w-96 h-96 bg-secondary/5 rounded-full blur-3xl" />
+        </div>
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="text-center mb-12">
+            <Badge variant="outline" className="mb-4">Transparent Pricing</Badge>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+              Calculate Your <span className="text-primary">Monthly Cost</span>
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Simple, transparent pricing with no hidden fees. See exactly what you'll pay.
+            </p>
+          </div>
+
+          <SimplePriceCalculator />
         </div>
       </section>
 

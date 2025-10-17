@@ -59,6 +59,7 @@ export default function DashboardPage() {
   const [showLocationWizard, setShowLocationWizard] = useState(false);
   const [showLegalWizard, setShowLegalWizard] = useState(false);
   const [createdLocation, setCreatedLocation] = useState(null);
+  const [profile, setProfile] = useState(null);
 
   const COLORS = ['#2563eb', '#1f2937', '#3b82f6', '#0f172a', '#93c5fd'];
 
@@ -184,6 +185,17 @@ export default function DashboardPage() {
 
     try {
       setLoading(true);
+
+      // Load user profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (profileData) {
+        setProfile(profileData);
+      }
 
       // Check for locations first
       const { data: locationsData } = await supabase

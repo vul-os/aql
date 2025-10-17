@@ -29,9 +29,10 @@ import {
   Moon,
   Sun,
   Search,
-  Calendar
+  Calendar,
+  MapPin,
+  Plus
 } from 'lucide-react';
-import { MapPin } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -39,6 +40,14 @@ import { useTheme } from '@/components/theme-provider';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import LocationWizard from '@/components/services/location-wizard';
 
 export default function PortalLayout() {
   const navigate = useNavigate();
@@ -52,11 +61,11 @@ export default function PortalLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [locations, setLocations] = useState([]);
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const [showAddLocationDialog, setShowAddLocationDialog] = useState(false);
 
   const mainNavItems = [
     { icon: <LayoutDashboard className="h-5 w-5" />, label: 'Dashboard', path: '/portal' },
     { icon: <Sprout className="h-5 w-5" />, label: 'Services', path: '/portal/services' },
-    { icon: <Calendar className="h-5 w-5" />, label: 'Schedules', path: '/portal/services/schedules' },
     { icon: <Users className="h-5 w-5" />, label: 'Members', path: '/portal/members' },
     { icon: <CreditCard className="h-5 w-5" />, label: 'Billing', path: '/portal/billing' },
   ];
@@ -406,8 +415,16 @@ export default function PortalLayout() {
                     </DropdownMenuItem>
                   ))
                 ) : (
-                  <div className="px-2 py-3 text-sm text-muted-foreground">No locations found for this organization</div>
+                  <div className="px-2 py-3 text-sm text-muted-foreground">No locations found</div>
                 )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setShowAddLocationDialog(true)}
+                  className="cursor-pointer text-primary font-medium"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add New Location
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -496,6 +513,42 @@ export default function PortalLayout() {
           }} />
         </main>
       </div>
+
+      {/* Add Location Dialog */}
+      <Dialog open={showAddLocationDialog} onOpenChange={setShowAddLocationDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-primary" />
+              Add New Location
+            </DialogTitle>
+            <DialogDescription>
+              Add a new location for {selectedOrg?.organization_name}
+            </DialogDescription>
+          </DialogHeader>
+          <LocationWizard
+            organizationId={selectedOrg?.organization_id}
+            onComplete={(newLocation) => {
+              setShowAddLocationDialog(false);
+              loadOrganizationLocations();
+              toast({
+                title: 'Location Added! 🎉',
+                description: `${newLocation.name} has been added successfully.`,
+              });
+              // Auto-select the new location
+              setSelectedLocation(newLocation);
+              if (newLocation?.id) {
+                localStorage.setItem('selectedLocationId', newLocation.id);
+              }
+            }}
+            onCancel={() => setShowAddLocationDialog(false)}
+            embedded={true}
+            showCancel={true}
+            title=""
+            description=""
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

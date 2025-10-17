@@ -62,7 +62,8 @@ export default function ScheduleSelector({
     scheduleType: 'weekly',
     weeklyDays: [],
     monthlyDays: [],
-    preferredTime: '10:00'
+    preferredTime: '10:00',
+    servicesPerMonth: 4
   },
   onChange,
   maxServicesPerMonth = 4,
@@ -73,23 +74,11 @@ export default function ScheduleSelector({
   const [weeklyDays, setWeeklyDays] = useState(schedule.weeklyDays || []);
   const [monthlyDays, setMonthlyDays] = useState(schedule.monthlyDays || []);
   const [preferredTime, setPreferredTime] = useState(schedule.preferredTime || '10:00');
+  const [servicesPerMonth, setServicesPerMonth] = useState(schedule.servicesPerMonth || 4);
 
-  // Calculate total selected days per month
-  const calculateMonthlyServices = () => {
-    if (scheduleType === 'weekly') {
-      // Approximate: days per week * 4.33 weeks per month
-      return Math.floor(weeklyDays.length * 4.33);
-    } else if (scheduleType === 'monthly') {
-      return monthlyDays.length;
-    } else if (scheduleType === 'mixed') {
-      // For mixed, count unique days (approximate)
-      const weeklyCount = Math.floor(weeklyDays.length * 4.33);
-      return weeklyCount + monthlyDays.length;
-    }
-    return 0;
-  };
-
-  const estimatedServices = calculateMonthlyServices();
+  // For weekly schedules, use the manual servicesPerMonth selector
+  // For monthly schedules, use the number of selected days
+  const estimatedServices = scheduleType === 'monthly' ? monthlyDays.length : servicesPerMonth;
   const MAX_SERVICES_PER_MONTH = 8; // Hard limit
   const isOverLimit = estimatedServices > MAX_SERVICES_PER_MONTH;
 
@@ -138,14 +127,15 @@ export default function ScheduleSelector({
         weeklyDays,
         monthlyDays,
         preferredTime,
+        servicesPerMonth: estimatedServices,
         estimatedServices,
         isValid: !isOverLimit && (
-          (scheduleType === 'weekly' && weeklyDays.length > 0) ||
+          (scheduleType === 'weekly' && weeklyDays.length > 0 && servicesPerMonth > 0) ||
           (scheduleType === 'monthly' && monthlyDays.length > 0)
         )
       });
     }
-  }, [scheduleType, weeklyDays, monthlyDays, preferredTime]);
+  }, [scheduleType, weeklyDays, monthlyDays, preferredTime, servicesPerMonth]);
 
   const handleScheduleTypeChange = (type) => {
     setScheduleType(type);
@@ -162,9 +152,19 @@ export default function ScheduleSelector({
     if (preset === 'weekly-2x') {
       setScheduleType('weekly');
       setWeeklyDays([1, 4]); // Monday & Thursday
+      setServicesPerMonth(2);
     } else if (preset === 'weekly-1x') {
       setScheduleType('weekly');
       setWeeklyDays([3]); // Wednesday
+      setServicesPerMonth(1);
+    } else if (preset === 'weekly-4x') {
+      setScheduleType('weekly');
+      setWeeklyDays([1, 3, 5]); // Mon, Wed, Fri
+      setServicesPerMonth(4);
+    } else if (preset === 'weekly-8x') {
+      setScheduleType('weekly');
+      setWeeklyDays([1, 2, 4, 5]); // Mon, Tue, Thu, Fri
+      setServicesPerMonth(8);
     } else if (preset === 'monthly-2x') {
       setScheduleType('monthly');
       setMonthlyDays([1, 15]); // 1st & 15th
@@ -190,16 +190,15 @@ export default function ScheduleSelector({
   const getScheduleSummary = () => {
     const parts = [];
     
-    if (scheduleType === 'weekly' || scheduleType === 'mixed') {
+    if (scheduleType === 'weekly') {
+      parts.push(`${servicesPerMonth}x per month`);
       if (weeklyDays.length > 0) {
         const dayNames = weeklyDays
           .map(d => DAYS_OF_WEEK.find(day => day.value === d)?.short)
           .join(', ');
-        parts.push(`Every ${dayNames}`);
+        parts.push(`on ${dayNames}`);
       }
-    }
-    
-    if (scheduleType === 'monthly' || scheduleType === 'mixed') {
+    } else if (scheduleType === 'monthly') {
       if (monthlyDays.length > 0) {
         const ordinal = (n) => {
           const s = ['th', 'st', 'nd', 'rd'];
@@ -214,7 +213,7 @@ export default function ScheduleSelector({
     if (parts.length === 0) return 'No schedule selected';
     
     const timeLabel = TIME_SLOTS.find(t => t.value === preferredTime)?.label || preferredTime;
-    return `${parts.join(' and ')} at ${timeLabel}`;
+    return `${parts.join(' ')} at ${timeLabel}`;
   };
 
   return (
@@ -233,33 +232,54 @@ export default function ScheduleSelector({
         {/* Quick Presets */}
         <div className="space-y-3">
           <Label>Quick Select (Popular Schedules)</Label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => applyPreset('weekly-1x')}
-              className="text-xs"
+              className="text-xs h-auto py-2"
             >
-              Once Weekly (Wed)
+              <div className="flex flex-col items-center">
+                <span className="font-bold">1x/month</span>
+                <span className="opacity-70">Wed</span>
+              </div>
             </Button>
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => applyPreset('weekly-2x')}
-              className="text-xs"
+              className="text-xs h-auto py-2"
             >
-              Twice Weekly (Mon & Thu)
+              <div className="flex flex-col items-center">
+                <span className="font-bold">2x/month</span>
+                <span className="opacity-70">Mon & Thu</span>
+              </div>
             </Button>
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => applyPreset('monthly-2x')}
-              className="text-xs"
+              onClick={() => applyPreset('weekly-4x')}
+              className="text-xs h-auto py-2"
             >
-              Twice Monthly (1st & 15th)
+              <div className="flex flex-col items-center">
+                <span className="font-bold">4x/month</span>
+                <span className="opacity-70">Weekly</span>
+              </div>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => applyPreset('weekly-8x')}
+              className="text-xs h-auto py-2"
+            >
+              <div className="flex flex-col items-center">
+                <span className="font-bold">8x/month</span>
+                <span className="opacity-70">2x Week</span>
+              </div>
             </Button>
           </div>
         </div>
@@ -298,32 +318,60 @@ export default function ScheduleSelector({
 
         {/* Weekly Days Selection */}
         {scheduleType === 'weekly' && (
-          <div className="space-y-3">
-            <Label>Select Days of the Week</Label>
-            <p className="text-xs text-muted-foreground">
-              Your service will occur on these days every week
-            </p>
-            <div className="grid grid-cols-7 gap-2">
-              {DAYS_OF_WEEK.map(day => (
-                <Button
-                  key={day.value}
-                  type="button"
-                  variant={weeklyDays.includes(day.value) ? 'default' : 'outline'}
-                  className="h-14 flex flex-col items-center justify-center p-1"
-                  onClick={() => toggleWeeklyDay(day.value)}
-                >
-                  <span className="text-xs font-semibold">{day.short}</span>
-                </Button>
-              ))}
-            </div>
-            {weeklyDays.length === 0 && (
-              <Alert variant="default" className="bg-orange-50 border-orange-200">
-                <AlertCircle className="h-4 w-4 text-orange-600" />
-                <AlertDescription className="text-orange-800">
-                  Select at least one day of the week for your service
+          <div className="space-y-4">
+            {/* Services Per Month Selector */}
+            <div className="space-y-3">
+              <Label>How many services per month?</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {[1, 2, 4, 8].map(count => (
+                  <Button
+                    key={count}
+                    type="button"
+                    variant={servicesPerMonth === count ? 'default' : 'outline'}
+                    className="h-16 flex flex-col items-center justify-center"
+                    onClick={() => setServicesPerMonth(count)}
+                  >
+                    <span className="text-2xl font-bold">{count}x</span>
+                    <span className="text-xs opacity-80">per month</span>
+                  </Button>
+                ))}
+              </div>
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  Select how many times per month you want service, then choose your preferred days below.
                 </AlertDescription>
               </Alert>
-            )}
+            </div>
+
+            {/* Preferred Days Selection */}
+            <div className="space-y-3">
+              <Label>Preferred Days (Optional)</Label>
+              <p className="text-xs text-muted-foreground">
+                Select your preferred days. We'll schedule {servicesPerMonth} service{servicesPerMonth > 1 ? 's' : ''} per month on the days you choose.
+              </p>
+              <div className="grid grid-cols-7 gap-2">
+                {DAYS_OF_WEEK.map(day => (
+                  <Button
+                    key={day.value}
+                    type="button"
+                    variant={weeklyDays.includes(day.value) ? 'default' : 'outline'}
+                    className="h-14 flex flex-col items-center justify-center p-1"
+                    onClick={() => toggleWeeklyDay(day.value)}
+                  >
+                    <span className="text-xs font-semibold">{day.short}</span>
+                  </Button>
+                ))}
+              </div>
+              {weeklyDays.length === 0 && (
+                <Alert variant="default" className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-amber-900 dark:text-amber-100">
+                    Select at least one preferred day. If multiple days are selected, we'll rotate between them.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
           </div>
         )}
 
