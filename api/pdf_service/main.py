@@ -67,7 +67,7 @@ def generate_agreement_pdf():
         pricing = calculate_pricing(number_of_bots, services_per_month)
         
         # Fetch required data from database
-        profile = fetch_user_profile(user_id)
+        legal_profile = fetch_org_legal_profile(organization_id)
         auth_user = fetch_auth_user(user_id)
         location = fetch_location(location_id, organization_id)
         
@@ -80,7 +80,7 @@ def generate_agreement_pdf():
             organization_id=organization_id,
             location_id=location_id,
             pricing=pricing,
-            profile=profile,
+            legal_profile=legal_profile,
             auth_user=auth_user
         )
         
@@ -97,7 +97,7 @@ def generate_agreement_pdf():
         agreement_html = render_agreement_template(
             agreement_number=agreement_number,
             pricing=pricing,
-            profile=profile,
+            legal_profile=legal_profile,
             location=location,
             signature_url=f"{SUPABASE_URL}/storage/v1/object/public/signatures/{signature_path}",
             agreement_date=datetime.now().strftime('%Y-%m-%d')
@@ -279,6 +279,14 @@ def fetch_user_profile(user_id):
     return response.data
 
 
+def fetch_org_legal_profile(organization_id):
+    """Fetch organization legal profile from database"""
+    response = supabase.table('organization_legal_profiles').select('*').eq('organization_id', organization_id).single().execute()
+    if not response.data:
+        raise Exception(f'Organization legal profile not found for organization: {organization_id}')
+    return response.data
+
+
 def fetch_auth_user(user_id):
     """Fetch auth user data"""
     response = supabase.auth.admin.get_user_by_id(user_id)
@@ -309,7 +317,7 @@ def fetch_invoice(invoice_id):
     return response.data
 
 
-def create_rental_agreement(agreement_number, user_id, organization_id, location_id, pricing, profile, auth_user):
+def create_rental_agreement(agreement_number, user_id, organization_id, location_id, pricing, legal_profile, auth_user):
     """Create rental agreement record"""
     agreement_data = {
         'agreement_number': agreement_number,
@@ -323,18 +331,18 @@ def create_rental_agreement(agreement_number, user_id, organization_id, location
         'bot_rental_total': float(pricing['monthly_rental_fee']),
         'service_total': float(pricing['service_total']),
         'setup_fee': float(pricing['deposit_total']),
-        'signer_first_name': profile.get('first_name', 'Unknown'),
-        'signer_surname': profile.get('surname', 'Unknown'),
-        'signer_id_number': profile.get('id_number', ''),
+        'signer_first_name': legal_profile.get('first_name', 'Unknown'),
+        'signer_surname': legal_profile.get('surname', 'Unknown'),
+        'signer_id_number': legal_profile.get('id_number', ''),
         'signer_address': ', '.join(filter(None, [
-            profile.get('physical_address'),
-            profile.get('physical_city'),
-            profile.get('physical_province'),
-            profile.get('physical_postal_code')
+            legal_profile.get('physical_address'),
+            legal_profile.get('physical_city'),
+            legal_profile.get('physical_province'),
+            legal_profile.get('physical_postal_code')
         ])),
-        'signer_city': profile.get('physical_city', ''),
-        'signer_province': profile.get('physical_province', ''),
-        'signer_phone': profile.get('cell_phone', ''),
+        'signer_city': legal_profile.get('physical_city', ''),
+        'signer_province': legal_profile.get('physical_province', ''),
+        'signer_phone': legal_profile.get('cell_phone', ''),
         'signer_email': auth_user.email,
         'billing_day': pricing['billing_day'],
         'status': 'draft',
@@ -413,7 +421,7 @@ def generate_pdf_from_html(html_content):
     return pdf_file
 
 
-def render_agreement_template(agreement_number, pricing, profile, location, signature_url, agreement_date):
+def render_agreement_template(agreement_number, pricing, legal_profile, location, signature_url, agreement_date):
     """Render agreement HTML template"""
     # Import the template
     from templates.agreement import AGREEMENT_TEMPLATE
@@ -423,7 +431,7 @@ def render_agreement_template(agreement_number, pricing, profile, location, sign
     return template.render(
         agreement_number=agreement_number,
         agreement_date=agreement_date,
-        profile=profile,
+        legal_profile=legal_profile,
         location=location,
         pricing=pricing,
         signature_url=signature_url

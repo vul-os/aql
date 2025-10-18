@@ -45,6 +45,7 @@ import { useTheme } from '@/components/theme-provider';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { OrganizationOnboarding } from '@/components/auth/OrganizationOnboarding';
 import {
   Dialog,
   DialogContent,
@@ -53,19 +54,27 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import LocationWizard from '@/components/services/location-wizard';
+import { NotificationCenter } from '@/components/notifications/notification-center';
 
 export default function PortalLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, signOut } = useAuth();
+  const { 
+    user, 
+    signOut, 
+    organizations, 
+    selectedOrg, 
+    locations, 
+    selectedLocation, 
+    orgLoading,
+    loadUserOrganizations,
+    loadOrganizationLocations,
+    changeOrganization,
+    changeLocation
+  } = useAuth();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
-  const [organizations, setOrganizations] = useState([]);
-  const [selectedOrg, setSelectedOrg] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [locations, setLocations] = useState([]);
-  const [selectedLocation, setSelectedLocation] = useState(null);
   const [showAddLocationDialog, setShowAddLocationDialog] = useState(false);
   const [showCreateOrgDialog, setShowCreateOrgDialog] = useState(false);
   const [creatingOrg, setCreatingOrg] = useState(false);
@@ -88,104 +97,29 @@ export default function PortalLayout() {
     { icon: <Settings className="h-5 w-5" />, label: 'Settings', path: '/portal/settings' },
   ];
 
+  // Load admin status
   useEffect(() => {
-    loadUserOrganizations();
+    const loadAdminStatus = async () => {
+      if (!user) return;
+      
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role, is_admin')
+          .eq('id', user.id)
+          .single();
+        
+        setIsAdmin(profile?.is_admin === true || profile?.role === 'admin');
+      } catch (error) {
+        console.error('Error loading admin status:', error);
+      }
+    };
+    
+    loadAdminStatus();
   }, [user]);
 
-  useEffect(() => {
-    loadOrganizationLocations();
-  }, [selectedOrg]);
-
-  const loadUserOrganizations = async () => {
-    if (!user) return;
-
-    try {
-      setLoading(true);
-      
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Organizations fetch timeout')), 10000)
-      );
-
-      const fetchPromise = supabase.rpc('get_user_organizations', {
-        user_uuid: user.id
-      });
-
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
-
-      if (error) {
-        console.error('RPC error:', error);
-        throw error;
-      }
-
-      setOrganizations(data || []);
-      
-      // Check if user is admin
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role, is_admin')
-        .eq('id', user.id)
-        .single();
-      
-      setIsAdmin(profile?.is_admin === true || profile?.role === 'admin');
-      
-      // Select first org or previously selected
-      const savedOrgId = localStorage.getItem('selectedOrgId');
-      const orgToSelect = data?.find(o => o.organization_id === savedOrgId) || data?.[0];
-      
-      if (orgToSelect) {
-        setSelectedOrg(orgToSelect);
-        localStorage.setItem('selectedOrgId', orgToSelect.organization_id);
-      }
-    } catch (error) {
-      console.error('Error loading organizations:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to load organizations. Please refresh the page.",
-        variant: "destructive"
-      });
-      // Set loading to false even on error to prevent indefinite loading
-      setLoading(false);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadOrganizationLocations = async () => {
-    try {
-      if (!selectedOrg?.organization_id) {
-        setLocations([]);
-        setSelectedLocation(null);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('locations')
-        .select('*')
-        .eq('organization_id', selectedOrg.organization_id)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      setLocations(data || []);
-
-      const savedLocationId = localStorage.getItem('selectedLocationId');
-      const locToSelect = (data || []).find(l => String(l.id) === String(savedLocationId)) || data?.[0] || null;
-      if (locToSelect) {
-        setSelectedLocation(locToSelect);
-        localStorage.setItem('selectedLocationId', locToSelect.id);
-      } else {
-        setSelectedLocation(null);
-      }
-    } catch (error) {
-      console.error('Error loading locations:', error);
-    }
-  };
-
   const handleOrgChange = (org) => {
-    setSelectedOrg(org);
-    localStorage.setItem('selectedOrgId', org.organization_id);
+    changeOrganization(org);
     toast({
       title: "Organization switched",
       description: `Now viewing ${org.organization_name}`,
@@ -193,8 +127,7 @@ export default function PortalLayout() {
   };
 
   const handleLocationChange = (loc) => {
-    setSelectedLocation(loc);
-    if (loc?.id) localStorage.setItem('selectedLocationId', loc.id);
+    changeLocation(loc);
     toast({
       title: 'Location selected',
       description: loc?.name || 'Location changed',
@@ -231,12 +164,6 @@ export default function PortalLayout() {
 
       // Reload organizations and select the new one
       await loadUserOrganizations();
-      
-      // Find and select the newly created org
-      const newOrg = organizations.find(o => o.organization_id === data[0].organization_id);
-      if (newOrg) {
-        handleOrgChange(newOrg);
-      }
 
       setShowCreateOrgDialog(false);
       setNewOrgName('');
@@ -448,7 +375,7 @@ export default function PortalLayout() {
     </div>
   );
 
-  if (loading) {
+  if (orgLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -456,19 +383,8 @@ export default function PortalLayout() {
     );
   }
 
-  if (!selectedOrg) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center space-y-4">
-          <Building2 className="h-16 w-16 text-muted-foreground mx-auto" />
-          <h2 className="text-2xl font-bold">No Organization</h2>
-          <p className="text-muted-foreground">
-            You don't belong to any organization yet. Please contact support.
-          </p>
-          <Button onClick={handleSignOut}>Sign Out</Button>
-        </div>
-      </div>
-    );
+  if (!selectedOrg && !orgLoading) {
+    return <OrganizationOnboarding onComplete={() => loadUserOrganizations()} />;
   }
 
   return (
@@ -565,8 +481,10 @@ export default function PortalLayout() {
               </div>
             </div>
 
-            {/* User Menu */}
+            {/* Notifications & User Menu */}
             <div className="flex items-center gap-2">
+              <NotificationCenter />
+              
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
@@ -663,10 +581,7 @@ export default function PortalLayout() {
                 description: `${newLocation.name} has been added successfully.`,
               });
               // Auto-select the new location
-              setSelectedLocation(newLocation);
-              if (newLocation?.id) {
-                localStorage.setItem('selectedLocationId', newLocation.id);
-              }
+              changeLocation(newLocation);
             }}
             onCancel={() => setShowAddLocationDialog(false)}
             embedded={true}

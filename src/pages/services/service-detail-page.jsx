@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,7 +46,8 @@ import {
   Activity,
   Edit2,
   Check,
-  DollarSign
+  DollarSign,
+  Scissors
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -53,10 +55,9 @@ import { format } from 'date-fns';
 import { API, BACKEND_URL } from '@/lib/config';
 import { useAuth } from '@/context/auth-context';
 import SignaturePad from '@/components/services/signature-pad';
-import ScheduleSelector from '@/components/services/schedule-selector';
 
 export default function ServiceDetailPage() {
-  const { id } = useParams();
+  const { id, tab } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -64,11 +65,17 @@ export default function ServiceDetailPage() {
   const [gardens, setGardens] = useState([]);
   const [agreements, setAgreements] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
+  
+  // Get current tab from URL or default to 'overview'
+  const activeTab = tab || 'overview';
+  
+  // Handle tab change - update URL without page refresh
+  const handleTabChange = (newTab) => {
+    navigate(`/portal/service/${id}/${newTab}`, { replace: false });
+  };
   
   const [showPauseDialog, setShowPauseDialog] = useState(false);
   const [showResumeDialog, setShowResumeDialog] = useState(false);
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showModifyDialog, setShowModifyDialog] = useState(false);
   const [modifyAction, setModifyAction] = useState(null);
   const [newGardenCount, setNewGardenCount] = useState(1);
@@ -78,11 +85,10 @@ export default function ServiceDetailPage() {
   const [newServiceName, setNewServiceName] = useState('');
   const [editingSchedule, setEditingSchedule] = useState(false);
   const [scheduleData, setScheduleData] = useState({
-    scheduleType: 'weekly',
-    weeklyDays: [],
-    monthlyDays: [],
-    preferredTime: '10:00',
-    servicesPerMonth: 4,
+    dayOfWeek: 1, // 0=Sunday, 6=Saturday
+    timeWindowStart: '08:00',
+    timeWindowEnd: '12:00',
+    servicesPerMonth: 2,
     isValid: false
   });
   const [currentSchedule, setCurrentSchedule] = useState(null);
@@ -123,30 +129,36 @@ export default function ServiceDetailPage() {
       setService(serviceData);
       setNewServiceName(serviceData.name);
 
-      // TODO: service_schedules table doesn't exist in current schema
-      // Commenting out until table is created or alternative solution is implemented
-      // See DATABASE_ISSUES_EXPLANATION.md for details
-      
-      // // Load existing schedule from service_schedules
-      // const { data: scheduleRecords, error: scheduleError } = await supabase
-      //   .from('service_schedules')
-      //   .select('*')
-      //   .eq('service_id', id)
-      //   .limit(1);
+      // Load existing schedule preferences from service_preferences
+      const { data: preferenceRecords, error: prefError } = await supabase
+        .from('service_preferences')
+        .select('*')
+        .eq('service_id', id)
+        .eq('is_active', true)
+        .order('priority')
+        .limit(1);
 
-      // if (!scheduleError && scheduleRecords && scheduleRecords.length > 0) {
-      //   const record = scheduleRecords[0];
-      //   const loadedSchedule = {
-      //     scheduleType: record.schedule_type || 'weekly',
-      //     weeklyDays: record.weekly_days || [],
-      //     monthlyDays: record.monthly_days || [],
-      //     preferredTime: record.preferred_time || '10:00',
-      //     servicesPerMonth: record.max_services_per_month || 4,
-      //     isValid: true
-      //   };
-      //   setScheduleData(loadedSchedule);
-      //   setCurrentSchedule(loadedSchedule);
-      // }
+      if (!prefError && preferenceRecords && preferenceRecords.length > 0) {
+        const pref = preferenceRecords[0];
+        const loadedSchedule = {
+          dayOfWeek: pref.day_of_week,
+          timeWindowStart: pref.time_window_start,
+          timeWindowEnd: pref.time_window_end,
+          servicesPerMonth: serviceData.services_per_month || 2,
+          isValid: true
+        };
+        setScheduleData(loadedSchedule);
+        setCurrentSchedule(loadedSchedule);
+      } else {
+        // Set defaults if no preferences exist
+        setScheduleData({
+          dayOfWeek: 1, // Monday
+          timeWindowStart: '08:00',
+          timeWindowEnd: '12:00',
+          servicesPerMonth: serviceData.services_per_month || 2,
+          isValid: false
+        });
+      }
 
       const { data: gardensData } = await supabase
         .from('gardens')
@@ -245,33 +257,65 @@ export default function ServiceDetailPage() {
     }
   };
 
-  const handleCancelService = async () => {
+
+  const handleEmergencyStop = async () => {
+    if (!window.confirm('⚠️ EMERGENCY STOP: This will immediately halt all bots for this service. Are you sure?')) {
+      return;
+    }
+
     try {
       setProcessing(true);
       
-      const { error } = await supabase
-        .from('services')
-        .update({
-          status: 'cancelled',
-          is_active: false,
-          cancelled_at: new Date().toISOString(),
-          cancellation_reason: 'Cancelled by user'
-        })
-        .eq('id', id);
+      // Get all bots associated with this service's gardens
+      const { data: serviceBots, error: botsError } = await supabase
+        .from('bots')
+        .select('id')
+        .in('garden_id', gardens.map(g => g.id))
+        .neq('status', 'offline');
 
-      if (error) throw error;
+      if (botsError) throw botsError;
+
+      if (!serviceBots || serviceBots.length === 0) {
+        toast({
+          title: 'No Active Bots',
+          description: 'All bots are already offline.',
+        });
+        setProcessing(false);
+        return;
+      }
+
+      // Send emergency_stop command to all bots
+      const commands = serviceBots.map(bot => ({
+        bot_id: bot.id,
+        command_type: 'emergency_stop',
+        command_data: { 
+          timestamp: new Date().toISOString(),
+          triggered_by: 'service_emergency_stop',
+          service_id: id
+        },
+        created_by: user.id
+      }));
+
+      const { error: commandError } = await supabase
+        .from('bot_commands')
+        .insert(commands);
+
+      if (commandError) throw commandError;
 
       toast({
-        title: 'Service Cancelled',
-        description: 'Service has been cancelled successfully.',
+        title: '🛑 Emergency Stop Activated',
+        description: `Emergency stop sent to ${serviceBots.length} bot(s).`,
+        variant: 'destructive'
       });
 
-      setShowCancelDialog(false);
-      setTimeout(() => navigate('/portal/services'), 2000);
+      // Reload service details
+      await loadServiceDetails();
+
     } catch (error) {
+      console.error('Error sending emergency stop:', error);
       toast({
         title: 'Error',
-        description: 'Failed to cancel service',
+        description: error.message || 'Failed to send emergency stop command',
         variant: 'destructive'
       });
     } finally {
@@ -371,30 +415,52 @@ export default function ServiceDetailPage() {
     try {
       setProcessing(true);
 
-      // Update service frequency and billing
+      // Update service with edge trimming frequency
       const { error: serviceError } = await supabase
         .from('services')
         .update({
-          service_frequency: scheduleData.scheduleType,
-          services_per_month: scheduleData.servicesPerMonth || 4
+          services_per_month: scheduleData.servicesPerMonth || 2
         })
         .eq('id', id);
 
       if (serviceError) throw serviceError;
 
-      // Update all schedules for this service
-      const { error } = await supabase
-        .from('service_schedules')
-        .update({
-          schedule_type: scheduleData.scheduleType,
-          weekly_days: scheduleData.weeklyDays || [],
-          monthly_days: scheduleData.monthlyDays || [],
-          preferred_time: scheduleData.preferredTime,
-          max_services_per_month: scheduleData.servicesPerMonth || 4
-        })
-        .eq('service_id', id);
+      // Update or insert service preferences
+      const { data: existingPref } = await supabase
+        .from('service_preferences')
+        .select('id')
+        .eq('service_id', id)
+        .eq('is_active', true)
+        .limit(1);
 
-      if (error) throw error;
+      if (existingPref && existingPref.length > 0) {
+        // Update existing preference
+        const { error: prefError } = await supabase
+          .from('service_preferences')
+        .update({
+            day_of_week: scheduleData.dayOfWeek,
+            time_window_start: scheduleData.timeWindowStart,
+            time_window_end: scheduleData.timeWindowEnd,
+            priority: 1
+          })
+          .eq('id', existingPref[0].id);
+
+        if (prefError) throw prefError;
+      } else {
+        // Create new preference
+        const { error: prefError } = await supabase
+          .from('service_preferences')
+          .insert({
+            service_id: id,
+            day_of_week: scheduleData.dayOfWeek,
+            time_window_start: scheduleData.timeWindowStart,
+            time_window_end: scheduleData.timeWindowEnd,
+            priority: 1,
+            is_active: true
+          });
+
+        if (prefError) throw prefError;
+      }
 
       // If billing changed, update rental agreements
       if (newPricing) {
@@ -507,7 +573,7 @@ export default function ServiceDetailPage() {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 h-14 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-xl shadow-sm">
             <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-md transition-all text-sm font-medium">
               <CircleDot className="h-4 w-4 mr-2" />
@@ -865,12 +931,149 @@ export default function ServiceDetailPage() {
               </CardHeader>
               <CardContent>
                 {editingSchedule ? (
-                  <div className="space-y-4">
-                    <ScheduleSelector
-                      schedule={scheduleData}
-                      onChange={(newSchedule) => setScheduleData(newSchedule)}
-                      maxServicesPerMonth={8}
-                    />
+                  <div className="space-y-6">
+                    {/* Edge Trimming Frequency */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Scissors className="h-5 w-5 text-primary" />
+                        <Label className="text-base font-semibold">Edge Trimming Frequency</Label>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Choose how many edge trimming visits you'd like per month (1-4 visits)
+                      </p>
+                      <div className="grid grid-cols-4 gap-3">
+                        {[1, 2, 3, 4].map((visits) => (
+                          <button
+                            key={visits}
+                            type="button"
+                            onClick={() => setScheduleData({...scheduleData, servicesPerMonth: visits, isValid: true})}
+                            className={`p-6 rounded-lg border-2 text-center transition-all ${
+                              (scheduleData.servicesPerMonth || 2) === visits
+                                ? 'border-primary bg-primary/10 shadow-md'
+                                : 'border-border hover:border-primary/50 hover:bg-muted'
+                            }`}
+                          >
+                            <div className="text-3xl font-bold mb-2 text-primary">{visits}</div>
+                            <div className="text-xs text-muted-foreground">
+                              visit{visits > 1 ? 's' : ''}/month
+                            </div>
+                            <div className="text-sm font-semibold mt-2">
+                              R{visits * 100}
+                            </div>
+                            {(scheduleData.servicesPerMonth || 2) === visits && (
+                              <CheckCircle className="h-5 w-5 text-primary mx-auto mt-2" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <p className="text-sm text-center">
+                          <strong>R{((scheduleData.servicesPerMonth || 2) * 100).toFixed(2)}/month</strong> for edge trimming
+                          <span className="text-muted-foreground ml-1">(R100 per visit)</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Preferred Day of Week */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-5 w-5 text-primary" />
+                        <Label className="text-base font-semibold">Preferred Day of Week</Label>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Choose your preferred day for service visits</p>
+                      <div className="grid grid-cols-7 gap-2">
+                        {[
+                          { value: 0, label: 'Sun', full: 'Sunday' },
+                          { value: 1, label: 'Mon', full: 'Monday' },
+                          { value: 2, label: 'Tue', full: 'Tuesday' },
+                          { value: 3, label: 'Wed', full: 'Wednesday' },
+                          { value: 4, label: 'Thu', full: 'Thursday' },
+                          { value: 5, label: 'Fri', full: 'Friday' },
+                          { value: 6, label: 'Sat', full: 'Saturday' }
+                        ].map((day) => (
+                          <button
+                            key={day.value}
+                            type="button"
+                            onClick={() => setScheduleData({...scheduleData, dayOfWeek: day.value, isValid: true})}
+                            className={`p-3 rounded-lg border-2 text-center transition-all ${
+                              (scheduleData.dayOfWeek || 1) === day.value
+                                ? 'border-primary bg-primary text-primary-foreground shadow-md'
+                                : 'border-border hover:border-primary/50 hover:bg-muted'
+                            }`}
+                            title={day.full}
+                          >
+                            <div className="text-xs font-semibold">{day.label}</div>
+                          </button>
+                        ))}
+                      </div>
+                      {scheduleData.dayOfWeek !== undefined && (
+                        <p className="text-sm text-muted-foreground">
+                          ✓ Selected: {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][scheduleData.dayOfWeek || 1]}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Preferred Time Window */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-5 w-5 text-primary" />
+                        <Label className="text-base font-semibold">Preferred Time Window</Label>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Select your preferred time range for service visits</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="time-start">Start Time</Label>
+                          <Select 
+                            value={scheduleData.timeWindowStart || '08:00'}
+                            onValueChange={(value) => setScheduleData({...scheduleData, timeWindowStart: value, isValid: true})}
+                          >
+                            <SelectTrigger id="time-start">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent position="popper" sideOffset={5}>
+                              <SelectItem value="06:00">6:00 AM</SelectItem>
+                              <SelectItem value="07:00">7:00 AM</SelectItem>
+                              <SelectItem value="08:00">8:00 AM</SelectItem>
+                              <SelectItem value="09:00">9:00 AM</SelectItem>
+                              <SelectItem value="10:00">10:00 AM</SelectItem>
+                              <SelectItem value="11:00">11:00 AM</SelectItem>
+                              <SelectItem value="12:00">12:00 PM</SelectItem>
+                              <SelectItem value="13:00">1:00 PM</SelectItem>
+                              <SelectItem value="14:00">2:00 PM</SelectItem>
+                              <SelectItem value="15:00">3:00 PM</SelectItem>
+                              <SelectItem value="16:00">4:00 PM</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="time-end">End Time</Label>
+                          <Select 
+                            value={scheduleData.timeWindowEnd || '12:00'}
+                            onValueChange={(value) => setScheduleData({...scheduleData, timeWindowEnd: value, isValid: true})}
+                          >
+                            <SelectTrigger id="time-end">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent position="popper" sideOffset={5}>
+                              <SelectItem value="08:00">8:00 AM</SelectItem>
+                              <SelectItem value="09:00">9:00 AM</SelectItem>
+                              <SelectItem value="10:00">10:00 AM</SelectItem>
+                              <SelectItem value="11:00">11:00 AM</SelectItem>
+                              <SelectItem value="12:00">12:00 PM</SelectItem>
+                              <SelectItem value="13:00">1:00 PM</SelectItem>
+                              <SelectItem value="14:00">2:00 PM</SelectItem>
+                              <SelectItem value="15:00">3:00 PM</SelectItem>
+                              <SelectItem value="16:00">4:00 PM</SelectItem>
+                              <SelectItem value="17:00">5:00 PM</SelectItem>
+                              <SelectItem value="18:00">6:00 PM</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Services are typically scheduled within this time window
+                      </p>
+                    </div>
                     
                     {/* Billing Impact Alert */}
                     {scheduleData.servicesPerMonth !== currentSchedule?.servicesPerMonth && (
@@ -921,42 +1124,24 @@ export default function ServiceDetailPage() {
                     <div className="p-5 rounded-xl bg-gradient-to-br from-secondary/5 to-secondary/10 dark:from-secondary/10 dark:to-secondary/20 border-2 border-secondary/20 dark:border-secondary/30">
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Type</span>
-                          <Badge variant="outline" className="capitalize">{scheduleData.scheduleType}</Badge>
+                          <span className="text-sm text-muted-foreground">Preferred Day</span>
+                          <Badge variant="outline" className="capitalize">
+                            {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][scheduleData.dayOfWeek || 1]}
+                          </Badge>
                         </div>
                         
-                        {scheduleData.weeklyDays?.length > 0 && (
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-2">Weekly Days</p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {scheduleData.weeklyDays.map(day => {
-                                const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                                return (
-                                  <Badge key={day} variant="secondary" className="text-xs">
-                                    {dayNames[day]}
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Time Window</span>
+                          <Badge variant="outline">
+                            {scheduleData.timeWindowStart || '08:00'} - {scheduleData.timeWindowEnd || '12:00'}
                                   </Badge>
-                                );
-                              })}
                             </div>
-                          </div>
-                        )}
                         
-                        {scheduleData.monthlyDays?.length > 0 && (
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-2">Monthly Days</p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {scheduleData.monthlyDays.map(day => (
-                                <Badge key={day} variant="secondary" className="text-xs">
-                                  {day}
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Edge Trimming Visits/Month</span>
+                          <Badge variant="outline">
+                            {scheduleData.servicesPerMonth || 2} visit{(scheduleData.servicesPerMonth || 2) > 1 ? 's' : ''}
                                 </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        
-                        <div className="flex items-center justify-between pt-2 border-t">
-                          <span className="text-sm text-muted-foreground">Preferred Time</span>
-                          <span className="font-semibold">{scheduleData.preferredTime}</span>
                         </div>
                       </div>
                     </div>
@@ -1058,7 +1243,7 @@ export default function ServiceDetailPage() {
                   </div>
                   <div>
                     <CardTitle className="text-xl">Service Controls</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-0.5">Pause or cancel this service</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">Pause or manage this service</p>
                   </div>
                 </div>
               </CardHeader>
@@ -1092,12 +1277,14 @@ export default function ServiceDetailPage() {
 
                 <Button
                   variant="destructive"
-                  className="w-full h-11 md:h-12 justify-start text-sm md:text-base font-medium shadow-md"
-                  onClick={() => setShowCancelDialog(true)}
+                  className="w-full h-11 md:h-12 justify-start text-sm md:text-base font-medium shadow-md bg-red-600 hover:bg-red-700"
+                  onClick={handleEmergencyStop}
+                  disabled={processing}
                 >
-                  <X className="h-4 w-4 md:h-5 md:w-5 mr-2 md:mr-3" />
-                  Cancel Service
+                  <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 mr-2 md:mr-3" />
+                  {processing ? 'Stopping...' : 'Emergency Stop All Bots'}
                 </Button>
+
               </CardContent>
             </Card>
           </TabsContent>
@@ -1148,39 +1335,6 @@ export default function ServiceDetailPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Cancel */}
-      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <AlertDialogContent className="max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-xl">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
-              Cancel Service?
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3 text-sm">
-                <Alert className="border-red-200 bg-red-50 dark:bg-red-950/20">
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
-                  <AlertDescription className="text-red-800 dark:text-red-200 text-xs">
-                    <strong>Warning:</strong> This action cannot be undone
-                  </AlertDescription>
-                </Alert>
-                <ul className="space-y-1 text-muted-foreground">
-                  <li>• {gardens.length} gardens will be removed</li>
-                  <li>• {agreements.length} agreements will be terminated</li>
-                  <li>• Bots will be scheduled for pickup</li>
-                  <li>• Final invoice will be generated</li>
-                </ul>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep Service</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCancelService} className="bg-red-600 hover:bg-red-700">
-              Yes, Cancel Service
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Modify Amendment Dialog */}
       <AlertDialog open={showModifyDialog} onOpenChange={(open) => {

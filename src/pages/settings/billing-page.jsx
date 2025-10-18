@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -41,8 +40,13 @@ import { useToast } from '@/hooks/use-toast';
 import PageHeader from '@/components/ui/page-header';
 
 export default function BillingPage() {
-  const { organization } = useOutletContext();
-  const { user } = useAuth();
+  const { user, selectedOrg, selectedLocation } = useAuth();
+  const organization = selectedOrg ? {
+    id: selectedOrg.organization_id,
+    name: selectedOrg.organization_name,
+    subscription_tier: selectedOrg.subscription_tier,
+    role: selectedOrg.member_role
+  } : null;
   const { toast } = useToast();
   const { authorizations, loading, refreshAuthorizations } = usePaymentAuthorizations();
   const { 

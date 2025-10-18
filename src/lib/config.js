@@ -16,10 +16,10 @@ export const FEATURES = {
 
 // API Endpoints
 export const API = {
-  GENERATE_AGREEMENT_PDF: `${BACKEND_URL}/api/generate-agreement-pdf`,
+  CREATE_RENTAL_AGREEMENTS: `${BACKEND_URL}/api/create-rental-agreements`,  // Renamed: was GENERATE_AGREEMENT_PDF
   GENERATE_INVOICE_PDF: `${BACKEND_URL}/api/generate-invoice-pdf`,
   SEND_INVOICE_EMAIL: `${BACKEND_URL}/api/send-invoice-email`,
-  SEND_INSTALLATION_NOTIFICATION: `${BACKEND_URL}/api/send-installation-notification`,
+  // SEND_INSTALLATION_NOTIFICATION moved to Supabase Edge Function
   CREATE_SERVICE_AMENDMENT: `${BACKEND_URL}/api/create-service-amendment`,
   GET_PRICING: `${BACKEND_URL}/api/pricing`,
   CALCULATE_PRICING: `${BACKEND_URL}/api/calculate-pricing`,

@@ -39,7 +39,6 @@ const SignUp = lazyImport(() => import('./pages/auth/signup'));
 const ForgotPassword = lazyImport(() => import('./pages/auth/forgot-password'));
 const UpdatePassword = lazyImport(() => import('./pages/auth/update-password'));
 const VerifyEmail = lazyImport(() => import('./pages/auth/verify-email'));
-const AcceptInvite = lazyImport(() => import('./pages/auth/accept-invite'));
 
 // Portal pages
 const DashboardPage = lazyImport(() => import('./pages/dashboard/dashboard-page'));
@@ -54,6 +53,7 @@ const MembersPage = lazyImport(() => import('./pages/members/members-page'));
 // Admin pages
 const ApprovalsPage = lazyImport(() => import('./pages/admin/approvals-page'));
 const BotManagementPage = lazyImport(() => import('./pages/admin/bot-management-page'));
+const ServiceAppointmentScheduler = lazyImport(() => import('./pages/admin/service-appointment-scheduler'));
 
 // Docs pages
 const DocsHome = lazyImport(() => import('./pages/docs/docs-home'));
@@ -83,9 +83,6 @@ const AppRoutes = () => {
       <Routes>
         {/* Public landing page */}
         <Route path="/" element={<LandingPage />} />
-
-        {/* Accept invitation (public, no layout) */}
-        <Route path="/accept-invite/:token" element={<AcceptInvite />} />
 
         {/* Auth routes with blank layout */}
         <Route element={<BlankLayout />}>
@@ -118,9 +115,11 @@ const AppRoutes = () => {
           <Route path="services" element={<ServicesPage />} />
           <Route path="services/add" element={<AddServicePage />} />
           <Route path="service/:id" element={<ServiceDetailPage />} />
+          <Route path="service/:id/:tab" element={<ServiceDetailPage />} />
           
-          {/* Settings */}
+          {/* Settings - with optional tab sub-route */}
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="settings/:tab" element={<SettingsPage />} />
           
           {/* Billing */}
           <Route path="billing" element={<BillingPage />} />
@@ -159,6 +158,8 @@ const AppRoutes = () => {
         }>
           <Route path="approvals" element={<ApprovalsPage />} />
           <Route path="bot-management" element={<BotManagementPage />} />
+          <Route path="bot-management/:tab" element={<BotManagementPage />} />
+          <Route path="appointment-scheduler" element={<ServiceAppointmentScheduler />} />
         </Route>
 
         {/* Legacy dashboard redirect */}

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -49,8 +48,7 @@ import { format } from 'date-fns';
 import { API } from '@/lib/config';
 
 export default function ApprovalsPage() {
-  const { selectedOrg } = useOutletContext();
-  const { user } = useAuth();
+  const { user, selectedOrg, selectedLocation } = useAuth();
   const { toast } = useToast();
   const [agreements, setAgreements] = useState([]);
   const [amendments, setAmendments] = useState([]);
@@ -81,7 +79,7 @@ export default function ApprovalsPage() {
         .from('rental_agreements')
         .select(`
           *,
-          user:profiles(first_name, surname, cell_phone),
+          user:profiles(first_name, full_name, email),
           organization:organizations(name),
           location:locations(name, city, province, address)
         `)
@@ -120,8 +118,7 @@ export default function ApprovalsPage() {
           ),
           user:profiles!user_id(
             first_name,
-            surname,
-            cell_phone,
+            full_name,
             email
           )
         `)
@@ -564,22 +561,19 @@ export default function ApprovalsPage() {
 
       if (error) throw error;
 
-      // Send email notification to all organization members
+      // Send email notification to all organization members via Supabase Edge Function
       try {
-        const response = await fetch(API.SEND_INSTALLATION_NOTIFICATION, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        const { data: notificationData, error: notificationError } = await supabase.functions.invoke('send-installation-notification', {
+          body: {
             service_id: serviceId,
             organization_id: selectedService.organization_id
-          })
+          }
         });
 
-        if (response.ok) {
-          const data = await response.json();
-          console.log(`📧 Sent installation notification to ${data.emails_sent} members`);
+        if (!notificationError && notificationData?.success) {
+          console.log(`📧 Sent installation notification to ${notificationData.emails_sent} members`);
         } else {
-          console.warn('Failed to send installation notification');
+          console.warn('Failed to send installation notification:', notificationError);
         }
       } catch (emailError) {
         console.error('Email notification error:', emailError);
@@ -765,7 +759,7 @@ export default function ApprovalsPage() {
                     <TableCell>
                       <div>
                         <p className="font-medium">
-                          {amendment.user?.first_name} {amendment.user?.surname}
+                          {amendment.user?.full_name || amendment.user?.first_name}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {amendment.user?.email}
@@ -934,17 +928,14 @@ export default function ApprovalsPage() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Name:</span>
                     <span className="font-semibold">
-                      {selectedAmendment.user?.first_name} {selectedAmendment.user?.surname}
+                      {selectedAmendment.user?.full_name || selectedAmendment.user?.first_name}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Email:</span>
                     <span>{selectedAmendment.user?.email}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Phone:</span>
-                    <span>{selectedAmendment.user?.cell_phone || 'N/A'}</span>
-                  </div>
+                  {/* Phone number removed - now stored in organization_legal_profiles */}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Service:</span>
                     <span className="font-semibold">{selectedAmendment.service?.name}</span>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useOutletContext, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -50,8 +50,7 @@ import { format } from 'date-fns';
 import PageHeader from '@/components/ui/page-header';
 
 export default function DashboardPage() {
-  const { selectedOrg } = useOutletContext();
-  const { user } = useAuth();
+  const { user, selectedOrg, selectedLocation } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [analytics, setAnalytics] = useState(null);
@@ -242,7 +241,7 @@ export default function DashboardPage() {
         .select(`
           *,
           organization:organizations!organization_id(name),
-          inviter:profiles!invited_by(first_name, surname)
+          inviter:profiles!invited_by(first_name, full_name, email)
         `)
         .eq('email', user.email)
         .eq('status', 'pending')
@@ -311,6 +310,68 @@ export default function DashboardPage() {
     }
   };
 
+  // Emergency stop all bots
+  const handleEmergencyStopAll = async () => {
+    if (!window.confirm('⚠️ Are you sure you want to stop ALL bots? This will immediately halt all bot operations.')) {
+      return;
+    }
+
+    try {
+      // Get all bots for the organization
+      const { data: bots, error: fetchError } = await supabase
+        .from('bots')
+        .select('id')
+        .eq('organization_id', selectedOrg.id)
+        .neq('status', 'offline');
+
+      if (fetchError) throw fetchError;
+
+      if (!bots || bots.length === 0) {
+        toast({
+          title: 'No Active Bots',
+          description: 'All bots are already offline.',
+        });
+        return;
+      }
+
+      // Send emergency_stop command to all active bots
+      const commands = bots.map(bot => ({
+        bot_id: bot.id,
+        command_type: 'emergency_stop',
+        command_data: { 
+          timestamp: new Date().toISOString(),
+          triggered_by: 'dashboard_emergency_stop'
+        },
+        created_by: user.id
+      }));
+
+      const { error: commandError } = await supabase
+        .from('bot_commands')
+        .insert(commands);
+
+      if (commandError) throw commandError;
+
+      toast({
+        title: '🛑 Emergency Stop Activated',
+        description: `Emergency stop sent to ${bots.length} bot(s).`,
+        variant: 'destructive'
+      });
+
+      // Reload analytics to update UI
+      setTimeout(() => {
+        loadAnalytics();
+      }, 1000);
+
+    } catch (error) {
+      console.error('Error sending emergency stop:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to send emergency stop command',
+        variant: 'destructive'
+      });
+    }
+  };
+
   useEffect(() => {
     if (selectedOrg) {
       loadDashboardData();
@@ -338,6 +399,13 @@ export default function DashboardPage() {
         setProfile(profileData);
       }
 
+      // Load organization legal profile
+      const { data: orgLegalProfile } = await supabase
+        .from('organization_legal_profiles')
+        .select('*')
+        .eq('organization_id', selectedOrg.organization_id)
+        .single();
+
       // Check for locations first
       const { data: locationsData } = await supabase
         .from('locations')
@@ -349,10 +417,10 @@ export default function DashboardPage() {
 
       // Auto-show legal wizard if:
       // 1. User has locations (just created one)
-      // 2. Legal profile is not complete
+      // 2. Organization legal profile is not complete
       // 3. Not already showing location wizard
       if (locationsData && locationsData.length > 0 && 
-          profileData && !profileData.legal_profile_completed && 
+          (!orgLegalProfile || !orgLegalProfile.legal_profile_completed) && 
           !showLocationWizard && !showLegalWizard) {
         // Set the first location as createdLocation for wizard
         setCreatedLocation(locationsData[0]);
@@ -366,14 +434,8 @@ export default function DashboardPage() {
       }
 
       // Load all data in parallel for faster loading
-      const [
-        analyticsResult,
-        statusResult,
-        typeResult,
-        mowingResult,
-        servicesResult,
-        alertsResult
-      ] = await Promise.all([
+      // Use Promise.allSettled to continue even if some functions don't exist yet
+      const results = await Promise.allSettled([
         supabase.rpc('get_organization_dashboard_analytics', { org_id: selectedOrg.organization_id }),
         supabase.rpc('get_bot_status_distribution', { org_id: selectedOrg.organization_id }),
         supabase.rpc('get_bot_type_distribution', { org_id: selectedOrg.organization_id }),
@@ -382,9 +444,18 @@ export default function DashboardPage() {
         supabase.rpc('get_recent_alerts', { org_id: selectedOrg.organization_id, limit_count: 5 })
       ]);
 
-      // Check for errors and set data
-      if (analyticsResult.error) throw analyticsResult.error;
-      setAnalytics(analyticsResult.data);
+      // Safely extract results
+      const [analyticsResult, statusResult, typeResult, mowingResult, servicesResult, alertsResult] = results.map(r => 
+        r.status === 'fulfilled' ? r.value : { error: r.reason, data: null }
+      );
+
+      // Check for errors and set data (don't throw, just log warnings)
+      if (analyticsResult.error) {
+        console.warn('Analytics error:', analyticsResult.error);
+        setAnalytics({});
+      } else {
+        setAnalytics(analyticsResult.data?.[0] || {});
+      }
 
       if (statusResult.error) console.warn('Status data error:', statusResult.error);
       setBotStatusData(statusResult.data || []);
@@ -528,6 +599,7 @@ export default function DashboardPage() {
     return (
       <div className="p-4 md:p-6 space-y-6">
         <LegalProfileWizard
+          organizationId={selectedOrg.organization_id}
           locationAddress={{
             address: locationForWizard.address,
             city: locationForWizard.city,
@@ -538,7 +610,7 @@ export default function DashboardPage() {
             setShowLegalWizard(false);
             toast({
               title: 'Perfect! You\'re all set',
-              description: 'Your legal profile is complete. Now you can add services.',
+              description: 'Organization legal profile is complete. Now you can add services.',
             });
             // Reload to hide wizard and show dashboard
             loadDashboardData();
@@ -574,21 +646,21 @@ export default function DashboardPage() {
             setShowLocationWizard(false);
             setCreatedLocation(newLocation);
             
-            // Reload data to get updated locations and profile
+            // Reload data to get updated locations and legal profile
             await loadDashboardData();
             
-            // Re-fetch profile to ensure we have latest data
-            const { data: freshProfile } = await supabase
-              .from('profiles')
+            // Re-fetch organization legal profile to ensure we have latest data
+            const { data: freshOrgLegalProfile } = await supabase
+              .from('organization_legal_profiles')
               .select('*')
-              .eq('id', user.id)
+              .eq('organization_id', selectedOrg.organization_id)
               .single();
             
-            // Check if legal profile is complete
-            if (freshProfile && !freshProfile.legal_profile_completed) {
+            // Check if organization legal profile is complete
+            if (!freshOrgLegalProfile || !freshOrgLegalProfile.legal_profile_completed) {
               toast({
                 title: 'Great! Location created',
-                description: 'Next, let\'s complete your legal profile for service contracts.',
+                description: 'Next, let\'s complete your organization\'s legal profile for service contracts.',
               });
               setShowLegalWizard(true);
             } else {
@@ -633,6 +705,60 @@ export default function DashboardPage() {
     return ` across ${locations.length} locations`;
   };
 
+  // Empty State - No Services, but has locations
+  if (!loading && locations.length > 0 && analytics && analytics.total_services === 0) {
+    return (
+      <div className="p-4 md:p-6 space-y-6">
+        <PageHeader
+          title={`${getGreeting()}, ${getUserName()}! 👋`}
+          subtitle="You have locations set up. Now let's add your first service to get started."
+          icon={<Bot className="h-6 w-6 text-primary" />}
+        />
+
+        <Card className="border-2 border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center space-y-6">
+            <div className="rounded-full bg-primary/10 p-8">
+              <Sprout className="h-16 w-16 text-primary" />
+            </div>
+            <div className="space-y-3 max-w-2xl">
+              <h3 className="text-3xl font-bold">Let's Add Your First Service</h3>
+              <p className="text-muted-foreground text-lg">
+                Choose from lawn care, pool maintenance, or security services to start automating your property with Bot Korp.
+              </p>
+            </div>
+            
+            <Button size="lg" onClick={() => navigate('/portal/services/add')} className="text-lg px-8 py-6">
+              <Plus className="h-6 w-6 mr-2" />
+              Add Your First Service
+              <ArrowRight className="h-6 w-6 ml-2" />
+            </Button>
+
+            <div className="pt-8 border-t w-full max-w-xl">
+              <h4 className="font-semibold mb-3">Available Services</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
+                  <Sprout className="h-8 w-8 text-green-600 mb-2 mx-auto" />
+                  <p className="font-medium">Lawn Care</p>
+                  <p className="text-muted-foreground text-xs mt-1">Autonomous mowing bots</p>
+                </div>
+                <div className="p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
+                  <Droplets className="h-8 w-8 text-blue-600 mb-2 mx-auto" />
+                  <p className="font-medium">Pool Cleaning</p>
+                  <p className="text-muted-foreground text-xs mt-1">Automated pool maintenance</p>
+                </div>
+                <div className="p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
+                  <AlertCircle className="h-8 w-8 text-amber-600 mb-2 mx-auto" />
+                  <p className="font-medium">Security</p>
+                  <p className="text-muted-foreground text-xs mt-1">24/7 property monitoring</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 md:p-6 space-y-6">
       <PageHeader
@@ -668,7 +794,7 @@ export default function DashboardPage() {
                       </Badge>
                     </div>
                     <AlertDescription className="text-foreground/80">
-                      <strong>{invitation.inviter?.first_name} {invitation.inviter?.surname}</strong> invited you to join{' '}
+                      <strong>{invitation.inviter?.full_name || invitation.inviter?.first_name}</strong> invited you to join{' '}
                       <strong>{invitation.organization?.name}</strong>
                     </AlertDescription>
                     <p className="text-xs text-muted-foreground">
@@ -964,7 +1090,7 @@ export default function DashboardPage() {
         <>
           {/* Quick Action Buttons */}
           <div className="flex items-center justify-end gap-3">
-            <Button variant="destructive" size="lg">
+            <Button variant="destructive" size="lg" onClick={handleEmergencyStopAll}>
               <AlertTriangle className="h-5 w-5 mr-2" />
               Emergency Stop All Bots
             </Button>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,12 +19,13 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/auth-context';
 import PageHeader from '@/components/ui/page-header';
 
 export default function InstallationPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { selectedOrg, selectedLocation } = useOutletContext();
+  const { selectedOrg, selectedLocation } = useAuth();
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState([]);
 

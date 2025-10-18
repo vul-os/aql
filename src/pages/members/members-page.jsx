@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,8 +60,7 @@ import PageHeader from '@/components/ui/page-header';
 import { format } from 'date-fns';
 
 export default function MembersPage() {
-  const { selectedOrg } = useOutletContext();
-  const { user } = useAuth();
+  const { user, selectedOrg, selectedLocation } = useAuth();
   const { toast } = useToast();
   const [members, setMembers] = useState([]);
   const [invitations, setInvitations] = useState([]);
@@ -76,57 +74,6 @@ export default function MembersPage() {
     email: '',
     role: 'member'
   });
-
-  // Role-based permissions
-  const getRolePermissions = (role) => {
-    switch (role) {
-      case 'admin':
-        return {
-          can_manage_bots: true,
-          can_manage_locations: true,
-          can_view_billing: true,
-          can_manage_billing: true,
-          can_manage_members: true,
-          can_view_analytics: true
-        };
-      case 'manager':
-        return {
-          can_manage_bots: true,
-          can_manage_locations: true,
-          can_view_billing: true,
-          can_manage_billing: false,
-          can_manage_members: false,
-          can_view_analytics: true
-        };
-      case 'operator':
-        return {
-          can_manage_bots: true,
-          can_manage_locations: false,
-          can_view_billing: false,
-          can_manage_billing: false,
-          can_manage_members: false,
-          can_view_analytics: true
-        };
-      case 'viewer':
-        return {
-          can_manage_bots: false,
-          can_manage_locations: false,
-          can_view_billing: false,
-          can_manage_billing: false,
-          can_manage_members: false,
-          can_view_analytics: true
-        };
-      default: // member
-        return {
-          can_manage_bots: false,
-          can_manage_locations: false,
-          can_view_billing: false,
-          can_manage_billing: false,
-          can_manage_members: false,
-          can_view_analytics: true
-        };
-    }
-  };
 
   useEffect(() => {
     if (selectedOrg) {
@@ -159,10 +106,13 @@ export default function MembersPage() {
       if (membersError) throw membersError;
       setMembers(membersData || []);
 
-      // Load pending invitations
+      // Load pending invitations with inviter details
       const { data: invitationsData, error: invitationsError } = await supabase
-        .from('member_invitations')
-        .select('*')
+        .from('organization_invitations')
+        .select(`
+          *,
+          inviter:profiles!invited_by(first_name, email, full_name)
+        `)
         .eq('organization_id', selectedOrg.organization_id)
         .eq('status', 'pending')
         .gt('expires_at', new Date().toISOString())
@@ -197,31 +147,37 @@ export default function MembersPage() {
 
     setInviting(true);
     try {
-      // Get permissions for selected role
-      const permissions = getRolePermissions(inviteForm.role);
-      
       // Create invitation using SQL function
+      // Note: Permissions are determined by role, no need to pass them explicitly
       const { data: inviteData, error: inviteError } = await supabase.rpc('create_member_invitation', {
         p_organization_id: selectedOrg.organization_id,
         p_email: inviteForm.email,
         p_role: inviteForm.role,
-        p_invited_by: user.id,
-        p_can_manage_bots: permissions.can_manage_bots,
-        p_can_manage_locations: permissions.can_manage_locations,
-        p_can_view_billing: permissions.can_view_billing,
-        p_can_manage_billing: permissions.can_manage_billing,
-        p_can_manage_members: permissions.can_manage_members,
-        p_can_view_analytics: permissions.can_view_analytics
+        p_invited_by: user.id
       });
 
       if (inviteError) throw inviteError;
 
-      console.log('Invitation created:', inviteData);
+      console.log('✅ Invitation created:', inviteData);
+      
+      // Check if the RPC returned success
+      if (!inviteData || !inviteData.success) {
+        throw new Error(inviteData?.error || 'Failed to create invitation');
+      }
 
-      // Send invitation email via Edge Function
+      console.log('📧 Sending email for invitation:', inviteData.invitation_id);
+
+      // Send invitation email via Edge Function (just pass invitation_id)
       const { data: emailResponse, error: emailError } = await supabase.functions.invoke('send-invite-email', {
-        body: inviteData
+        body: {
+          invitation_id: inviteData.invitation_id
+        }
       });
+      
+      console.log('📬 Email sent:', emailResponse);
+      if (emailError) {
+        console.error('⚠️ Email error:', emailError);
+      }
 
       if (emailError) {
         console.error('Error sending email:', emailError);
@@ -507,20 +463,30 @@ export default function MembersPage() {
           <CardContent>
             <div className="space-y-2">
               {invitations.map((invitation) => (
-                <div key={invitation.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
+                <div key={invitation.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/5 transition-colors">
+                  <div className="flex items-center gap-3 flex-1">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <Mail className="h-5 w-5 text-primary" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <p className="font-medium">{invitation.email}</p>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <Badge variant="secondary" className="capitalize">
                           {invitation.role}
                         </Badge>
-                        <p className="text-xs text-muted-foreground">
-                          Expires {format(new Date(invitation.expires_at), 'MMM d, yyyy')}
-                        </p>
+                        {invitation.inviter && (
+                          <span className="text-xs text-muted-foreground">
+                            Invited by {invitation.inviter.full_name || invitation.inviter.first_name}
+                          </span>
+                        )}
+                        <span className="text-xs text-muted-foreground">•</span>
+                        <span className="text-xs text-muted-foreground">
+                          Sent {format(new Date(invitation.created_at), 'MMM d, yyyy')}
+                        </span>
+                        <span className="text-xs text-muted-foreground">•</span>
+                        <span className="text-xs text-amber-600 font-medium">
+                          Expires {format(new Date(invitation.expires_at), 'MMM d')}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -528,6 +494,7 @@ export default function MembersPage() {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleCancelInvitation(invitation.id)}
+                    className="hover:bg-destructive/10 hover:text-destructive"
                   >
                     <X className="h-4 w-4" />
                   </Button>

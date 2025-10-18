@@ -1,0 +1,86 @@
+-- =====================================================
+-- DISABLE ALL ROW LEVEL SECURITY (Development Mode)
+-- =====================================================
+-- This migration explicitly disables RLS on ALL tables
+-- for development and testing purposes
+
+-- Core tables
+ALTER TABLE IF EXISTS profiles DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS organizations DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS locations DISABLE ROW LEVEL SECURITY;
+
+-- Bot tables
+ALTER TABLE IF EXISTS bots DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS bot_commands DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS bot_telemetry DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS bot_schedules DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS bot_alerts DISABLE ROW LEVEL SECURITY;
+
+-- Services and gardens
+ALTER TABLE IF EXISTS services DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS gardens DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS pools DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS bot_garden_assignments DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS bot_pool_assignments DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS mowing_sessions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS pool_cleaning_sessions DISABLE ROW LEVEL SECURITY;
+
+-- Pricing and coverage
+ALTER TABLE IF EXISTS coverage_areas DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS pricing_plans DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS pricing_line_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS customer_pricing_overrides DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS customer_line_item_overrides DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS discounts DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS discount_usage DISABLE ROW LEVEL SECURITY;
+
+-- Payment system
+ALTER TABLE IF EXISTS payments DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS payment_authorizations DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS payment_transaction_logs DISABLE ROW LEVEL SECURITY;
+
+-- Rental agreements
+ALTER TABLE IF EXISTS master_rental_agreements DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS rental_agreements DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS rental_agreement_amendments DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS service_amendments DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS service_cancellation_requests DISABLE ROW LEVEL SECURITY;
+
+-- Invoices
+ALTER TABLE IF EXISTS invoices DISABLE ROW LEVEL SECURITY;
+
+-- Billing automation
+ALTER TABLE IF EXISTS payment_attempts DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS billing_notifications DISABLE ROW LEVEL SECURITY;
+
+-- Service records
+ALTER TABLE IF EXISTS service_records DISABLE ROW LEVEL SECURITY;
+
+-- Members and activity
+ALTER TABLE IF EXISTS organization_members DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS activity_logs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS member_invitations DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS organization_invitations DISABLE ROW LEVEL SECURITY;
+
+-- Service scheduling
+ALTER TABLE IF EXISTS service_preferences DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS service_appointments DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS appointment_slots DISABLE ROW LEVEL SECURITY;
+
+-- Referral system
+ALTER TABLE IF EXISTS referral_codes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS referrals DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS deposits DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS referral_rewards DISABLE ROW LEVEL SECURITY;
+
+-- Success message
+DO $$
+BEGIN
+    RAISE NOTICE '=== ROW LEVEL SECURITY DISABLED ON ALL TABLES ===';
+    RAISE NOTICE 'This is for development/testing purposes';
+    RAISE NOTICE 'All tables are accessible without RLS restrictions';
+    RAISE NOTICE '';
+    RAISE NOTICE '⚠️  WARNING: For production, you should enable RLS and create proper policies';
+    RAISE NOTICE '    See commented RLS sections in individual migration files for examples';
+END $$;
+

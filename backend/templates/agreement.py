@@ -164,14 +164,14 @@ AGREEMENT_TEMPLATE = """
     <h3>1.2 The Lessee (Customer)</h3>
     <div class="info-grid">
       <div class="info-label">Full Name:</div>
-      <div class="info-value">{{ profile.first_name }} {{ profile.surname }}</div>
+      <div class="info-value">{{ legal_profile.first_name }} {{ legal_profile.surname }}</div>
       <div class="info-label">ID Number:</div>
-      <div class="info-value">{{ profile.id_number or 'Not provided' }}</div>
+      <div class="info-value">{{ legal_profile.id_number or 'Not provided' }}</div>
       <div class="info-label">Phone:</div>
-      <div class="info-value">{{ profile.cell_phone or 'Not provided' }}</div>
+      <div class="info-value">{{ legal_profile.cell_phone or 'Not provided' }}</div>
       <div class="info-label">Address:</div>
-      <div class="info-value">{{ profile.physical_address or '' }}<br>
-      {{ profile.physical_city or '' }}, {{ profile.physical_province or '' }}, {{ profile.physical_postal_code or '' }}</div>
+      <div class="info-value">{{ legal_profile.physical_address or '' }}<br>
+      {{ legal_profile.physical_city or '' }}, {{ legal_profile.physical_province or '' }}, {{ legal_profile.physical_postal_code or '' }}</div>
     </div>
 
     <h3>1.3 Service Location</h3>
@@ -268,7 +268,7 @@ AGREEMENT_TEMPLATE = """
       <p><strong>Customer Signature:</strong></p>
       <img src="{{ signature_url }}" alt="Signature" class="signature-image" />
       <p><strong>Date:</strong> {{ agreement_date }}</p>
-      <p><strong>Name:</strong> {{ profile.first_name }} {{ profile.surname }}</p>
+      <p><strong>Name:</strong> {{ legal_profile.first_name }} {{ legal_profile.surname }}</p>
     </div>
 
     <p style="margin-top: 40px;"><strong>For BotKorp (Pty) Ltd:</strong></p>

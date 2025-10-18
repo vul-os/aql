@@ -109,10 +109,16 @@ def calculate_pricing_endpoint():
         }), 500
 
 
-@app.route('/api/generate-agreement-pdf', methods=['POST'])
-def generate_agreement_pdf():
+@app.route('/api/create-rental-agreements', methods=['POST'])
+def create_rental_agreements():
     """
-    Generate rental agreement PDFs - ONE PER GARDEN/BOT
+    Create rental agreements for service setup
+    
+    Creates one rental agreement per garden/bot, including:
+    - Database records (rental_agreements table)
+    - Signature image uploads
+    - PDF generation and upload
+    - Bot assignment linking
     
     Expected JSON body:
     {
@@ -168,7 +174,7 @@ def generate_agreement_pdf():
         print(f"📄 Generating {len(gardens)} agreement(s) for user: {user_id}, service: {service_id}")
         
         # Fetch common data once
-        profile = fetch_user_profile(user_id)
+        legal_profile = fetch_org_legal_profile(organization_id)
         auth_user = fetch_auth_user(user_id)
         location = fetch_location(location_id, organization_id)
         
@@ -200,7 +206,7 @@ def generate_agreement_pdf():
                 service_id=service_id,
                 garden_id=garden_id,
                 pricing=pricing,
-                profile=profile,
+                legal_profile=legal_profile,
                 auth_user=auth_user
             )
             
@@ -217,7 +223,7 @@ def generate_agreement_pdf():
             agreement_html = render_agreement_template(
                 agreement_number=agreement_number,
                 pricing=pricing,
-                profile=profile,
+                legal_profile=legal_profile,
                 location=location,
                 signature_url=f"{SUPABASE_URL}/storage/v1/object/public/signatures/{signature_path}",
                 agreement_date=datetime.now().strftime('%Y-%m-%d'),
@@ -268,6 +274,19 @@ def generate_agreement_pdf():
             'success': False,
             'error': str(e)
         }), 500
+
+
+# Backward compatibility endpoint (deprecated)
+@app.route('/api/generate-agreement-pdf', methods=['POST'])
+def generate_agreement_pdf_deprecated():
+    """
+    DEPRECATED: Use /api/create-rental-agreements instead
+    
+    This endpoint is maintained for backward compatibility only.
+    """
+    print("⚠️  Warning: Using deprecated endpoint /api/generate-agreement-pdf")
+    print("   Please update to /api/create-rental-agreements")
+    return create_rental_agreements()
 
 
 @app.route('/api/generate-invoice-pdf', methods=['POST'])
@@ -407,182 +426,8 @@ def create_service_amendment():
         }), 500
 
 
-@app.route('/api/send-installation-notification', methods=['POST'])
-def send_installation_notification():
-    """
-    Send email to all organization members about bot installation
-    
-    Expected JSON body:
-    {
-        "service_id": "uuid",
-        "organization_id": "uuid"
-    }
-    """
-    try:
-        data = request.get_json()
-        service_id = data['service_id']
-        organization_id = data['organization_id']
-        
-        print(f"📧 Sending installation notification for service: {service_id}")
-        
-        # Fetch service details
-        service_response = supabase.table('services').select(`
-            *,
-            location:locations(name, city, province, address)
-        `).eq('id', service_id).single().execute()
-        
-        if not service_response.data:
-            raise Exception('Service not found')
-        
-        service = service_response.data
-        
-        # Get garden count
-        gardens_response = supabase.table('gardens').select('id, name, area_sqm').eq('service_id', service_id).eq('is_active', True).execute()
-        garden_count = len(gardens_response.data) if gardens_response.data else 0
-        
-        # Get all organization members
-        members_response = supabase.table('organization_members').select(`
-            user_id,
-            profiles!user_id(email, first_name, surname)
-        `).eq('organization_id', organization_id).eq('status', 'active').execute()
-        
-        if not members_response.data:
-            print("⚠️ No organization members found")
-            return jsonify({
-                'success': True,
-                'emails_sent': 0,
-                'message': 'No members to notify'
-            })
-        
-        # Send email to each member
-        emails_sent = 0
-        for member in members_response.data:
-            if not member.get('profiles') or not member['profiles'].get('email'):
-                continue
-                
-            profile = member['profiles']
-            email = profile['email']
-            name = f"{profile.get('first_name', '')} {profile.get('surname', '')}".strip() or 'there'
-            
-            # Email content
-            subject = f"🤖 Your {service['service_type'].title()} Service is Now Active!"
-            
-            html_content = f"""
-            <html>
-            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; color: white; text-align: center;">
-                    <h1 style="margin: 0; font-size: 28px;">🎉 Installation Complete!</h1>
-                    <p style="margin: 10px 0 0; font-size: 16px; opacity: 0.9;">Your bots are ready to work</p>
-                </div>
-                
-                <div style="padding: 30px 20px;">
-                    <p style="font-size: 16px; color: #333;">Hi {name},</p>
-                    
-                    <p style="font-size: 15px; color: #555; line-height: 1.6;">
-                        Great news! Your <strong>{service['name']}</strong> service has been successfully installed and is now active.
-                    </p>
-                    
-                    <div style="background: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 25px 0; border-radius: 5px;">
-                        <h3 style="margin: 0 0 15px; color: #333; font-size: 16px;">📋 Service Details</h3>
-                        <table style="width: 100%; font-size: 14px; color: #555;">
-                            <tr>
-                                <td style="padding: 8px 0;"><strong>Service:</strong></td>
-                                <td style="text-align: right;">{service['name']}</td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 8px 0;"><strong>Type:</strong></td>
-                                <td style="text-align: right; text-transform: capitalize;">{service['service_type']}</td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 8px 0;"><strong>Location:</strong></td>
-                                <td style="text-align: right;">{service['location']['name']}</td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 8px 0;"><strong>Gardens:</strong></td>
-                                <td style="text-align: right;">{garden_count} garden{"s" if garden_count != 1 else ""}</td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 8px 0;"><strong>Bots Deployed:</strong></td>
-                                <td style="text-align: right;">{garden_count} bot{"s" if garden_count != 1 else ""}</td>
-                            </tr>
-                        </table>
-                    </div>
-                    
-                    <h3 style="color: #333; font-size: 16px; margin: 25px 0 15px;">✅ What's Next?</h3>
-                    <ul style="color: #555; line-height: 1.8; font-size: 14px;">
-                        <li>Your bots will start operating according to their schedule</li>
-                        <li>You can monitor them in your dashboard</li>
-                        <li>Monthly billing will begin from your next billing cycle</li>
-                        <li>You can pause or adjust the service anytime</li>
-                    </ul>
-                    
-                    <div style="margin: 30px 0; text-align: center;">
-                        <a href="{SUPABASE_URL.replace('/rest/v1', '')}/portal/services" 
-                           style="display: inline-block; background: #667eea; color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px;">
-                            View My Services
-                        </a>
-                    </div>
-                    
-                    <p style="font-size: 14px; color: #666; margin-top: 30px;">
-                        Need help? Reply to this email or contact our support team.
-                    </p>
-                    
-                    <p style="font-size: 14px; color: #555; margin-top: 20px;">
-                        Best regards,<br>
-                        <strong>The BotKorp Team</strong>
-                    </p>
-                </div>
-                
-                <div style="text-align: center; padding: 20px; color: #999; font-size: 12px; border-top: 1px solid #eee;">
-                    <p>© 2025 BotKorp. Automated Property Management.</p>
-                </div>
-            </body>
-            </html>
-            """
-            
-            try:
-                # Send via Resend
-                response = requests.post(
-                    'https://api.resend.com/emails',
-                    headers={
-                        'Authorization': f'Bearer {RESEND_API_KEY}',
-                        'Content-Type': 'application/json'
-                    },
-                    json={
-                        'from': 'BotKorp <noreply@botkorp.com>',
-                        'to': email,
-                        'subject': subject,
-                        'html': html_content
-                    }
-                )
-                
-                if response.status_code == 200:
-                    emails_sent += 1
-                    print(f"✅ Email sent to: {email}")
-                else:
-                    print(f"⚠️ Failed to send to {email}: {response.text}")
-                    
-            except Exception as e:
-                print(f"⚠️ Email error for {email}: {str(e)}")
-                continue
-        
-        print(f"✅ Installation notification complete. Sent to {emails_sent} members.")
-        
-        return jsonify({
-            'success': True,
-            'emails_sent': emails_sent,
-            'message': f'Installation notification sent to {emails_sent} organization members'
-        })
-        
-    except Exception as e:
-        print(f"❌ Error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
+# Installation notification moved to Supabase Edge Function
+# See: supabase/functions/send-installation-notification/
 
 @app.route('/api/send-invoice-email', methods=['POST'])
 def send_invoice_email():
@@ -643,44 +488,52 @@ def send_invoice_email():
 # ==================== Helper Functions ====================
 
 def fetch_pricing_from_db(bot_type='mow_bot'):
-    """Fetch pricing from database - FAILS if not found"""
-    response = supabase.table('pricing_structure').select('*').eq('bot_type', bot_type).eq('is_active', True).single().execute()
+    """Fetch pricing from database using new flexible pricing structure"""
+    # Call the Supabase RPC function which handles the new pricing_plans structure
+    response = supabase.rpc('get_full_pricing', {
+        'p_bot_type': bot_type,
+        'p_organization_id': None
+    }).execute()
     
     if not response.data:
-        raise Exception(f'No active pricing found for bot type: {bot_type}. Please configure pricing in the database.')
+        raise Exception(f'No pricing found for bot type {bot_type}. Please configure pricing in the database.')
     
     return response.data
 
 
 def calculate_pricing(number_of_bots, services_per_month, bot_type='mow_bot', billing_day=None):
-    """Calculate pricing based on database pricing structure"""
-    pricing_data = fetch_pricing_from_db(bot_type)
+    """Calculate pricing using new flexible pricing structure"""
+    # Call the Supabase RPC function for consistent pricing calculation
+    response = supabase.rpc('get_tier_pricing', {
+        'p_bot_type': bot_type,
+        'p_number_of_bots': number_of_bots,
+        'p_services_per_month': services_per_month
+    }).execute()
     
-    bot_rental_monthly = float(pricing_data['bot_rental_monthly'])
-    service_price_per_visit = float(pricing_data['service_price_per_visit'])
-    setup_fee = float(pricing_data['setup_fee'])
+    if not response.data:
+        raise Exception(f'Unable to calculate pricing for bot type {bot_type}')
     
-    monthly_rental = number_of_bots * bot_rental_monthly
-    service_total = services_per_month * service_price_per_visit
-    monthly_total = monthly_rental + service_total
-    deposit_total = number_of_bots * setup_fee
+    pricing = response.data
     
     # Use provided billing_day or default to BILLING_DAY constant
     if billing_day is None:
         billing_day = BILLING_DAY
     
+    # Return in expected format (backward compatible)
     return {
         'number_of_bots': number_of_bots,
         'services_per_month': services_per_month,
-        'bot_rental_monthly': bot_rental_monthly,
-        'service_price_per_visit': service_price_per_visit,
-        'monthly_rental_fee': monthly_rental,
-        'service_fee_per_visit': service_price_per_visit,
-        'service_total': service_total,
-        'monthly_total': monthly_total,
-        'setup_fee': setup_fee,
-        'deposit_total': deposit_total,
-        'billing_day': billing_day
+        'bot_rental_monthly': float(pricing.get('bot_rental_per_bot', 0)),
+        'service_price_per_visit': float(pricing.get('service_price_per_visit', 0)),
+        'monthly_rental_fee': float(pricing.get('bot_rental_total', 0)),
+        'service_fee_per_visit': float(pricing.get('service_price_per_visit', 0)),
+        'service_total': float(pricing.get('service_total', 0)),
+        'monthly_total': float(pricing.get('monthly_total', 0)),
+        'setup_fee': float(pricing.get('setup_fee', 0)) / number_of_bots if number_of_bots > 0 else 0,
+        'deposit_total': float(pricing.get('setup_fee', 0)),
+        'billing_day': billing_day,
+        'tier_name': pricing.get('tier_name', 'Standard'),
+        'pricing_type': pricing.get('pricing_type', 'calculated')
     }
 
 
@@ -698,6 +551,14 @@ def fetch_auth_user(user_id):
     if not response.user:
         raise Exception('Auth user not found')
     return response.user
+
+
+def fetch_org_legal_profile(organization_id):
+    """Fetch organization legal profile from database"""
+    response = supabase.table('organization_legal_profiles').select('*').eq('organization_id', organization_id).single().execute()
+    if not response.data:
+        raise Exception(f'Organization legal profile not found for organization: {organization_id}')
+    return response.data
 
 
 def fetch_location(location_id, organization_id):
@@ -722,7 +583,7 @@ def fetch_invoice(invoice_id):
     return response.data
 
 
-def create_rental_agreement(agreement_number, user_id, organization_id, location_id, pricing, profile, auth_user, service_id=None, garden_id=None):
+def create_rental_agreement(agreement_number, user_id, organization_id, location_id, pricing, legal_profile, auth_user, service_id=None, garden_id=None):
     """Create rental agreement record - one per garden/bot"""
     agreement_data = {
         'agreement_number': agreement_number,
@@ -738,18 +599,18 @@ def create_rental_agreement(agreement_number, user_id, organization_id, location
         'bot_rental_total': float(pricing['monthly_rental_fee']),
         'service_total': float(pricing['service_total']),
         'setup_fee': float(pricing['deposit_total']),
-        'signer_first_name': profile.get('first_name', 'Unknown'),
-        'signer_surname': profile.get('surname', 'Unknown'),
-        'signer_id_number': profile.get('id_number', ''),
+        'signer_first_name': legal_profile.get('first_name', 'Unknown'),
+        'signer_surname': legal_profile.get('surname', 'Unknown'),
+        'signer_id_number': legal_profile.get('id_number', ''),
         'signer_address': ', '.join(filter(None, [
-            profile.get('physical_address'),
-            profile.get('physical_city'),
-            profile.get('physical_province'),
-            profile.get('physical_postal_code')
+            legal_profile.get('physical_address'),
+            legal_profile.get('physical_city'),
+            legal_profile.get('physical_province'),
+            legal_profile.get('physical_postal_code')
         ])),
-        'signer_city': profile.get('physical_city', ''),
-        'signer_province': profile.get('physical_province', ''),
-        'signer_phone': profile.get('cell_phone', ''),
+        'signer_city': legal_profile.get('physical_city', ''),
+        'signer_province': legal_profile.get('physical_province', ''),
+        'signer_phone': legal_profile.get('cell_phone', ''),
         'signer_email': auth_user.email,
         'billing_day': pricing['billing_day'],
         'status': 'draft',
@@ -828,7 +689,7 @@ def generate_pdf_from_html(html_content):
     return pdf_file
 
 
-def render_agreement_template(agreement_number, pricing, profile, location, signature_url, agreement_date, garden_name=None):
+def render_agreement_template(agreement_number, pricing, legal_profile, location, signature_url, agreement_date, garden_name=None):
     """Render agreement HTML template"""
     # Import the template
     from templates.agreement import AGREEMENT_TEMPLATE
@@ -842,7 +703,7 @@ def render_agreement_template(agreement_number, pricing, profile, location, sign
     return template.render(
         agreement_number=agreement_number,
         agreement_date=agreement_date,
-        profile=profile,
+        legal_profile=legal_profile,
         location=location,
         pricing=pricing,
         signature_url=signature_url

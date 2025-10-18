@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
-import { useSearchParams, useOutletContext } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,26 +39,30 @@ import {
   MapPin,
   Trash2,
   Plus,
-  Building
+  Building,
+  Mail,
+  Smartphone
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from '@/components/theme-provider';
 import PageHeader from '@/components/ui/page-header';
 import LocationWizard from '@/components/services/location-wizard';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, selectedOrg, selectedLocation, locations: contextLocations, loadOrganizationLocations } = useAuth();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
-  const [searchParams] = useSearchParams();
-  const { selectedOrg } = useOutletContext();
+  const navigate = useNavigate();
+  const { tab } = useParams();
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState({
     full_name: '',
     phone: ''
   });
-  const [locations, setLocations] = useState([]);
+  // Use locations from context instead of local state
+  const locations = contextLocations || [];
   const [showAddLocationDialog, setShowAddLocationDialog] = useState(false);
   
   // Organization settings
@@ -80,30 +84,25 @@ export default function SettingsPage() {
   });
 
   // Notification preferences
-  const [notifications, setNotifications] = useState({
-    email_alerts: true,
-    push_notifications: true,
-    bot_offline: true,
-    maintenance_reminders: true,
-    service_complete: true,
-    low_battery: true
-  });
+  const [notificationPreferences, setNotificationPreferences] = useState(null);
+  const [loadingNotifications, setLoadingNotifications] = useState(true);
+  const [savingNotifications, setSavingNotifications] = useState(false);
+  const { permission, requestPermission, isSupported, isSubscribed, unsubscribe } = usePushNotifications();
 
   useEffect(() => {
     loadUserProfile();
-    loadLegalProfile();
     loadNotificationPreferences();
   }, [user]);
+
+  useEffect(() => {
+    if (selectedOrg?.organization_id) {
+      loadLegalProfile();
+    }
+  }, [selectedOrg]);
   
   useEffect(() => {
     if (selectedOrg?.organization_name) {
       setOrganizationName(selectedOrg.organization_name);
-    }
-  }, [selectedOrg]);
-
-  useEffect(() => {
-    if (selectedOrg?.organization_id) {
-      loadLocations();
     }
   }, [selectedOrg]);
 
@@ -131,13 +130,13 @@ export default function SettingsPage() {
   };
 
   const loadLegalProfile = async () => {
-    if (!user?.id) return;
+    if (!selectedOrg?.organization_id) return;
 
     try {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('organization_legal_profiles')
         .select('first_name, surname, id_number, physical_address, physical_city, physical_province, physical_postal_code, cell_phone, legal_profile_completed, updated_at')
-        .eq('id', user.id)
+        .eq('organization_id', selectedOrg.organization_id)
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;
@@ -155,39 +154,130 @@ export default function SettingsPage() {
           legal_profile_completed: data.legal_profile_completed || false,
           updated_at: data.updated_at
         });
+      } else {
+        // No legal profile yet, set empty state
+        setLegalProfile({
+          first_name: '',
+          surname: '',
+          id_number: '',
+          physical_address: '',
+          physical_city: '',
+          physical_province: '',
+          physical_postal_code: '',
+          cell_phone: '',
+          legal_profile_completed: false,
+          updated_at: null
+        });
       }
     } catch (error) {
       console.error('Error loading legal profile:', error);
     }
   };
 
-  const loadNotificationPreferences = () => {
-    // Load from localStorage for now
-    const saved = localStorage.getItem('notificationPreferences');
-    if (saved) {
-      setNotifications(JSON.parse(saved));
+  // Locations are now managed in AuthContext
+  // Use loadOrganizationLocations from context to refresh when needed
+
+  const loadNotificationPreferences = async () => {
+    if (!user?.id) {
+      setLoadingNotifications(false);
+      return;
+    }
+
+    try {
+      // First try to get existing preferences
+      const { data, error } = await supabase
+        .from('notification_preferences')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle(); // Use maybeSingle() instead of single() to avoid errors when no record exists
+
+      if (error) throw error;
+
+      if (data) {
+        setNotificationPreferences(data);
+      } else {
+        // Create default preferences using upsert to handle race conditions
+        const { data: newPrefs, error: createError } = await supabase
+          .from('notification_preferences')
+          .upsert(
+            { user_id: user.id },
+            { onConflict: 'user_id', ignoreDuplicates: false }
+          )
+          .select()
+          .single();
+
+        if (createError) {
+          // If upsert failed, try to fetch again (in case another process created it)
+          const { data: retryData, error: retryError } = await supabase
+            .from('notification_preferences')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          if (retryError) throw retryError;
+          if (retryData) {
+            setNotificationPreferences(retryData);
+          } else {
+            throw createError;
+          }
+        } else {
+          setNotificationPreferences(newPrefs);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading notification preferences:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to load notification preferences: ${error.message || 'Unknown error'}`,
+        variant: 'destructive'
+      });
+    } finally {
+      setLoadingNotifications(false);
     }
   };
 
-  const loadLocations = async () => {
-    if (!selectedOrg?.organization_id) return;
-
+  const saveNotificationPreferences = async () => {
+    setSavingNotifications(true);
     try {
-      const { data, error } = await supabase
-        .from('locations')
-        .select('*')
-        .eq('organization_id', selectedOrg.organization_id)
-        .order('created_at', { ascending: false });
+      const { error } = await supabase
+        .from('notification_preferences')
+        .update(notificationPreferences)
+        .eq('id', notificationPreferences.id);
 
       if (error) throw error;
-      setLocations(data || []);
-    } catch (error) {
-      console.error('Error loading locations:', error);
+
       toast({
-        title: "Error",
-        description: "Failed to load locations",
-        variant: "destructive"
+        title: 'Saved',
+        description: 'Notification preferences updated successfully'
       });
+    } catch (error) {
+      console.error('Error saving notification preferences:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save preferences',
+        variant: 'destructive'
+      });
+    } finally {
+      setSavingNotifications(false);
+    }
+  };
+
+  const handleNotificationChange = (field, value) => {
+    setNotificationPreferences(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handlePushToggle = async (enabled) => {
+    if (enabled) {
+      const success = await requestPermission();
+      if (success) {
+        handleNotificationChange('push_enabled', true);
+      }
+    } else {
+      await unsubscribe();
+      handleNotificationChange('push_enabled', false);
     }
   };
 
@@ -209,7 +299,7 @@ export default function SettingsPage() {
         description: "Location deleted successfully",
       });
       
-      loadLocations();
+      loadOrganizationLocations();
     } catch (error) {
       console.error('Error deleting location:', error);
       toast({
@@ -251,14 +341,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handleNotificationUpdate = () => {
-    localStorage.setItem('notificationPreferences', JSON.stringify(notifications));
-    toast({
-      title: "Success",
-      description: "Notification preferences saved",
-    });
-  };
-  
   const handleOrganizationUpdate = async (e) => {
     e.preventDefault();
     
@@ -332,6 +414,14 @@ export default function SettingsPage() {
     }
   };
 
+  // Get current tab from URL or default to 'profile'
+  const currentTab = tab || 'profile';
+
+  // Handle tab change - update URL without page refresh
+  const handleTabChange = (newTab) => {
+    navigate(`/portal/settings/${newTab}`, { replace: false });
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6">
       <PageHeader
@@ -341,7 +431,7 @@ export default function SettingsPage() {
       />
 
       {/* Settings Tabs */}
-      <Tabs defaultValue={searchParams.get('tab') || 'profile'} className="space-y-4">
+      <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList className="grid w-full grid-cols-5 lg:w-auto">
           <TabsTrigger value="profile">
             <User className="h-4 w-4 mr-2" />
@@ -776,123 +866,261 @@ export default function SettingsPage() {
 
         {/* Notifications Tab */}
         <TabsContent value="notifications" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Preferences</CardTitle>
-              <CardDescription>
-                Control how and when you receive notifications
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Email Notifications */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Email Alerts</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Receive email notifications for important events
-                  </p>
-                </div>
-                <Switch
-                  checked={notifications.email_alerts}
-                  onCheckedChange={(checked) =>
-                    setNotifications({ ...notifications, email_alerts: checked })
-                  }
-                />
+          {loadingNotifications ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <>
+              {/* Global Settings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bell className="h-5 w-5" />
+                    Notification Channels
+                  </CardTitle>
+                  <CardDescription>
+                    Choose how you want to receive notifications
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Email Notifications */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Mail className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <Label htmlFor="email_enabled" className="text-base">Email Notifications</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Receive notifications via email
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      id="email_enabled"
+                      checked={notificationPreferences?.email_enabled || false}
+                      onCheckedChange={(checked) => handleNotificationChange('email_enabled', checked)}
+                    />
+                  </div>
+
+                  {/* Push Notifications */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Smartphone className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <Label htmlFor="push_enabled" className="text-base">Push Notifications</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Receive browser push notifications
+                          {!isSupported && ' (Not supported in your browser)'}
+                          {isSubscribed && ' ✓ Subscribed'}
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      id="push_enabled"
+                      checked={notificationPreferences?.push_enabled && isSubscribed || false}
+                      onCheckedChange={handlePushToggle}
+                      disabled={!isSupported}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Email Preferences */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Mail className="h-5 w-5" />
+                    Email Preferences
+                  </CardTitle>
+                  <CardDescription>
+                    Choose which types of notifications you want to receive via email
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="email_bot_alerts">Bot Alerts</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Low battery, offline, errors, maintenance
+                      </p>
+                    </div>
+                    <Switch
+                      id="email_bot_alerts"
+                      checked={notificationPreferences?.email_bot_alerts || false}
+                      onCheckedChange={(checked) => handleNotificationChange('email_bot_alerts', checked)}
+                      disabled={!notificationPreferences?.email_enabled}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="email_service_reminders">Service Reminders</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Upcoming services, appointments, completions
+                      </p>
+                    </div>
+                    <Switch
+                      id="email_service_reminders"
+                      checked={notificationPreferences?.email_service_reminders || false}
+                      onCheckedChange={(checked) => handleNotificationChange('email_service_reminders', checked)}
+                      disabled={!notificationPreferences?.email_enabled}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="email_billing">Billing & Payments</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Invoices, payment confirmations, failures
+                      </p>
+                    </div>
+                    <Switch
+                      id="email_billing"
+                      checked={notificationPreferences?.email_billing || false}
+                      onCheckedChange={(checked) => handleNotificationChange('email_billing', checked)}
+                      disabled={!notificationPreferences?.email_enabled}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="email_organization">Organization Updates</Label>
+                      <p className="text-sm text-muted-foreground">
+                        New members, role changes, team updates
+                      </p>
+                    </div>
+                    <Switch
+                      id="email_organization"
+                      checked={notificationPreferences?.email_organization || false}
+                      onCheckedChange={(checked) => handleNotificationChange('email_organization', checked)}
+                      disabled={!notificationPreferences?.email_enabled}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="email_system">System Notifications</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Important system updates and announcements
+                      </p>
+                    </div>
+                    <Switch
+                      id="email_system"
+                      checked={notificationPreferences?.email_system || false}
+                      onCheckedChange={(checked) => handleNotificationChange('email_system', checked)}
+                      disabled={!notificationPreferences?.email_enabled}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Push Preferences */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Smartphone className="h-5 w-5" />
+                    Push Notification Preferences
+                  </CardTitle>
+                  <CardDescription>
+                    Choose which types of notifications you want to receive as push notifications
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="push_bot_alerts">Bot Alerts</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Low battery, offline, errors, maintenance
+                      </p>
+                    </div>
+                    <Switch
+                      id="push_bot_alerts"
+                      checked={notificationPreferences?.push_bot_alerts || false}
+                      onCheckedChange={(checked) => handleNotificationChange('push_bot_alerts', checked)}
+                      disabled={!notificationPreferences?.push_enabled || !isSubscribed}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="push_service_reminders">Service Reminders</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Upcoming services, appointments, completions
+                      </p>
+                    </div>
+                    <Switch
+                      id="push_service_reminders"
+                      checked={notificationPreferences?.push_service_reminders || false}
+                      onCheckedChange={(checked) => handleNotificationChange('push_service_reminders', checked)}
+                      disabled={!notificationPreferences?.push_enabled || !isSubscribed}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="push_billing">Billing & Payments</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Payment failures and urgent billing issues
+                      </p>
+                    </div>
+                    <Switch
+                      id="push_billing"
+                      checked={notificationPreferences?.push_billing || false}
+                      onCheckedChange={(checked) => handleNotificationChange('push_billing', checked)}
+                      disabled={!notificationPreferences?.push_enabled || !isSubscribed}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="push_organization">Organization Updates</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Important team and organization changes
+                      </p>
+                    </div>
+                    <Switch
+                      id="push_organization"
+                      checked={notificationPreferences?.push_organization || false}
+                      onCheckedChange={(checked) => handleNotificationChange('push_organization', checked)}
+                      disabled={!notificationPreferences?.push_enabled || !isSubscribed}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="push_system">System Notifications</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Critical system alerts and announcements
+                      </p>
+                    </div>
+                    <Switch
+                      id="push_system"
+                      checked={notificationPreferences?.push_system || false}
+                      onCheckedChange={(checked) => handleNotificationChange('push_system', checked)}
+                      disabled={!notificationPreferences?.push_enabled || !isSubscribed}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Save Button */}
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={loadNotificationPreferences}
+                  disabled={savingNotifications}
+                >
+                  Reset
+                </Button>
+                <Button
+                  onClick={saveNotificationPreferences}
+                  disabled={savingNotifications}
+                >
+                  {savingNotifications ? 'Saving...' : 'Save Preferences'}
+                </Button>
               </div>
-
-              <Separator />
-
-              {/* Push Notifications */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Push Notifications</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Receive browser push notifications
-                  </p>
-                </div>
-                <Switch
-                  checked={notifications.push_notifications}
-                  onCheckedChange={(checked) =>
-                    setNotifications({ ...notifications, push_notifications: checked })
-                  }
-                />
-              </div>
-
-              <Separator />
-
-              {/* Specific Alerts */}
-              <div className="space-y-4">
-                <Label className="text-base">Alert Types</Label>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Bot Offline</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Alert when a bot goes offline
-                      </p>
-                    </div>
-                    <Switch
-                      checked={notifications.bot_offline}
-                      onCheckedChange={(checked) =>
-                        setNotifications({ ...notifications, bot_offline: checked })
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Maintenance Reminders</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Remind about upcoming maintenance
-                      </p>
-                    </div>
-                    <Switch
-                      checked={notifications.maintenance_reminders}
-                      onCheckedChange={(checked) =>
-                        setNotifications({ ...notifications, maintenance_reminders: checked })
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Service Complete</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Notify when service is complete
-                      </p>
-                    </div>
-                    <Switch
-                      checked={notifications.service_complete}
-                      onCheckedChange={(checked) =>
-                        setNotifications({ ...notifications, service_complete: checked })
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Low Battery</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Alert when bot battery is low
-                      </p>
-                    </div>
-                    <Switch
-                      checked={notifications.low_battery}
-                      onCheckedChange={(checked) =>
-                        setNotifications({ ...notifications, low_battery: checked })
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <Button onClick={handleNotificationUpdate}>
-                <Save className="h-4 w-4 mr-2" />
-                Save Preferences
-              </Button>
-            </CardContent>
-          </Card>
+            </>
+          )}
         </TabsContent>
       </Tabs>
 
@@ -912,7 +1140,7 @@ export default function SettingsPage() {
             organizationId={selectedOrg?.organization_id}
             onComplete={(newLocation) => {
               setShowAddLocationDialog(false);
-              loadLocations();
+              loadOrganizationLocations();
               toast({
                 variant: 'success',
                 title: 'Location Added! 🎉',

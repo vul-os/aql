@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useLocation, useOutletContext } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -27,7 +27,9 @@ import {
   AlertCircle,
   Calendar,
   Info,
-  FileText
+  FileText,
+  Clock,
+  Scissors
 } from 'lucide-react';
 import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -35,21 +37,20 @@ import { useAuth } from '@/context/auth-context';
 import { usePaymentAuthorizations, usePaystack } from '@/hooks/use-paystack';
 import PriceCalculator from '@/components/services/price-calculator';
 import LocationChecker from '@/components/services/location-checker';
-import ScheduleSelector from '@/components/services/schedule-selector';
 import LocationWizard from '@/components/services/location-wizard';
 import SignaturePad from '@/components/services/signature-pad';
 import { API } from '@/lib/config';
 
-const STORAGE_KEY = 'addServiceWizardData';
-
 export default function AddServicePage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { selectedOrg } = useOutletContext();
+  const { user, selectedOrg, selectedLocation } = useAuth();
   const { toast } = useToast();
-  const { user } = useAuth();
   const { authorizations, loading: authLoading } = usePaymentAuthorizations();
   const { addPaymentMethod, processing } = usePaystack();
+
+  // Make storage key organization-specific to avoid conflicts
+  const STORAGE_KEY = `addServiceWizardData_${selectedOrg?.organization_id || 'default'}`;
 
   // Load from localStorage
   const loadSavedData = () => {
@@ -57,6 +58,12 @@ export default function AddServicePage() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
+        // Validate that the saved org matches current org
+        if (parsed.organizationId && parsed.organizationId !== selectedOrg?.organization_id) {
+          console.warn('Saved data is from different organization, ignoring');
+          localStorage.removeItem(STORAGE_KEY);
+          return null;
+        }
         console.log('📦 Loaded from localStorage:', parsed);
         return parsed;
       }
@@ -86,36 +93,77 @@ export default function AddServicePage() {
     locationId: '',
     serviceName: '',  // NEW: Service name
     serviceType: 'garden',
+    service_frequency: 'bi-weekly', // bi-weekly or monthly
     gardens: [
       {
         name: 'Garden 1',
         area_sqm: '100'
       }
     ],
-    schedule: {
-      scheduleType: 'weekly',
-      weeklyDays: [],
-      monthlyDays: [],
-      preferredTime: '10:00',
-      isValid: false
+    schedulingPreferences: {
+      edge_trimming_per_month: 2, // 1-2 for bi-weekly, 1-4 for monthly
+      preferred_day_of_week: 1, // 0=Sunday, 6=Saturday
+      preferred_time_window_start: '08:00',
+      preferred_time_window_end: '12:00'
     },
     signature: null
   });
 
   const [calculatedPricing, setCalculatedPricing] = useState(initialData?.calculatedPricing || null);
 
+  // Calculate pricing whenever gardens or scheduling changes
+  useEffect(() => {
+    const calculatePricing = async () => {
+      try {
+        const validGardens = formData.gardens.filter(g => g.name && g.area_sqm);
+        const numberOfBots = validGardens.length;
+        const servicesPerMonth = formData.schedulingPreferences?.edge_trimming_per_month || 2;
+        
+        if (numberOfBots === 0 || step < 3) {
+          setCalculatedPricing(null);
+          return;
+        }
+
+        // Call the pricing function
+        const { data, error } = await supabase.rpc('get_tier_pricing', {
+          p_bot_type: 'mow_bot',
+          p_number_of_bots: numberOfBots,
+          p_services_per_month: servicesPerMonth
+        });
+
+        if (error) {
+          console.error('Error calculating pricing:', error);
+          return;
+        }
+
+        console.log('📊 Pricing calculated:', data);
+        setCalculatedPricing(data);
+      } catch (err) {
+        console.error('Error in pricing calculation:', err);
+      }
+    };
+
+    // Only calculate if we have gardens and are on step 3 or later
+    if (step >= 3 && formData.gardens.some(g => g.name && g.area_sqm)) {
+      calculatePricing();
+    }
+  }, [formData.gardens, formData.schedulingPreferences?.edge_trimming_per_month, step]);
+
   // Save to localStorage on every change
   useEffect(() => {
+    if (!selectedOrg?.organization_id) return;
+    
     const dataToSave = {
       step,
       formData,
       showNewLocation,
       calculatedPricing,
+      organizationId: selectedOrg.organization_id,
       timestamp: Date.now()
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
     console.log('💾 Saved - Step:', step);
-  }, [step, formData, showNewLocation, calculatedPricing]);
+  }, [step, formData, showNewLocation, calculatedPricing, selectedOrg?.organization_id]);
 
   useEffect(() => {
     if (selectedOrg?.organization_id) {
@@ -164,9 +212,13 @@ export default function AddServicePage() {
       if (error) throw error;
       setLocations(data || []);
       
-      // Auto-select first location if none is selected
-      if (data && data.length > 0 && !formData.locationId) {
-        setFormData(prev => ({ ...prev, locationId: data[0].id }));
+      // Validate that saved locationId exists, otherwise reset to first location
+      if (data && data.length > 0) {
+        const locationExists = data.some(loc => loc.id === formData.locationId);
+        if (!locationExists) {
+          console.warn('Saved location not found, resetting to first location');
+          setFormData(prev => ({ ...prev, locationId: data[0].id }));
+        }
       }
     } catch (error) {
       console.error('Error loading locations:', error);
@@ -234,15 +286,8 @@ export default function AddServicePage() {
     }
 
     if (step === 3) {
-      // Validate schedule
-      if (!formData.schedule || !formData.schedule.isValid) {
-        toast({
-          title: 'Schedule Required',
-          description: 'Please set up a valid service schedule',
-          variant: 'destructive'
-        });
-        return;
-      }
+      // Scheduling preferences are always valid (have defaults)
+      // No validation needed
     }
 
     // Step 5: Just validate signature is present
@@ -267,6 +312,17 @@ export default function AddServicePage() {
     setLoading(true);
     try {
       const locationId = formData.locationId;
+      
+      // Validate location exists
+      if (!locationId || !locations.some(loc => loc.id === locationId)) {
+        toast({
+          title: 'Invalid Location',
+          description: 'Please select a valid location',
+          variant: 'destructive'
+        });
+        setLoading(false);
+        return;
+      }
       
       // Normalize service type (garden → lawn) for database
       const serviceType = formData.serviceType === 'garden' ? 'lawn' : formData.serviceType;
@@ -301,8 +357,8 @@ export default function AddServicePage() {
           location_id: locationId,
           name: formData.serviceName || `${formData.serviceType} Service`,
           service_type: serviceType,  // Use normalized type
-          service_frequency: formData.schedule?.scheduleType || 'weekly',
-          services_per_month: calculatedPricing?.services_per_month || 4,
+          service_frequency: formData.service_frequency || 'bi-weekly',
+          services_per_month: formData.schedulingPreferences.edge_trimming_per_month || 2,
           status: 'active',  // Active since agreements will be signed
           activation_date: new Date().toISOString(),
           is_active: true
@@ -350,11 +406,11 @@ export default function AddServicePage() {
         if (gardenError) throw gardenError;
         console.log('Gardens created:', gardens);
 
-        // STEP 3: Generate rental agreements (one per garden)
+        // STEP 3: Create rental agreements (one per garden)
         if (formData.signature && gardens && gardens.length > 0) {
-          console.log('Generating rental agreements...');
+          console.log('Creating rental agreements...');
           
-          const agreementResponse = await fetch(API.GENERATE_AGREEMENT_PDF, {
+          const agreementResponse = await fetch(API.CREATE_RENTAL_AGREEMENTS, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -368,7 +424,7 @@ export default function AddServicePage() {
                 name: g.name,
                 area_sqm: g.area_sqm
               })),
-              services_per_month: calculatedPricing?.services_per_month || 4,
+              services_per_month: formData.schedulingPreferences.edge_trimming_per_month || 2,
             })
           });
 
@@ -382,29 +438,21 @@ export default function AddServicePage() {
           }
         }
 
-        // STEP 4: Create schedules for each garden
-        if (formData.schedule && formData.schedule.isValid && gardens) {
-          const schedulesToInsert = gardens.map(garden => ({
-            organization_id: selectedOrg.organization_id,
-            location_id: locationId,
-            garden_id: garden.id,
+        // STEP 4: Create scheduling preferences
+        const { error: prefError } = await supabase
+          .from('service_preferences')
+          .insert({
             service_id: serviceId,
-            schedule_type: formData.schedule.scheduleType,
-            weekly_days: formData.schedule.weeklyDays || [],
-            monthly_days: formData.schedule.monthlyDays || [],
-            preferred_time: formData.schedule.preferredTime,
-            max_services_per_month: calculatedPricing?.services_per_month || 4,
-            created_by: user.id
-          }));
+            day_of_week: formData.schedulingPreferences.preferred_day_of_week,
+            time_window_start: formData.schedulingPreferences.preferred_time_window_start,
+            time_window_end: formData.schedulingPreferences.preferred_time_window_end,
+            priority: 1,
+            is_active: true
+          });
 
-          const { error: scheduleError } = await supabase
-            .from('service_schedules')
-            .insert(schedulesToInsert);
-
-          if (scheduleError) {
-            console.error('Error creating schedules:', scheduleError);
-            // Don't throw - service is created
-          }
+        if (prefError) {
+          console.error('Error creating schedule preferences:', prefError);
+          // Don't throw - service is created
         }
 
         toast({
@@ -503,8 +551,9 @@ export default function AddServicePage() {
             Step {step} of {totalSteps}: {
               step === 1 ? 'Select Location & Service Type' :
               step === 2 ? 'Service Details' :
-              step === 3 ? 'Schedule Setup' :
+              step === 3 ? 'Scheduling Preferences' :
               step === 4 ? 'Review & Pricing' :
+              step === 5 ? 'Sign Agreement' :
               'Payment Method'
             }
           </p>
@@ -519,14 +568,15 @@ export default function AddServicePage() {
               setFormData({
                 locationId: locations[0]?.id || '',
                 serviceType: 'garden',
+                service_frequency: 'bi-weekly',
                 gardens: [{ name: 'Garden 1', area_sqm: '100' }],
-                schedule: {
-                  scheduleType: 'weekly',
-                  weeklyDays: [],
-                  monthlyDays: [],
-                  preferredTime: '10:00',
-                  isValid: false
-                }
+                schedulingPreferences: {
+                  edge_trimming_per_month: 2,
+                  preferred_day_of_week: 1,
+                  preferred_time_window_start: '08:00',
+                  preferred_time_window_end: '12:00'
+                },
+                signature: null
               });
               toast({ title: "Progress cleared", description: "Starting fresh" });
             }}
@@ -801,20 +851,208 @@ export default function AddServicePage() {
         </div>
       )}
 
-      {/* Step 3: Schedule Setup */}
+      {/* Step 3: Scheduling Preferences */}
       {step === 3 && (
-        <div className="max-w-3xl mx-auto">
-          <ScheduleSelector
-            schedule={formData.schedule}
-            onChange={(scheduleData) => {
-              setFormData({
-                ...formData,
-                schedule: scheduleData
-              });
-            }}
-            maxServicesPerMonth={calculatedPricing?.services_per_month || 4}
-            basePrice={calculatedPricing?.monthly_total || 0}
-          />
+        <div className="max-w-3xl mx-auto space-y-6">
+          {/* Important Information Alert */}
+          <Alert className="border-primary/50 bg-primary/5">
+            <Info className="h-4 w-4 text-primary" />
+            <AlertDescription className="space-y-2 text-sm">
+              <p className="font-medium">Please note:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li><strong>Bot servicing:</strong> Bots are automatically serviced once a month (fixed)</li>
+                <li><strong>Edge trimming:</strong> Select 1-4 edge trimming visits per month based on your needs</li>
+                <li><strong>Flexible scheduling:</strong> Your preferred day and time are our priority, but may change due to weather, environmental conditions, or logistical factors</li>
+                <li><strong>Appointment allocation:</strong> One of your selected time windows will be chosen for each visit</li>
+              </ul>
+            </AlertDescription>
+          </Alert>
+
+          {/* Edge Trimming Frequency */}
+          <Card className="border-2">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Scissors className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Edge Trimming Frequency</CardTitle>
+              </div>
+              <CardDescription>
+                Choose how many edge trimming visits you'd like per month (1-4 visits)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Label>Visits per Month</Label>
+                <div className="grid grid-cols-4 gap-3">
+                  {[1, 2, 3, 4].map((visits) => (
+                    <button
+                      key={visits}
+                      type="button"
+                      onClick={() => setFormData({
+                        ...formData,
+                        service_frequency: 'monthly',
+                        schedulingPreferences: {
+                          ...formData.schedulingPreferences,
+                          edge_trimming_per_month: visits
+                        }
+                      })}
+                      className={`p-6 rounded-lg border-2 text-center transition-all ${
+                        formData.schedulingPreferences?.edge_trimming_per_month === visits
+                          ? 'border-primary bg-primary/10 shadow-md'
+                          : 'border-border hover:border-primary/50 hover:bg-muted'
+                      }`}
+                    >
+                      <div className="text-3xl font-bold mb-2 text-primary">{visits}</div>
+                      <div className="text-xs text-muted-foreground">
+                        visit{visits > 1 ? 's' : ''}/month
+                      </div>
+                      <div className="text-sm font-semibold mt-2">
+                        R{visits * 100}
+                      </div>
+                      {formData.schedulingPreferences?.edge_trimming_per_month === visits && (
+                        <CheckCircle className="h-5 w-5 text-primary mx-auto mt-2" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-center">
+                    <strong>R{((formData.schedulingPreferences?.edge_trimming_per_month || 2) * 100).toFixed(2)}/month</strong> for edge trimming
+                    <span className="text-muted-foreground ml-1">(R100 per visit)</span>
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Preferred Day of Week */}
+          <Card className="border-2">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Preferred Day of Week</CardTitle>
+              </div>
+              <CardDescription>Choose your preferred day for service visits</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Label>Select Day</Label>
+                <div className="grid grid-cols-7 gap-2">
+                  {[
+                    { value: 0, label: 'Sun', full: 'Sunday' },
+                    { value: 1, label: 'Mon', full: 'Monday' },
+                    { value: 2, label: 'Tue', full: 'Tuesday' },
+                    { value: 3, label: 'Wed', full: 'Wednesday' },
+                    { value: 4, label: 'Thu', full: 'Thursday' },
+                    { value: 5, label: 'Fri', full: 'Friday' },
+                    { value: 6, label: 'Sat', full: 'Saturday' }
+                  ].map((day) => (
+                    <button
+                      key={day.value}
+                      type="button"
+                      onClick={() => setFormData({
+                        ...formData,
+                        schedulingPreferences: {
+                          ...formData.schedulingPreferences,
+                          preferred_day_of_week: day.value
+                        }
+                      })}
+                      className={`p-3 rounded-lg border-2 text-center transition-all ${
+                        formData.schedulingPreferences?.preferred_day_of_week === day.value
+                          ? 'border-primary bg-primary text-primary-foreground shadow-md'
+                          : 'border-border hover:border-primary/50 hover:bg-muted'
+                      }`}
+                      title={day.full}
+                    >
+                      <div className="text-xs font-semibold">{day.label}</div>
+                    </button>
+                  ))}
+                </div>
+                {formData.schedulingPreferences?.preferred_day_of_week !== undefined && (
+                  <p className="text-sm text-muted-foreground">
+                    ✓ Selected: {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][formData.schedulingPreferences.preferred_day_of_week]}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Preferred Time Window */}
+          <Card className="border-2">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Preferred Time Window</CardTitle>
+              </div>
+              <CardDescription>Select your preferred time range for service visits</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="time-start">Start Time</Label>
+                  <Select 
+                    value={formData.schedulingPreferences?.preferred_time_window_start || '08:00'}
+                    onValueChange={(value) => setFormData({
+                      ...formData,
+                      schedulingPreferences: {
+                        ...formData.schedulingPreferences,
+                        preferred_time_window_start: value
+                      }
+                    })}
+                  >
+                    <SelectTrigger id="time-start">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent position="popper" sideOffset={5}>
+                      <SelectItem value="06:00">6:00 AM</SelectItem>
+                      <SelectItem value="07:00">7:00 AM</SelectItem>
+                      <SelectItem value="08:00">8:00 AM</SelectItem>
+                      <SelectItem value="09:00">9:00 AM</SelectItem>
+                      <SelectItem value="10:00">10:00 AM</SelectItem>
+                      <SelectItem value="11:00">11:00 AM</SelectItem>
+                      <SelectItem value="12:00">12:00 PM</SelectItem>
+                      <SelectItem value="13:00">1:00 PM</SelectItem>
+                      <SelectItem value="14:00">2:00 PM</SelectItem>
+                      <SelectItem value="15:00">3:00 PM</SelectItem>
+                      <SelectItem value="16:00">4:00 PM</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="time-end">End Time</Label>
+                  <Select 
+                    value={formData.schedulingPreferences?.preferred_time_window_end || '12:00'}
+                    onValueChange={(value) => setFormData({
+                      ...formData,
+                      schedulingPreferences: {
+                        ...formData.schedulingPreferences,
+                        preferred_time_window_end: value
+                      }
+                    })}
+                  >
+                    <SelectTrigger id="time-end">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent position="popper" sideOffset={5}>
+                      <SelectItem value="08:00">8:00 AM</SelectItem>
+                      <SelectItem value="09:00">9:00 AM</SelectItem>
+                      <SelectItem value="10:00">10:00 AM</SelectItem>
+                      <SelectItem value="11:00">11:00 AM</SelectItem>
+                      <SelectItem value="12:00">12:00 PM</SelectItem>
+                      <SelectItem value="13:00">1:00 PM</SelectItem>
+                      <SelectItem value="14:00">2:00 PM</SelectItem>
+                      <SelectItem value="15:00">3:00 PM</SelectItem>
+                      <SelectItem value="16:00">4:00 PM</SelectItem>
+                      <SelectItem value="17:00">5:00 PM</SelectItem>
+                      <SelectItem value="18:00">6:00 PM</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                Services are typically scheduled within this time window
+              </p>
+            </CardContent>
+          </Card>
         </div>
       )}
 
@@ -873,37 +1111,24 @@ export default function AddServicePage() {
               <CardContent>
                 <div className="space-y-2">
                   <div>
-                    <p className="text-sm text-muted-foreground">Schedule Type</p>
-                    <p className="font-medium capitalize">{formData.schedule?.scheduleType || 'Not set'}</p>
+                    <p className="text-sm text-muted-foreground">Service Frequency</p>
+                    <p className="font-medium capitalize">{formData.service_frequency === 'bi-weekly' ? 'Bi-Weekly (Every 2 Weeks)' : 'Monthly (Every 4 Weeks)'}</p>
                   </div>
-                  {formData.schedule?.weeklyDays?.length > 0 && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Weekly Days</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {formData.schedule.weeklyDays.map(day => {
-                          const dayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][day];
-                          return <Badge key={day} variant="secondary">{dayName}</Badge>;
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  {formData.schedule?.monthlyDays?.length > 0 && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Monthly Days</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {formData.schedule.monthlyDays.map(day => (
-                          <Badge key={day} variant="secondary">{day}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                   <div>
-                    <p className="text-sm text-muted-foreground">Preferred Time</p>
-                    <p className="font-medium">{formData.schedule?.preferredTime || '10:00'}</p>
+                    <p className="text-sm text-muted-foreground">Preferred Day</p>
+                    <p className="font-medium">
+                      {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][formData.schedulingPreferences?.preferred_day_of_week || 1]}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Time Window</p>
+                    <p className="font-medium">
+                      {formData.schedulingPreferences?.preferred_time_window_start || '08:00'} - {formData.schedulingPreferences?.preferred_time_window_end || '12:00'}
+                    </p>
                   </div>
                   <div className="mt-3 p-2 bg-muted rounded-md">
                     <p className="text-sm">
-                      <span className="font-medium">~{formData.schedule?.estimatedServices || 0}</span> services per month
+                      <span className="font-medium">{formData.schedulingPreferences?.edge_trimming_per_month || 2}</span> edge trimming visit{(formData.schedulingPreferences?.edge_trimming_per_month || 2) > 1 ? 's' : ''} per month
                     </p>
                   </div>
                 </div>
