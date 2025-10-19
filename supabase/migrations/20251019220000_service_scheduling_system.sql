@@ -414,7 +414,7 @@ COMMENT ON FUNCTION get_service_appointments_for_month IS 'Get all appointments 
 -- Success message
 DO $$
 BEGIN
-    RAISE NOTICE '✓ Service scheduling system created successfully!';
+    RAISE NOTICE '- Service scheduling system created successfully!';
     RAISE NOTICE 'Tables:';
     RAISE NOTICE '  - service_preferences (customer day/time preferences)';
     RAISE NOTICE '  - service_appointments (admin scheduled appointments)';

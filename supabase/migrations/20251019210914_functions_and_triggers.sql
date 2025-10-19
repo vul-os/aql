@@ -166,10 +166,13 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function to get tier pricing (updated for new flexible pricing structure)
+-- NOTE: Service fee is PER LOCATION, not per bot/garden
+-- Use include_service_fee parameter to control whether service fee is added
 CREATE OR REPLACE FUNCTION get_tier_pricing(
     p_bot_type TEXT,
     p_number_of_bots INTEGER,
-    p_services_per_month INTEGER
+    p_services_per_month INTEGER,
+    p_include_service_fee BOOLEAN DEFAULT true
 )
 RETURNS JSON AS $$
 DECLARE
@@ -191,41 +194,40 @@ BEGIN
         RAISE EXCEPTION 'No pricing plan found for bot type: %', p_bot_type;
     END IF;
     
-    -- Calculate bot rental
+    -- Calculate bot rental (always per bot)
     v_bot_rental := v_plan.bot_rental_monthly * p_number_of_bots;
     
     -- Sum up all required line items (non-optional)
-    FOR v_line_item IN 
-        SELECT price_per_unit
-        FROM pricing_line_items
-        WHERE pricing_plan_id = v_plan.id
-        AND is_active = true
-        AND is_optional = false
-    LOOP
-        v_line_items_total := v_line_items_total + v_line_item.price_per_unit;
-    END LOOP;
-    
-    -- Multiply by services per month
-    v_line_items_total := v_line_items_total * p_services_per_month;
-    
-    -- Calculate average service price per visit for backward compatibility
-    IF p_services_per_month > 0 THEN
-        v_service_price_per_visit := ROUND(v_line_items_total / p_services_per_month, 2);
-    ELSE
-        v_service_price_per_visit := 0;
+    -- Service fee is PER LOCATION (R400/month), not per bot or per visit
+    -- Only include if p_include_service_fee is true
+    IF p_include_service_fee THEN
+        FOR v_line_item IN 
+            SELECT price_per_unit
+            FROM pricing_line_items
+            WHERE pricing_plan_id = v_plan.id
+            AND is_active = true
+            AND is_optional = false
+        LOOP
+            v_line_items_total := v_line_items_total + v_line_item.price_per_unit;
+        END LOOP;
     END IF;
+    
+    -- For backward compatibility, show service price
+    v_service_price_per_visit := v_line_items_total;
     
     RETURN json_build_object(
         'monthly_total', v_bot_rental + v_line_items_total,
         'bot_rental_total', v_bot_rental,
         'service_total', v_line_items_total,
         'bot_rental_per_bot', v_plan.bot_rental_monthly,
-        'service_price_per_visit', v_service_price_per_visit,
+        'service_price_per_visit', v_service_price_per_visit, -- Legacy field, now equals monthly service fee
+        'monthly_service_fee', v_line_items_total,
         'number_of_bots', p_number_of_bots,
-        'services_per_month', p_services_per_month,
+        'services_per_month', p_services_per_month, -- Still tracked for scheduling
         'setup_fee', v_plan.setup_fee * p_number_of_bots,
         'pricing_type', 'calculated',
-        'tier_name', v_plan.name
+        'tier_name', v_plan.name,
+        'include_service_fee', p_include_service_fee
     );
 END;
 $$ LANGUAGE plpgsql;
@@ -1299,11 +1301,42 @@ DECLARE
     v_slug_base TEXT;
     v_counter INTEGER := 0;
     v_slug_exists BOOLEAN;
+    v_user_email TEXT;
+    v_full_name TEXT;
 BEGIN
+    -- Validate organization name
     IF p_organization_name IS NULL OR trim(p_organization_name) = '' THEN
         RAISE EXCEPTION 'Organization name cannot be empty';
     END IF;
     
+    -- Check if profile exists, if not create it
+    IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = p_user_id) THEN
+        -- Get user email from auth.users
+        SELECT email INTO v_user_email
+        FROM auth.users
+        WHERE id = p_user_id;
+        
+        IF v_user_email IS NULL THEN
+            RAISE EXCEPTION 'User not found in authentication system';
+        END IF;
+        
+        -- Extract name from email if no full name available
+        v_full_name := SPLIT_PART(v_user_email, '@', 1);
+        
+        -- Create the missing profile
+        INSERT INTO profiles (id, email, full_name, first_name, role)
+        VALUES (
+            p_user_id,
+            v_user_email,
+            v_full_name,
+            v_full_name,
+            'user'
+        );
+        
+        RAISE NOTICE 'Created missing profile for user %', p_user_id;
+    END IF;
+    
+    -- Generate unique slug
     v_slug_base := lower(trim(regexp_replace(p_organization_name, '[^a-zA-Z0-9\s-]', '', 'g')));
     v_slug_base := regexp_replace(v_slug_base, '\s+', '-', 'g');
     v_slug_base := regexp_replace(v_slug_base, '-+', '-', 'g');
@@ -1321,22 +1354,26 @@ BEGIN
         v_slug := v_slug_base || '-' || v_counter;
     END LOOP;
     
+    -- Create organization
     INSERT INTO organizations (
         name, slug, subscription_tier, is_active
     ) VALUES (
         trim(p_organization_name), v_slug, 'free', true
     ) RETURNING id INTO v_organization_id;
     
+    -- Add user as owner
     INSERT INTO organization_members (
         organization_id, user_id, role, status, joined_at
     ) VALUES (
         v_organization_id, p_user_id, 'owner', 'active', NOW()
     );
     
+    -- Update user's profile with organization_id
     UPDATE profiles
     SET organization_id = v_organization_id
     WHERE id = p_user_id AND profiles.organization_id IS NULL;
     
+    -- Log activity
     INSERT INTO activity_logs (
         user_id, organization_id, action, resource_type, resource_id, details
     ) VALUES (
@@ -1344,6 +1381,7 @@ BEGIN
         jsonb_build_object('organization_name', trim(p_organization_name), 'organization_type', p_organization_type)
     );
     
+    -- Return organization details
     RETURN QUERY
     SELECT 
         v_organization_id, trim(p_organization_name), v_slug, 'free'::TEXT, 'owner'::TEXT;
@@ -1493,8 +1531,8 @@ RETURNS TABLE (
     total_bots INTEGER,
     active_bots INTEGER,
     pending_installations INTEGER,
-    monthly_revenue DECIMAL,
-    overdue_invoices INTEGER
+    pending_invoices INTEGER,
+    total_amount_due DECIMAL
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -1522,11 +1560,19 @@ BEGIN
          FROM locations 
          WHERE organization_id = org_id AND is_active = true),
         
-        -- Total bots (placeholder - will be 0 until bots are deployed)
-        0::INTEGER,
+        -- Total bots
+        (SELECT COUNT(*)::INTEGER 
+         FROM bots b
+         JOIN locations l ON l.id = b.location_id 
+         WHERE l.organization_id = org_id),
         
-        -- Active bots (placeholder)
-        0::INTEGER,
+        -- Active bots (status not offline/error and is_enabled = true)
+        (SELECT COUNT(*)::INTEGER 
+         FROM bots b
+         JOIN locations l ON l.id = b.location_id 
+         WHERE l.organization_id = org_id 
+         AND b.is_enabled = true
+         AND b.status NOT IN ('offline', 'error')),
         
         -- Pending installations (services not yet active)
         (SELECT COUNT(*)::INTEGER 
@@ -1535,22 +1581,17 @@ BEGIN
          WHERE l.organization_id = org_id 
          AND s.status IN ('pending_setup', 'pending_installation', 'installation_scheduled')),
         
-        -- Monthly revenue (from active services)
-        (SELECT COALESCE(SUM(
-            CASE 
-                WHEN pp.bot_rental_monthly IS NOT NULL 
-                THEN pp.bot_rental_monthly + (s.services_per_month * 100.00) -- R100 per edge trimming visit
-                ELSE 0 
-            END
-        ), 0)::DECIMAL
-         FROM services s
-         JOIN locations l ON l.id = s.location_id
-         LEFT JOIN gardens g ON g.service_id = s.id
-         LEFT JOIN pricing_plans pp ON pp.bot_type = 'mow_bot' AND s.service_type = 'garden'
-         WHERE l.organization_id = org_id AND s.is_active = true),
+        -- Pending invoices (unpaid invoices: sent or overdue)
+        (SELECT COUNT(*)::INTEGER
+         FROM invoices i
+         WHERE i.organization_id = org_id
+         AND i.status IN ('sent', 'overdue')),
         
-        -- Overdue invoices (placeholder)
-        0::INTEGER;
+        -- Total amount due (what the client needs to pay)
+        (SELECT COALESCE(SUM(amount_due), 0)::DECIMAL
+         FROM invoices i
+         WHERE i.organization_id = org_id
+         AND i.status IN ('sent', 'overdue'));
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

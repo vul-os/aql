@@ -11,7 +11,7 @@ CREATE TABLE invoices (
     -- References
     user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-    rental_agreement_id UUID REFERENCES rental_agreements(id) ON DELETE SET NULL,
+    rental_agreement_id UUID REFERENCES rental_agreements(id) ON DELETE CASCADE,
     
     -- Invoice period
     period_start DATE NOT NULL,
@@ -108,10 +108,29 @@ COMMENT ON COLUMN invoices.invoice_number IS 'Unique invoice number (INV-YYYYMM-
 COMMENT ON COLUMN invoices.line_items IS 'Array of line items: [{description, quantity, unit_price, total}]';
 COMMENT ON COLUMN invoices.status IS 'draft: not sent, sent: awaiting payment, paid: fully paid, overdue: past due, cancelled: voided, refunded: money returned';
 
+-- Trigger to cascade delete payments when invoice is deleted
+-- Payments reference invoice_number (TEXT), not invoice_id (UUID), so we need a trigger
+CREATE OR REPLACE FUNCTION cleanup_payments_on_invoice_delete()
+RETURNS TRIGGER AS $$
+BEGIN
+    DELETE FROM payments WHERE invoice_number = OLD.invoice_number;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_cleanup_payments_on_invoice_delete
+    BEFORE DELETE ON invoices
+    FOR EACH ROW
+    EXECUTE FUNCTION cleanup_payments_on_invoice_delete();
+
+COMMENT ON FUNCTION cleanup_payments_on_invoice_delete 
+IS 'Cascade delete payments when invoice is deleted (invoice_number is TEXT not FK)';
+
 -- Success message
 DO $$
 BEGIN
     RAISE NOTICE 'Invoices table created successfully';
     RAISE NOTICE 'Invoice format: INV-YYYYMM-NNNN';
+    RAISE NOTICE 'Cascade delete trigger added for payments';
 END $$;
 

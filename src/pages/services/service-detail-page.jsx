@@ -707,7 +707,6 @@ export default function ServiceDetailPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
                 {gardens.map((garden, index) => (
                   <Card key={garden.id} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group">
-                    <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-accent to-accent/80" />
                     <CardHeader className="pb-4 pt-6">
                       <div className="flex items-start gap-3">
                         <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center shadow-lg flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -762,7 +761,6 @@ export default function ServiceDetailPage() {
                   const garden = gardens.find(g => g.id === agreement.garden_id);
                   return (
                     <Card key={agreement.id} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
-                      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-secondary to-secondary/80" />
                       <CardHeader className="pb-4 pt-6">
                         <div className="flex flex-col gap-3">
                           <div className="flex items-start gap-3">
@@ -783,24 +781,15 @@ export default function ServiceDetailPage() {
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          <div className="p-3 md:p-4 rounded-xl bg-accent/5 dark:bg-accent/10 border border-accent/20 dark:border-accent/30">
-                            <p className="text-[10px] md:text-xs font-medium text-accent mb-1">Monthly Total</p>
-                            <p className="text-xl md:text-2xl font-bold text-foreground">
-                              R{parseFloat(agreement.monthly_total || 0).toFixed(2)}
-                            </p>
-                          </div>
-                          <div className="p-3 md:p-4 rounded-xl bg-secondary/5 dark:bg-secondary/10 border border-secondary/20 dark:border-secondary/30">
-                            <p className="text-[10px] md:text-xs font-medium text-secondary mb-1">Bot Rental</p>
-                            <p className="text-xl md:text-2xl font-bold text-foreground">
-                              R{parseFloat(agreement.bot_rental_total || 0).toFixed(2)}
-                            </p>
-                          </div>
-                          <div className="p-3 md:p-4 rounded-xl bg-muted border border-border">
-                            <p className="text-[10px] md:text-xs font-medium text-muted-foreground mb-1">Service Fee</p>
-                            <p className="text-xl md:text-2xl font-bold text-foreground">
-                              R{parseFloat(agreement.service_total || 0).toFixed(2)}
-                            </p>
+                        <div className="p-4 md:p-5 rounded-xl bg-gradient-to-br from-secondary/5 to-secondary/10 dark:from-secondary/10 dark:to-secondary/20 border-2 border-secondary/20 dark:border-secondary/30">
+                          <p className="text-xs font-medium text-secondary mb-2">Bot Rental (Monthly)</p>
+                          <p className="text-3xl md:text-4xl font-bold text-foreground mb-2">
+                            R{parseFloat(agreement.bot_rental_total || 0).toFixed(2)}
+                          </p>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <span>R150/month per bot</span>
+                            <span>•</span>
+                            <span>{agreement.number_of_bots || 1} bot{(agreement.number_of_bots || 1) > 1 ? 's' : ''}</span>
                           </div>
                         </div>
                         {agreement.agreement_pdf_url && (

@@ -14,6 +14,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { 
   CreditCard, 
   Plus, 
@@ -63,13 +69,14 @@ export default function BillingPage() {
   const [invoices, setInvoices] = useState([]);
   const [loadingInvoices, setLoadingInvoices] = useState(true);
   const [showAllSubscriptions, setShowAllSubscriptions] = useState(false);
+  const [selectedInvoicePdf, setSelectedInvoicePdf] = useState(null);
 
   useEffect(() => {
     if (organization?.id) {
       loadSubscriptions();
       loadInvoices();
     }
-  }, [organization]);
+  }, [organization?.id]);
 
   const loadSubscriptions = async () => {
     if (!organization?.id) return;
@@ -78,17 +85,26 @@ export default function BillingPage() {
       setLoadingSubscriptions(true);
       const { data, error } = await supabase
         .from('rental_agreements')
-        .select('*')
+        .select(`
+          *,
+          location:locations(id, name, address, city)
+        `)
         .eq('organization_id', organization.id)
         .eq('status', 'active')
+        .order('location_id', { ascending: true })
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       
       // Map rental agreements to subscription format for display
+      // Group by location to properly show service fees
       const mappedData = (data || []).map(agreement => ({
         id: agreement.id,
-        name: `${agreement.number_of_bots} Bot${agreement.number_of_bots !== 1 ? 's' : ''} - ${agreement.bot_type.replace('_', ' ')}`,
+        location_id: agreement.location_id,
+        location_name: agreement.location?.name || 'Unknown Location',
+        name: `Bot Rental${agreement.bot_type ? ` - ${agreement.bot_type.replace('_', ' ')}` : ''}`,
+        bot_rental: agreement.bot_rental_total,
+        service_fee: agreement.service_total,
         amount: agreement.monthly_total,
         next_billing_date: agreement.next_billing_date,
         bot: { name: `${agreement.bot_type} Service`, bot_type: agreement.bot_type },
@@ -210,7 +226,29 @@ export default function BillingPage() {
     }
   };
 
-  const totalMonthly = subscriptions.reduce((sum, sub) => sum + parseFloat(sub.amount), 0);
+  // Calculate total by grouping by location to avoid double-counting service fees
+  const subscriptionsByLocation = subscriptions.reduce((acc, sub) => {
+    if (!acc[sub.location_id]) {
+      acc[sub.location_id] = {
+        location_name: sub.location_name,
+        bot_rental_total: 0,
+        service_fee: 0, // Service fee is per location
+        agreements: []
+      };
+    }
+    acc[sub.location_id].bot_rental_total += parseFloat(sub.bot_rental || 0);
+    // Only count service fee once per location (from first agreement with service_fee > 0)
+    if (parseFloat(sub.service_fee || 0) > 0) {
+      acc[sub.location_id].service_fee = parseFloat(sub.service_fee);
+    }
+    acc[sub.location_id].agreements.push(sub);
+    return acc;
+  }, {});
+
+  const totalMonthly = Object.values(subscriptionsByLocation).reduce((sum, location) => {
+    return sum + location.bot_rental_total + location.service_fee;
+  }, 0);
+  
   const nextBillingDate = subscriptions[0]?.next_billing_date;
 
   return (
@@ -256,110 +294,95 @@ export default function BillingPage() {
         </CardContent>
       </Card>
 
-      {/* Subscriptions */}
+      {/* Subscriptions Grouped by Location */}
       {subscriptions.length > 0 && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-2xl">Active Subscriptions</CardTitle>
-                <CardDescription>Your current bot services and monthly charges</CardDescription>
+                <CardDescription>
+                  Your current bot services grouped by location
+                  {Object.keys(subscriptionsByLocation).length > 1 && ` • ${Object.keys(subscriptionsByLocation).length} locations`}
+                </CardDescription>
               </div>
               <Receipt className="h-6 w-6 text-muted-foreground" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {/* Show first 5 subscriptions */}
-              {subscriptions.slice(0, 5).map((sub, index) => (
-                <div key={sub.id}>
-                  <div className="flex items-center justify-between py-4">
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <BotIcon className="h-6 w-6 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-lg">
-                          {sub.bot?.name || 'Bot Service'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {sub.bot?.bot_type?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                          {sub.bot?.identifier && ` • ${sub.bot.identifier}`}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold">R{parseFloat(sub.amount).toFixed(2)}</p>
-                      <p className="text-sm text-muted-foreground">per month</p>
-                    </div>
+            <div className="space-y-6">
+              {Object.entries(subscriptionsByLocation).map(([locationId, locationData], locationIndex) => (
+                <div key={locationId} className={locationIndex > 0 ? 'pt-6 border-t' : ''}>
+                  {/* Location Header */}
+                  <div className="mb-3">
+                    <h3 className="font-semibold text-lg text-primary">{locationData.location_name}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {locationData.agreements.length} bot{locationData.agreements.length !== 1 ? 's' : ''} at this location
+                    </p>
                   </div>
-                  {index < Math.min(4, subscriptions.length - 1) && <Separator />}
+
+                  {/* Bot Rentals */}
+                  {locationData.agreements.map((sub, index) => (
+                    <div key={sub.id}>
+                      <div className="flex items-center justify-between py-3 pl-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <BotIcon className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium">
+                              {sub.bot?.name || 'Bot Rental'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              R150/month per bot
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold">R{parseFloat(sub.bot_rental).toFixed(2)}</p>
+                        </div>
+                      </div>
+                      {index < locationData.agreements.length - 1 && <Separator className="ml-4" />}
+                    </div>
+                  ))}
+
+                  {/* Service Fee (once per location) */}
+                  {locationData.service_fee > 0 && (
+                    <>
+                      <Separator className="ml-4 my-2" />
+                      <div className="flex items-center justify-between py-3 pl-4 bg-accent/5 rounded-lg">
+                        <div>
+                          <p className="font-medium">Monthly Service Fee</p>
+                          <p className="text-xs text-muted-foreground">
+                            Per location - includes edge trimming, battery swaps, bot servicing
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold">R{locationData.service_fee.toFixed(2)}</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Location Subtotal */}
+                  <div className="mt-3 pt-3 border-t flex items-center justify-between pl-4">
+                    <p className="font-semibold">Location Subtotal</p>
+                    <p className="text-xl font-bold text-primary">
+                      R{(locationData.bot_rental_total + locationData.service_fee).toFixed(2)}
+                    </p>
+                  </div>
                 </div>
               ))}
-
-              {/* Collapsible section for remaining subscriptions */}
-              {subscriptions.length > 5 && (
-                <>
-                  {showAllSubscriptions ? (
-                    <>
-                      <Separator />
-                      {subscriptions.slice(5).map((sub, index) => (
-                        <div key={sub.id}>
-                          <div className="flex items-center justify-between py-4">
-                            <div className="flex items-center gap-4">
-                              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <BotIcon className="h-6 w-6 text-primary" />
-                              </div>
-                              <div>
-                                <p className="font-semibold text-lg">
-                                  {sub.bot?.name || 'Bot Service'}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  {sub.bot?.bot_type?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                  {sub.bot?.identifier && ` • ${sub.bot.identifier}`}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-2xl font-bold">R{parseFloat(sub.amount).toFixed(2)}</p>
-                              <p className="text-sm text-muted-foreground">per month</p>
-                            </div>
-                          </div>
-                          {index < subscriptions.slice(5).length - 1 && <Separator />}
-                        </div>
-                      ))}
-                    </>
-                  ) : null}
-
-                  {/* Show More/Less Button */}
-                  <div className="pt-3">
-                    <Button
-                      variant="ghost"
-                      onClick={() => setShowAllSubscriptions(!showAllSubscriptions)}
-                      className="w-full"
-                    >
-                      {showAllSubscriptions ? (
-                        <>
-                          <ArrowUp className="h-4 w-4 mr-2" />
-                          Show Less
-                        </>
-                      ) : (
-                        <>
-                          <ArrowDown className="h-4 w-4 mr-2" />
-                          Show {subscriptions.length - 5} More Subscription{subscriptions.length - 5 > 1 ? 's' : ''}
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </>
-              )}
               
-              {/* Total */}
+              {/* Grand Total */}
               <div className="pt-4 border-t-2">
                 <div className="flex items-center justify-between">
                   <p className="text-lg font-semibold">Total Monthly</p>
                   <p className="text-3xl font-bold text-primary">R{totalMonthly.toFixed(2)}</p>
                 </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {subscriptions.length} bot{subscriptions.length !== 1 ? 's' : ''} across {Object.keys(subscriptionsByLocation).length} location{Object.keys(subscriptionsByLocation).length !== 1 ? 's' : ''}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -601,7 +624,7 @@ export default function BillingPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => window.open(invoice.invoice_pdf_url, '_blank')}
+                          onClick={() => setSelectedInvoicePdf({ url: invoice.invoice_pdf_url, number: invoice.invoice_number })}
                         >
                           <Eye className="h-4 w-4 mr-1" />
                           View
@@ -631,6 +654,27 @@ export default function BillingPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Invoice PDF Viewer Dialog */}
+      <Dialog open={!!selectedInvoicePdf} onOpenChange={() => setSelectedInvoicePdf(null)}>
+        <DialogContent className="max-w-5xl h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Invoice {selectedInvoicePdf?.number}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 w-full h-full">
+            {selectedInvoicePdf?.url && (
+              <iframe
+                src={selectedInvoicePdf.url}
+                className="w-full h-full rounded-lg border"
+                title="Invoice PDF"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deletingId} onOpenChange={() => setDeletingId(null)}>

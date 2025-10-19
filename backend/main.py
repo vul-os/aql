@@ -29,7 +29,9 @@ CORS(app)  # Enable CORS for frontend requests
 # Initialize Supabase client
 try:
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    revision = os.environ.get('K_REVISION', 'local')
     print(f"✅ Supabase client initialized: {SUPABASE_URL}")
+    print(f"🔧 Running on revision: {revision}")
 except Exception as e:
     print(f"⚠️  Warning: Supabase client initialization failed: {str(e)}")
     supabase = None
@@ -44,6 +46,7 @@ def health_check():
         'status': 'healthy',
         'service': 'botkorp_backend',
         'version': '1.0.0',
+        'revision': os.environ.get('K_REVISION', 'local'),
         'timestamp': datetime.now().isoformat(),
         'supabase': supabase_status,
         'environment': os.environ.get('ENVIRONMENT', 'unknown')
@@ -180,22 +183,40 @@ def create_rental_agreements():
         
         agreements = []
         
+        # SERVICE FEE IS PER LOCATION, NOT PER GARDEN
+        # Only the first agreement gets the service fee; others get bot rental only
+        total_gardens = len(gardens)
+        
         # Create ONE agreement PER garden/bot
         for index, garden in enumerate(gardens):
             garden_id = garden.get('id')
             garden_name = garden.get('name', f'Garden {index + 1}')
             garden_area = garden.get('area_sqm', 0)
+            is_first_garden = (index == 0)
             
             print(f"  Creating agreement {index + 1}/{len(gardens)} for garden: {garden_name}")
             
             # Calculate pricing for 1 bot
-            pricing = calculate_pricing(1, services_per_month, billing_day=billing_day)
+            # Service fee is charged on INVOICES, not rental agreements
+            # Rental agreements only show bot rental (R150/month per bot)
+            pricing = calculate_pricing(
+                number_of_bots=1, 
+                services_per_month=services_per_month, 
+                billing_day=billing_day,
+                include_service_fee=False  # Never include service fee in agreements
+            )
+            
+            print(f"    ↳ Bot rental only (R{pricing['monthly_total']}) - service fee charged on invoices")
+            
             pricing['garden_name'] = garden_name
             pricing['garden_area'] = garden_area
+            pricing['garden_number'] = index + 1
+            pricing['total_gardens_at_location'] = total_gardens
             
-            # Create unique agreement number
-            timestamp = int(datetime.now().timestamp() * 1000) + index  # Add index to make unique
-            agreement_number = f"RA-{datetime.now().year}-{timestamp}"
+            # Create unique agreement number (6-digit random number)
+            import random
+            random_num = random.randint(100000, 999999)
+            agreement_number = f"RA-{datetime.now().year}-{random_num:06d}{index:02d}"
             
             # Create rental agreement record
             rental_agreement = create_rental_agreement(
@@ -442,11 +463,23 @@ def send_invoice_email():
     try:
         data = request.get_json()
         invoice_id = data['invoice_id']
+        revision = os.environ.get('K_REVISION', 'local')
         
-        print(f"📧 Sending invoice email: {invoice_id}")
+        print(f"📧 [Rev: {revision}] Sending invoice email: {invoice_id}")
         
         # Fetch invoice data
-        invoice = fetch_invoice(invoice_id)
+        try:
+            invoice = fetch_invoice(invoice_id)
+        except Exception as e:
+            if 'Invoice not found' in str(e):
+                print(f"⚠️  [Rev: {revision}] Invoice not found in database: {invoice_id}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Invoice not found: {invoice_id}',
+                    'note': 'Invoice may have been deleted or does not exist',
+                    'revision': revision
+                }), 404
+            raise
         
         # Generate PDF
         invoice_html = render_invoice_template(invoice)
@@ -465,23 +498,26 @@ def send_invoice_email():
         # Send email with PDF attachment
         email_result = send_invoice_via_email(invoice, pdf_bytes)
         
-        print(f"✅ Invoice emailed: {invoice_id}")
+        print(f"✅ [Rev: {revision}] Invoice emailed: {invoice_id}")
         
         return jsonify({
             'success': True,
             'invoice_id': invoice_id,
             'pdf_url': f"{SUPABASE_URL}/storage/v1/object/public/invoices/{pdf_path}",
             'email_sent': True,
-            'email_id': email_result.get('id')
+            'email_id': email_result.get('id'),
+            'revision': revision
         })
         
     except Exception as e:
-        print(f"❌ Error: {str(e)}")
+        revision = os.environ.get('K_REVISION', 'local')
+        print(f"❌ [Rev: {revision}] Error: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': str(e),
+            'revision': revision
         }), 500
 
 
@@ -501,13 +537,33 @@ def fetch_pricing_from_db(bot_type='mow_bot'):
     return response.data
 
 
-def calculate_pricing(number_of_bots, services_per_month, bot_type='mow_bot', billing_day=None):
-    """Calculate pricing using new flexible pricing structure"""
+def calculate_pricing(number_of_bots, services_per_month, bot_type='mow_bot', billing_day=None, include_service_fee=True):
+    """Calculate pricing using new flexible pricing structure
+    
+    Pricing model:
+    - Bot rental: R150/month per bot (e.g., 3 bots = R450)
+    - Service fee: R400/month PER LOCATION (not per bot, not per garden!)
+    - Setup fee: R299 per bot (e.g., 3 bots = R897)
+    
+    Example: Location with 3 gardens (3 bots):
+    - Bot rental: 3 × R150 = R450
+    - Service fee: R400 (once per location, not 3x)
+    - Total: R850/month
+    
+    Args:
+        number_of_bots: Number of bots (typically 1 per garden)
+        services_per_month: Scheduling frequency (tracked but doesn't affect price)
+        bot_type: Type of bot (mow_bot, pool_bot, etc.)
+        billing_day: Day of month for billing
+        include_service_fee: Whether to include the R400 service fee (should be True only for first bot at location)
+    """
     # Call the Supabase RPC function for consistent pricing calculation
+    # Note: services_per_month is still tracked for scheduling purposes
     response = supabase.rpc('get_tier_pricing', {
         'p_bot_type': bot_type,
         'p_number_of_bots': number_of_bots,
-        'p_services_per_month': services_per_month
+        'p_services_per_month': services_per_month,
+        'p_include_service_fee': include_service_fee
     }).execute()
     
     if not response.data:
@@ -522,11 +578,12 @@ def calculate_pricing(number_of_bots, services_per_month, bot_type='mow_bot', bi
     # Return in expected format (backward compatible)
     return {
         'number_of_bots': number_of_bots,
-        'services_per_month': services_per_month,
+        'services_per_month': services_per_month,  # For scheduling
         'bot_rental_monthly': float(pricing.get('bot_rental_per_bot', 0)),
-        'service_price_per_visit': float(pricing.get('service_price_per_visit', 0)),
+        'service_price_per_visit': float(pricing.get('monthly_service_fee', 0)),  # Legacy field
+        'monthly_service_fee': float(pricing.get('monthly_service_fee', 0)),  # Fixed monthly service fee
         'monthly_rental_fee': float(pricing.get('bot_rental_total', 0)),
-        'service_fee_per_visit': float(pricing.get('service_price_per_visit', 0)),
+        'service_fee_per_visit': float(pricing.get('monthly_service_fee', 0)),  # Legacy field
         'service_total': float(pricing.get('service_total', 0)),
         'monthly_total': float(pricing.get('monthly_total', 0)),
         'setup_fee': float(pricing.get('setup_fee', 0)) / number_of_bots if number_of_bots > 0 else 0,
@@ -571,16 +628,22 @@ def fetch_location(location_id, organization_id):
 
 def fetch_invoice(invoice_id):
     """Fetch invoice with all related data"""
-    response = supabase.table('invoices').select('''
-        *,
-        user:profiles(*),
-        organization:organizations(*),
-        rental_agreement:rental_agreements(*)
-    ''').eq('id', invoice_id).single().execute()
-    
-    if not response.data:
-        raise Exception(f'Invoice not found: {invoice_id}')
-    return response.data
+    try:
+        response = supabase.table('invoices').select('''
+            *,
+            user:profiles(*),
+            organization:organizations(*),
+            rental_agreement:rental_agreements(*)
+        ''').eq('id', invoice_id).single().execute()
+        
+        if not response.data:
+            raise Exception(f'Invoice not found: {invoice_id}')
+        return response.data
+    except Exception as e:
+        # Handle case where invoice doesn't exist
+        if 'PGRST116' in str(e) or 'contains 0 rows' in str(e):
+            raise Exception(f'Invoice not found: {invoice_id}')
+        raise
 
 
 def create_rental_agreement(agreement_number, user_id, organization_id, location_id, pricing, legal_profile, auth_user, service_id=None, garden_id=None):
@@ -729,7 +792,7 @@ def send_invoice_via_email(invoice, pdf_bytes):
     }
     
     payload = {
-        "from": "BotKorp Billing <billing@botkorp.co.za>",
+        "from": "BotKorp Billing <billing@kom.botkorp.com>",
         "to": [invoice['billing_email']],
         "subject": f"Invoice {invoice['invoice_number']} - R{invoice['total_amount']}",
         "html": f"""

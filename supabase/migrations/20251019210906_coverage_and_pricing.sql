@@ -64,6 +64,7 @@ CREATE TABLE pricing_line_items (
     
     -- Line item details
     item_type TEXT NOT NULL CHECK (item_type IN (
+        'service_fee',
         'edge_trimming',
         'bot_swap',
         'bot_maintenance',
@@ -80,7 +81,7 @@ CREATE TABLE pricing_line_items (
     
     -- Pricing
     price_per_unit DECIMAL(10, 2) NOT NULL,
-    unit_type TEXT DEFAULT 'visit' CHECK (unit_type IN ('visit', 'hour', 'sqm', 'item', 'flat')),
+    unit_type TEXT DEFAULT 'visit' CHECK (unit_type IN ('visit', 'month', 'hour', 'sqm', 'item', 'flat')),
     
     -- Applicability
     is_optional BOOLEAN DEFAULT false,
@@ -124,19 +125,14 @@ CREATE TABLE customer_pricing_overrides (
     UNIQUE(organization_id, bot_type, effective_from)
 );
 
--- CUSTOMER_LINE_ITEM_OVERRIDES TABLE
--- Customer-specific line item overrides
+-- Customer-specific line item overrides (override prices for individual line items)
 CREATE TABLE customer_line_item_overrides (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     pricing_line_item_id UUID NOT NULL REFERENCES pricing_line_items(id) ON DELETE CASCADE,
     
     -- Override values
-    price_per_unit DECIMAL(10, 2) NOT NULL,
-    is_optional BOOLEAN,
-    is_active BOOLEAN DEFAULT true,
-    
-    -- Reason/notes
+    override_price DECIMAL(10, 2) NOT NULL,
     override_reason TEXT,
     approved_by UUID REFERENCES profiles(id),
     approved_at TIMESTAMPTZ,
@@ -144,9 +140,12 @@ CREATE TABLE customer_line_item_overrides (
     -- Validity
     effective_from DATE DEFAULT CURRENT_DATE,
     effective_until DATE,
+    is_active BOOLEAN DEFAULT true,
     
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    UNIQUE(organization_id, pricing_line_item_id, effective_from)
 );
 
 -- DISCOUNTS TABLE

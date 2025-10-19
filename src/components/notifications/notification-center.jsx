@@ -11,9 +11,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 export function NotificationCenter() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { 
     notifications, 
     unreadCount, 
@@ -23,16 +25,17 @@ export function NotificationCenter() {
     archiveNotification 
   } = useNotifications();
 
-  const { permission, requestPermission, isSupported } = usePushNotifications();
+  const { permission, requestPermission, isSupported, isSubscribed } = usePushNotifications();
 
   const handleNotificationClick = (notification) => {
     if (!notification.is_read) {
       markAsRead(notification.id);
     }
     
-    // Navigate to action URL if exists
-    if (notification.action_url) {
-      navigate(notification.action_url);
+    // Navigate to action URL if exists (check both root level and data object)
+    const actionUrl = notification.action_url || notification.data?.action_url;
+    if (actionUrl) {
+      navigate(actionUrl);
     }
   };
 
@@ -81,14 +84,29 @@ export function NotificationCenter() {
           </div>
 
           {/* Push notification permission banner */}
-          {isSupported && permission === 'default' && (
+          {isSupported && !isSubscribed && (
             <div className="p-4 bg-primary/10 border-b">
-              <p className="text-sm mb-2">Enable push notifications?</p>
+              <div className="flex items-center gap-2 mb-2">
+                <Bell className="h-4 w-4" />
+                <p className="text-sm font-medium">Stay Updated!</p>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">
+                Get instant alerts for bot issues, service updates, and important notifications
+              </p>
               <Button 
                 size="sm" 
-                onClick={requestPermission}
+                onClick={async () => {
+                  const success = await requestPermission();
+                  if (success) {
+                    toast({
+                      title: 'Notifications Enabled! 🔔',
+                      description: 'You\'ll now receive push notifications for important updates',
+                    });
+                  }
+                }}
+                className="w-full"
               >
-                Enable
+                Enable Push Notifications
               </Button>
             </div>
           )}

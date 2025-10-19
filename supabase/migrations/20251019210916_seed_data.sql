@@ -8,12 +8,12 @@
 
 -- Insert pricing plans (simplified - just mow_bot)
 INSERT INTO pricing_plans (bot_type, name, bot_rental_monthly, setup_fee, base_area_included_sqm, price_per_sqm_after_base, description) VALUES
-    ('mow_bot', 'Standard Lawn Package', 150.00, 299.00, 100, 0.50, 'Automated lawn mowing with edge trimming');
+    ('mow_bot', 'MowBot Rental', 150.00, 299.00, 100, 0.50, 'Automated lawn mowing with monthly service');
 
--- Insert line items for mow_bot (just edge trimming)
+-- Insert line items for mow_bot (monthly service fee)
 INSERT INTO pricing_line_items (pricing_plan_id, item_type, name, description, price_per_unit, unit_type, is_optional, display_order) 
 SELECT 
-    id, 'edge_trimming', 'Edge Trimming', 'Manual edge trimming and finishing', 100.00, 'visit', false, 1
+    id, 'service_fee', 'Monthly Service Fee', 'Includes edge trimming, bot servicing, and maintenance', 400.00, 'month', false, 1
 FROM pricing_plans WHERE bot_type = 'mow_bot';
 
 -- =====================================================
@@ -31,11 +31,14 @@ INSERT INTO discounts (code, name, description, discount_type, discount_value, f
 DO $$
 BEGIN
     RAISE NOTICE '=== SEED DATA INSERTED ===';
-    RAISE NOTICE 'Pricing: mow_bot (R150/month + R299 setup)';
-    RAISE NOTICE 'Line item: Edge Trimming (R100/visit)';
+    RAISE NOTICE 'Pricing: mow_bot';
+    RAISE NOTICE '  - Bot Rental: R150/month per bot';
+    RAISE NOTICE '  - Service Fee: R400/month (includes edge trimming & bot servicing)';
+    RAISE NOTICE '  - Setup Fee: R299 per bot';
     RAISE NOTICE 'Sample discounts: 4 promotional codes';
     RAISE NOTICE '';
+    RAISE NOTICE 'Example: 2 bots = R150×2 + R400 = R700/month + R598 setup';
+    RAISE NOTICE '';
     RAISE NOTICE 'Test pricing:';
-    RAISE NOTICE '  SELECT * FROM get_tier_pricing(''mow_bot'', 2, 4);';
-    RAISE NOTICE '  SELECT * FROM get_full_pricing(''mow_bot'');';
+    RAISE NOTICE '  SELECT * FROM get_tier_pricing(''mow_bot'', 2, 1);';
 END $$;

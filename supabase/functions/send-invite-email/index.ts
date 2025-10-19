@@ -416,7 +416,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Bot Korp <onboarding@resend.dev>',
+        from: 'Bot Korp <notify@kom.botkorp.com>',
         to: inviteData.email,
         subject: `You're invited to join ${inviteData.organization_name} on Bot Korp`,
         html: getEmailTemplate(inviteData),
@@ -432,7 +432,7 @@ serve(async (req) => {
       const errorData = await emailResponse.text()
       console.error('❌ Resend API error:', errorData)
       console.error('Request body was:', JSON.stringify({
-        from: 'Bot Korp <onboarding@resend.dev>',
+        from: 'Bot Korp <notify@kom.botkorp.com>',
         to: inviteData.email,
         subject: `You're invited to join ${inviteData.organization_name} on Bot Korp`,
       }))

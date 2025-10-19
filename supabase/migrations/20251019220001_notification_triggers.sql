@@ -542,7 +542,7 @@ BEGIN
                 ELSE 'service_amendment_rejected'
             END,
             p_title := format('Amendment Request %s', 
-                CASE WHEN NEW.status = 'approved' THEN 'Approved ✓' ELSE 'Rejected' END
+                CASE WHEN NEW.status = 'approved' THEN 'Approved -' ELSE 'Rejected' END
             ),
             p_message := format('Your request to %s (%s → %s gardens) for service at %s has been %s.%s', 
                 CASE 
@@ -612,7 +612,7 @@ COMMENT ON FUNCTION notify_amendment_status_changed IS 'Trigger function: Sends 
 -- Success message
 DO $$ 
 BEGIN 
-    RAISE NOTICE '✓ Notification triggers created successfully!';
+    RAISE NOTICE '- Notification triggers created successfully!';
     RAISE NOTICE '  - Bot offline/error → automatic notification';
     RAISE NOTICE '  - Low battery → automatic notification';
     RAISE NOTICE '  - Service created → automatic notification';

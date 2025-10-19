@@ -49,42 +49,48 @@ BEGIN
         FROM locations l
         WHERE l.id = NEW.location_id;
         
-        -- Get all organization member user IDs
+        -- Get all organization member user IDs, filtering out NULLs
         SELECT array_agg(om.user_id) INTO v_user_ids
         FROM organization_members om
         WHERE om.organization_id = v_location.organization_id
-        AND om.status = 'active';
+        AND om.status = 'active'
+        AND om.user_id IS NOT NULL;
         
-        -- Make HTTP POST to Edge Function
-        BEGIN
-            SELECT * INTO v_response FROM http((
-                'POST',
-                get_edge_function_url('notifications'),
-                ARRAY[http_header('Content-Type', 'application/json'), http_header('Authorization', 'Bearer ' || get_service_role_key())],
-                'application/json',
-                json_build_object(
-                    'type', 'bot_offline',
-                    'user_ids', v_user_ids,
-                    'title', format('Bot Offline: %s', v_bot_name),
-                    'message', format('Bot %s at %s has gone %s and is not responding.', v_bot_name, v_location.name, NEW.status),
-                    'priority', 'urgent',
-                    'data', json_build_object(
-                        'bot_id', NEW.id,
-                        'bot_name', v_bot_name,
-                        'location', v_location.name,
-                        'action_url', '/portal/services',
-                        'action_label', 'View Services'
-                    ),
-                    'send_email', true,
-                    'send_push', true
-                )::text
-            )::http_request);
-            
-            RAISE NOTICE 'Bot offline notification sent via HTTP: %', v_response.status;
-        EXCEPTION
-            WHEN OTHERS THEN
-                RAISE WARNING 'Failed to send bot offline notification: %', SQLERRM;
-        END;
+        -- Only send notification if we have users to notify
+        IF v_user_ids IS NOT NULL AND array_length(v_user_ids, 1) > 0 THEN
+            -- Make HTTP POST to Edge Function
+            BEGIN
+                SELECT * INTO v_response FROM http((
+                    'POST',
+                    get_edge_function_url('notifications'),
+                    ARRAY[http_header('Content-Type', 'application/json'), http_header('Authorization', 'Bearer ' || get_service_role_key())],
+                    'application/json',
+                    json_build_object(
+                        'type', 'bot_offline',
+                        'user_ids', v_user_ids,
+                        'title', format('Bot Offline: %s', v_bot_name),
+                        'message', format('Bot %s at %s has gone %s and is not responding.', v_bot_name, v_location.name, NEW.status),
+                        'priority', 'urgent',
+                        'data', json_build_object(
+                            'bot_id', NEW.id,
+                            'bot_name', v_bot_name,
+                            'location', v_location.name,
+                            'action_url', '/portal/services',
+                            'action_label', 'View Services'
+                        ),
+                        'send_email', true,
+                        'send_push', true
+                    )::text
+                )::http_request);
+                
+                RAISE NOTICE 'Bot offline notification sent via HTTP: %', v_response.status;
+            EXCEPTION
+                WHEN OTHERS THEN
+                    RAISE WARNING 'Failed to send bot offline notification: %', SQLERRM;
+            END;
+        ELSE
+            RAISE WARNING 'No active members found for organization % to notify about bot %', v_location.organization_id, NEW.id;
+        END IF;
     END IF;
     
     RETURN NEW;
@@ -130,39 +136,46 @@ BEGIN
             FROM locations l
             WHERE l.id = v_bot.location_id;
             
+            -- Get active organization members, filtering out NULLs
             SELECT array_agg(om.user_id) INTO v_user_ids
             FROM organization_members om
             WHERE om.organization_id = v_location.organization_id
-            AND om.status = 'active';
+            AND om.status = 'active'
+            AND om.user_id IS NOT NULL;
             
-            BEGIN
-                SELECT * INTO v_response FROM http((
-                    'POST',
-                    get_edge_function_url('notifications'),
-                    ARRAY[http_header('Content-Type', 'application/json'), http_header('Authorization', 'Bearer ' || get_service_role_key())],
-                    'application/json',
-                    json_build_object(
-                        'type', 'bot_low_battery',
-                        'user_ids', v_user_ids,
-                        'title', format('Low Battery: %s', v_bot.name),
-                        'message', format('Bot %s battery level is at %s%%. Please charge soon.', v_bot.name, v_battery_level),
-                        'priority', CASE WHEN v_battery_level < 10 THEN 'high' ELSE 'normal' END,
-                        'data', json_build_object(
-                            'bot_id', NEW.bot_id,
-                            'battery_level', v_battery_level,
-                            'action_url', '/portal/services',
-                            'action_label', 'View Bot'
-                        ),
-                        'send_email', true,
-                        'send_push', true
-                    )::text
-                )::http_request);
-                
-                RAISE NOTICE 'Low battery notification sent via HTTP: %', v_response.status;
-            EXCEPTION
-                WHEN OTHERS THEN
-                    RAISE WARNING 'Failed to send low battery notification: %', SQLERRM;
-            END;
+            -- Only send notification if we have users to notify
+            IF v_user_ids IS NOT NULL AND array_length(v_user_ids, 1) > 0 THEN
+                BEGIN
+                    SELECT * INTO v_response FROM http((
+                        'POST',
+                        get_edge_function_url('notifications'),
+                        ARRAY[http_header('Content-Type', 'application/json'), http_header('Authorization', 'Bearer ' || get_service_role_key())],
+                        'application/json',
+                        json_build_object(
+                            'type', 'bot_low_battery',
+                            'user_ids', v_user_ids,
+                            'title', format('Low Battery: %s', v_bot.name),
+                            'message', format('Bot %s battery level is at %s%%. Please charge soon.', v_bot.name, v_battery_level),
+                            'priority', CASE WHEN v_battery_level < 10 THEN 'high' ELSE 'normal' END,
+                            'data', json_build_object(
+                                'bot_id', NEW.bot_id,
+                                'battery_level', v_battery_level,
+                                'action_url', '/portal/services',
+                                'action_label', 'View Bot'
+                            ),
+                            'send_email', true,
+                            'send_push', true
+                        )::text
+                    )::http_request);
+                    
+                    RAISE NOTICE 'Low battery notification sent via HTTP: %', v_response.status;
+                EXCEPTION
+                    WHEN OTHERS THEN
+                        RAISE WARNING 'Failed to send low battery notification: %', SQLERRM;
+                END;
+            ELSE
+                RAISE WARNING 'No active members found for organization % to notify about low battery for bot %', v_location.organization_id, NEW.bot_id;
+            END IF;
         END IF;
     END IF;
     
@@ -319,6 +332,84 @@ CREATE TRIGGER trigger_service_completed_notification
     EXECUTE FUNCTION notify_service_completed();
 
 -- =====================================================
+-- TRIGGER 6: Installation Completed
+-- =====================================================
+CREATE OR REPLACE FUNCTION notify_installation_completed()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_service_name TEXT;
+    v_location RECORD;
+    v_user_ids UUID[];
+    v_response http_response;
+BEGIN
+    -- Only trigger when installation_completed_date is set (was NULL before)
+    IF NEW.installation_completed_date IS NOT NULL AND (OLD.installation_completed_date IS NULL) THEN
+        
+        -- Get service name
+        v_service_name := NEW.name;
+        
+        -- Get location details
+        SELECT l.name, l.organization_id INTO v_location
+        FROM locations l
+        WHERE l.id = NEW.location_id;
+        
+        -- Get all organization member user IDs, filtering out NULLs
+        SELECT array_agg(om.user_id) INTO v_user_ids
+        FROM organization_members om
+        WHERE om.organization_id = v_location.organization_id
+        AND om.status = 'active'
+        AND om.user_id IS NOT NULL;
+        
+        -- Only send notification if we have users to notify
+        IF v_user_ids IS NOT NULL AND array_length(v_user_ids, 1) > 0 THEN
+            -- Make HTTP POST to Edge Function
+            BEGIN
+                SELECT * INTO v_response FROM http((
+                    'POST',
+                    get_edge_function_url('notifications'),
+                    ARRAY[http_header('Content-Type', 'application/json'), http_header('Authorization', 'Bearer ' || get_service_role_key())],
+                    'application/json',
+                    json_build_object(
+                        'type', 'installation_completed',
+                        'user_ids', v_user_ids,
+                        'title', 'Installation Complete! 🎉',
+                        'message', format('Your %s service at %s has been installed and is now ready to use!', NEW.service_type, v_location.name),
+                        'priority', 'normal',
+                        'data', json_build_object(
+                            'service_id', NEW.id,
+                            'service_name', v_service_name,
+                            'location', v_location.name,
+                            'action_url', format('/portal/service/%s', NEW.id),
+                            'action_label', 'View Service'
+                        ),
+                        'send_email', true,
+                        'send_push', true
+                    )::text
+                )::http_request);
+                
+                RAISE NOTICE 'Installation completed notification sent via HTTP: %', v_response.status;
+            EXCEPTION
+                WHEN OTHERS THEN
+                    RAISE WARNING 'Failed to send installation notification: %', SQLERRM;
+            END;
+        ELSE
+            RAISE WARNING 'No active members found for organization % to notify about installation completion for service %', v_location.organization_id, NEW.id;
+        END IF;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create installation trigger
+DROP TRIGGER IF EXISTS trigger_installation_completed_notification ON services;
+
+CREATE TRIGGER trigger_installation_completed_notification
+    AFTER UPDATE OF installation_completed_date ON services
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_installation_completed();
+
+-- =====================================================
 -- COMMENTS
 -- =====================================================
 COMMENT ON FUNCTION get_edge_function_url IS 'Returns the Edge Function URL for HTTP requests';
@@ -327,7 +418,7 @@ COMMENT ON FUNCTION send_notification_http IS 'Helper function to send notificat
 -- Success message
 DO $$
 BEGIN
-    RAISE NOTICE '✓ Notification triggers updated to use HTTP requests!';
+    RAISE NOTICE '- Notification triggers updated to use HTTP requests!';
     RAISE NOTICE '  - All notifications now go through Edge Function';
     RAISE NOTICE '  - Requires http extension';
     RAISE NOTICE '  - Set app.edge_function_url config for production';

@@ -54,9 +54,9 @@ export default function PricingLineItemsDisplay({
   const requiredItems = pricing.line_items?.filter(item => !item.is_optional) || [];
   const optionalItems = pricing.line_items?.filter(item => item.is_optional) || [];
 
-  // Calculate totals
+  // Calculate totals - service fee is monthly, not per visit
   const requiredTotal = requiredItems.reduce((sum, item) => 
-    sum + parseFloat(item.price_per_unit) * servicesPerMonth, 0
+    sum + parseFloat(item.price_per_unit), 0
   );
 
   return (
@@ -79,8 +79,9 @@ export default function PricingLineItemsDisplay({
         {requiredItems.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <h4 className="font-semibold text-sm">Included Services (per visit)</h4>
+              <h4 className="font-semibold text-sm">Monthly Service Fee</h4>
               <Badge variant="secondary" className="text-xs">Required</Badge>
+              <Badge variant="outline" className="text-xs">Per Location</Badge>
             </div>
             <div className="space-y-2">
               {requiredItems.map((item) => (
@@ -90,15 +91,14 @@ export default function PricingLineItemsDisplay({
                     <div>
                       <p className="font-medium">{item.name}</p>
                       <p className="text-xs text-muted-foreground">{item.description}</p>
+                      <p className="text-xs text-muted-foreground mt-1 italic">
+                        Charged once per location, covers all bots at that location
+                      </p>
                     </div>
                   </div>
-                  <span className="font-semibold">R{parseFloat(item.price_per_unit).toFixed(2)}</span>
+                  <span className="font-semibold">R{parseFloat(item.price_per_unit).toFixed(2)}/month</span>
                 </div>
               ))}
-            </div>
-            <div className="pl-4 text-sm text-muted-foreground">
-              <Info className="h-3 w-3 inline mr-1" />
-              @ {servicesPerMonth}x/month = <span className="font-semibold">R{requiredTotal.toFixed(2)}/month</span>
             </div>
           </div>
         )}

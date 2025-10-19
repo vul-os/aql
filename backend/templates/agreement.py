@@ -141,7 +141,7 @@ AGREEMENT_TEMPLATE = """
   <div class="agreement-info">
     <p><strong>Agreement Number:</strong> {{ agreement_number }}</p>
     <p><strong>Agreement Date:</strong> {{ agreement_date }}</p>
-    <p><strong>Service Type:</strong> Monthly Bot Rental with Service Visits</p>
+    <p><strong>Service Type:</strong> Monthly Bot Rental with Service Package</p>
   </div>
 
   <div class="section">
@@ -180,6 +180,12 @@ AGREEMENT_TEMPLATE = """
       <div class="info-value">{{ location.name }}</div>
       <div class="info-label">Address:</div>
       <div class="info-value">{{ location.address or '' }}<br>{{ location.city }}, {{ location.province }}</div>
+      {% if pricing.garden_name %}
+      <div class="info-label">Garden/Area:</div>
+      <div class="info-value">{{ pricing.garden_name }}{% if pricing.total_gardens_at_location > 1 %} ({{ pricing.garden_number }} of {{ pricing.total_gardens_at_location }} gardens at this location){% endif %}</div>
+      <div class="info-label">Area Size:</div>
+      <div class="info-value">{{ pricing.garden_area }} m²</div>
+      {% endif %}
     </div>
   </div>
 
@@ -201,13 +207,13 @@ AGREEMENT_TEMPLATE = """
           <td>-</td>
         </tr>
         <tr>
-          <td>Monthly Rental Fee</td>
+          <td>Monthly Bot Rental</td>
           <td>R150.00 per bot per month</td>
           <td><strong>R{{ "%.2f"|format(pricing.monthly_rental_fee) }}</strong></td>
         </tr>
         <tr>
-          <td>Service Visits</td>
-          <td>{{ pricing.services_per_month }}x per month (edge trimming + battery swap)</td>
+          <td>Monthly Service Fee</td>
+          <td>{% if pricing.service_total > 0 %}Includes edge trimming, battery swaps, and bot servicing{% if pricing.total_gardens_at_location > 1 %} (covers all {{ pricing.total_gardens_at_location }} gardens at this location){% endif %}{% else %}Service fee applied to first garden only - R0.00 for this garden{% endif %}</td>
           <td><strong>R{{ "%.2f"|format(pricing.service_total) }}</strong></td>
         </tr>
         <tr>
@@ -216,8 +222,8 @@ AGREEMENT_TEMPLATE = """
           <td><strong>R{{ "%.2f"|format(pricing.monthly_total) }}</strong></td>
         </tr>
         <tr>
-          <td>Refundable Deposit</td>
-          <td>R500.00 per bot (returned when bots are returned)</td>
+          <td>Setup Fee</td>
+          <td>R299.00 per bot (one-time, non-refundable)</td>
           <td><strong>R{{ "%.2f"|format(pricing.deposit_total) }}</strong></td>
         </tr>
         <tr>
@@ -244,10 +250,10 @@ AGREEMENT_TEMPLATE = """
       <ol>
         <li><strong>Rental Period:</strong> Month-to-month rental with no long-term commitment. Either party may terminate with 30 days written notice.</li>
         <li><strong>Equipment:</strong> BotKorp provides autonomous lawn mower bots in good working condition. Bots remain BotKorp property.</li>
-        <li><strong>Service Visits:</strong> BotKorp visits according to agreed schedule for edge trimming, battery swaps, and maintenance.</li>
+        <li><strong>Service:</strong> Monthly service fee includes all edge trimming, battery swaps, and bot maintenance according to agreed schedule.</li>
         <li><strong>Customer Responsibilities:</strong> Keep lawn clear of obstacles, maintain boundary wire, provide safe property access.</li>
-        <li><strong>Payment Terms:</strong> Monthly fees due on 1st of each month. Refundable deposit collected upfront.</li>
-        <li><strong>Cancellation:</strong> Cancel with 30 days written notice. Deposit refunded after bot return and inspection.</li>
+        <li><strong>Payment Terms:</strong> Monthly fees due on 1st of each month. Setup fee charged on first invoice.</li>
+        <li><strong>Cancellation:</strong> Cancel with 30 days written notice. No refund on setup fee.</li>
         <li><strong>Winter Pause:</strong> Pause service during winter (May-August) without penalty. Monthly fees suspended.</li>
         <li><strong>Equipment Damage:</strong> Customer responsible for negligence or misuse. Normal wear covered by BotKorp.</li>
         <li><strong>Liability:</strong> BotKorp maintains comprehensive insurance. Customer should ensure adequate property insurance.</li>

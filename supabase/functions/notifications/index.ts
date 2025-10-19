@@ -207,8 +207,21 @@ serve(async (req) => {
   }
 
   try {
+    console.log(`═══════════════════════════════════════════════════════`)
+    console.log(`🚀 NOTIFICATION FUNCTION INVOKED`)
+    console.log(`   Time: ${new Date().toISOString()}`)
+    console.log(`   Method: ${req.method}`)
+    console.log(`═══════════════════════════════════════════════════════`)
+    
     // Validate API keys
+    console.log(`🔑 Environment Check:`)
+    console.log(`   RESEND_API_KEY: ${RESEND_API_KEY ? `✅ Set (${RESEND_API_KEY.substring(0, 10)}...${RESEND_API_KEY.substring(RESEND_API_KEY.length - 4)})` : '❌ NOT SET'}`)
+    console.log(`   SUPABASE_URL: ${SUPABASE_URL ? '✅ Set' : '❌ NOT SET'}`)
+    console.log(`   SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY ? '✅ Set' : '❌ NOT SET'}`)
+    console.log(`   APP_URL: ${APP_URL}`)
+    
     if (!RESEND_API_KEY) {
+      console.error(`❌ CRITICAL: RESEND_API_KEY is not configured`)
       throw new Error('RESEND_API_KEY is not configured')
     }
 
@@ -216,7 +229,14 @@ serve(async (req) => {
     const notificationReq: NotificationRequest = await req.json()
     const { type, user_ids, title, message, send_email = true, send_push = false } = notificationReq
 
-    console.log(`📬 Processing ${type} notification for ${user_ids?.length || 0} user(s)`)
+    console.log(`\n📬 Notification Request Details:`)
+    console.log(`   Type: ${type}`)
+    console.log(`   Title: ${title}`)
+    console.log(`   Message: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`)
+    console.log(`   User IDs: ${user_ids?.length || 0} user(s)`)
+    console.log(`   Send Email: ${send_email}`)
+    console.log(`   Send Push: ${send_push}`)
+    console.log(`   Priority: ${notificationReq.priority || 'normal'}`)
     console.log(`📋 User IDs:`, user_ids)
 
     // Validate user_ids
@@ -262,7 +282,7 @@ serve(async (req) => {
     // Get user details and preferences
     const { data: users, error: usersError } = await supabase
       .from('profiles')
-      .select('id, email, first_name, surname')
+      .select('id, email, full_name')
       .in('id', validUserIds)
 
     if (usersError) {
@@ -316,56 +336,134 @@ serve(async (req) => {
 
       if (shouldSendEmail && user.email) {
         try {
-          const userName = `${user.first_name || ''} ${user.surname || ''}`.trim() || 'there'
+          const userName = user.full_name || 'there'
+          
+          console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
+          console.log(`📧 SENDING EMAIL`)
+          console.log(`   To: ${user.email}`)
+          console.log(`   User ID: ${user.id}`)
+          console.log(`   User Name: ${userName}`)
+          console.log(`   Notification Type: ${type}`)
+          console.log(`   Subject: ${title}`)
+          console.log(`   Priority: ${notificationReq.priority || 'normal'}`)
+          
+          // Validate email format
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+          if (!emailRegex.test(user.email)) {
+            console.error(`❌ Invalid email format: ${user.email}`)
+            throw new Error(`Invalid email format: ${user.email}`)
+          }
+          
+          const emailPayload = {
+            from: 'Bot Korp <notify@kom.botkorp.com>',
+            to: [user.email],
+            subject: title,
+            html: getEmailTemplate(notificationReq, userName),
+            reply_to: 'support@botkorp.com',
+            tags: [
+              { name: 'type', value: type },
+              { name: 'user_id', value: user.id },
+            ],
+          }
+          
+          console.log(`📦 Email Payload:`)
+          console.log(`   From: ${emailPayload.from}`)
+          console.log(`   To: ${emailPayload.to}`)
+          console.log(`   Reply-To: ${emailPayload.reply_to}`)
+          console.log(`   Tags: ${JSON.stringify(emailPayload.tags)}`)
+          console.log(`   HTML Length: ${emailPayload.html.length} chars`)
+          console.log(`   RESEND_API_KEY: ${RESEND_API_KEY ? `${RESEND_API_KEY.substring(0, 10)}...${RESEND_API_KEY.substring(RESEND_API_KEY.length - 4)}` : '❌ NOT SET'}`)
           
           // Send email via Resend
+          console.log(`🌐 Making request to Resend API...`)
           const emailResponse = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${RESEND_API_KEY}`,
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-              from: 'Bot Korp <notifications@botkorp.com>',
-              to: [user.email],
-              subject: title,
-              html: getEmailTemplate(notificationReq, userName),
-              reply_to: 'support@botkorp.com',
-              tags: [
-                { name: 'type', value: type },
-                { name: 'user_id', value: user.id },
-              ],
-            }),
+            body: JSON.stringify(emailPayload),
           })
 
+          console.log(`📡 Resend API Response Status: ${emailResponse.status} ${emailResponse.statusText}`)
+          
+          const responseData = await emailResponse.json()
+          
           if (emailResponse.ok) {
             emailsSent++
-            console.log(`✅ Email sent to ${user.email}`)
+            console.log(`✅ EMAIL SENT SUCCESSFULLY`)
+            console.log(`   Email ID: ${responseData.id || 'N/A'}`)
+            console.log(`   Full Response:`, JSON.stringify(responseData, null, 2))
           } else {
-            console.error(`❌ Failed to send email to ${user.email}`)
+            console.error(`❌ EMAIL SEND FAILED`)
+            console.error(`   Status: ${emailResponse.status} ${emailResponse.statusText}`)
+            console.error(`   Response Body:`, JSON.stringify(responseData, null, 2))
+            
+            // Parse specific Resend error types
+            if (responseData.message) {
+              console.error(`   Error Message: ${responseData.message}`)
+            }
+            if (responseData.name) {
+              console.error(`   Error Type: ${responseData.name}`)
+            }
+            
+            // Common Resend errors
+            if (emailResponse.status === 401) {
+              console.error(`   ⚠️  Authentication failed - check RESEND_API_KEY`)
+            } else if (emailResponse.status === 403) {
+              console.error(`   ⚠️  Forbidden - sender email may not be verified in Resend`)
+              console.error(`   ⚠️  Go to Resend Dashboard and verify: notify@kom.botkorp.com`)
+              console.error(`   ⚠️  Or verify domain: kom.botkorp.com`)
+            } else if (emailResponse.status === 422) {
+              console.error(`   ⚠️  Validation error - check email payload structure`)
+            } else if (emailResponse.status === 429) {
+              console.error(`   ⚠️  Rate limit exceeded`)
+            }
           }
+          console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
         } catch (emailError) {
-          console.error(`Error sending email to ${user.email}:`, emailError)
+          console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
+          console.error(`💥 EXCEPTION WHILE SENDING EMAIL`)
+          console.error(`   To: ${user.email}`)
+          console.error(`   Error Type: ${emailError?.constructor?.name || 'Unknown'}`)
+          console.error(`   Error Message: ${emailError?.message || 'No message'}`)
+          console.error(`   Error Stack:`)
+          console.error(emailError?.stack || 'No stack trace')
+          if (emailError?.cause) {
+            console.error(`   Error Cause:`, emailError.cause)
+          }
+          console.error(`   Full Error:`, JSON.stringify(emailError, Object.getOwnPropertyNames(emailError), 2))
+          console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
+        }
+      } else {
+        if (!user.email) {
+          console.warn(`⚠️  User ${user.id} has no email address`)
+        } else if (!shouldSendEmail) {
+          console.log(`🔕 Email skipped for ${user.email} - disabled in preferences or send_email=false`)
         }
       }
 
-      // TODO: Implement push notifications via Firebase/OneSignal
-      // For now, we just create the notification in the database
-      if (send_push) {
-        try {
-          await supabase.from('notifications').insert({
-            user_id: user.id,
-            type,
-            title,
-            message,
-            priority: notificationReq.priority || 'normal',
-            data: notificationReq.data || {},
-            sent_push: false, // Will be sent by a separate push service
-          })
+      // Create notification in database for in-app display
+      // This happens regardless of send_push flag - we always want in-app notifications
+      try {
+        await supabase.from('notifications').insert({
+          user_id: user.id,
+          type,
+          title,
+          message,
+          priority: notificationReq.priority || 'normal',
+          data: notificationReq.data || {},
+          action_url: notificationReq.data?.action_url || null,
+          sent_push: false,
+          sent_email: shouldSendEmail,
+        })
+        
+        // TODO: Implement actual push notifications via Firebase/OneSignal
+        if (send_push) {
           pushSent++
-        } catch (pushError) {
-          console.error(`Error creating notification for ${user.id}:`, pushError)
         }
+      } catch (dbError) {
+        console.error(`Error creating notification for ${user.id}:`, dbError)
       }
     }
 

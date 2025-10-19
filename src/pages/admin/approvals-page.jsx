@@ -74,7 +74,8 @@ export default function ApprovalsPage() {
     try {
       setLoading(true);
 
-      // Load all rental agreements with user and organization details
+      // Load ONLY draft rental agreements that need approval
+      // Active agreements are already approved and don't need to be shown here
       const { data, error } = await supabase
         .from('rental_agreements')
         .select(`
@@ -83,7 +84,7 @@ export default function ApprovalsPage() {
           organization:organizations(name),
           location:locations(name, city, province, address)
         `)
-        .in('status', ['draft', 'active', 'paused'])
+        .eq('status', 'draft')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -551,7 +552,7 @@ export default function ApprovalsPage() {
     try {
       setActionLoading(true);
 
-      // Mark as installed
+      // Mark as installed (database trigger will send notifications automatically)
       const { error } = await supabase
         .from('services')
         .update({ 
@@ -561,29 +562,10 @@ export default function ApprovalsPage() {
 
       if (error) throw error;
 
-      // Send email notification to all organization members via Supabase Edge Function
-      try {
-        const { data: notificationData, error: notificationError } = await supabase.functions.invoke('send-installation-notification', {
-          body: {
-            service_id: serviceId,
-            organization_id: selectedService.organization_id
-          }
-        });
-
-        if (!notificationError && notificationData?.success) {
-          console.log(`📧 Sent installation notification to ${notificationData.emails_sent} members`);
-        } else {
-          console.warn('Failed to send installation notification:', notificationError);
-        }
-      } catch (emailError) {
-        console.error('Email notification error:', emailError);
-        // Don't fail the whole operation if email fails
-      }
-
       toast({
         variant: 'success',
         title: 'Installation Completed ✓',
-        description: 'Service marked as installed and notifications sent to organization members.',
+        description: 'Service marked as installed. Organization members will be notified automatically.',
         duration: 5000,
       });
 

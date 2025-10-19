@@ -5,7 +5,7 @@
  */
 
 // Backend API Configuration
-export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+export const BACKEND_URL = 'https://botkorp-backend-695066639923.europe-west1.run.app';
 
 // Feature Flags
 export const FEATURES = {

@@ -21,12 +21,17 @@ export function useNotifications() {
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
+        .eq('user_id', user.id)  // Filter by user_id!
         .eq('is_archived', false)
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching notifications:', error);
+        throw error;
+      }
 
+      console.log('📬 Fetched notifications:', data?.length || 0);
       setNotifications(data || []);
       setUnreadCount(data?.filter(n => !n.is_read).length || 0);
     } catch (error) {

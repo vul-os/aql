@@ -1,0 +1,10 @@
+# Supabase local development
+.branches
+.temp
+.env
+.env.local
+
+# Edge function build outputs
+functions/**/.build/
+
+

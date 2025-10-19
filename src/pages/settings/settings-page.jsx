@@ -49,6 +49,7 @@ import { useTheme } from '@/components/theme-provider';
 import PageHeader from '@/components/ui/page-header';
 import LocationWizard from '@/components/services/location-wizard';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import PushSubscriptionDevices from '@/components/notifications/push-subscription-devices';
 
 export default function SettingsPage() {
   const { user, selectedOrg, selectedLocation, locations: contextLocations, loadOrganizationLocations } = useAuth();
@@ -595,30 +596,22 @@ export default function SettingsPage() {
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                     Organization Details
                   </h3>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label className="text-muted-foreground">Subscription Tier</Label>
-                      <div className="p-3 bg-muted/50 rounded-md border">
-                        <p className="font-medium capitalize">{selectedOrg?.subscription_tier || 'Free'}</p>
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-muted-foreground">Status</Label>
-                      <div className="p-3 bg-muted/50 rounded-md border">
-                        <p className="font-medium flex items-center gap-2">
-                          {selectedOrg?.is_active !== false ? (
-                            <>
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                              Active
-                            </>
-                          ) : (
-                            <>
-                              <AlertCircle className="h-4 w-4 text-red-600" />
-                              Inactive
-                            </>
-                          )}
-                        </p>
-                      </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-muted-foreground">Status</Label>
+                    <div className="p-3 bg-muted/50 rounded-md border">
+                      <p className="font-medium flex items-center gap-2">
+                        {selectedOrg?.is_active !== false ? (
+                          <>
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            Active
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle className="h-4 w-4 text-red-600" />
+                            Inactive
+                          </>
+                        )}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1102,6 +1095,11 @@ export default function SettingsPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Push Subscription Devices */}
+              {isSubscribed && (
+                <PushSubscriptionDevices userId={user?.id} />
+              )}
 
               {/* Save Button */}
               <div className="flex justify-end gap-3">

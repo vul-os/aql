@@ -340,12 +340,15 @@ CREATE TABLE IF NOT EXISTS notifications (
         'bot_offline',
         'bot_low_battery',
         'bot_alert',
+        'service_created',
         'service_scheduled',
         'service_completed',
+        'installation_completed',
         'service_amendment_submitted',
         'service_amendment_approved',
         'service_amendment_rejected',
         'payment_failed',
+        'payment_success',
         'member_joined',
         'system'
     )),
@@ -365,6 +368,10 @@ CREATE TABLE IF NOT EXISTS notifications (
     is_read BOOLEAN DEFAULT false,
     is_archived BOOLEAN DEFAULT false,
     read_at TIMESTAMPTZ,
+    
+    -- Delivery tracking
+    sent_email BOOLEAN DEFAULT false,
+    sent_push BOOLEAN DEFAULT false,
     
     -- Additional data
     data JSONB DEFAULT '{}'::jsonb,
@@ -402,6 +409,9 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
     -- Device/Browser info
     user_agent TEXT,
     device_type TEXT,
+    browser TEXT,
+    os TEXT,
+    fcm_token TEXT,  -- Firebase Cloud Messaging token
     
     -- Status
     is_active BOOLEAN DEFAULT true,

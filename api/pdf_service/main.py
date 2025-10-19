@@ -248,26 +248,44 @@ def send_invoice_email():
 
 # ==================== Helper Functions ====================
 
-def calculate_pricing(number_of_bots, services_per_month):
-    """Calculate pricing based on business rules"""
-    BOT_RENTAL_FEE = 150
-    SERVICE_FEE = 150
-    DEPOSIT_PER_BOT = 500
+def calculate_pricing(number_of_bots, services_per_month, include_service_fee=True):
+    """Calculate pricing based on business rules
+    
+    Pricing model:
+    - Bot rental: R150/month per bot (e.g., 3 bots = R450)
+    - Service fee: R400/month PER LOCATION (not per bot, not per garden!)
+    - Setup fee: R299 per bot (e.g., 3 bots = R897)
+    
+    Example: Location with 3 gardens (3 bots):
+    - Bot rental: 3 × R150 = R450
+    - Service fee: R400 (once per location, not 3x)
+    - Total: R850/month
+    
+    Args:
+        number_of_bots: Number of bots (typically 1 per garden)
+        services_per_month: Scheduling frequency (tracked but doesn't affect price)
+        include_service_fee: Whether to include the R400 service fee (should be True only for first bot at location)
+    """
+    BOT_RENTAL_FEE = 150  # Per bot per month
+    MONTHLY_SERVICE_FEE = 400  # Fixed monthly service fee PER LOCATION
+    DEPOSIT_PER_BOT = 299  # Setup fee per bot
     
     monthly_rental = number_of_bots * BOT_RENTAL_FEE
-    service_total = services_per_month * SERVICE_FEE
+    service_total = MONTHLY_SERVICE_FEE if include_service_fee else 0  # Only if include_service_fee is True
     monthly_total = monthly_rental + service_total
     deposit_total = number_of_bots * DEPOSIT_PER_BOT
     
     return {
         'number_of_bots': number_of_bots,
-        'services_per_month': services_per_month,
+        'services_per_month': services_per_month,  # Still tracked for scheduling
         'monthly_rental_fee': monthly_rental,
-        'service_fee_per_visit': SERVICE_FEE,
+        'service_fee_per_visit': service_total,  # Legacy field
+        'monthly_service_fee': service_total,  # Actual fixed monthly service fee
         'service_total': service_total,
         'monthly_total': monthly_total,
         'deposit_total': deposit_total,
-        'billing_day': 1
+        'billing_day': 1,
+        'include_service_fee': include_service_fee
     }
 
 
@@ -449,10 +467,27 @@ def render_invoice_template(invoice):
 
 
 def send_invoice_via_email(invoice, pdf_bytes):
-    """Send invoice via email using Resend"""
+    """Send invoice via email to admin members and billing contact using Resend"""
+    # Get admin members of the organization
+    admin_emails = []
+    try:
+        response = supabase.table('organization_members').select('''
+            user:profiles(email, full_name)
+        ''').eq('organization_id', invoice['organization_id']).in_('role', ['owner', 'admin']).eq('status', 'active').execute()
+        
+        if response.data:
+            admin_emails = [member['user']['email'] for member in response.data if member.get('user') and member['user'].get('email')]
+    except Exception as e:
+        print(f"⚠️ Error fetching admin emails: {e}")
+    
+    # Add billing email if not already in admin emails
+    all_recipients = list(set(admin_emails + [invoice['billing_email']]))
+    
+    print(f"📧 Sending invoice to: {', '.join(all_recipients)}")
+    
     params = {
-        "from": "BotKorp Billing <billing@botkorp.co.za>",
-        "to": [invoice['billing_email']],
+        "from": "BotKorp Billing <billing@kom.botkorp.com>",
+        "to": all_recipients,
         "subject": f"Invoice {invoice['invoice_number']} - R{invoice['total_amount']}",
         "html": f"""
         <html>

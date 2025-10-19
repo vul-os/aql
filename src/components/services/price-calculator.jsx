@@ -215,16 +215,17 @@ export default function PriceCalculator({
                 R{pricing.bot_rental_per_bot}/bot/month
               </div>
 
-              {/* Service Visits */}
+              {/* Monthly Service Fee (Per Location) */}
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
                   <Wrench className="h-4 w-4 text-muted-foreground" />
-                  <span>Service Visits ({pricing.services_per_month}x/month)</span>
+                  <span>Monthly Service Fee</span>
+                  <Badge variant="outline" className="text-xs">Per Location</Badge>
                 </div>
                 <span className="font-semibold">R{pricing.service_total?.toFixed(2) || '0.00'}</span>
               </div>
               <div className="pl-6 text-xs text-muted-foreground">
-                R{pricing.service_price_per_visit}/visit (edge trimming + bot swap)
+                Covers edge trimming, battery swaps & bot servicing for all bots at this location
               </div>
 
               {/* Total */}
