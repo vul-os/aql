@@ -142,7 +142,7 @@ BEGIN
                 ra.signer_phone,
                 ra.signer_email,
                 NEW.signature_url, -- Amendment signature
-                NEW.signature_ip_address,
+                CASE WHEN NEW.signature_ip_address IS NOT NULL THEN NEW.signature_ip_address::inet ELSE NULL END, -- Cast text to inet
                 NEW.signature_user_agent,
                 NEW.signed_at,
                 'active', -- Set to active immediately - will trigger deposit invoice
