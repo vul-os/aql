@@ -30,8 +30,10 @@ DECLARE
     v_total_bots_in_service INT;
     v_charged_bot_count INT;
     v_new_bots_count INT;
-    v_setup_fee_per_bot DECIMAL := 299.00;
+    v_setup_fee_per_bot DECIMAL;
     v_is_amendment BOOLEAN := FALSE;
+    v_authorization RECORD;
+    v_attempt_id UUID;
 BEGIN
     -- Get rental agreement
     SELECT * INTO v_agreement
@@ -46,6 +48,20 @@ BEGIN
     SELECT * INTO v_profile
     FROM organization_legal_profiles
     WHERE organization_id = v_agreement.organization_id;
+    
+    -- Get setup fee from pricing (not hardcoded!)
+    SELECT setup_fee INTO v_setup_fee_per_bot
+    FROM pricing_plans
+    WHERE bot_type = COALESCE(v_agreement.bot_type, 'mow_bot')
+    AND is_active = true
+    AND is_default = true
+    LIMIT 1;
+    
+    -- Fallback if no pricing found
+    IF v_setup_fee_per_bot IS NULL THEN
+        v_setup_fee_per_bot := 299.00;
+        RAISE NOTICE 'No pricing found, using default setup fee: R%', v_setup_fee_per_bot;
+    END IF;
     
     -- Count TOTAL bots in the SERVICE (not just this one rental agreement)
     -- One service can have multiple rental agreements (one per garden)
@@ -150,7 +166,7 @@ BEGIN
         v_line_items,
         'sent', -- Set to 'sent' - PDF will be generated automatically by trigger
         CURRENT_DATE,
-        CURRENT_DATE + INTERVAL '7 days', -- Due in 7 days
+        CURRENT_DATE, -- Due immediately - will be picked up by auto_collect_payments() cron
         COALESCE(v_profile.first_name || ' ' || v_profile.surname, 'N/A'),
         COALESCE(v_profile.physical_address, 'N/A'),
         COALESCE(v_profile.physical_city, 'N/A'),
@@ -165,7 +181,56 @@ BEGIN
     )
     RETURNING id INTO v_invoice_id;
     
-    RAISE NOTICE 'Deposit invoice created: % for agreement: %', v_invoice_number, v_agreement.agreement_number;
+    RAISE NOTICE 'Deposit invoice % created for agreement % - creating payment attempt', 
+                 v_invoice_number, v_agreement.agreement_number;
+    
+    -- Create payment attempt immediately for deposit invoices
+    -- Get user's default payment authorization
+    SELECT * INTO v_authorization
+    FROM payment_authorizations
+    WHERE user_id = v_agreement.user_id
+    AND is_default = true
+    AND is_active = true
+    LIMIT 1;
+    
+    IF v_authorization IS NOT NULL THEN
+        -- Create payment attempt with status='pending'
+        -- This will trigger the charge-payment edge function automatically!
+        BEGIN
+            INSERT INTO payment_attempts (
+                invoice_id,
+                rental_agreement_id,
+                user_id,
+                organization_id,
+                authorization_code,
+                amount,
+                attempt_number,
+                status,
+                next_retry_at
+            )
+            VALUES (
+                v_invoice_id,
+                p_rental_agreement_id,
+                v_agreement.user_id,
+                v_agreement.organization_id,
+                v_authorization.authorization_code,
+                v_total,
+                1,
+                'pending',
+                CURRENT_TIMESTAMP + INTERVAL '1 day'
+            )
+            RETURNING id INTO v_attempt_id;
+            
+            RAISE NOTICE 'Payment attempt % created for deposit invoice % - edge function will process immediately', 
+                        v_attempt_id, v_invoice_number;
+        EXCEPTION
+            WHEN OTHERS THEN
+                RAISE WARNING 'Failed to create payment attempt for deposit invoice %: %', v_invoice_number, SQLERRM;
+        END;
+    ELSE
+        RAISE WARNING 'No payment authorization found for user % - invoice % will need manual payment', 
+                     v_agreement.user_id, v_invoice_number;
+    END IF;
     
     RETURN json_build_object(
         'success', true,
@@ -174,8 +239,8 @@ BEGIN
         'total_amount', v_total,
         'setup_fee', v_setup_fee,
         'tax_amount', v_tax_amount,
-        'due_date', CURRENT_DATE + INTERVAL '7 days',
-        'message', 'Deposit invoice created successfully'
+        'due_date', CURRENT_DATE,
+        'message', 'Deposit invoice created and payment attempt triggered'
     );
     
 EXCEPTION
@@ -273,7 +338,7 @@ GRANT EXECUTE ON FUNCTION create_deposit_invoice TO authenticated;
 GRANT EXECUTE ON FUNCTION create_deposit_invoice TO postgres;
 
 -- Comments
-COMMENT ON FUNCTION create_deposit_invoice IS 'Creates a deposit/setup fee invoice for a rental agreement. Supports both initial setup and amendments - only charges for new bots not yet billed.';
+COMMENT ON FUNCTION create_deposit_invoice IS 'Creates deposit invoice with immediate due date (CURRENT_DATE) so auto_collect_payments() cron charges it immediately. Fetches setup_fee from pricing_plans table. Supports both initial setup and amendments - only charges for new bots not yet billed.';
 COMMENT ON FUNCTION trigger_create_deposit_invoice IS 'Trigger function to auto-create deposit invoice when rental agreement becomes active. Handles both initial setup and amendments (additional gardens).';
 
 -- Success message
@@ -283,9 +348,10 @@ BEGIN
     RAISE NOTICE 'Features:';
     RAISE NOTICE '  - Auto-creates deposit invoice when rental agreement is signed';
     RAISE NOTICE '  - Invoice includes setup fees for all new bots';
+    RAISE NOTICE '  - Setup fee fetched from pricing_plans table (not hardcoded)';
     RAISE NOTICE '  - Supports amendments: charges deposit for newly added gardens/bots';
     RAISE NOTICE '  - Prevents duplicate charges: only bills for bots not yet charged';
-    RAISE NOTICE '  - Due in 7 days from agreement date';
+    RAISE NOTICE '  - Due IMMEDIATELY - charged by auto_collect_payments() cron';
     RAISE NOTICE '  - Marked as "sent" - PDF generated automatically';
     RAISE NOTICE 'Flow:';
     RAISE NOTICE '  1. Customer signs rental agreement in frontend';

@@ -37,7 +37,11 @@ import {
   Eye,
   FileText,
   ArrowDown,
-  ArrowUp
+  ArrowUp,
+  Activity,
+  CheckCircle,
+  XCircle,
+  Clock
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { usePaymentAuthorizations, usePaystack, formatCardNumber, formatExpiryDate, getCardIcon, isCardExpired } from '@/hooks/use-paystack';
@@ -70,11 +74,14 @@ export default function BillingPage() {
   const [loadingInvoices, setLoadingInvoices] = useState(true);
   const [showAllSubscriptions, setShowAllSubscriptions] = useState(false);
   const [selectedInvoicePdf, setSelectedInvoicePdf] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(true);
 
   useEffect(() => {
     if (organization?.id) {
       loadSubscriptions();
       loadInvoices();
+      loadTransactions();
     }
   }, [organization?.id]);
 
@@ -139,18 +146,58 @@ export default function BillingPage() {
     }
   };
 
+  const loadTransactions = async () => {
+    if (!organization?.id) return;
+    
+    try {
+      setLoadingTransactions(true);
+      const { data, error } = await supabase
+        .from('payment_attempts')
+        .select(`
+          *,
+          invoice:invoices(invoice_number, total_amount)
+        `)
+        .eq('organization_id', organization.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      setTransactions(data || []);
+    } catch (error) {
+      console.error('Error loading transactions:', error);
+    } finally {
+      setLoadingTransactions(false);
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'paid':
+      case 'success':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
       case 'sent':
+      case 'pending':
         return 'bg-secondary/10 text-secondary dark:bg-secondary/20 dark:text-secondary';
       case 'overdue':
+      case 'failed':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
       case 'draft':
         return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+    }
+  };
+
+  const getTransactionIcon = (status) => {
+    switch (status) {
+      case 'success':
+        return <CheckCircle className="h-5 w-5 text-green-600" />;
+      case 'failed':
+        return <XCircle className="h-5 w-5 text-red-600" />;
+      case 'pending':
+        return <Clock className="h-5 w-5 text-yellow-600" />;
+      default:
+        return <Activity className="h-5 w-5 text-gray-600" />;
     }
   };
 
@@ -545,6 +592,103 @@ export default function BillingPage() {
                 This may be refunded by your bank or appear as a pending transaction.
               </AlertDescription>
             </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Transactions Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-2xl flex items-center gap-2">
+                <Activity className="h-6 w-6" />
+                Transactions
+              </CardTitle>
+              <CardDescription>
+                Payment history and transaction details
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingTransactions ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : transactions.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="h-20 w-20 rounded-full bg-muted mx-auto mb-6 flex items-center justify-center">
+                <Activity className="h-10 w-10 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">No transactions yet</h3>
+              <p className="text-muted-foreground max-w-sm mx-auto">
+                Your payment transactions will appear here once they are processed
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {transactions.slice(0, 10).map((transaction) => (
+                <div 
+                  key={transaction.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
+                      {getTransactionIcon(transaction.status)}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold">
+                          {transaction.invoice?.invoice_number || 'Payment Attempt'}
+                        </p>
+                        <Badge className={getStatusColor(transaction.status)}>
+                          {transaction.status}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                        <span>{new Date(transaction.created_at).toLocaleDateString('en-ZA', { 
+                          year: 'numeric', 
+                          month: 'short', 
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}</span>
+                        {transaction.payment_reference && (
+                          <>
+                            <span>•</span>
+                            <span className="text-xs font-mono">{transaction.payment_reference}</span>
+                          </>
+                        )}
+                      </div>
+                      {transaction.error_message && transaction.status === 'failed' && (
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                          {transaction.error_message}
+                        </p>
+                      )}
+                      {transaction.attempt_number > 1 && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Attempt #{transaction.attempt_number}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold">R{parseFloat(transaction.amount).toFixed(2)}</p>
+                    {transaction.status === 'success' && transaction.processed_at && (
+                      <p className="text-xs text-green-600 dark:text-green-400">
+                        Processed {new Date(transaction.processed_at).toLocaleDateString()}
+                      </p>
+                    )}
+                    {transaction.status === 'pending' && transaction.next_retry_at && (
+                      <p className="text-xs text-muted-foreground">
+                        Retry: {new Date(transaction.next_retry_at).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>

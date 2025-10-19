@@ -1,3 +1,5 @@
+DEPOSITS ARE NOT GETTING SENT TO CHARGE PAYMENT, NOT BEING TRIGGERED
+
 BILLING SETUP AND TESTING
 keep track of bot data, on off, direction rpm, distance, orentation 3d, accelleration 3d, rotation 3d, temp, humidity, rain, battery 
 bot location history, bot events? 
@@ -28,7 +30,6 @@ learn how to run supabase locally, what files to change in frontend and backend?
 service calander, get how many locations to service in month on a map, service completed, 
 in create service, create the service there becasuse if api fails, service is not finished 
 
-make a script that creates botkorp account, upload coverage also, maybe all can be in sql seed file that exists?
 
 EMAIL SUPPORT@BOTKORP.COM gets sent to a specific email? 
 email footers for gmail?

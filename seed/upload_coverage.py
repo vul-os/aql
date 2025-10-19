@@ -19,6 +19,11 @@ import urllib.error
 # Supabase configuration
 SUPABASE_URL = 'https://kyoowsarfopltjwmhksi.supabase.co'
 SUPABASE_ANON_KEY = 'REDACTED_JWT'
+# Service role key for admin operations (has full database access)
+SUPABASE_SERVICE_KEY = 'REDACTED_JWT'
+
+# Use service key for seeding operations (requires full database access)
+SUPABASE_KEY = SUPABASE_SERVICE_KEY
 
 
 def parse_kml(kml_content: str) -> List[Dict]:
@@ -112,8 +117,8 @@ def upload_to_supabase(areas: List[Dict]) -> None:
                 data=data,
                 headers={
                     'Content-Type': 'application/json',
-                    'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': f'Bearer {SUPABASE_ANON_KEY}',
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': f'Bearer {SUPABASE_KEY}',
                     'Prefer': 'resolution=merge-duplicates'
                 },
                 method='POST'

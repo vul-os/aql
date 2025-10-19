@@ -33,14 +33,43 @@ interface PaystackChargeResponse {
 
 serve(async (req) => {
   try {
+    // Log environment variables (for debugging)
+    console.log('Environment check:');
+    console.log('- SUPABASE_URL:', SUPABASE_URL ? 'SET' : 'MISSING');
+    console.log('- SUPABASE_SERVICE_ROLE_KEY:', SUPABASE_SERVICE_ROLE_KEY ? 'SET (length: ' + SUPABASE_SERVICE_ROLE_KEY.length + ')' : 'MISSING');
+    console.log('- PAYSTACK_SECRET_KEY:', PAYSTACK_SECRET_KEY ? 'SET' : 'MISSING');
+    
     // Verify request is from Supabase (check authorization header)
     const authHeader = req.headers.get('authorization');
-    if (!authHeader || !authHeader.includes(SUPABASE_SERVICE_ROLE_KEY!)) {
+    console.log('Authorization header:', authHeader ? 'Present (length: ' + authHeader.length + ')' : 'Missing');
+    
+    if (!authHeader) {
+      console.error('Authorization header is missing');
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: 'Unauthorized', reason: 'No authorization header' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       );
     }
+    
+    if (!SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('SUPABASE_SERVICE_ROLE_KEY environment variable is not set');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', reason: 'Service key not configured' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    if (!authHeader.includes(SUPABASE_SERVICE_ROLE_KEY)) {
+      console.error('Authorization header does not match service key');
+      console.log('Expected key to include:', SUPABASE_SERVICE_ROLE_KEY.substring(0, 20) + '...');
+      console.log('Received header:', authHeader.substring(0, 50) + '...');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', reason: 'Invalid service key' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    console.log('✅ Authorization successful');
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -70,6 +99,20 @@ serve(async (req) => {
     // Process each payment attempt
     for (const attempt of (attempts || []) as PaymentAttempt[]) {
       try {
+        // Get user's email for Paystack charge
+        const { data: userData, error: userError } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('id', attempt.user_id)
+          .single();
+
+        if (userError || !userData?.email) {
+          console.error(`Failed to get email for user ${attempt.user_id}:`, userError);
+          throw new Error('User email not found');
+        }
+
+        console.log(`Charging ${userData.email} for R${attempt.amount}`);
+
         // Call Paystack to charge the authorization
         const response = await fetch('https://api.paystack.co/transaction/charge_authorization', {
           method: 'POST',
@@ -79,7 +122,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             authorization_code: attempt.authorization_code,
-            email: '', // Paystack will use the email associated with the authorization
+            email: userData.email, // Required by Paystack
             amount: Math.round(attempt.amount * 100), // Convert to kobo (cents)
             metadata: {
               invoice_id: attempt.invoice_id,
