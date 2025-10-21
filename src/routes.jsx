@@ -46,6 +46,8 @@ const ServicesPage = lazyImport(() => import('./pages/services/services-page'));
 const ServiceDetailPage = lazyImport(() => import('./pages/services/service-detail-page'));
 const AddServicePage = lazyImport(() => import('./pages/services/add-service-page'));
 const AddServicePublic = lazyImport(() => import('./pages/services/add-service-public'));
+const ServiceBotStatus = lazyImport(() => import('./pages/services/service-bot-status'));
+const LocationBotStatusPage = lazyImport(() => import('./pages/locations/location-bot-status-page'));
 const SettingsPage = lazyImport(() => import('./pages/settings/settings-page'));
 const BillingPage = lazyImport(() => import('./pages/settings/billing-page'));
 const MembersPage = lazyImport(() => import('./pages/members/members-page'));
@@ -54,6 +56,8 @@ const MembersPage = lazyImport(() => import('./pages/members/members-page'));
 const ApprovalsPage = lazyImport(() => import('./pages/admin/approvals-page'));
 const BotManagementPage = lazyImport(() => import('./pages/admin/bot-management-page'));
 const ServiceAppointmentScheduler = lazyImport(() => import('./pages/admin/service-appointment-scheduler'));
+const ServiceCalendarPage = lazyImport(() => import('./pages/admin/service-calendar-page'));
+const BotDashboardPage = lazyImport(() => import('./pages/admin/bot-dashboard-page'));
 
 // Docs pages
 const DocsHome = lazyImport(() => import('./pages/docs/docs-home'));
@@ -116,6 +120,10 @@ const AppRoutes = () => {
           <Route path="services/add" element={<AddServicePage />} />
           <Route path="service/:id" element={<ServiceDetailPage />} />
           <Route path="service/:id/:tab" element={<ServiceDetailPage />} />
+          <Route path="service/:serviceId/bot-status" element={<ServiceBotStatus />} />
+          
+          {/* Location Bot Status */}
+          <Route path="location/:locationId/bot-status" element={<LocationBotStatusPage />} />
           
           {/* Settings - with optional tab sub-route */}
           <Route path="settings" element={<SettingsPage />} />
@@ -160,6 +168,8 @@ const AppRoutes = () => {
           <Route path="bot-management" element={<BotManagementPage />} />
           <Route path="bot-management/:tab" element={<BotManagementPage />} />
           <Route path="appointment-scheduler" element={<ServiceAppointmentScheduler />} />
+          <Route path="service-calendar" element={<ServiceCalendarPage />} />
+          <Route path="bot/:botId" element={<BotDashboardPage />} />
         </Route>
 
         {/* Legacy dashboard redirect */}

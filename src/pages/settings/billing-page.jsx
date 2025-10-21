@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -65,6 +66,8 @@ export default function BillingPage() {
     setDefaultAuthorization,
     processing 
   } = usePaystack();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const [deletingId, setDeletingId] = useState(null);
   const [settingDefaultId, setSettingDefaultId] = useState(null);
@@ -76,6 +79,65 @@ export default function BillingPage() {
   const [selectedInvoicePdf, setSelectedInvoicePdf] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loadingTransactions, setLoadingTransactions] = useState(true);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+
+  // Handle Paystack redirect callback
+  useEffect(() => {
+    const trxref = searchParams.get('trxref');
+    const reference = searchParams.get('reference');
+
+    if (trxref && reference && !verifyingPayment) {
+      verifyPaymentAndRefresh(reference);
+    }
+  }, [searchParams]);
+
+  const verifyPaymentAndRefresh = async (reference) => {
+    setVerifyingPayment(true);
+    
+    try {
+      toast({
+        title: "Verifying payment...",
+        description: "Please wait while we confirm your payment.",
+      });
+
+      // Call Edge Function to verify transaction with Paystack
+      const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-payment', {
+        body: { reference }
+      });
+
+      if (verifyError) {
+        throw verifyError;
+      }
+
+      // Wait a moment for database to update
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Refresh authorizations to get the new card
+      await refreshAuthorizations();
+
+      // Clean up URL params
+      setSearchParams({});
+
+      toast({
+        title: "Payment method added!",
+        description: "Your card has been successfully added and is ready to use.",
+      });
+    } catch (error) {
+      console.error('Error verifying payment:', error);
+      
+      // Still try to refresh and clean URL
+      await refreshAuthorizations();
+      setSearchParams({});
+      
+      toast({
+        title: "Payment processed",
+        description: "Your payment method should appear shortly. Please refresh if needed.",
+        variant: "default",
+      });
+    } finally {
+      setVerifyingPayment(false);
+    }
+  };
 
   useEffect(() => {
     if (organization?.id) {

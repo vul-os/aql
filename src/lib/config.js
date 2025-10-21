@@ -5,7 +5,9 @@
  */
 
 // Backend API Configuration
-export const BACKEND_URL = 'https://botkorp-backend-695066639923.europe-west1.run.app';
+// For local development, use: 'http://localhost:8080'
+// For production, use: 'https://botkorp-backend-695066639923.europe-west1.run.app'
+export const BACKEND_URL = 'http://localhost:8080';
 
 // Feature Flags
 export const FEATURES = {

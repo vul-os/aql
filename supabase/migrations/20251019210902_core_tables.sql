@@ -2,6 +2,9 @@
 -- Core Tables: Profiles, Organizations, Locations
 -- =====================================================
 
+-- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- PROFILES TABLE
 CREATE TABLE profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,

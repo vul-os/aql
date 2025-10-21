@@ -48,6 +48,7 @@ import {
 } from 'recharts';
 import { format } from 'date-fns';
 import PageHeader from '@/components/ui/page-header';
+import MyLocationsBotStatus from '@/components/services/my-locations-bot-status';
 
 export default function DashboardPage() {
   const { user, selectedOrg, selectedLocation } = useAuth();
@@ -995,6 +996,10 @@ export default function DashboardPage() {
               description={`${Math.round(analytics?.total_area_managed_sqm || 0)} m² managed`}
             />
           </div>
+
+          {/* Bot Status Widget - Real-time bot data */}
+          <MyLocationsBotStatus />
+
           {/* Alerts Section - Show immediately after stats */}
           {recentAlerts.length > 0 && (
             <Card className="overflow-hidden border-l-4 border-l-orange-500">

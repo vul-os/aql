@@ -7,10 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Calendar as CalendarIcon, Clock, Plus, ChevronLeft, ChevronRight, MapPin, User } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, Plus, ChevronLeft, ChevronRight, MapPin, User, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import PageHeader from '@/components/ui/page-header';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO } from 'date-fns';
+import ServiceCompletionForm from '@/components/services/service-completion-form';
 
 export default function ServiceAppointmentScheduler() {
   const [services, setServices] = useState([]);
@@ -22,6 +23,8 @@ export default function ServiceAppointmentScheduler() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [bots, setBots] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false);
   const { toast } = useToast();
 
   const [newAppointment, setNewAppointment] = useState({
@@ -352,9 +355,25 @@ export default function ServiceAppointmentScheduler() {
                         {dayAppointments.map(apt => (
                           <div
                             key={apt.appointment_id}
-                            className={`text-xs p-1 rounded ${getStatusColor(apt.status)}`}
+                            className={`text-xs p-1 rounded ${getStatusColor(apt.status)} flex items-center justify-between gap-1`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (apt.status !== 'completed' && apt.status !== 'cancelled') {
+                                setSelectedAppointment({
+                                  id: apt.appointment_id,
+                                  service_name: selectedService.name,
+                                  location_name: selectedService.locations?.name,
+                                  appointment_date: apt.appointment_date,
+                                  start_time: apt.start_time.slice(0, 5),
+                                  end_time: apt.end_time.slice(0, 5),
+                                  status: apt.status
+                                });
+                                setShowCompletionDialog(true);
+                              }
+                            }}
                           >
-                            {apt.start_time.slice(0, 5)} - {apt.end_time.slice(0, 5)}
+                            <span>{apt.start_time.slice(0, 5)} - {apt.end_time.slice(0, 5)}</span>
+                            {apt.status === 'completed' && <CheckCircle className="w-3 h-3" />}
                           </div>
                         ))}
                       </div>
@@ -472,6 +491,17 @@ export default function ServiceAppointmentScheduler() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Service Completion Dialog */}
+      <ServiceCompletionForm
+        appointment={selectedAppointment}
+        open={showCompletionDialog}
+        onOpenChange={setShowCompletionDialog}
+        onComplete={() => {
+          loadAppointments();
+          setSelectedAppointment(null);
+        }}
+      />
     </div>
   );
 }

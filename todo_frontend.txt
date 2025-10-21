@@ -1,12 +1,14 @@
 DEPOSITS ARE NOT GETTING SENT TO CHARGE PAYMENT, NOT BEING TRIGGERED
 
 BILLING SETUP AND TESTING
-keep track of bot data, on off, direction rpm, distance, orentation 3d, accelleration 3d, rotation 3d, temp, humidity, rain, battery 
-bot location history, bot events? 
+
 have a system with pg cron tiggering a python cf, once a day, to notify 2 days in advance of service
 RLS
 
 ANDILE
+
+keep track of bot data, on off, direction rpm, distance, orentation 3d, accelleration 3d, rotation 3d, temp, humidity, rain, battery 
+bot location history, bot events? also for pool bots, make generic bot data maybe have common fields and json field
 
 LOGO
 Make email templates look good
@@ -26,11 +28,11 @@ loading animation, make nice, make it like a mower or robot or whatever
 fix index for seo, and for sharing on whatsapp etc. After pushing to main, check if it working by sharing link on whatsapp
 if incomplete service, go to servie page, show loading when loading service from localstorage
 HARD
-learn how to run supabase locally, what files to change in frontend and backend?
 service calander, get how many locations to service in month on a map, service completed, 
 in create service, create the service there becasuse if api fails, service is not finished 
 
 
+learn how to run supabase locally, what files to change in frontend and backend?
 EMAIL SUPPORT@BOTKORP.COM gets sent to a specific email? 
 email footers for gmail?
 add picture of product to landing page

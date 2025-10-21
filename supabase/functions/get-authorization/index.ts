@@ -47,6 +47,10 @@ serve(async (req) => {
     const body: AuthorizationRequest = await req.json();
     const { email, amount = 100, metadata = {} } = body; // 100 kobo = R1.00
 
+    // Get the origin from the request header to support localhost and production
+    const origin = req.headers.get('origin') || 'https://botkorp.co.za';
+    const callbackUrl = `${origin}/portal/billing`;
+
     // Initialize Paystack transaction
     const initResponse = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
@@ -59,6 +63,7 @@ serve(async (req) => {
         amount, // in kobo (100 kobo = R1)
         currency: 'ZAR',
         channels: ['card'],
+        callback_url: callbackUrl,
         metadata: {
           ...metadata,
           user_id: user.id,

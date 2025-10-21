@@ -95,6 +95,7 @@ DROP FUNCTION IF EXISTS delete_payment_authorization CASCADE;
 DROP FUNCTION IF EXISTS set_default_authorization CASCADE;
 DROP FUNCTION IF EXISTS get_user_authorizations CASCADE;
 DROP FUNCTION IF EXISTS update_authorization_usage CASCADE;
+DROP EXTENSION "uuid-ossp";
 
 -- Re-enable triggers
 SET session_replication_role = DEFAULT;
