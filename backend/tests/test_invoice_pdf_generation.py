@@ -160,3 +160,4 @@ print('gcloud logging read "resource.type=cloud_run_revision AND resource.labels
 print()
 print("="*70)
 
+
