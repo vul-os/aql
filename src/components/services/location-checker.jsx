@@ -93,10 +93,18 @@ export default function LocationChecker({ onLocationSelect, initialAddress = '',
           const data = await response.json();
           const place = data.features[0];
           
+          // Extract city, province, and postal code from context
+          const city = place.context?.find(c => c.id.includes('place'))?.text || '';
+          const province = place.context?.find(c => c.id.includes('region'))?.text || '';
+          const postalCode = place.context?.find(c => c.id.includes('postcode'))?.text || '';
+          
           const newLocation = {
             latitude,
             longitude,
-            address: place.place_name
+            address: place.place_name,
+            city,
+            province,
+            postalCode
           };
           
           setLocation(newLocation);
@@ -154,10 +162,18 @@ export default function LocationChecker({ onLocationSelect, initialAddress = '',
   const selectSuggestion = async (place) => {
     const [longitude, latitude] = place.center;
     
+    // Extract city, province, and postal code from context
+    const city = place.context?.find(c => c.id.includes('place'))?.text || '';
+    const province = place.context?.find(c => c.id.includes('region'))?.text || '';
+    const postalCode = place.context?.find(c => c.id.includes('postcode'))?.text || '';
+    
     const newLocation = {
       latitude,
       longitude,
-      address: place.place_name
+      address: place.place_name,
+      city,
+      province,
+      postalCode
     };
     
     setLocation(newLocation);

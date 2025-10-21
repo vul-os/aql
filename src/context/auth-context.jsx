@@ -16,6 +16,13 @@ export const AuthProvider = ({ children, onNavigate, pathname }) => {
   const [loading, setLoading] = useState(true)
   const [session, setSession] = useState(null)
   const [isInitializing, setIsInitializing] = useState(true)
+  
+  // Organization and Location state
+  const [organizations, setOrganizations] = useState([])
+  const [selectedOrg, setSelectedOrg] = useState(null)
+  const [locations, setLocations] = useState([])
+  const [selectedLocation, setSelectedLocation] = useState(null)
+  const [orgLoading, setOrgLoading] = useState(false)
 
   const initializeAuth = useCallback(async (session) => {
     console.log('[AuthContext] initializeAuth called with session:', !!session)
@@ -170,7 +177,125 @@ export const AuthProvider = ({ children, onNavigate, pathname }) => {
     }
   }
 
+  // Load user's organizations
+  const loadUserOrganizations = useCallback(async () => {
+    if (!user) {
+      setOrganizations([])
+      setSelectedOrg(null)
+      return
+    }
+
+    try {
+      setOrgLoading(true)
+      
+      const { data, error } = await supabase.rpc('get_user_organizations', {
+        user_uuid: user.id
+      })
+
+      if (error) throw error
+
+      setOrganizations(data || [])
+      
+      // Auto-select organization from localStorage or first available
+      const savedOrgId = localStorage.getItem('selectedOrgId')
+      const orgToSelect = data?.find(o => o.organization_id === savedOrgId) || data?.[0]
+      
+      if (orgToSelect) {
+        setSelectedOrg(orgToSelect)
+        localStorage.setItem('selectedOrgId', orgToSelect.organization_id)
+      } else {
+        setSelectedOrg(null)
+        localStorage.removeItem('selectedOrgId')
+      }
+    } catch (error) {
+      console.error('Error loading organizations:', error)
+      setOrganizations([])
+      setSelectedOrg(null)
+    } finally {
+      setOrgLoading(false)
+    }
+  }, [user])
+
+  // Load locations for selected organization
+  const loadOrganizationLocations = useCallback(async () => {
+    if (!selectedOrg?.organization_id) {
+      setLocations([])
+      setSelectedLocation(null)
+      return
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('*')
+        .eq('organization_id', selectedOrg.organization_id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: true })
+
+      if (error) throw error
+
+      setLocations(data || [])
+
+      // Auto-select location from localStorage or first available (oldest created)
+      const savedLocationId = localStorage.getItem('selectedLocationId')
+      const locToSelect = (data || []).find(l => String(l.id) === String(savedLocationId)) || data?.[0] || null
+      
+      if (locToSelect) {
+        setSelectedLocation(locToSelect)
+        localStorage.setItem('selectedLocationId', locToSelect.id)
+      } else {
+        setSelectedLocation(null)
+        localStorage.removeItem('selectedLocationId')
+      }
+    } catch (error) {
+      console.error('Error loading locations:', error)
+      setLocations([])
+      setSelectedLocation(null)
+    }
+  }, [selectedOrg])
+
+  // Change active organization
+  const changeOrganization = useCallback((org) => {
+    setSelectedOrg(org)
+    localStorage.setItem('selectedOrgId', org.organization_id)
+    console.log('[AuthContext] Organization changed to:', org.organization_name)
+  }, [])
+
+  // Change active location
+  const changeLocation = useCallback((loc) => {
+    setSelectedLocation(loc)
+    if (loc?.id) {
+      localStorage.setItem('selectedLocationId', loc.id)
+    } else {
+      localStorage.removeItem('selectedLocationId')
+    }
+    console.log('[AuthContext] Location changed to:', loc?.name || 'none')
+  }, [])
+
+  // Load organizations when user changes
+  useEffect(() => {
+    loadUserOrganizations()
+  }, [loadUserOrganizations])
+
+  // Load locations when organization changes
+  useEffect(() => {
+    loadOrganizationLocations()
+  }, [loadOrganizationLocations])
+
+  // Clear org/location data on sign out
+  useEffect(() => {
+    if (!user) {
+      setOrganizations([])
+      setSelectedOrg(null)
+      setLocations([])
+      setSelectedLocation(null)
+      localStorage.removeItem('selectedOrgId')
+      localStorage.removeItem('selectedLocationId')
+    }
+  }, [user])
+
   const value = {
+    // Auth
     user,
     session,
     loading,
@@ -180,6 +305,17 @@ export const AuthProvider = ({ children, onNavigate, pathname }) => {
     signOut,
     resetPassword,
     updatePassword,
+    
+    // Organization & Location
+    organizations,
+    selectedOrg,
+    locations,
+    selectedLocation,
+    orgLoading,
+    loadUserOrganizations,
+    loadOrganizationLocations,
+    changeOrganization,
+    changeLocation,
   }
 
   return (

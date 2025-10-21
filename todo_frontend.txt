@@ -1,59 +1,36 @@
+DEPOSITS ARE NOT GETTING SENT TO CHARGE PAYMENT, NOT BEING TRIGGERED
 
-Email tempplates
-sign in sign up forgot password etc 
-add member 
-delete member 
-change role (only for admin)
+BILLING SETUP AND TESTING
+keep track of bot data, on off, direction rpm, distance, orentation 3d, accelleration 3d, rotation 3d, temp, humidity, rain, battery 
+bot location history, bot events? 
+have a system with pg cron tiggering a python cf, once a day, to notify 2 days in advance of service
+RLS
 
-change ui ux, fix text, make colours better, give 3 options. 
+ANDILE
 
-fix footer on landing etc, make it more like store nxt door, make all links work, fake links remove 
-copywrite Bot Korp PTY 2025 also 
-make landing page amazing
-
-fix docs, add section for garden service
-
-make every page good on mobile, check every page 
-
-
-
-Have a way to auto assign bots, if none then create one, have a page for admins to see which new bots need to be manufactured
-Also show service history of bots, information on replacements and parts? 
-have a way to cancel and return deposit 
-
-logo 
-
-add last setep for service wizzard, needs their name surname address to acknowledge they are renting bots and there are other service fees 
-it must lay out the agreement, and they must accept, a copy of rental contract sent to them as well as service agreement 
-
-Invoices, have setup for with VAT and without VAT
-
-have a way to test 0 fees only deposit for a period 
-
-
+LOGO
+Make email templates look good
+make invite supabase functions look good
+make backend html emails look good
+make notification emails look good
+MAKE IVOICE pdf look nice and email look nice
+MAKE EVERYTHING MOBILE FRIENDLY
+make these pages, META AND INSTAGRAM PAGES, AND LINKEDIN? AND TIKTOK?
+add animations to landing page 
+make a better blank services page
+every page on docs have route to it in side bar, have a nice home for docs make it look good
+google login
+location selector not updating when a location is created, active location also
+loading animation, make nice, make it like a mower or robot or whatever 
+-> use handle botkorp or bot.korp
+fix index for seo, and for sharing on whatsapp etc. After pushing to main, check if it working by sharing link on whatsapp
+if incomplete service, go to servie page, show loading when loading service from localstorage
+HARD
+learn how to run supabase locally, what files to change in frontend and backend?
+service calander, get how many locations to service in month on a map, service completed, 
+in create service, create the service there becasuse if api fails, service is not finished 
 
 
-
-
-when no location, on home or dashboard page have a nice welcome text and guide user to make location
-if you have a location, then guide to make a service, look at auth context after location is made to update location
-for creating services, on service page if no location also it must guide to create for all of the use a common location wizzard component 
-for scheduling a service must be made first 
-step 1 of service wizzard remove becuase you need a location to do anything 
-
-
-
-
-on landing page, when location is typed, first check if in coverate map, if covered guide user to sign up and create a location with their location, use routes for this 
-
-after a while, it just goes blank, maybe an issue with supabase token refresh or something? 
-
-settle on a colour scheme
-
-landing page is too much like storenxtdoor, make it unique but still nice and comprehensive with a great ui but a unique to us, focus on robotics and wires connecting things. Have this theme throughout 
-
-footer looks ugly, make it more like stornxtdoor, link to docs
-
-
-
-resend api key re_HjE9aC37_P2q9RsQAr4F91i3cKHKEfwgN
+EMAIL SUPPORT@BOTKORP.COM gets sent to a specific email? 
+email footers for gmail?
+add picture of product to landing page

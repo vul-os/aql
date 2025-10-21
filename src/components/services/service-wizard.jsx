@@ -19,7 +19,11 @@ import {
   Lock,
   CreditCard,
   AlertCircle,
-  RotateCcw
+  RotateCcw,
+  Calendar,
+  Clock,
+  Info,
+  Scissors
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -92,13 +96,20 @@ export default function ServiceWizard({ open, onOpenChange, organizationId, onCo
       preferred_cut_height_mm: '40',
       preferred_pattern: 'random',
       service_frequency: 'bi-weekly'
+    },
+    // Step 3.5: Scheduling Preferences
+    schedulingPreferences: {
+      edge_trimming_per_month: 2, // Default to 2 for bi-weekly
+      preferred_day_of_week: 1, // 0=Sunday, 6=Saturday
+      preferred_time_window_start: '08:00',
+      preferred_time_window_end: '12:00'
     }
   });
 
   const [calculatedPricing, setCalculatedPricing] = useState(null);
   
-  // Always show 5 steps (including payment method)
-  const totalSteps = 5;
+  // Always show 6 steps (including scheduling preferences and payment method)
+  const totalSteps = 6;
   const hasPaymentMethod = !authLoading && authorizations.length > 0;
   
   console.log('📊 Current step:', step, '/ Total steps:', totalSteps, '| Has payment:', hasPaymentMethod, '| Auth count:', authorizations.length);
@@ -303,6 +314,12 @@ export default function ServiceWizard({ open, onOpenChange, organizationId, onCo
         preferred_cut_height_mm: '40',
         preferred_pattern: 'random',
         service_frequency: 'bi-weekly'
+      },
+      schedulingPreferences: {
+        edge_trimming_per_month: 2,
+        preferred_day_of_week: 1,
+        preferred_time_window_start: '08:00',
+        preferred_time_window_end: '12:00'
       }
     });
     toast({
@@ -341,23 +358,54 @@ export default function ServiceWizard({ open, onOpenChange, organizationId, onCo
 
         if (locError) throw locError;
         locationId = newLoc.id;
+        
+        // Refresh locations list so new location appears
+        await loadLocations();
       }
 
-      // Create garden
+      // Create service first (parent record)
       if (formData.serviceType === 'garden') {
-        const { data: garden, error: gardenError } = await supabase
-          .from('gardens')
+        const { data: service, error: serviceError } = await supabase
+          .from('services')
           .insert({
             location_id: locationId,
-            ...formData.gardenDetails,
-            area_sqm: parseFloat(formData.gardenDetails.area_sqm),
-            preferred_cut_height_mm: parseInt(formData.gardenDetails.preferred_cut_height_mm),
+            service_type: 'garden',
+            services_per_month: formData.schedulingPreferences.edge_trimming_per_month,
             service_frequency: formData.gardenDetails.service_frequency
           })
           .select()
           .single();
 
+        if (serviceError) throw serviceError;
+
+        // Create garden details
+        const { data: garden, error: gardenError } = await supabase
+          .from('gardens')
+          .insert({
+            service_id: service.id,
+            location_id: locationId,
+            ...formData.gardenDetails,
+            area_sqm: parseFloat(formData.gardenDetails.area_sqm),
+            preferred_cut_height_mm: parseInt(formData.gardenDetails.preferred_cut_height_mm)
+          })
+          .select()
+          .single();
+
         if (gardenError) throw gardenError;
+
+        // Create scheduling preferences
+        const { error: prefError } = await supabase
+          .from('service_preferences')
+          .insert({
+            service_id: service.id,
+            day_of_week: formData.schedulingPreferences.preferred_day_of_week,
+            time_window_start: formData.schedulingPreferences.preferred_time_window_start,
+            time_window_end: formData.schedulingPreferences.preferred_time_window_end,
+            priority: 1,
+            is_active: true
+          });
+
+        if (prefError) throw prefError;
 
         toast({
           title: 'Service Created Successfully! 🎉',
@@ -415,6 +463,12 @@ export default function ServiceWizard({ open, onOpenChange, organizationId, onCo
         preferred_cut_height_mm: '40',
         preferred_pattern: 'random',
         service_frequency: 'bi-weekly'
+      },
+      schedulingPreferences: {
+        edge_trimming_per_month: 2,
+        preferred_day_of_week: 1,
+        preferred_time_window_start: '08:00',
+        preferred_time_window_end: '12:00'
       }
     });
   };
@@ -431,7 +485,8 @@ export default function ServiceWizard({ open, onOpenChange, organizationId, onCo
                   step === 1 ? 'Choose Location' :
                   step === 2 ? 'Select Service Type' :
                   step === 3 ? 'Service Details' :
-                  step === 4 ? 'Review & Pricing' :
+                  step === 4 ? 'Scheduling Preferences' :
+                  step === 5 ? 'Review & Pricing' :
                   'Add Payment Method'
                 }
               </DialogDescription>
@@ -750,35 +805,235 @@ export default function ServiceWizard({ open, onOpenChange, organizationId, onCo
                   value={formData.gardenDetails.preferred_cut_height_mm}
                   onChange={(e) => setFormData({
                     ...formData,
-                    gardenDetails: {...formData.gardenDetails, preferred_cut_height_mm: e.target.value}
+                    gardenDetails: {...formData.gardenDetails, preferred_cut_height_mm: e.target.value, service_frequency: 'monthly'}
                   })}
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="frequency">Service Frequency</Label>
-                <Select 
-                  value={formData.gardenDetails.service_frequency}
-                  onValueChange={(value) => setFormData({
-                    ...formData,
-                    gardenDetails: {...formData.gardenDetails, service_frequency: value}
-                  })}
-                >
-                  <SelectTrigger id="frequency">
-                    <SelectValue placeholder="Select frequency" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" sideOffset={5}>
-                    <SelectItem value="bi-weekly">Bi-Weekly (Every 2 Weeks)</SelectItem>
-                    <SelectItem value="monthly">Monthly (Every 4 Weeks)</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="p-3 bg-muted/50 rounded-lg border">
+                <p className="text-sm font-medium">Bot Servicing Frequency</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Once per month (fixed) - Bots are automatically serviced monthly
+                </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Step 4: Review & Pricing */}
-        {step === 4 && (
+        {/* Step 4: Scheduling Preferences */}
+        {step === 4 && formData.serviceType === 'garden' && (
+          <div className="space-y-6">
+            {/* Important Information Alert */}
+            <Alert className="border-primary/50 bg-primary/5">
+              <Info className="h-4 w-4 text-primary" />
+              <AlertTitle>Service Scheduling Information</AlertTitle>
+              <AlertDescription className="space-y-2 text-sm">
+                <p className="font-medium">Please note:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li><strong>Bot servicing:</strong> Bots are automatically serviced once a month (fixed)</li>
+                  <li><strong>Edge trimming:</strong> Select 1-4 edge trimming visits per month based on your needs</li>
+                  <li><strong>Flexible scheduling:</strong> Your preferred day and time are our priority, but may change due to weather, environmental conditions, or logistical factors</li>
+                  <li><strong>Appointment allocation:</strong> One of your selected time windows will be chosen for each visit</li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+
+            <div className="grid grid-cols-1 gap-6">
+              {/* Edge Trimming Frequency */}
+              <Card className="border-2">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Scissors className="h-5 w-5 text-primary" />
+                    <h3 className="font-semibold text-lg">Edge Trimming Frequency</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Choose how many edge trimming visits you'd like per month (1-4 visits)
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <Label>Visits per Month</Label>
+                    <div className="grid grid-cols-4 gap-3">
+                      {[1, 2, 3, 4].map((visits) => (
+                        <button
+                          key={visits}
+                          type="button"
+                          onClick={() => setFormData({
+                            ...formData,
+                            gardenDetails: {...formData.gardenDetails, service_frequency: 'monthly'},
+                            schedulingPreferences: {
+                              ...formData.schedulingPreferences,
+                              edge_trimming_per_month: visits
+                            }
+                          })}
+                          className={`p-6 rounded-lg border-2 text-center transition-all ${
+                            formData.schedulingPreferences.edge_trimming_per_month === visits
+                              ? 'border-primary bg-primary/10 shadow-md'
+                              : 'border-border hover:border-primary/50 hover:bg-muted'
+                          }`}
+                        >
+                          <div className="text-3xl font-bold mb-2 text-primary">{visits}</div>
+                          <div className="text-xs text-muted-foreground">
+                            visit{visits > 1 ? 's' : ''}/month
+                          </div>
+                          <div className="text-sm font-semibold mt-2">
+                            R{visits * 100}
+                          </div>
+                          {formData.schedulingPreferences.edge_trimming_per_month === visits && (
+                            <CheckCircle className="h-5 w-5 text-primary mx-auto mt-2" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="p-3 bg-muted/50 rounded-lg">
+                      <p className="text-sm text-center">
+                        <strong>R{(formData.schedulingPreferences.edge_trimming_per_month * 100).toFixed(2)}/month</strong> for edge trimming
+                        <span className="text-muted-foreground ml-1">(R100 per visit)</span>
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Preferred Day of Week */}
+              <Card className="border-2">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    <h3 className="font-semibold text-lg">Preferred Day of Week</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Choose your preferred day for service visits
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <Label>Select Day</Label>
+                    <div className="grid grid-cols-7 gap-2">
+                      {[
+                        { value: 0, label: 'Sun', full: 'Sunday' },
+                        { value: 1, label: 'Mon', full: 'Monday' },
+                        { value: 2, label: 'Tue', full: 'Tuesday' },
+                        { value: 3, label: 'Wed', full: 'Wednesday' },
+                        { value: 4, label: 'Thu', full: 'Thursday' },
+                        { value: 5, label: 'Fri', full: 'Friday' },
+                        { value: 6, label: 'Sat', full: 'Saturday' }
+                      ].map((day) => (
+                        <button
+                          key={day.value}
+                          type="button"
+                          onClick={() => setFormData({
+                            ...formData,
+                            schedulingPreferences: {
+                              ...formData.schedulingPreferences,
+                              preferred_day_of_week: day.value
+                            }
+                          })}
+                          className={`p-3 rounded-lg border-2 text-center transition-all ${
+                            formData.schedulingPreferences.preferred_day_of_week === day.value
+                              ? 'border-primary bg-primary text-primary-foreground shadow-md'
+                              : 'border-border hover:border-primary/50 hover:bg-muted'
+                          }`}
+                          title={day.full}
+                        >
+                          <div className="text-xs font-semibold">{day.label}</div>
+                        </button>
+                      ))}
+                    </div>
+                    {formData.schedulingPreferences?.preferred_day_of_week !== undefined && (
+                      <p className="text-sm text-muted-foreground">
+                        ✓ Selected: {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][formData.schedulingPreferences.preferred_day_of_week]}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Preferred Time Window */}
+              <Card className="border-2">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-primary" />
+                    <h3 className="font-semibold text-lg">Preferred Time Window</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Select your preferred time range for service visits
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="time-start">Start Time</Label>
+                      <Select 
+                        value={formData.schedulingPreferences.preferred_time_window_start}
+                        onValueChange={(value) => setFormData({
+                          ...formData,
+                          schedulingPreferences: {
+                            ...formData.schedulingPreferences,
+                            preferred_time_window_start: value
+                          }
+                        })}
+                      >
+                        <SelectTrigger id="time-start">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent position="popper" sideOffset={5}>
+                          <SelectItem value="06:00">6:00 AM</SelectItem>
+                          <SelectItem value="07:00">7:00 AM</SelectItem>
+                          <SelectItem value="08:00">8:00 AM</SelectItem>
+                          <SelectItem value="09:00">9:00 AM</SelectItem>
+                          <SelectItem value="10:00">10:00 AM</SelectItem>
+                          <SelectItem value="11:00">11:00 AM</SelectItem>
+                          <SelectItem value="12:00">12:00 PM</SelectItem>
+                          <SelectItem value="13:00">1:00 PM</SelectItem>
+                          <SelectItem value="14:00">2:00 PM</SelectItem>
+                          <SelectItem value="15:00">3:00 PM</SelectItem>
+                          <SelectItem value="16:00">4:00 PM</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="time-end">End Time</Label>
+                      <Select 
+                        value={formData.schedulingPreferences.preferred_time_window_end}
+                        onValueChange={(value) => setFormData({
+                          ...formData,
+                          schedulingPreferences: {
+                            ...formData.schedulingPreferences,
+                            preferred_time_window_end: value
+                          }
+                        })}
+                      >
+                        <SelectTrigger id="time-end">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent position="popper" sideOffset={5}>
+                          <SelectItem value="08:00">8:00 AM</SelectItem>
+                          <SelectItem value="09:00">9:00 AM</SelectItem>
+                          <SelectItem value="10:00">10:00 AM</SelectItem>
+                          <SelectItem value="11:00">11:00 AM</SelectItem>
+                          <SelectItem value="12:00">12:00 PM</SelectItem>
+                          <SelectItem value="13:00">1:00 PM</SelectItem>
+                          <SelectItem value="14:00">2:00 PM</SelectItem>
+                          <SelectItem value="15:00">3:00 PM</SelectItem>
+                          <SelectItem value="16:00">4:00 PM</SelectItem>
+                          <SelectItem value="17:00">5:00 PM</SelectItem>
+                          <SelectItem value="18:00">6:00 PM</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-3">
+                    Services are typically scheduled within this time window
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* Step 5: Review & Pricing */}
+        {step === 5 && (
           <div className="space-y-6">
             {console.log('🎨 Rendering Step 4 - Review & Pricing')}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -826,8 +1081,8 @@ export default function ServiceWizard({ open, onOpenChange, organizationId, onCo
           </div>
         )}
 
-        {/* Step 5: Payment Method */}
-        {step === 5 && (
+        {/* Step 6: Payment Method */}
+        {step === 6 && (
           <div className="space-y-6">
             {console.log('🎨 Rendering Step 5 - hasPaymentMethod:', hasPaymentMethod, 'authorizations:', authorizations.length)}
             {hasPaymentMethod ? (
@@ -929,7 +1184,7 @@ export default function ServiceWizard({ open, onOpenChange, organizationId, onCo
             </Button>
           ) : <div />}
 
-          {step < 5 ? (
+          {step < 6 ? (
             <Button onClick={handleNext} disabled={loading}>
               {console.log('🔘 Showing Next button for step:', step)}
               Next

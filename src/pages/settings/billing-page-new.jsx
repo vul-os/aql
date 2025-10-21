@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -35,8 +34,13 @@ import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 
 export default function BillingPage() {
-  const { organization } = useOutletContext();
-  const { user } = useAuth();
+  const { user, selectedOrg, selectedLocation } = useAuth();
+  const organization = selectedOrg ? {
+    id: selectedOrg.organization_id,
+    name: selectedOrg.organization_name,
+    subscription_tier: selectedOrg.subscription_tier,
+    role: selectedOrg.member_role
+  } : null;
   const { toast } = useToast();
   const { authorizations, loading, refreshAuthorizations } = usePaymentAuthorizations();
   const { 
@@ -403,8 +407,8 @@ export default function BillingPage() {
 
           {/* Info Card */}
           {authorizations.length > 0 && (
-            <Alert className="mt-6 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-              <AlertCircle className="h-4 w-4 text-blue-600" />
+            <Alert className="mt-6 bg-accent/5 dark:bg-accent/10 border-accent/20 dark:border-accent/30">
+              <AlertCircle className="h-4 w-4 text-accent" />
               <AlertDescription className="text-sm">
                 <strong>Card Verification:</strong> When adding a new card, we charge R1 to verify it. 
                 This may be refunded by your bank or appear as a pending transaction.

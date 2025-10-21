@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useLocation, useOutletContext } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -26,7 +26,10 @@ import {
   Loader2,
   AlertCircle,
   Calendar,
-  Info
+  Info,
+  FileText,
+  Clock,
+  Scissors
 } from 'lucide-react';
 import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -34,20 +37,20 @@ import { useAuth } from '@/context/auth-context';
 import { usePaymentAuthorizations, usePaystack } from '@/hooks/use-paystack';
 import PriceCalculator from '@/components/services/price-calculator';
 import LocationChecker from '@/components/services/location-checker';
-import ScheduleSelector from '@/components/services/schedule-selector';
 import LocationWizard from '@/components/services/location-wizard';
 import SignaturePad from '@/components/services/signature-pad';
-
-const STORAGE_KEY = 'addServiceWizardData';
+import { API } from '@/lib/config';
 
 export default function AddServicePage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { selectedOrg } = useOutletContext();
+  const { user, selectedOrg, selectedLocation } = useAuth();
   const { toast } = useToast();
-  const { user } = useAuth();
   const { authorizations, loading: authLoading } = usePaymentAuthorizations();
   const { addPaymentMethod, processing } = usePaystack();
+
+  // Make storage key organization-specific to avoid conflicts
+  const STORAGE_KEY = `addServiceWizardData_${selectedOrg?.organization_id || 'default'}`;
 
   // Load from localStorage
   const loadSavedData = () => {
@@ -55,6 +58,12 @@ export default function AddServicePage() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
+        // Validate that the saved org matches current org
+        if (parsed.organizationId && parsed.organizationId !== selectedOrg?.organization_id) {
+          console.warn('Saved data is from different organization, ignoring');
+          localStorage.removeItem(STORAGE_KEY);
+          return null;
+        }
         console.log('📦 Loaded from localStorage:', parsed);
         return parsed;
       }
@@ -82,38 +91,79 @@ export default function AddServicePage() {
   // Form state
   const [formData, setFormData] = useState(initialData?.formData || {
     locationId: '',
+    serviceName: '',  // NEW: Service name
     serviceType: 'garden',
+    service_frequency: 'bi-weekly', // bi-weekly or monthly
     gardens: [
       {
         name: 'Garden 1',
-        area_sqm: ''
+        area_sqm: '100'
       }
     ],
-    schedule: {
-      scheduleType: 'weekly',
-      weeklyDays: [],
-      monthlyDays: [],
-      preferredTime: '10:00',
-      isValid: false
+    schedulingPreferences: {
+      edge_trimming_per_month: 2, // 1-2 for bi-weekly, 1-4 for monthly
+      preferred_day_of_week: 1, // 0=Sunday, 6=Saturday
+      preferred_time_window_start: '08:00',
+      preferred_time_window_end: '12:00'
     },
     signature: null
   });
 
-  const [calculatedPricing, setCalculatedPricing] = useState(null);
-  const [generatingPdf, setGeneratingPdf] = useState(false);
-  const [agreementPdfUrl, setAgreementPdfUrl] = useState(null);
+  const [calculatedPricing, setCalculatedPricing] = useState(initialData?.calculatedPricing || null);
+
+  // Calculate pricing whenever gardens or scheduling changes
+  useEffect(() => {
+    const calculatePricing = async () => {
+      try {
+        const validGardens = formData.gardens.filter(g => g.name && g.area_sqm);
+        const numberOfBots = validGardens.length;
+        const servicesPerMonth = formData.schedulingPreferences?.edge_trimming_per_month || 2;
+        
+        if (numberOfBots === 0 || step < 3) {
+          setCalculatedPricing(null);
+          return;
+        }
+
+        // Call the pricing function
+        const { data, error } = await supabase.rpc('get_tier_pricing', {
+          p_bot_type: 'mow_bot',
+          p_number_of_bots: numberOfBots,
+          p_services_per_month: servicesPerMonth
+        });
+
+        if (error) {
+          console.error('Error calculating pricing:', error);
+          return;
+        }
+
+        console.log('📊 Pricing calculated:', data);
+        setCalculatedPricing(data);
+      } catch (err) {
+        console.error('Error in pricing calculation:', err);
+      }
+    };
+
+    // Only calculate if we have gardens and are on step 3 or later
+    if (step >= 3 && formData.gardens.some(g => g.name && g.area_sqm)) {
+      calculatePricing();
+    }
+  }, [formData.gardens, formData.schedulingPreferences?.edge_trimming_per_month, step]);
 
   // Save to localStorage on every change
   useEffect(() => {
+    if (!selectedOrg?.organization_id) return;
+    
     const dataToSave = {
       step,
       formData,
       showNewLocation,
+      calculatedPricing,
+      organizationId: selectedOrg.organization_id,
       timestamp: Date.now()
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
     console.log('💾 Saved - Step:', step);
-  }, [step, formData, showNewLocation]);
+  }, [step, formData, showNewLocation, calculatedPricing, selectedOrg?.organization_id]);
 
   useEffect(() => {
     if (selectedOrg?.organization_id) {
@@ -122,12 +172,33 @@ export default function AddServicePage() {
       // Show restore toast
       if (initialData && initialData.step > 1) {
         toast({
+          variant: "success",
           title: "Progress Restored",
           description: `Continuing from Step ${initialData.step}`,
         });
       }
     }
   }, [selectedOrg]);
+
+  // Auto-generate service name when location or service type changes
+  useEffect(() => {
+    if (formData.locationId && locations.length > 0) {
+      const selectedLocation = locations.find(l => l.id === formData.locationId);
+      if (selectedLocation) {
+        const serviceTypeMap = {
+          'garden': 'Lawn Care',
+          'pool': 'Pool Cleaning',
+          'security': 'Security Monitoring',
+          'weather': 'Weather Station'
+        };
+        const typeName = serviceTypeMap[formData.serviceType] || 'Service';
+        const autoName = `${selectedLocation.name} - ${typeName}`;
+        
+        // Always update the service name (removed the !formData.serviceName condition)
+        setFormData(prev => ({ ...prev, serviceName: autoName }));
+      }
+    }
+  }, [formData.locationId, formData.serviceType, locations]);
 
   const loadLocations = async () => {
     try {
@@ -141,9 +212,13 @@ export default function AddServicePage() {
       if (error) throw error;
       setLocations(data || []);
       
-      // Auto-select first location if none is selected
-      if (data && data.length > 0 && !formData.locationId) {
-        setFormData(prev => ({ ...prev, locationId: data[0].id }));
+      // Validate that saved locationId exists, otherwise reset to first location
+      if (data && data.length > 0) {
+        const locationExists = data.some(loc => loc.id === formData.locationId);
+        if (!locationExists) {
+          console.warn('Saved location not found, resetting to first location');
+          setFormData(prev => ({ ...prev, locationId: data[0].id }));
+        }
       }
     } catch (error) {
       console.error('Error loading locations:', error);
@@ -211,107 +286,19 @@ export default function AddServicePage() {
     }
 
     if (step === 3) {
-      // Validate schedule
-      if (!formData.schedule || !formData.schedule.isValid) {
-        toast({
-          title: 'Schedule Required',
-          description: 'Please set up a valid service schedule',
-          variant: 'destructive'
-        });
-        return;
-      }
+      // Scheduling preferences are always valid (have defaults)
+      // No validation needed
     }
 
-    // Step 5: Generate PDF and save signature after user signs
-    if (step === 5 && formData.signature) {
-      try {
-        setGeneratingPdf(true);
-        
-        // Validate required data
-        if (!user?.id) {
-          throw new Error('User ID is required');
-        }
-        if (!selectedOrg?.organization_id) {
-          throw new Error('Organization ID is required');
-        }
-        if (!formData.locationId) {
-          throw new Error('Location ID is required');
-        }
-
-        // Edge Function will fetch user profile, location, and calculate pricing
-        // We only send the essential service details
-        const requestBody = {
-          user_id: user.id,
-          organization_id: selectedOrg.organization_id,
-          location_id: formData.locationId,
-          signature_base64: formData.signature,
-          number_of_bots: formData.gardens.length,
-          services_per_month: calculatedPricing?.services_per_month || 4,
-        };
-        
-        console.log('Sending agreement data:', JSON.stringify(requestBody, null, 2));
-        
-        // Call Edge Function to generate PDF and save signature
-        const response = await fetch(
-          `${supabaseUrl}/functions/v1/generate-agreement-pdf`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${supabaseAnonKey}`,
-            },
-            body: JSON.stringify(requestBody)
-          }
-        );
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Edge Function error response:', errorText);
-          let errorData;
-          try {
-            errorData = JSON.parse(errorText);
-          } catch (e) {
-            errorData = { error: errorText };
-          }
-          throw new Error(errorData.error || `Failed to generate agreement PDF (${response.status})`);
-        }
-
-        const data = await response.json();
-        console.log('Edge Function response:', data);
-        
-        if (data.success) {
-          // Store URLs in form data
-          setFormData({
-            ...formData,
-            signatureUrl: data.signature_url,
-            pdfUrl: data.pdf_url,
-            signaturePath: data.signature_path,
-            pdfPath: data.pdf_path
-          });
-          
-          setAgreementPdfUrl(data.pdf_url);
-
-          toast({
-            title: 'Agreement Generated! ✓',
-            description: 'Your signature and rental agreement have been saved securely.',
-          });
-        } else {
-          throw new Error(data.error || 'Failed to generate PDF');
-        }
-        
-      } catch (error) {
-        console.error('Error generating agreement:', error);
-        toast({
-          title: 'Generation Failed',
-          description: error.message || 'Failed to generate agreement. Please try again.',
-          variant: 'destructive'
-        });
-        // Don't proceed if PDF generation failed
-        setGeneratingPdf(false);
-        return;
-      } finally {
-        setGeneratingPdf(false);
-      }
+    // Step 5: Just validate signature is present
+    // Agreement generation happens AFTER service and gardens are created in handleSubmit
+    if (step === 5 && !formData.signature) {
+      toast({
+        title: 'Signature Required',
+        description: 'Please sign the agreement before proceeding.',
+        variant: 'destructive'
+      });
+      return;
     }
 
     setStep(step + 1);
@@ -325,12 +312,26 @@ export default function AddServicePage() {
     setLoading(true);
     try {
       const locationId = formData.locationId;
+      
+      // Validate location exists
+      if (!locationId || !locations.some(loc => loc.id === locationId)) {
+        toast({
+          title: 'Invalid Location',
+          description: 'Please select a valid location',
+          variant: 'destructive'
+        });
+        setLoading(false);
+        return;
+      }
+      
+      // Normalize service type (garden → lawn) for database
+      const serviceType = formData.serviceType === 'garden' ? 'lawn' : formData.serviceType;
 
       // Check if service already exists at this location
-      const { data: existingCheck, error: checkError } = await supabase
+      const { data: existingCheck, error: checkError} = await supabase
         .rpc('check_service_exists_at_location', {
           p_location_id: locationId,
-          p_service_type: formData.serviceType
+          p_service_type: serviceType  // Use normalized type
         });
 
       if (checkError) {
@@ -347,12 +348,51 @@ export default function AddServicePage() {
         return;
       }
 
-      // Create gardens
+      // STEP 1: Create SERVICE first
+      console.log('Creating service...');
+      const { data: service, error: serviceError } = await supabase
+        .from('services')
+        .insert({
+          organization_id: selectedOrg.organization_id,
+          location_id: locationId,
+          name: formData.serviceName || `${formData.serviceType} Service`,
+          service_type: serviceType,  // Use normalized type
+          service_frequency: formData.service_frequency || 'bi-weekly',
+          services_per_month: formData.schedulingPreferences.edge_trimming_per_month || 2,
+          status: 'active',  // Active since agreements will be signed
+          activation_date: new Date().toISOString(),
+          is_active: true
+        })
+        .select()
+        .single();
+
+      if (serviceError) {
+        // Check if it's a duplicate service error
+        if (serviceError.code === '23505' && serviceError.message.includes('services_organization_id_location_id_service_type_key')) {
+          toast({
+            title: 'Service Already Exists',
+            description: `A ${formData.serviceType} service already exists at this location. Please go to the Services page to view it.`,
+            variant: 'destructive',
+            duration: 7000,
+          });
+          setLoading(false);
+          setTimeout(() => {
+            navigate('/portal/services');
+          }, 2000);
+          return;
+        }
+        throw serviceError;
+      }
+      console.log('Service created:', service);
+
+      const serviceId = service.id;
+
+      // STEP 2: Create gardens/pools with service_id
       if (formData.serviceType === 'garden') {
-        // Filter out empty gardens
         const validGardens = formData.gardens.filter(g => g.name && g.area_sqm);
         
         const gardensToInsert = validGardens.map(garden => ({
+          service_id: serviceId,  // ← Link to service
           location_id: locationId,
           name: garden.name,
           area_sqm: parseFloat(garden.area_sqm)
@@ -364,32 +404,59 @@ export default function AddServicePage() {
           .select();
 
         if (gardenError) throw gardenError;
+        console.log('Gardens created:', gardens);
 
-        // Create schedules for each garden
-        if (formData.schedule && formData.schedule.isValid && gardens) {
-          const schedulesToInsert = gardens.map(garden => ({
-            organization_id: selectedOrg.organization_id,
-            location_id: locationId,
-            garden_id: garden.id,
-            schedule_type: formData.schedule.scheduleType,
-            weekly_days: formData.schedule.weeklyDays || [],
-            monthly_days: formData.schedule.monthlyDays || [],
-            preferred_time: formData.schedule.preferredTime,
-            max_services_per_month: calculatedPricing?.services_per_month || 4,
-            created_by: user.id
-          }));
+        // STEP 3: Create rental agreements (one per garden)
+        if (formData.signature && gardens && gardens.length > 0) {
+          console.log('Creating rental agreements...');
+          
+          const agreementResponse = await fetch(API.CREATE_RENTAL_AGREEMENTS, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: user.id,
+              organization_id: selectedOrg.organization_id,
+              location_id: locationId,
+              service_id: serviceId,  // ← Pass service ID
+              signature_base64: formData.signature,
+              gardens: gardens.map(g => ({  // ← Pass gardens array
+                id: g.id,
+                name: g.name,
+                area_sqm: g.area_sqm
+              })),
+              services_per_month: formData.schedulingPreferences.edge_trimming_per_month || 2,
+            })
+          });
 
-          const { error: scheduleError } = await supabase
-            .from('service_schedules')
-            .insert(schedulesToInsert);
-
-          if (scheduleError) {
-            console.error('Error creating schedules:', scheduleError);
-            // Don't throw, just log - service is created
+          if (!agreementResponse.ok) {
+            const error = await agreementResponse.text();
+            console.error('Agreement generation error:', error);
+            // Don't throw - continue with service creation
+          } else {
+            const agreementData = await agreementResponse.json();
+            console.log(`✅ Generated ${agreementData.total_agreements} agreement(s)`);
           }
         }
 
+        // STEP 4: Create scheduling preferences
+        const { error: prefError } = await supabase
+          .from('service_preferences')
+          .insert({
+            service_id: serviceId,
+            day_of_week: formData.schedulingPreferences.preferred_day_of_week,
+            time_window_start: formData.schedulingPreferences.preferred_time_window_start,
+            time_window_end: formData.schedulingPreferences.preferred_time_window_end,
+            priority: 1,
+            is_active: true
+          });
+
+        if (prefError) {
+          console.error('Error creating schedule preferences:', prefError);
+          // Don't throw - service is created
+        }
+
         toast({
+          variant: 'success',
           title: 'Service Created Successfully! 🎉',
           description: 'You will receive communication regarding installation of your service within 24-48 hours. Our team will contact you to schedule the bot setup.',
           duration: 7000,
@@ -450,7 +517,32 @@ export default function AddServicePage() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-6 relative">
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
+          <Card className="w-full max-w-md border-2 border-primary/20 shadow-2xl">
+            <CardContent className="p-8 text-center space-y-4">
+              <div className="flex justify-center">
+                <Loader2 className="h-16 w-16 animate-spin text-primary" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold">
+                  Creating Your Service...
+                </h3>
+                <p className="text-muted-foreground">
+                  Setting up your service, creating gardens, and generating agreements. This may take a moment.
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                <CheckCircle className="h-4 w-4" />
+                <span>Secure • Encrypted • Professional</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -459,8 +551,9 @@ export default function AddServicePage() {
             Step {step} of {totalSteps}: {
               step === 1 ? 'Select Location & Service Type' :
               step === 2 ? 'Service Details' :
-              step === 3 ? 'Schedule Setup' :
+              step === 3 ? 'Scheduling Preferences' :
               step === 4 ? 'Review & Pricing' :
+              step === 5 ? 'Sign Agreement' :
               'Payment Method'
             }
           </p>
@@ -475,14 +568,15 @@ export default function AddServicePage() {
               setFormData({
                 locationId: locations[0]?.id || '',
                 serviceType: 'garden',
-                gardens: [{ name: 'Garden 1', area_sqm: '' }],
-                schedule: {
-                  scheduleType: 'weekly',
-                  weeklyDays: [],
-                  monthlyDays: [],
-                  preferredTime: '10:00',
-                  isValid: false
-                }
+                service_frequency: 'bi-weekly',
+                gardens: [{ name: 'Garden 1', area_sqm: '100' }],
+                schedulingPreferences: {
+                  edge_trimming_per_month: 2,
+                  preferred_day_of_week: 1,
+                  preferred_time_window_start: '08:00',
+                  preferred_time_window_end: '12:00'
+                },
+                signature: null
               });
               toast({ title: "Progress cleared", description: "Starting fresh" });
             }}
@@ -567,6 +661,36 @@ export default function AddServicePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Service Name */}
+          {formData.locationId && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  Service Name
+                </CardTitle>
+                <CardDescription>
+                  Give this service a friendly name (auto-generated, but you can edit it)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label htmlFor="serviceName">Service Name *</Label>
+                  <Input
+                    id="serviceName"
+                    value={formData.serviceName}
+                    onChange={(e) => setFormData({...formData, serviceName: e.target.value})}
+                    placeholder="e.g., Home - Lawn Care"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This name will appear on invoices and agreements
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Service Type Selection */}
           <div>
@@ -661,7 +785,7 @@ export default function AddServicePage() {
                     <Input
                       id={`garden-area-${index}`}
                       type="number"
-                      placeholder="250"
+                      placeholder="100"
                       value={garden.area_sqm}
                       onChange={(e) => {
                         const newGardens = [...formData.gardens];
@@ -687,7 +811,7 @@ export default function AddServicePage() {
                   ...formData.gardens,
                   {
                     name: `Garden ${nextIndex}`,
-                    area_sqm: ''
+                    area_sqm: '100'
                   }
                 ]
               });
@@ -727,28 +851,214 @@ export default function AddServicePage() {
         </div>
       )}
 
-      {/* Step 3: Schedule Setup */}
+      {/* Step 3: Scheduling Preferences */}
       {step === 3 && (
-        <div className="max-w-3xl mx-auto">
-          <ScheduleSelector
-            schedule={formData.schedule}
-            onChange={(scheduleData) => {
-              setFormData({
-                ...formData,
-                schedule: scheduleData
-              });
-            }}
-            maxServicesPerMonth={calculatedPricing?.services_per_month || 4}
-            basePrice={calculatedPricing?.monthly_total || 0}
-          />
+        <div className="max-w-3xl mx-auto space-y-6">
+          {/* Important Information Alert */}
+          <Alert className="border-primary/50 bg-primary/5">
+            <Info className="h-4 w-4 text-primary" />
+            <AlertDescription className="space-y-2 text-sm">
+              <p className="font-medium">Please note:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li><strong>Bot servicing:</strong> Bots are automatically serviced once a month (fixed)</li>
+                <li><strong>Edge trimming:</strong> Select 1-4 edge trimming visits per month based on your needs</li>
+                <li><strong>Flexible scheduling:</strong> Your preferred day and time are our priority, but may change due to weather, environmental conditions, or logistical factors</li>
+                <li><strong>Appointment allocation:</strong> One of your selected time windows will be chosen for each visit</li>
+              </ul>
+            </AlertDescription>
+          </Alert>
+
+          {/* Edge Trimming Frequency */}
+          <Card className="border-2">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Scissors className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Edge Trimming Frequency</CardTitle>
+              </div>
+              <CardDescription>
+                Choose how many edge trimming visits you'd like per month (1-4 visits)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Label>Visits per Month</Label>
+                <div className="grid grid-cols-4 gap-3">
+                  {[1, 2, 3, 4].map((visits) => (
+                    <button
+                      key={visits}
+                      type="button"
+                      onClick={() => setFormData({
+                        ...formData,
+                        service_frequency: 'monthly',
+                        schedulingPreferences: {
+                          ...formData.schedulingPreferences,
+                          edge_trimming_per_month: visits
+                        }
+                      })}
+                      className={`p-6 rounded-lg border-2 text-center transition-all ${
+                        formData.schedulingPreferences?.edge_trimming_per_month === visits
+                          ? 'border-primary bg-primary/10 shadow-md'
+                          : 'border-border hover:border-primary/50 hover:bg-muted'
+                      }`}
+                    >
+                      <div className="text-3xl font-bold mb-2 text-primary">{visits}</div>
+                      <div className="text-xs text-muted-foreground">
+                        visit{visits > 1 ? 's' : ''}/month
+                      </div>
+                      <div className="text-sm font-semibold mt-2">
+                        R{visits * 100}
+                      </div>
+                      {formData.schedulingPreferences?.edge_trimming_per_month === visits && (
+                        <CheckCircle className="h-5 w-5 text-primary mx-auto mt-2" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-center">
+                    <strong>R{((formData.schedulingPreferences?.edge_trimming_per_month || 2) * 100).toFixed(2)}/month</strong> for edge trimming
+                    <span className="text-muted-foreground ml-1">(R100 per visit)</span>
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Preferred Day of Week */}
+          <Card className="border-2">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Preferred Day of Week</CardTitle>
+              </div>
+              <CardDescription>Choose your preferred day for service visits</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Label>Select Day</Label>
+                <div className="grid grid-cols-7 gap-2">
+                  {[
+                    { value: 0, label: 'Sun', full: 'Sunday' },
+                    { value: 1, label: 'Mon', full: 'Monday' },
+                    { value: 2, label: 'Tue', full: 'Tuesday' },
+                    { value: 3, label: 'Wed', full: 'Wednesday' },
+                    { value: 4, label: 'Thu', full: 'Thursday' },
+                    { value: 5, label: 'Fri', full: 'Friday' },
+                    { value: 6, label: 'Sat', full: 'Saturday' }
+                  ].map((day) => (
+                    <button
+                      key={day.value}
+                      type="button"
+                      onClick={() => setFormData({
+                        ...formData,
+                        schedulingPreferences: {
+                          ...formData.schedulingPreferences,
+                          preferred_day_of_week: day.value
+                        }
+                      })}
+                      className={`p-3 rounded-lg border-2 text-center transition-all ${
+                        formData.schedulingPreferences?.preferred_day_of_week === day.value
+                          ? 'border-primary bg-primary text-primary-foreground shadow-md'
+                          : 'border-border hover:border-primary/50 hover:bg-muted'
+                      }`}
+                      title={day.full}
+                    >
+                      <div className="text-xs font-semibold">{day.label}</div>
+                    </button>
+                  ))}
+                </div>
+                {formData.schedulingPreferences?.preferred_day_of_week !== undefined && (
+                  <p className="text-sm text-muted-foreground">
+                    ✓ Selected: {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][formData.schedulingPreferences.preferred_day_of_week]}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Preferred Time Window */}
+          <Card className="border-2">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Preferred Time Window</CardTitle>
+              </div>
+              <CardDescription>Select your preferred time range for service visits</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="time-start">Start Time</Label>
+                  <Select 
+                    value={formData.schedulingPreferences?.preferred_time_window_start || '08:00'}
+                    onValueChange={(value) => setFormData({
+                      ...formData,
+                      schedulingPreferences: {
+                        ...formData.schedulingPreferences,
+                        preferred_time_window_start: value
+                      }
+                    })}
+                  >
+                    <SelectTrigger id="time-start">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent position="popper" sideOffset={5}>
+                      <SelectItem value="06:00">6:00 AM</SelectItem>
+                      <SelectItem value="07:00">7:00 AM</SelectItem>
+                      <SelectItem value="08:00">8:00 AM</SelectItem>
+                      <SelectItem value="09:00">9:00 AM</SelectItem>
+                      <SelectItem value="10:00">10:00 AM</SelectItem>
+                      <SelectItem value="11:00">11:00 AM</SelectItem>
+                      <SelectItem value="12:00">12:00 PM</SelectItem>
+                      <SelectItem value="13:00">1:00 PM</SelectItem>
+                      <SelectItem value="14:00">2:00 PM</SelectItem>
+                      <SelectItem value="15:00">3:00 PM</SelectItem>
+                      <SelectItem value="16:00">4:00 PM</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="time-end">End Time</Label>
+                  <Select 
+                    value={formData.schedulingPreferences?.preferred_time_window_end || '12:00'}
+                    onValueChange={(value) => setFormData({
+                      ...formData,
+                      schedulingPreferences: {
+                        ...formData.schedulingPreferences,
+                        preferred_time_window_end: value
+                      }
+                    })}
+                  >
+                    <SelectTrigger id="time-end">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent position="popper" sideOffset={5}>
+                      <SelectItem value="08:00">8:00 AM</SelectItem>
+                      <SelectItem value="09:00">9:00 AM</SelectItem>
+                      <SelectItem value="10:00">10:00 AM</SelectItem>
+                      <SelectItem value="11:00">11:00 AM</SelectItem>
+                      <SelectItem value="12:00">12:00 PM</SelectItem>
+                      <SelectItem value="13:00">1:00 PM</SelectItem>
+                      <SelectItem value="14:00">2:00 PM</SelectItem>
+                      <SelectItem value="15:00">3:00 PM</SelectItem>
+                      <SelectItem value="16:00">4:00 PM</SelectItem>
+                      <SelectItem value="17:00">5:00 PM</SelectItem>
+                      <SelectItem value="18:00">6:00 PM</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                Services are typically scheduled within this time window
+              </p>
+            </CardContent>
+          </Card>
         </div>
       )}
 
       {/* Step 4: Review & Pricing */}
       {step === 4 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Summary */}
-          <div className="space-y-4">
+        <div className="max-w-3xl mx-auto space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Service Summary</CardTitle>
@@ -801,37 +1111,24 @@ export default function AddServicePage() {
               <CardContent>
                 <div className="space-y-2">
                   <div>
-                    <p className="text-sm text-muted-foreground">Schedule Type</p>
-                    <p className="font-medium capitalize">{formData.schedule?.scheduleType || 'Not set'}</p>
+                    <p className="text-sm text-muted-foreground">Service Frequency</p>
+                    <p className="font-medium capitalize">{formData.service_frequency === 'bi-weekly' ? 'Bi-Weekly (Every 2 Weeks)' : 'Monthly (Every 4 Weeks)'}</p>
                   </div>
-                  {formData.schedule?.weeklyDays?.length > 0 && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Weekly Days</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {formData.schedule.weeklyDays.map(day => {
-                          const dayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][day];
-                          return <Badge key={day} variant="secondary">{dayName}</Badge>;
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  {formData.schedule?.monthlyDays?.length > 0 && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Monthly Days</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {formData.schedule.monthlyDays.map(day => (
-                          <Badge key={day} variant="secondary">{day}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                   <div>
-                    <p className="text-sm text-muted-foreground">Preferred Time</p>
-                    <p className="font-medium">{formData.schedule?.preferredTime || '10:00'}</p>
+                    <p className="text-sm text-muted-foreground">Preferred Day</p>
+                    <p className="font-medium">
+                      {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][formData.schedulingPreferences?.preferred_day_of_week || 1]}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Time Window</p>
+                    <p className="font-medium">
+                      {formData.schedulingPreferences?.preferred_time_window_start || '08:00'} - {formData.schedulingPreferences?.preferred_time_window_end || '12:00'}
+                    </p>
                   </div>
                   <div className="mt-3 p-2 bg-muted rounded-md">
                     <p className="text-sm">
-                      <span className="font-medium">~{formData.schedule?.estimatedServices || 0}</span> services per month
+                      <span className="font-medium">{formData.schedulingPreferences?.edge_trimming_per_month || 2}</span> edge trimming visit{(formData.schedulingPreferences?.edge_trimming_per_month || 2) > 1 ? 's' : ''} per month
                     </p>
                   </div>
                 </div>
@@ -911,16 +1208,6 @@ export default function AddServicePage() {
                 </CardContent>
               </Card>
             )}
-          </div>
-
-          {/* Price Calculator */}
-          <PriceCalculator 
-            serviceType={formData.serviceType}
-            totalArea={formData.gardens.reduce((sum, g) => sum + (parseFloat(g.area_sqm) || 0), 0)}
-            gardenCount={formData.gardens.filter(g => g.name && g.area_sqm).length}
-            servicesPerMonth={formData.schedule?.estimatedServices || 1}
-            onPriceChange={setCalculatedPricing}
-          />
         </div>
       )}
 
@@ -1019,33 +1306,13 @@ export default function AddServicePage() {
                 />
               </div>
 
-              {/* PDF Generation Status */}
-              {generatingPdf && (
-                <Alert>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <AlertDescription>
-                    Generating your rental agreement PDF...
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {agreementPdfUrl && (
-                <Alert className="border-green-500 bg-green-50">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <AlertDescription>
-                    <div className="flex items-center justify-between">
-                      <span className="text-green-800">Agreement PDF generated successfully!</span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(agreementPdfUrl, '_blank')}
-                      >
-                        View PDF
-                      </Button>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
+              {/* Info about next steps */}
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  Your agreement will be generated after you complete the setup in the next step.
+                </AlertDescription>
+              </Alert>
             </CardContent>
           </Card>
         </div>
@@ -1209,6 +1476,7 @@ export default function AddServicePage() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-background rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <LocationWizard
+              organizationId={selectedOrg?.organization_id}
               embedded={true}
               onComplete={(newLocation) => {
                 // Reload locations and select the new one
@@ -1216,6 +1484,7 @@ export default function AddServicePage() {
                   setFormData({...formData, locationId: newLocation.id});
                   setShowLocationWizard(false);
                   toast({
+                    variant: 'success',
                     title: 'Location Added',
                     description: `${newLocation.name} has been added and selected`,
                   });

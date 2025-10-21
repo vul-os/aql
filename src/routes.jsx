@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import ProtectedRoute from './components/auth/protected-route';
+import AdminProtectedRoute from './components/auth/admin-protected-route';
 
 // Layouts
 import BlankLayout from './components/layout/blank-layout';
@@ -38,17 +39,21 @@ const SignUp = lazyImport(() => import('./pages/auth/signup'));
 const ForgotPassword = lazyImport(() => import('./pages/auth/forgot-password'));
 const UpdatePassword = lazyImport(() => import('./pages/auth/update-password'));
 const VerifyEmail = lazyImport(() => import('./pages/auth/verify-email'));
-const AcceptInvite = lazyImport(() => import('./pages/auth/accept-invite'));
 
 // Portal pages
 const DashboardPage = lazyImport(() => import('./pages/dashboard/dashboard-page'));
 const ServicesPage = lazyImport(() => import('./pages/services/services-page'));
-const GardenDetailPage = lazyImport(() => import('./pages/services/garden-detail-page'));
+const ServiceDetailPage = lazyImport(() => import('./pages/services/service-detail-page'));
 const AddServicePage = lazyImport(() => import('./pages/services/add-service-page'));
 const AddServicePublic = lazyImport(() => import('./pages/services/add-service-public'));
 const SettingsPage = lazyImport(() => import('./pages/settings/settings-page'));
 const BillingPage = lazyImport(() => import('./pages/settings/billing-page'));
 const MembersPage = lazyImport(() => import('./pages/members/members-page'));
+
+// Admin pages
+const ApprovalsPage = lazyImport(() => import('./pages/admin/approvals-page'));
+const BotManagementPage = lazyImport(() => import('./pages/admin/bot-management-page'));
+const ServiceAppointmentScheduler = lazyImport(() => import('./pages/admin/service-appointment-scheduler'));
 
 // Docs pages
 const DocsHome = lazyImport(() => import('./pages/docs/docs-home'));
@@ -66,15 +71,18 @@ const Protected = ({ children }) => (
   <ProtectedRoute>{children}</ProtectedRoute>
 );
 
+const AdminProtected = ({ children }) => (
+  <AdminProtectedRoute>
+    <ProtectedRoute>{children}</ProtectedRoute>
+  </AdminProtectedRoute>
+);
+
 const AppRoutes = () => {
   return (
     <CustomSuspense>
       <Routes>
         {/* Public landing page */}
         <Route path="/" element={<LandingPage />} />
-
-        {/* Accept invitation (public, no layout) */}
-        <Route path="/accept-invite/:token" element={<AcceptInvite />} />
 
         {/* Auth routes with blank layout */}
         <Route element={<BlankLayout />}>
@@ -106,10 +114,12 @@ const AppRoutes = () => {
           {/* Services */}
           <Route path="services" element={<ServicesPage />} />
           <Route path="services/add" element={<AddServicePage />} />
-          <Route path="garden/:id" element={<GardenDetailPage />} />
+          <Route path="service/:id" element={<ServiceDetailPage />} />
+          <Route path="service/:id/:tab" element={<ServiceDetailPage />} />
           
-          {/* Settings */}
+          {/* Settings - with optional tab sub-route */}
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="settings/:tab" element={<SettingsPage />} />
           
           {/* Billing */}
           <Route path="billing" element={<BillingPage />} />
@@ -138,6 +148,18 @@ const AppRoutes = () => {
           <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
           <Route path="terms-of-service" element={<TermsOfServicePage />} />
           <Route path="cookie-policy" element={<CookiePolicyPage />} />
+        </Route>
+
+        {/* Admin routes (protected by admin role) */}
+        <Route path="/admin" element={
+          <AdminProtected>
+            <PortalLayout />
+          </AdminProtected>
+        }>
+          <Route path="approvals" element={<ApprovalsPage />} />
+          <Route path="bot-management" element={<BotManagementPage />} />
+          <Route path="bot-management/:tab" element={<BotManagementPage />} />
+          <Route path="appointment-scheduler" element={<ServiceAppointmentScheduler />} />
         </Route>
 
         {/* Legacy dashboard redirect */}

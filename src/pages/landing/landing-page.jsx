@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AddressSearch } from '@/components/ui/address-search';
-import { Bot, Sprout, Droplets, Shield, MapPin, CheckCircle2, ArrowRight, LayoutDashboard, X, Facebook, Instagram, Linkedin, Mail, Clock, CreditCard, BarChart3, Wrench, User2, ChevronDown, Plus, Minus } from 'lucide-react';
+import { Bot, Sprout, Droplets, Shield, MapPin, CheckCircle2, ArrowRight, LayoutDashboard, X, Facebook, Instagram, Linkedin, Mail, Clock, CreditCard, BarChart3, Wrench, User2, ChevronDown, Plus, Minus, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
@@ -30,9 +30,12 @@ export default function LandingPage() {
   });
   const [activeAudience, setActiveAudience] = useState('homeowner');
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
+  const [coverageAreas, setCoverageAreas] = useState([]);
+  const [loadingCoverageAreas, setLoadingCoverageAreas] = useState(true);
 
   useEffect(() => {
     checkUserOrganization();
+    loadCoverageAreas();
   }, [user]);
 
   useEffect(() => {
@@ -43,6 +46,25 @@ export default function LandingPage() {
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  const loadCoverageAreas = async () => {
+    try {
+      setLoadingCoverageAreas(true);
+      const { data, error } = await supabase
+        .from('coverage_areas')
+        .select('*')
+        .eq('is_active', true)
+        .order('priority', { ascending: false })
+        .order('city', { ascending: true });
+
+      if (error) throw error;
+      setCoverageAreas(data || []);
+    } catch (error) {
+      console.error('Error loading coverage areas:', error);
+    } finally {
+      setLoadingCoverageAreas(false);
+    }
+  };
 
   const checkUserOrganization = async () => {
     if (!user) {
@@ -90,18 +112,55 @@ export default function LandingPage() {
       if (error) throw error;
 
       setCoverageResults(data);
-      // Save to localStorage
+      // Save to localStorage for later use
       localStorage.setItem('coverageResults', JSON.stringify(data));
+      localStorage.setItem('pendingLocationAddress', JSON.stringify(address));
       
       if (data && data.length > 0) {
+        // Coverage found! Guide user to sign up
         toast({
-          title: "Great news!",
-          description: `We service your area! Found ${data.length} coverage zone(s).`,
+          title: "Great news! We cover your area! 🎉",
+          description: "Let's get you started with your automated property care.",
         });
+        
+        // If user is not logged in, redirect to sign up with location data
+        if (!user) {
+          setTimeout(() => {
+            navigate('/auth/register', { 
+              state: { 
+                address: address,
+                coverageData: data 
+              }
+            });
+          }, 1500);
+        } else {
+          // User is logged in, check if they have an organization
+          if (hasOrganization) {
+            // Navigate to add service/location
+            setTimeout(() => {
+              navigate('/portal/services/add', {
+                state: {
+                  address: address,
+                  coverageData: data
+                }
+              });
+            }, 1500);
+          } else {
+            // Need to create organization first
+            setTimeout(() => {
+              navigate('/portal/dashboard', {
+                state: {
+                  address: address,
+                  coverageData: data
+                }
+              });
+            }, 1500);
+          }
+        }
       } else {
         toast({
           title: "Not yet available",
-          description: "We don't service your area yet, but we're expanding soon!",
+          description: "We don't service your area yet, but we're expanding soon! Join our waitlist.",
           variant: "destructive"
         });
       }
@@ -155,118 +214,190 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-      {/* Header - transparent before scroll, solid after */}
-      <header className={`fixed top-0 left-0 right-0 z-50 transition-all border-b ${
-        scrolled ? 'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60' : 'bg-transparent border-transparent'
+      {/* Header - Modern, Clean Design */}
+      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled 
+          ? 'bg-white/95 dark:bg-slate-950/95 backdrop-blur-lg border-b border-slate-200 dark:border-slate-800 shadow-sm' 
+          : 'bg-white/50 dark:bg-slate-950/50 backdrop-blur-md border-b border-white/10'
       }`}>
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}> 
-            <Bot className={`h-8 w-8 ${scrolled ? 'text-primary' : 'text-primary'}`} />
-            <h1 className={`text-2xl font-bold ${scrolled ? '' : 'text-foreground'}`}>Bot Korp</h1>
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 sm:h-18">
+            {/* Logo */}
+            <div className="flex items-center gap-2.5 cursor-pointer group" onClick={() => navigate('/')}> 
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md group-hover:shadow-lg transition-all group-hover:scale-105">
+                <Bot className="h-5 w-5 text-white" />
           </div>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={() => navigate('/docs')} className={`hidden sm:flex ${scrolled ? '' : 'text-foreground hover:text-foreground/80'}`}>
+              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
+                Bot Korp
+              </h1>
+            </div>
+
+            {/* Navigation */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Button 
+                variant="ghost" 
+                onClick={() => navigate('/docs')} 
+                className="hidden sm:flex text-foreground/70 hover:text-primary hover:bg-primary/5 font-medium"
+              >
               Docs
             </Button>
+              
             {user && hasOrganization ? (
               <Button 
-                size="lg"
                 onClick={() => navigate('/portal')}
-                className="gap-2 shadow-lg hover:shadow-xl transition-all bg-secondary hover:bg-secondary/90"
+                  className="gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md hover:shadow-lg transition-all hover:scale-105 font-semibold"
               >
-                <LayoutDashboard className="h-5 w-5" />
-                Go to Portal
+                  <LayoutDashboard className="h-4 w-4" />
+                  <span className="hidden sm:inline">Dashboard</span>
+                  <span className="sm:hidden">Portal</span>
               </Button>
             ) : user ? (
-              <Button onClick={() => navigate('/portal')} className="bg-secondary hover:bg-secondary/90">
-                Dashboard
+                <Button 
+                  onClick={() => navigate('/portal')} 
+                  className="gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md hover:shadow-lg transition-all hover:scale-105 font-semibold"
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  <span className="hidden sm:inline">Dashboard</span>
+                  <span className="sm:hidden">Portal</span>
               </Button>
             ) : (
               <>
-                <Button variant="ghost" onClick={() => navigate('/auth/login')} className={`${scrolled ? '' : 'text-foreground hover:text-foreground/80'}`}>
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => navigate('/auth/login')} 
+                    className="text-foreground/70 hover:text-primary hover:bg-primary/5 font-medium"
+                  >
                   Login
                 </Button>
                 <Button 
-                  size="lg"
                   onClick={() => navigate('/auth/register')}
-                  className="shadow-lg hover:shadow-xl transition-all"
+                    className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md hover:shadow-lg transition-all hover:scale-105 font-semibold"
                 >
-                  Get Started
+                    <span className="hidden sm:inline">Get Started</span>
+                    <span className="sm:hidden">Sign Up</span>
                 </Button>
               </>
             )}
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Hero Section - full viewport with integrated coverage search */}
-      <section className="relative min-h-screen">
-        <img src="/images/lawn.jpg" alt="Lawn" className="absolute inset-0 w-full h-full object-cover bg-black" />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/5 via-background/20 to-background/70" />
-        <div className="relative container mx-auto px-4 min-h-screen pt-24 md:pt-28 lg:pt-32 pb-20 flex items-start justify-center">
-          <div className="max-w-4xl mx-auto text-center mt-12 md:mt-16">
-            <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-foreground drop-shadow leading-[1.05]">
-              Autonomous care for your
-              <span className="block bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent">property</span>
-            </h2>
-            <p className="mt-6 text-lg md:text-xl text-foreground/90 max-w-2xl mx-auto">
-              Lawn, pool, security and weather—handled by <span className="text-secondary font-semibold">smart bots</span> while you relax.
+      {/* Pilot Banner - Below Header */}
+      <div className="fixed top-16 sm:top-[72px] left-0 right-0 z-40 bg-gradient-to-r from-muted/50 via-accent/10 to-muted/50 dark:from-botkorp-black dark:via-botkorp-slate-blue dark:to-botkorp-black border-b border-accent/20 backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-2.5">
+          <div className="flex items-center justify-center gap-2 text-sm">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+            </span>
+            <p className="text-foreground">
+              <strong className="font-semibold text-primary">Pilot Program Now Active</strong> — Be among the first to experience automated property care in South Africa!
             </p>
+          </div>
+        </div>
+      </div>
 
-            {/* Address Search pill */}
-            <div className="mt-8 max-w-2xl mx-auto">
-              <div className="rounded-2xl bg-background/90 backdrop-blur-xl shadow-2xl ring-1 ring-border">
+      {/* Hero Section - full viewport with integrated coverage search */}
+      <section className="relative h-screen flex items-center mt-[110px] overflow-hidden">
+        {/* Background Image with Overlays */}
+        <div className="absolute inset-0 overflow-hidden">
+          <img 
+            src="/images/lawn.jpg" 
+            alt="Automated lawn care" 
+            className="w-full h-full object-cover object-center transition-transform duration-[10000ms] hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-black/25 to-black/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20" />
+        </div>
+
+        {/* Content */}
+        <div className="relative w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center">
+          
+          {/* Headline */}
+          <div className="text-center mb-12 lg:mb-16 animate-[fadeIn_1s_ease-out]">
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight tracking-tight drop-shadow-2xl">
+              Property services managed
+            </h1>
+            <h1 className="mt-2 text-5xl md:text-[4.125rem] lg:text-7xl font-bold text-white leading-tight tracking-tight drop-shadow-2xl">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary/90 to-primary/70">
+                automatically.
+              </span>
+            </h1>
+            <p className="mt-8 text-xl md:text-2xl text-white/95 font-light max-w-3xl mx-auto drop-shadow-lg leading-relaxed">
+              Professional lawn, pool, and security automation for homes and businesses across South Africa.
+            </p>
+          </div>
+
+          {/* Search Box - Clean StorNextDoor Style */}
+          <div className="w-full max-w-3xl mx-auto animate-[fadeInUp_0.7s_ease-out_0.3s_both]">
+            <div className="relative bg-white rounded-2xl shadow-2xl transition-all duration-300 hover:shadow-xl">
+              <div className="flex items-center px-3 sm:px-4 py-3 sm:py-3">
+                <MapPin className="text-primary mr-2 sm:mr-3 flex-shrink-0 h-5 w-5" />
+                <div className="flex-1 min-w-0">
                 <AddressSearch
                   onAddressSelect={handleAddressSelect}
-                  placeholder="Enter your address to check coverage"
+                    placeholder="Enter Address"
                   storageKey="lastSearchedAddress"
-                  inputClassName="h-12 text-base md:text-lg"
+                    className="border-none shadow-none focus-visible:ring-0 py-2 sm:py-3 text-base sm:text-lg placeholder:text-gray-400 px-0 h-auto outline-none"
                 />
-                {searching && (
-                  <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-                    <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                    Checking coverage in your area...
                   </div>
-                )}
-                {coverageResults && coverageResults.length > 0 && (
-                  <div className="mt-4">
-                    <div className="mb-2 flex items-center justify-between">
-                      <h4 className="text-sm font-semibold">Coverage Results</h4>
-                      <Button variant="ghost" size="sm" onClick={handleClearCoverage} className="h-8 gap-1">
-                        <X className="h-3 w-3" />
-                        Clear
+                <Button
+                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium bg-primary text-white hover:bg-gradient-to-r from-primary to-primary/80 hover:scale-105 active:scale-95 transition-all duration-200 shadow-sm hover:shadow-md h-12 rounded-lg px-6 ml-2 sm:ml-3 text-sm"
+                  disabled={searching}
+                  onClick={() => {
+                    // Trigger search if needed
+                  }}
+                >
+                  {searching ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <ArrowRight className="h-4 w-4" />
+                      <span className="hidden md:inline">Find</span>
+                    </>
+                  )}
                       </Button>
                     </div>
-                    <div className="space-y-2">
-                      {coverageResults.map((area) => (
-                        <div key={area.area_id} className="p-3 rounded-lg border border-primary/20 bg-background/70 hover:border-secondary/30 transition-colors">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <p className="font-semibold">{area.area_name}</p>
-                              <p className="text-sm text-muted-foreground">{area.city}, {area.province}</p>
                             </div>
-                            <CheckCircle2 className="h-5 w-5 text-primary" />
+
+            {/* Feature Cards */}
+            <div className="mt-8 sm:mt-12 flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-6 animate-[fadeIn_1s_ease-out_0.6s_both]">
+              <div className="flex items-center bg-gray-900/80 backdrop-blur-sm rounded-xl sm:rounded-2xl px-4 sm:px-6 py-3 sm:py-4 border border-primary/30 shadow-lg hover:shadow-xl hover:bg-gray-900/90 hover:border-primary/50 transition-all w-full sm:w-auto">
+                <div className="bg-primary/20 p-2 sm:p-3 rounded-full mr-3 sm:mr-4">
+                  <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                           </div>
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {area.service_types.map((service, idx) => (
-                              <Badge 
-                                key={service} 
-                                variant="secondary" 
-                                className={`text-xs ${idx % 2 === 0 ? 'bg-primary/10 text-primary hover:bg-primary/20' : 'bg-secondary/10 text-secondary hover:bg-secondary/20'}`}
-                              >
-                                {service.replace('_', ' ')}
-                              </Badge>
-                            ))}
+                <div className="text-white">
+                  <p className="font-medium text-xs sm:text-sm">Automated lawn</p>
+                  <p className="font-medium text-xs sm:text-sm">mowing service</p>
                           </div>
                         </div>
-                      ))}
+              <div className="flex items-center bg-gray-900/80 backdrop-blur-sm rounded-xl sm:rounded-2xl px-4 sm:px-6 py-3 sm:py-4 border border-accent/30 shadow-lg hover:shadow-xl hover:bg-gray-900/90 hover:border-accent/50 transition-all w-full sm:w-auto">
+                <div className="bg-accent/20 p-2 sm:p-3 rounded-full mr-3 sm:mr-4">
+                  <Sprout className="w-5 h-5 sm:w-6 sm:h-6 text-accent" />
                     </div>
+                <div className="text-white">
+                  <p className="font-medium text-xs sm:text-sm">Professional results,</p>
+                  <p className="font-medium text-xs sm:text-sm">effortless care</p>
                   </div>
-                )}
               </div>
             </div>
 
-            {/* Secondary CTAs removed per request */}
+            {/* Trust Indicators */}
+            <div className="mt-8 sm:mt-12 pt-4 sm:pt-6 border-t border-white/10 flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8 text-white/90 animate-[fadeIn_1s_ease-out_0.9s_both]">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
+                <span className="text-xs sm:text-sm font-light">No Long-term Contracts</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Sprout className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
+                <span className="text-xs sm:text-sm font-light">Eco-friendly Technology</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-secondary" />
+                <span className="text-xs sm:text-sm font-light">South African Based</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -337,96 +468,119 @@ export default function LandingPage() {
       </section>
 
       {/* Services Section - impactful cards */}
-      <section id="services" className="container mx-auto px-4 py-20">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 mb-4">
-              <div className="h-1 w-8 bg-primary rounded-full"></div>
-              <div className="h-1 w-8 bg-secondary rounded-full"></div>
-              <div className="h-1 w-8 bg-primary rounded-full"></div>
+      <section id="services" className="container mx-auto px-4 py-20 md:py-28">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 mb-6">
+              <div className="h-1 w-12 bg-primary rounded-full"></div>
+              <Bot className="h-5 w-5 text-primary" />
+              <div className="h-1 w-12 bg-primary rounded-full"></div>
             </div>
-            <h3 className="text-3xl md:text-4xl font-bold mb-3">Our Bot Services</h3>
-            <p className="text-lg text-muted-foreground">Choose from our fleet of <span className="text-secondary font-semibold">specialized autonomous bots</span></p>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              Automated Property Services
+            </h2>
+            <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
+              Specialized bots designed for <span className="text-primary font-semibold">effortless maintenance</span> across homes and businesses
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
             {/* Mow Bot */}
-            <Card className="overflow-hidden group">
-              <div className="h-28 bg-gradient-to-r from-primary/40 to-primary/20 flex items-center justify-center">
-                <div className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow">
+            <Card className="overflow-hidden group hover:shadow-2xl transition-all duration-300 border-2 hover:border-primary/30">
+              <div className="h-32 bg-gradient-to-br from-primary/30 via-primary/20 to-primary/10 flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+                <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-primary to-primary/70 text-primary-foreground flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
                   {services[0].icon}
                 </div>
               </div>
-              <CardHeader>
-                <CardTitle className="text-xl">{services[0].title}</CardTitle>
-                <CardDescription>{services[0].description}</CardDescription>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl font-bold">{services[0].title}</CardTitle>
+                <CardDescription className="text-sm leading-relaxed">{services[0].description}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-2 text-sm">
+                <ul className="space-y-2.5">
                   {services[0].features.map((f,i)=> (
-                    <div key={i} className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /><span>{f}</span></div>
+                    <li key={i} className="flex items-start gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                      <span className="text-sm text-muted-foreground">{f}</span>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </CardContent>
             </Card>
 
             {/* Pool Bot */}
-            <Card className="overflow-hidden group opacity-50 pointer-events-none">
-              <div className="h-28 bg-gradient-to-r from-botkorp-blue-500/40 to-botkorp-blue-500/20 flex items-center justify-center">
-                <div className="h-16 w-16 rounded-full bg-botkorp-blue-500 text-white flex items-center justify-center shadow">
+            <Card className="overflow-hidden group opacity-60 relative">
+              <Badge className="absolute top-3 right-3 z-10 bg-yellow-500/90 text-yellow-950">Coming Soon</Badge>
+              <div className="h-32 bg-gradient-to-br from-blue-500/30 via-blue-500/20 to-blue-500/10 flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+                <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-blue-500 to-blue-500/70 text-white flex items-center justify-center shadow-xl">
                   {services[1].icon}
                 </div>
               </div>
-              <CardHeader>
-                <CardTitle className="text-xl">{services[1].title}</CardTitle>
-                <CardDescription>{services[1].description}</CardDescription>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl font-bold">{services[1].title}</CardTitle>
+                <CardDescription className="text-sm leading-relaxed">{services[1].description}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-2 text-sm">
+                <ul className="space-y-2.5">
                   {services[1].features.map((f,i)=> (
-                    <div key={i} className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-botkorp-blue-500" /><span>{f}</span></div>
+                    <li key={i} className="flex items-start gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                      <span className="text-sm text-muted-foreground">{f}</span>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </CardContent>
             </Card>
 
             {/* Security Bot */}
-            <Card className="overflow-hidden group opacity-50 pointer-events-none">
-              <div className="h-28 bg-gradient-to-r from-botkorp-slate-700/40 to-botkorp-slate-700/20 flex items-center justify-center">
-                <div className="h-16 w-16 rounded-full bg-botkorp-slate-700 text-white flex items-center justify-center shadow">
+            <Card className="overflow-hidden group opacity-60 relative">
+              <Badge className="absolute top-3 right-3 z-10 bg-yellow-500/90 text-yellow-950">Coming Soon</Badge>
+              <div className="h-32 bg-gradient-to-br from-slate-700/30 via-slate-700/20 to-slate-700/10 flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+                <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-slate-700 to-slate-700/70 text-white flex items-center justify-center shadow-xl">
                   {services[2].icon}
                 </div>
               </div>
-              <CardHeader>
-                <CardTitle className="text-xl">{services[2].title}</CardTitle>
-                <CardDescription>{services[2].description}</CardDescription>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl font-bold">{services[2].title}</CardTitle>
+                <CardDescription className="text-sm leading-relaxed">{services[2].description}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-2 text-sm">
+                <ul className="space-y-2.5">
                   {services[2].features.map((f,i)=> (
-                    <div key={i} className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-botkorp-slate-700" /><span>{f}</span></div>
+                    <li key={i} className="flex items-start gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-slate-700 mt-0.5 flex-shrink-0" />
+                      <span className="text-sm text-muted-foreground">{f}</span>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </CardContent>
             </Card>
 
             {/* Weather Station */}
-            <Card className="overflow-hidden group opacity-50 pointer-events-none">
-              <div className="h-28 bg-gradient-to-r from-botkorp-blue-500/30 to-botkorp-blue-500/15 flex items-center justify-center">
-                <div className="h-16 w-16 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center shadow">
+            <Card className="overflow-hidden group opacity-60 relative">
+              <Badge className="absolute top-3 right-3 z-10 bg-yellow-500/90 text-yellow-950">Coming Soon</Badge>
+              <div className="h-32 bg-gradient-to-br from-orange-500/30 via-orange-500/20 to-orange-500/10 flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+                <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-orange-500 to-orange-500/70 text-white flex items-center justify-center shadow-xl">
                   {services[3].icon}
                 </div>
               </div>
-              <CardHeader>
-                <CardTitle className="text-xl">{services[3].title}</CardTitle>
-                <CardDescription>{services[3].description}</CardDescription>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl font-bold">{services[3].title}</CardTitle>
+                <CardDescription className="text-sm leading-relaxed">{services[3].description}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-2 text-sm">
+                <ul className="space-y-2.5">
                   {services[3].features.map((f,i)=> (
-                    <div key={i} className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-secondary" /><span>{f}</span></div>
+                    <li key={i} className="flex items-start gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                      <span className="text-sm text-muted-foreground">{f}</span>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </CardContent>
             </Card>
           </div>
@@ -435,30 +589,30 @@ export default function LandingPage() {
 
       {/* How It Works - Split Layout with Preview */}
       <section id="how" className="relative overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-botkorp-grey-900 via-botkorp-grey-800 to-botkorp-grey-700" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-botkorp-black via-botkorp-slate-blue to-botkorp-black" />
         
-        <div className="container mx-auto px-4 py-20 lg:py-28">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+        <div className="container mx-auto px-4 py-20 md:py-28">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center max-w-7xl mx-auto">
             
             {/* Left Column - Copy Content */}
-            <div className="space-y-8">
+            <div className="space-y-8 lg:space-y-10">
               {/* Header */}
               <div>
-                <h3 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">
+                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">
                   How Bot Korp works
-                </h3>
-                <p className="text-lg text-white/70 max-w-xl">
-                  Simple, secure, and seamless — whether you're automating your home or installing for clients.
+                </h2>
+                <p className="text-base sm:text-lg text-white/70 max-w-xl leading-relaxed">
+                  Simple, secure, and seamless automation for homes and businesses across South Africa.
                 </p>
               </div>
 
               {/* Segmented Toggle */}
-              <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1">
+              <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1 w-full sm:w-auto">
                 <button 
                   onClick={() => setActiveAudience('homeowner')} 
-                  className={`px-6 py-3 rounded-lg text-sm font-medium transition-all ${
+                  className={`flex-1 sm:flex-none px-4 sm:px-6 py-3 rounded-lg text-sm font-medium transition-all ${
                     activeAudience === 'homeowner' 
-                      ? 'bg-botkorp-green-600 text-white shadow-lg' 
+                      ? 'bg-primary text-white shadow-lg' 
                       : 'text-white/80 hover:text-white'
                   }`}
                 >
@@ -466,101 +620,101 @@ export default function LandingPage() {
                 </button>
                 <button 
                   onClick={() => setActiveAudience('installer')} 
-                  className={`px-6 py-3 rounded-lg text-sm font-medium transition-all ${
+                  className={`flex-1 sm:flex-none px-4 sm:px-6 py-3 rounded-lg text-sm font-medium transition-all ${
                     activeAudience === 'installer' 
-                      ? 'bg-accent-blue text-white shadow-lg' 
+                      ? 'bg-blue-600 text-white shadow-lg' 
                       : 'text-white/80 hover:text-white'
                   }`}
                 >
-                  Installers
+                  Businesses
                 </button>
               </div>
 
               {/* Steps - Vertical Layout */}
               {activeAudience === 'homeowner' ? (
-                <div className="space-y-6">
-                  <div className="flex gap-4">
+                <div className="space-y-6 md:space-y-8">
+                  <div className="flex gap-4 md:gap-6 group">
                     <div className="flex-shrink-0">
-                      <div className="h-12 w-12 rounded-full bg-botkorp-green-600 text-white flex items-center justify-center text-xl font-bold shadow-lg">
+                      <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-primary text-white flex items-center justify-center text-xl font-bold shadow-lg group-hover:scale-110 transition-transform">
                         1
                       </div>
                     </div>
                     <div className="text-white pt-1">
-                      <div className="font-semibold text-lg mb-1">Find your perfect setup</div>
-                      <div className="text-white/70 text-sm leading-relaxed">
-                        Choose a bot plan tailored to your property and goals.
+                      <div className="font-semibold text-lg md:text-xl mb-2">Check Coverage</div>
+                      <div className="text-white/70 text-sm md:text-base leading-relaxed">
+                        Enter your address to verify we service your area.
                       </div>
                     </div>
                   </div>
                   
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 md:gap-6 group">
                     <div className="flex-shrink-0">
-                      <div className="h-12 w-12 rounded-full bg-accent-blue text-white flex items-center justify-center text-xl font-bold shadow-lg">
+                      <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-bold shadow-lg group-hover:scale-110 transition-transform">
                         2
                       </div>
                     </div>
                     <div className="text-white pt-1">
-                      <div className="font-semibold text-lg mb-1">Installed in days</div>
-                      <div className="text-white/70 text-sm leading-relaxed">
-                        Certified pros handle setup, safety checks, and training.
+                      <div className="font-semibold text-lg md:text-xl mb-2">Installation in Days</div>
+                      <div className="text-white/70 text-sm md:text-base leading-relaxed">
+                        Certified professionals handle setup, safety checks, and training.
                       </div>
                     </div>
                   </div>
                   
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 md:gap-6 group">
                     <div className="flex-shrink-0">
-                      <div className="h-12 w-12 rounded-full bg-botkorp-green-600 text-white flex items-center justify-center text-xl font-bold shadow-lg">
+                      <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-accent text-white flex items-center justify-center text-xl font-bold shadow-lg group-hover:scale-110 transition-transform">
                         3
                       </div>
                     </div>
                     <div className="text-white pt-1">
-                      <div className="font-semibold text-lg mb-1">Monitor and save</div>
-                      <div className="text-white/70 text-sm leading-relaxed">
-                        Automations run on schedule; you track it all from the portal.
+                      <div className="font-semibold text-lg md:text-xl mb-2">Monitor & Save</div>
+                      <div className="text-white/70 text-sm md:text-base leading-relaxed">
+                        Track everything from your dashboard. Automation runs on schedule.
                       </div>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="space-y-6">
-                  <div className="flex gap-4">
+                <div className="space-y-6 md:space-y-8">
+                  <div className="flex gap-4 md:gap-6 group">
                     <div className="flex-shrink-0">
-                      <div className="h-12 w-12 rounded-full bg-accent-blue text-white flex items-center justify-center text-xl font-bold shadow-lg">
+                      <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-primary text-white flex items-center justify-center text-xl font-bold shadow-lg group-hover:scale-110 transition-transform">
                         1
                       </div>
                     </div>
                     <div className="text-white pt-1">
-                      <div className="font-semibold text-lg mb-1">Fast onboarding</div>
-                      <div className="text-white/70 text-sm leading-relaxed">
-                        Provision devices and link clients in minutes from your dashboard.
+                      <div className="font-semibold text-lg md:text-xl mb-2">Partner with Us</div>
+                      <div className="text-white/70 text-sm md:text-base leading-relaxed">
+                        Join our network and offer automated services to your clients.
                       </div>
                     </div>
                   </div>
                   
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 md:gap-6 group">
                     <div className="flex-shrink-0">
-                      <div className="h-12 w-12 rounded-full bg-botkorp-green-600 text-white flex items-center justify-center text-xl font-bold shadow-lg">
+                      <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-secondary text-white flex items-center justify-center text-xl font-bold shadow-lg group-hover:scale-110 transition-transform">
                         2
                       </div>
                     </div>
                     <div className="text-white pt-1">
-                      <div className="font-semibold text-lg mb-1">Scheduled automations</div>
-                      <div className="text-white/70 text-sm leading-relaxed">
-                        Set safe default routines that customers can fine‑tune.
+                      <div className="font-semibold text-lg md:text-xl mb-2">Manage Deployments</div>
+                      <div className="text-white/70 text-sm md:text-base leading-relaxed">
+                        Track all installations and client services from one dashboard.
                       </div>
                     </div>
                   </div>
                   
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 md:gap-6 group">
                     <div className="flex-shrink-0">
-                      <div className="h-12 w-12 rounded-full bg-white/20 text-white flex items-center justify-center text-xl font-bold shadow-lg">
+                      <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-accent text-white flex items-center justify-center text-xl font-bold shadow-lg group-hover:scale-110 transition-transform">
                         3
                       </div>
                     </div>
                     <div className="text-white pt-1">
-                      <div className="font-semibold text-lg mb-1">Simple billing</div>
-                      <div className="text-white/70 text-sm leading-relaxed">
-                        Subscription plans and add‑ons handled automatically.
+                      <div className="font-semibold text-lg md:text-xl mb-2">Scale Revenue</div>
+                      <div className="text-white/70 text-sm md:text-base leading-relaxed">
+                        Build recurring revenue with automated property management.
                       </div>
                     </div>
                   </div>
@@ -607,7 +761,7 @@ export default function LandingPage() {
                 </div>
 
                 {/* Decorative glow - subtle */}
-                <div className="absolute -inset-6 bg-gradient-to-r from-botkorp-green-600/10 via-accent-blue/10 to-primary/10 blur-3xl -z-10 opacity-60" />
+                <div className="absolute -inset-6 bg-gradient-to-r from-accent/10 via-secondary/10 to-accent/10 blur-3xl -z-10 opacity-60" />
               </div>
             </div>
 
@@ -635,6 +789,121 @@ export default function LandingPage() {
           </div>
 
           <SimplePriceCalculator />
+        </div>
+      </section>
+
+      {/* Coverage Areas Section */}
+      <section id="coverage-map" className="relative overflow-hidden bg-gradient-to-b from-muted/30 to-background py-20 md:py-28">
+        <div className="container mx-auto px-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-12 md:mb-16">
+              <div className="inline-flex items-center gap-2 mb-6">
+                <div className="h-1 w-12 bg-primary rounded-full"></div>
+                <MapPin className="h-5 w-5 text-primary" />
+                <div className="h-1 w-12 bg-primary rounded-full"></div>
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                Where We Serve
+              </h2>
+              <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                Currently operating across key areas in South Africa, with expansion plans nationwide
+              </p>
+            </div>
+
+            {loadingCoverageAreas ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : coverageAreas.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {coverageAreas.map((area) => (
+                  <Card key={area.id} className="overflow-hidden group hover:shadow-xl transition-all duration-300 border-2 hover:border-primary/30">
+                    <CardHeader className="bg-gradient-to-br from-primary/5 to-primary/10 pb-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-xl font-bold mb-1">{area.area_name}</CardTitle>
+                          <CardDescription className="flex items-center gap-1.5 text-sm">
+                            <MapPin className="h-3.5 w-3.5" />
+                            {area.city}, {area.province}
+                          </CardDescription>
+                        </div>
+                        <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0" />
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-4">
+                      {/* Service Types */}
+                      <div className="mb-4">
+                        <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase">Available Services</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {area.service_types?.map((service, idx) => (
+                            <Badge 
+                              key={service} 
+                              variant="outline"
+                              className={`text-xs ${
+                                service === 'mow_bot' ? 'border-primary/30 bg-primary/5 text-primary' :
+                                service === 'pool_bot' ? 'border-blue-500/30 bg-blue-500/5 text-blue-600' :
+                                service === 'security_bot' ? 'border-slate-500/30 bg-slate-500/5 text-slate-600' :
+                                'border-orange-500/30 bg-orange-500/5 text-orange-600'
+                              }`}
+                            >
+                              {service.replace('_', ' ').replace('bot', '').trim()}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Postal Codes */}
+                      {area.postal_codes && area.postal_codes.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase">Postal Codes</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {area.postal_codes.slice(0, 4).map((code) => (
+                              <Badge key={code} variant="secondary" className="text-xs font-mono">
+                                {code}
+                              </Badge>
+                            ))}
+                            {area.postal_codes.length > 4 && (
+                              <Badge variant="secondary" className="text-xs">
+                                +{area.postal_codes.length - 4} more
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="border-dashed border-2">
+                <CardContent className="py-16 text-center">
+                  <MapPin className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">Coverage Areas Coming Soon</h3>
+                  <p className="text-muted-foreground">
+                    We're currently setting up our service areas. Check back soon!
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* CTA */}
+            {coverageAreas.length > 0 && (
+              <div className="mt-12 text-center">
+                <p className="text-muted-foreground mb-4">
+                  Don't see your area? We're expanding rapidly!
+                </p>
+                <Button 
+                  onClick={() => navigate('/auth/register')} 
+                  variant="outline"
+                  size="lg"
+                  className="group"
+                >
+                  Join Waitlist
+                  <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
@@ -784,70 +1053,102 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-botkorp-slate-900 text-white/70 overflow-hidden">
+      <footer className="bg-gradient-to-b from-botkorp-black to-botkorp-slate-blue text-white/70 overflow-hidden border-t border-white/5">
         <div className="container mx-auto px-4 py-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
             {/* Brand + intro */}
-            <div>
+            <div className="lg:col-span-1">
               <div className="flex items-center gap-2 mb-4">
-                <Bot className="h-7 w-7 text-primary" />
-                <span className="font-semibold text-white text-lg">Bot Korp</span>
+                <Bot className="h-8 w-8 text-primary" />
+                <span className="font-bold text-white text-xl">Bot Korp</span>
               </div>
-              <h4 className="text-2xl font-semibold text-white mb-2">Automation starts here.</h4>
-              <p className="text-sm leading-relaxed text-white/60">We turn everyday property tasks into set‑and‑forget automation. Reliable results for owners, peace of mind for everyone.</p>
-              <div className="mt-5 flex items-center gap-3">
-                <a href="#" aria-label="Facebook" className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/80 hover:text-white transition-colors"><Facebook className="h-4 w-4" /></a>
-                <a href="#" aria-label="Instagram" className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/80 hover:text-white transition-colors"><Instagram className="h-4 w-4" /></a>
-                <a href="#" aria-label="LinkedIn" className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/80 hover:text-white transition-colors"><Linkedin className="h-4 w-4" /></a>
-                <a href="mailto:support@botkorp.com" aria-label="Email" className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/80 hover:text-white transition-colors"><Mail className="h-4 w-4" /></a>
+              <h4 className="text-xl font-semibold text-white mb-3 leading-tight">Automated property care, simplified.</h4>
+              <p className="text-sm leading-relaxed text-white/50 mb-6">
+                Professional-grade automation for lawns, pools, and security. Reliable, eco-friendly, and effortless.
+              </p>
+              <div className="flex items-center gap-3">
+                <a href="https://facebook.com/botkorp" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="h-10 w-10 rounded-full bg-white/5 hover:bg-primary/20 border border-white/10 hover:border-primary/30 flex items-center justify-center text-white/60 hover:text-primary transition-all">
+                  <Facebook className="h-4 w-4" />
+                </a>
+                <a href="https://instagram.com/botkorp" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="h-10 w-10 rounded-full bg-white/5 hover:bg-primary/20 border border-white/10 hover:border-primary/30 flex items-center justify-center text-white/60 hover:text-primary transition-all">
+                  <Instagram className="h-4 w-4" />
+                </a>
+                <a href="https://linkedin.com/company/botkorp" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="h-10 w-10 rounded-full bg-white/5 hover:bg-primary/20 border border-white/10 hover:border-primary/30 flex items-center justify-center text-white/60 hover:text-primary transition-all">
+                  <Linkedin className="h-4 w-4" />
+                </a>
+                <a href="mailto:support@botkorp.com" aria-label="Email" className="h-10 w-10 rounded-full bg-white/5 hover:bg-primary/20 border border-white/10 hover:border-primary/30 flex items-center justify-center text-white/60 hover:text-primary transition-all">
+                  <Mail className="h-4 w-4" />
+                </a>
               </div>
             </div>
 
-            {/* Support & Guides */}
+            {/* Documentation & Support */}
             <div>
-              <h3 className="font-semibold text-white mb-3">Support & Guides</h3>
-              <ul className="space-y-2 text-sm">
-                <li><a href="mailto:support@botkorp.com" className="text-white/70 hover:text-primary transition-colors">Support</a></li>
-                <li><a href="/docs" className="text-white/70 hover:text-primary transition-colors">Help Center</a></li>
-                <li><a href="/#services" className="text-white/70 hover:text-primary transition-colors">For Homeowners</a></li>
-                <li><a href="/#services" className="text-white/70 hover:text-primary transition-colors">For Installers</a></li>
-                <li><a href="/docs/faq" className="text-white/70 hover:text-primary transition-colors">Safety & Security</a></li>
+              <h3 className="font-semibold text-white text-base mb-4 uppercase tracking-wide">Documentation</h3>
+              <ul className="space-y-2.5 text-sm">
+                <li><a href="/docs" className="text-white/60 hover:text-primary transition-colors flex items-center gap-1.5 group"><ArrowRight className="h-3 w-3 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />Getting Started</a></li>
+                <li><a href="/docs/services" className="text-white/60 hover:text-primary transition-colors flex items-center gap-1.5 group"><ArrowRight className="h-3 w-3 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />Services Guide</a></li>
+                <li><a href="/docs/faq" className="text-white/60 hover:text-primary transition-colors flex items-center gap-1.5 group"><ArrowRight className="h-3 w-3 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />FAQ</a></li>
+                <li><a href="/docs/bot-rental-terms" className="text-white/60 hover:text-primary transition-colors flex items-center gap-1.5 group"><ArrowRight className="h-3 w-3 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />Rental Terms</a></li>
+                <li><a href="mailto:support@botkorp.com" className="text-white/60 hover:text-primary transition-colors flex items-center gap-1.5 group"><ArrowRight className="h-3 w-3 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />Contact Support</a></li>
               </ul>
             </div>
 
             {/* Product */}
             <div>
-              <h3 className="font-semibold text-white mb-3">Product</h3>
-              <ul className="space-y-2 text-sm">
-                <li><a href="/#services" className="text-white/70 hover:text-primary transition-colors">Services</a></li>
-                <li><a href="/#how" className="text-white/70 hover:text-primary transition-colors">How it Works</a></li>
-                <li><a href="/#coverage" className="text-white/70 hover:text-primary transition-colors">Coverage</a></li>
+              <h3 className="font-semibold text-white text-base mb-4 uppercase tracking-wide">Product</h3>
+              <ul className="space-y-2.5 text-sm">
+                <li><a href="/#services" className="text-white/60 hover:text-primary transition-colors flex items-center gap-1.5 group"><ArrowRight className="h-3 w-3 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />Our Services</a></li>
+                <li><a href="/#how" className="text-white/60 hover:text-primary transition-colors flex items-center gap-1.5 group"><ArrowRight className="h-3 w-3 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />How It Works</a></li>
+                <li><a href="/#pricing" className="text-white/60 hover:text-primary transition-colors flex items-center gap-1.5 group"><ArrowRight className="h-3 w-3 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />Pricing</a></li>
+                <li><a href="/#coverage" className="text-white/60 hover:text-primary transition-colors flex items-center gap-1.5 group"><ArrowRight className="h-3 w-3 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />Coverage Areas</a></li>
               </ul>
             </div>
 
             {/* Legal */}
             <div>
-              <h3 className="font-semibold text-white mb-3">Legal</h3>
-              <ul className="space-y-2 text-sm">
-                <li><a href="/docs/privacy-policy" className="text-white/70 hover:text-primary transition-colors">Privacy Policy</a></li>
-                <li><a href="/docs/terms-of-service" className="text-white/70 hover:text-primary transition-colors">Terms of Service</a></li>
-                <li><a href="/docs/cookie-policy" className="text-white/70 hover:text-primary transition-colors">Cookie Policy</a></li>
+              <h3 className="font-semibold text-white text-base mb-4 uppercase tracking-wide">Legal</h3>
+              <ul className="space-y-2.5 text-sm">
+                <li><a href="/docs/privacy-policy" className="text-white/60 hover:text-primary transition-colors flex items-center gap-1.5 group"><ArrowRight className="h-3 w-3 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />Privacy Policy</a></li>
+                <li><a href="/docs/terms-of-service" className="text-white/60 hover:text-primary transition-colors flex items-center gap-1.5 group"><ArrowRight className="h-3 w-3 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />Terms of Service</a></li>
+                <li><a href="/docs/cookie-policy" className="text-white/60 hover:text-primary transition-colors flex items-center gap-1.5 group"><ArrowRight className="h-3 w-3 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />Cookie Policy</a></li>
               </ul>
             </div>
           </div>
 
           {/* Contact strip */}
-          <div className="flex items-center gap-3 text-sm border-y border-white/10 py-4">
+          <div className="border-t border-white/10 pt-8 pb-8">
+            <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
             <Mail className="h-4 w-4 text-primary" />
-            <a href="mailto:support@botkorp.com" className="text-white/80 hover:text-primary transition-colors">support@botkorp.com</a>
+                </div>
+                <div>
+                  <p className="text-xs text-white/40 mb-0.5">Get in touch</p>
+                  <a href="mailto:support@botkorp.com" className="text-white font-medium hover:text-primary transition-colors">support@botkorp.com</a>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Bottom bar */}
-          <div className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/60">
-            <p>© 2024 Bot Korp. All rights reserved.</p>
-            <div className="flex items-center gap-4">
-              <a href="/docs/privacy-policy" className="text-white/60 hover:text-primary transition-colors">Privacy Policy</a>
-              <a href="/docs/terms-of-service" className="text-white/60 hover:text-primary transition-colors">Terms of Service</a>
+          <div className="border-t border-white/10 pt-8">
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-4 text-sm">
+              <div className="text-center lg:text-left">
+                <p className="text-white/50 mb-1">
+                  © 2025 <span className="text-white/70 font-medium">Bot Korp (Pty) Ltd</span>. All rights reserved.
+                </p>
+                <p className="text-xs text-white/30">
+                  A member of <span className="text-white/40 font-medium">Exolution Technologies (Pty) Ltd</span>
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-6">
+                <a href="/docs/privacy-policy" className="text-white/50 hover:text-primary transition-colors text-sm">Privacy</a>
+                <span className="text-white/20">•</span>
+                <a href="/docs/terms-of-service" className="text-white/50 hover:text-primary transition-colors text-sm">Terms</a>
+                <span className="text-white/20">•</span>
+                <a href="/docs" className="text-white/50 hover:text-primary transition-colors text-sm">Docs</a>
+              </div>
             </div>
           </div>
         </div>

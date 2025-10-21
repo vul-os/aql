@@ -33,6 +33,7 @@ import { useToast } from '@/hooks/use-toast';
 export default function LegalProfileWizard({ 
   embedded = false,
   locationAddress = null,
+  organizationId,
   onComplete,
   onSkip 
 }) {
@@ -52,31 +53,59 @@ export default function LegalProfileWizard({
   });
 
   const [errors, setErrors] = useState({});
+  const [orgLegalProfile, setOrgLegalProfile] = useState(null);
 
-  // Load existing profile data
+  // Load existing organization legal profile OR pre-fill from location
   useEffect(() => {
-    if (profile) {
-      setFormData({
-        first_name: profile.first_name || '',
-        surname: profile.surname || '',
-        id_number: profile.id_number || '',
-        physical_address: profile.physical_address || locationAddress?.address || '',
-        physical_city: profile.physical_city || locationAddress?.city || '',
-        physical_province: profile.physical_province || locationAddress?.province || 'KwaZulu-Natal',
-        physical_postal_code: profile.physical_postal_code || locationAddress?.postal_code || '',
-        cell_phone: profile.cell_phone || profile.phone || ''
-      });
-    } else if (locationAddress) {
-      // Pre-fill from location if no profile data
-      setFormData(prev => ({
-        ...prev,
-        physical_address: locationAddress.address || '',
-        physical_city: locationAddress.city || '',
-        physical_province: locationAddress.province || 'KwaZulu-Natal',
-        physical_postal_code: locationAddress.postal_code || ''
-      }));
-    }
-  }, [profile, locationAddress]);
+    const loadOrgLegalProfile = async () => {
+      if (!organizationId) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('organization_legal_profiles')
+          .select('*')
+          .eq('organization_id', organizationId)
+          .single();
+
+        if (error && error.code !== 'PGRST116') throw error;
+
+        if (data) {
+          setOrgLegalProfile(data);
+          setFormData({
+            first_name: data.first_name || '',
+            surname: data.surname || '',
+            id_number: data.id_number || '',
+            // Always prefer location data for address fields if available
+            physical_address: locationAddress?.address || data.physical_address || '',
+            physical_city: locationAddress?.city || data.physical_city || '',
+            physical_province: locationAddress?.province || data.physical_province || 'KwaZulu-Natal',
+            physical_postal_code: locationAddress?.postal_code || data.physical_postal_code || '',
+            cell_phone: data.cell_phone || ''
+          });
+        } else if (locationAddress) {
+          // Pre-fill from location if no legal profile data
+          console.log('[LegalProfileWizard] Pre-filling from location:', {
+            address: locationAddress.address,
+            city: locationAddress.city,
+            province: locationAddress.province,
+            postal_code: locationAddress.postal_code
+          });
+          
+          setFormData(prev => ({
+            ...prev,
+            physical_address: locationAddress.address || '',
+            physical_city: locationAddress.city || '',
+            physical_province: locationAddress.province || 'KwaZulu-Natal',
+            physical_postal_code: locationAddress.postal_code || ''
+          }));
+        }
+      } catch (error) {
+        console.error('[LegalProfileWizard] Error loading legal profile:', error);
+      }
+    };
+
+    loadOrgLegalProfile();
+  }, [organizationId, locationAddress]);
 
   // Validate South African ID number
   const validateIdNumber = (idNumber) => {
@@ -123,9 +152,19 @@ export default function LegalProfileWizard({
       return;
     }
 
+    if (!organizationId) {
+      toast({
+        title: 'Error',
+        description: 'Organization ID is required',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('update_legal_profile', {
+      const { data, error } = await supabase.rpc('update_org_legal_profile', {
+        p_organization_id: organizationId,
         p_user_id: user.id,
         p_first_name: formData.first_name.trim(),
         p_surname: formData.surname.trim(),
@@ -145,7 +184,7 @@ export default function LegalProfileWizard({
 
       toast({
         title: 'Legal Profile Complete ✓',
-        description: 'Your legal information has been saved securely. You can now proceed with service contracts.',
+        description: 'Organization legal information has been saved securely. You can now proceed with service contracts.',
         duration: 5000
       });
 

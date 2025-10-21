@@ -10,14 +10,6 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
 interface InviteEmailRequest {
   invitation_id: string
-  email: string
-  organization_name: string
-  organization_id: string
-  role: string
-  inviter_name: string
-  inviter_email: string
-  invite_token: string
-  expires_at: string
 }
 
 const corsHeaders = {
@@ -27,7 +19,7 @@ const corsHeaders = {
 
 // Beautiful HTML email template
 function getEmailTemplate(data: InviteEmailRequest): string {
-  const inviteUrl = `${Deno.env.get('APP_URL') || 'https://app.botkorp.com'}/accept-invite/${data.invite_token}`
+  const portalUrl = `${Deno.env.get('APP_URL') || 'https://app.botkorp.com'}/portal`
   const expiryDate = new Date(data.expires_at).toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -57,7 +49,7 @@ function getEmailTemplate(data: InviteEmailRequest): string {
       background-color: #ffffff;
     }
     .header {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      background: linear-gradient(135deg, #FF6B35 0%, #e05525 100%);
       padding: 40px 30px;
       text-align: center;
     }
@@ -104,8 +96,8 @@ function getEmailTemplate(data: InviteEmailRequest): string {
       margin: 0 0 24px 0;
     }
     .invitation-card {
-      background: #f9fafb;
-      border: 2px solid #e5e7eb;
+      background: #fef3f0;
+      border: 2px solid #fed7cd;
       border-radius: 12px;
       padding: 24px;
       margin: 24px 0;
@@ -135,7 +127,7 @@ function getEmailTemplate(data: InviteEmailRequest): string {
     }
     .cta-button {
       display: inline-block;
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      background: linear-gradient(135deg, #FF6B35 0%, #e05525 100%);
       color: #ffffff;
       text-decoration: none;
       padding: 16px 40px;
@@ -144,15 +136,15 @@ function getEmailTemplate(data: InviteEmailRequest): string {
       font-size: 16px;
       text-align: center;
       margin: 24px 0;
-      box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
+      box-shadow: 0 4px 6px rgba(255, 107, 53, 0.2);
       transition: transform 0.2s;
     }
     .cta-button:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 12px rgba(16, 185, 129, 0.3);
+      box-shadow: 0 6px 12px rgba(255, 107, 53, 0.3);
     }
     .secondary-link {
-      color: #10b981;
+      color: #FF6B35;
       text-decoration: none;
       font-size: 14px;
       word-break: break-all;
@@ -191,7 +183,7 @@ function getEmailTemplate(data: InviteEmailRequest): string {
     .feature-icon {
       width: 24px;
       height: 24px;
-      background: #d1fae5;
+      background: #fed7cd;
       border-radius: 6px;
       display: flex;
       align-items: center;
@@ -214,7 +206,7 @@ function getEmailTemplate(data: InviteEmailRequest): string {
       margin: 16px 0;
     }
     .footer-link {
-      color: #10b981;
+      color: #FF6B35;
       text-decoration: none;
       margin: 0 12px;
       font-size: 14px;
@@ -270,24 +262,33 @@ function getEmailTemplate(data: InviteEmailRequest): string {
         </div>
       </div>
 
+      <!-- Instructions -->
+      <div class="expiry-notice">
+        <p>
+          <strong>To accept this invitation:</strong><br>
+          Simply sign in to your account (or create one if you don't have one yet) using the email address <strong>${data.email}</strong>. 
+          Your invitation will be automatically applied when you log in.
+        </p>
+      </div>
+
       <!-- CTA Button -->
       <center>
-        <a href="${inviteUrl}" class="cta-button">
-          Accept Invitation
+        <a href="${portalUrl}" class="cta-button">
+          Sign In / Sign Up
         </a>
       </center>
 
       <!-- Alternative Link -->
       <p style="text-align: center; font-size: 14px; color: #6b7280;">
         Or copy and paste this link:<br>
-        <a href="${inviteUrl}" class="secondary-link">${inviteUrl}</a>
+        <a href="${portalUrl}" class="secondary-link">${portalUrl}</a>
       </p>
 
       <!-- Expiry Notice -->
       <div class="expiry-notice">
         <p>
           ⏰ <strong>This invitation expires on ${expiryDate}.</strong>
-          Please accept it before then to join the team.
+          Please sign in before then to join the team.
         </p>
       </div>
 
@@ -321,7 +322,7 @@ function getEmailTemplate(data: InviteEmailRequest): string {
       <!-- Help Text -->
       <p class="message" style="margin-top: 32px;">
         If you have any questions or need assistance, feel free to reply to this email 
-        or contact us at <a href="mailto:support@botkorp.com" style="color: #10b981;">support@botkorp.com</a>.
+        or contact us at <a href="mailto:support@botkorp.com" style="color: #FF6B35;">support@botkorp.com</a>.
       </p>
     </div>
 
@@ -358,11 +359,56 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const inviteData: InviteEmailRequest = await req.json()
+    const { invitation_id }: InviteEmailRequest = await req.json()
 
-    console.log('Sending invite email to:', inviteData.email)
+    console.log('📧 Processing invitation:', invitation_id)
+    
+    // Validate invitation_id
+    if (!invitation_id) {
+      throw new Error('invitation_id is required')
+    }
+
+    // Initialize Supabase client
+    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!)
+
+    // Fetch invitation details from database
+    const { data: invitation, error: inviteError } = await supabase
+      .from('organization_invitations')
+      .select(`
+        *,
+        organization:organizations!organization_id(name),
+        inviter:profiles!invited_by(first_name, email)
+      `)
+      .eq('id', invitation_id)
+      .single()
+
+    if (inviteError || !invitation) {
+      console.error('❌ Failed to fetch invitation:', inviteError)
+      console.error('Error details:', JSON.stringify(inviteError, null, 2))
+      throw new Error(`Invitation not found: ${inviteError?.message || 'Unknown error'}`)
+    }
+
+    console.log('✅ Invitation loaded:', invitation.email)
+    console.log('Token value:', invitation.token)
+    console.log('Full invitation:', JSON.stringify(invitation, null, 2))
+    
+    // Build invite data
+    const inviteData = {
+      invitation_id: invitation.id,
+      email: invitation.email,
+      organization_name: invitation.organization?.name || 'Unknown Organization',
+      organization_id: invitation.organization_id,
+      role: invitation.role,
+      inviter_name: invitation.inviter?.first_name || 'Team',
+      inviter_email: invitation.inviter?.email || 'noreply@botkorp.com',
+      invite_token: invitation.token,
+      expires_at: invitation.expires_at
+    }
+    
+    console.log('📬 Sending email to:', inviteData.email)
 
     // Send email via Resend
+    // Note: Using onboarding@resend.dev until botkorp.com domain is verified
     const emailResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -370,8 +416,8 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Bot Korp <invites@botkorp.com>',
-        to: [inviteData.email],
+        from: 'Bot Korp <notify@kom.botkorp.com>',
+        to: inviteData.email,
         subject: `You're invited to join ${inviteData.organization_name} on Bot Korp`,
         html: getEmailTemplate(inviteData),
         reply_to: inviteData.inviter_email,
@@ -384,27 +430,29 @@ serve(async (req) => {
 
     if (!emailResponse.ok) {
       const errorData = await emailResponse.text()
-      console.error('Resend API error:', errorData)
+      console.error('❌ Resend API error:', errorData)
+      console.error('Request body was:', JSON.stringify({
+        from: 'Bot Korp <notify@kom.botkorp.com>',
+        to: inviteData.email,
+        subject: `You're invited to join ${inviteData.organization_name} on Bot Korp`,
+      }))
       throw new Error(`Failed to send email: ${errorData}`)
     }
 
     const emailResult = await emailResponse.json()
-    console.log('Email sent successfully:', emailResult)
+    console.log('✅ Email sent successfully:', emailResult.id)
 
-    // Log the email send in database (optional)
-    if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-      
-      await supabase
-        .from('organization_invitations')
-        .update({
-          metadata: {
-            email_sent_at: new Date().toISOString(),
-            email_id: emailResult.id,
-          }
-        })
-        .eq('id', inviteData.invitation_id)
-    }
+    // Update invitation metadata with email info
+    await supabase
+      .from('organization_invitations')
+      .update({
+        metadata: {
+          ...(invitation.metadata || {}),
+          email_sent_at: new Date().toISOString(),
+          email_id: emailResult.id,
+        }
+      })
+      .eq('id', invitation_id)
 
     return new Response(
       JSON.stringify({

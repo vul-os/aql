@@ -1,51 +1,43 @@
 import React, { useState, useEffect } from 'react';
-import { useOutletContext, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Sprout, 
-  Droplets, 
-  Plus, 
-  MapPin, 
-  Calendar,
-  Eye,
-  Loader2,
-  CircleDot,
-  Ruler,
+import { Input } from '@/components/ui/input';
+import {
+  Sprout,
+  MapPin,
+  Plus,
   ArrowRight,
-  AlertCircle,
-  Pause,
-  Bot
+  Loader2,
+  Info,
+  Bot,
+  Ruler,
+  Search,
+  Droplets,
+  Shield,
+  CloudSun,
+  Circle,
+  TrendingUp,
+  Activity,
+  LayoutGrid
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
-import PageHeader from '@/components/ui/page-header';
 import LocationWizard from '@/components/services/location-wizard';
-import { format } from 'date-fns';
 
 export default function ServicesPage() {
-  const { selectedOrg } = useOutletContext();
-  const { user } = useAuth();
+  const { selectedOrg, selectedLocation } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [gardens, setGardens] = useState([]);
-  const [pools, setPools] = useState([]);
+  const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [locations, setLocations] = useState([]);
   const [showLocationWizard, setShowLocationWizard] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
 
   useEffect(() => {
     if (selectedOrg) {
@@ -59,7 +51,6 @@ export default function ServicesPage() {
     try {
       setLoading(true);
 
-      // Load locations first
       const { data: locationsData } = await supabase
         .from('locations')
         .select('*')
@@ -69,47 +60,41 @@ export default function ServicesPage() {
       setLocations(locationsData || []);
 
       if (!locationsData || locationsData.length === 0) {
-        setGardens([]);
-        setPools([]);
+        setServices([]);
         setLoading(false);
         return;
       }
 
-      // Load gardens with bot count
-      const { data: gardensData, error: gardensError } = await supabase
-        .from('gardens')
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services')
         .select(`
           *,
-          location:locations(name, city, province),
-          bot_garden_assignments(count)
+          location:locations(name, city, province, address)
         `)
         .in('location_id', locationsData.map(l => l.id))
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
-      if (gardensError) throw gardensError;
-      
-      // Add bot count to each garden
-      const gardensWithBotCount = (gardensData || []).map(garden => ({
-        ...garden,
-        bot_count: garden.bot_garden_assignments?.[0]?.count || 0
+      if (servicesError) throw servicesError;
+
+      const servicesWithDetails = await Promise.all((servicesData || []).map(async (service) => {
+        const { data: serviceGardens } = await supabase
+          .from('gardens')
+          .select('id, name, area_sqm')
+          .eq('service_id', service.id)
+          .eq('is_active', true);
+        
+        const totalArea = (serviceGardens || []).reduce((sum, g) => sum + parseFloat(g.area_sqm || 0), 0);
+        
+        return {
+          ...service,
+          garden_count: (serviceGardens || []).length,
+          bot_count: (serviceGardens || []).length,
+          total_area: totalArea
+        };
       }));
       
-      setGardens(gardensWithBotCount);
-
-      // Load pools
-      const { data: poolsData, error: poolsError } = await supabase
-        .from('pools')
-        .select(`
-          *,
-          location:locations(name, city, province)
-        `)
-        .in('location_id', locationsData.map(l => l.id))
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-
-      if (poolsError) throw poolsError;
-      setPools(poolsData || []);
+      setServices(servicesWithDetails);
 
     } catch (error) {
       console.error('Error loading services:', error);
@@ -123,134 +108,66 @@ export default function ServicesPage() {
     }
   };
 
-  const GardenCard = ({ garden }) => {
-    // Determine service stage
-    const stage = garden.stage || 'pending_installation';
-    const isInstalled = ['installed', 'active'].includes(stage);
-    
-    // Count bots (placeholder - will be fetched with garden data)
-    const botCount = garden.bot_count || 1;
-    
-    // Stage badge configuration
-    const getStageDisplay = () => {
-      if (garden.is_paused) {
-        return { label: 'Paused', variant: 'outline', color: 'bg-amber-100 text-amber-700 border-amber-300' };
-      }
-      switch (stage) {
-        case 'pending_installation':
-          return { label: 'Pending Setup', variant: 'secondary', color: 'bg-blue-100 text-blue-700 border-blue-300' };
-        case 'installation_scheduled':
-          return { label: 'Setup Scheduled', variant: 'default', color: 'bg-purple-100 text-purple-700 border-purple-300' };
-        case 'installing':
-          return { label: 'Installing', variant: 'default', color: 'bg-indigo-100 text-indigo-700 border-indigo-300' };
-        case 'installed':
-        case 'active':
-          return { label: 'Active', variant: 'default', color: 'bg-green-100 text-green-700 border-green-300' };
-        default:
-          return { label: 'Active', variant: 'default', color: 'bg-green-100 text-green-700 border-green-300' };
-      }
-    };
-    
-    const stageDisplay = getStageDisplay();
-    
-    return (
-      <Card className="group hover:shadow-xl hover:scale-[1.02] transition-all duration-200 border-2 hover:border-primary/20">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3 flex-1 min-w-0">
-              <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shrink-0 shadow-md">
-                <Sprout className="h-7 w-7 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <CardTitle className="text-xl font-bold truncate">{garden.name}</CardTitle>
-                <CardDescription className="flex items-center gap-1.5 mt-1.5">
-                  <MapPin className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{garden.location?.name || 'Unknown Location'}</span>
-                </CardDescription>
-              </div>
-            </div>
-            <Badge variant="secondary" className={`gap-1.5 px-2.5 py-1 font-medium shrink-0 ${stageDisplay.color} border`}>
-              {garden.is_paused ? (
-                <Pause className="h-3.5 w-3.5" />
-              ) : (
-                <CircleDot className="h-3.5 w-3.5" />
-              )}
-              {stageDisplay.label}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Bot Count & Quick Stats */}
-          <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
-            <Bot className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">
-              {botCount} Bot{botCount !== 1 ? 's' : ''} • {garden.area_sqm} m²
-            </span>
-          </div>
-
-          {/* Show installation message or stats */}
-          {!isInstalled ? (
-            <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
-              <AlertCircle className="h-4 w-4 text-blue-600" />
-              <AlertDescription className="text-sm text-blue-900 dark:text-blue-100">
-                {stage === 'pending_installation' && 'Awaiting installation - we\'ll contact you soon'}
-                {stage === 'installation_scheduled' && `Setup: ${garden.installation_scheduled_date ? format(new Date(garden.installation_scheduled_date), 'MMM d') : 'scheduled'}`}
-                {stage === 'installing' && 'Installation in progress'}
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Grass Type</p>
-                <p className="text-sm font-medium capitalize">{garden.grass_type || 'Standard'}</p>
-              </div>
-              {garden.last_mowed_at && (
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Last Service</p>
-                  <p className="text-sm font-medium flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    {format(new Date(garden.last_mowed_at), 'MMM d')}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Action Button */}
-          <Button
-            variant={isInstalled ? "default" : "outline"}
-            size="sm"
-            className="w-full group-hover:shadow-md transition-shadow"
-            onClick={() => navigate(`/portal/garden/${garden.id}`)}
-          >
-            <Eye className="h-4 w-4 mr-2" />
-            View Details
-            <ArrowRight className="h-4 w-4 ml-auto" />
-          </Button>
-
-          {garden.is_paused && garden.paused_at && (
-            <p className="text-xs text-muted-foreground text-center pt-2 border-t">
-              Paused since {format(new Date(garden.paused_at), 'MMM d, yyyy')}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    );
+  const getServiceIcon = (type) => {
+    switch (type) {
+      case 'lawn': return Sprout;
+      case 'pool': return Droplets;
+      case 'security': return Shield;
+      case 'weather': return CloudSun;
+      default: return Sprout;
+    }
   };
 
-  // Show location wizard if requested
+  const getServiceColor = (type) => {
+    switch (type) {
+      case 'lawn': return { bg: 'bg-accent', light: 'bg-accent/5', text: 'text-accent', border: 'border-accent/20' };
+      case 'pool': return { bg: 'bg-secondary', light: 'bg-secondary/5', text: 'text-secondary', border: 'border-secondary/20' };
+      case 'security': return { bg: 'bg-botkorp-silver', light: 'bg-muted', text: 'text-foreground', border: 'border-border' };
+      case 'weather': return { bg: 'bg-accent', light: 'bg-accent/5', text: 'text-accent', border: 'border-accent/20' };
+      default: return { bg: 'bg-muted', light: 'bg-muted', text: 'text-muted-foreground', border: 'border-border' };
+    }
+  };
+
+  const getStatusInfo = (service) => {
+    if (service.is_paused) {
+      return { text: 'Paused', color: 'bg-amber-500/80' };
+    }
+    
+    switch (service.status) {
+      case 'pending_setup':
+      case 'pending_installation':
+        return { text: 'Pending', color: 'bg-accent/80' };
+      case 'installation_scheduled':
+        return { text: 'Scheduled', color: 'bg-secondary/80' };
+      case 'active':
+        return { text: 'Active', color: 'bg-accent' };
+      default:
+        return { text: 'Active', color: 'bg-accent' };
+    }
+  };
+
+  const filteredServices = services.filter(service => {
+    const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         service.location?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = filterStatus === 'all' || 
+                         (filterStatus === 'active' && service.status === 'active' && !service.is_paused) ||
+                         (filterStatus === 'paused' && service.is_paused) ||
+                         (filterStatus === 'pending' && (service.status === 'pending_setup' || service.status === 'pending_installation'));
+    return matchesSearch && matchesFilter;
+  });
+
+  const activeCount = services.filter(s => s.status === 'active' && !s.is_paused).length;
+  const totalBots = services.reduce((sum, s) => sum + s.bot_count, 0);
+  const totalArea = services.reduce((sum, s) => sum + s.total_area, 0);
+
   if (showLocationWizard) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="p-6">
         <LocationWizard
           organizationId={selectedOrg.organization_id}
-          onComplete={(newLocation) => {
+          onComplete={() => {
             setShowLocationWizard(false);
             loadData();
-            toast({
-              title: 'Location Created!',
-              description: 'You can now add services to this location',
-            });
           }}
           onCancel={() => setShowLocationWizard(false)}
           embedded={false}
@@ -259,128 +176,321 @@ export default function ServicesPage() {
     );
   }
 
-  return (
-    <div className="p-6 space-y-6">
-      <PageHeader
-        title="Services"
-        subtitle="Manage your automated services and schedules"
-        actions={
-          locations.length > 0 ? (
-            <Button onClick={() => navigate('/portal/services/add')} size="lg" className="gap-2">
-              <Plus className="h-5 w-5" />
-              Add New Service
-            </Button>
-          ) : null
-        }
-      />
-
-      {/* Services Grid */}
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto" />
+          <p className="text-sm text-muted-foreground">Loading services...</p>
         </div>
-      ) : locations.length === 0 ? (
-        <Card className="border-2 border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center space-y-6">
-            <div className="rounded-full bg-orange-100 dark:bg-orange-950 p-8">
-              <MapPin className="h-16 w-16 text-orange-600 dark:text-orange-400" />
+      </div>
+    );
+  }
+
+  if (locations.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-b from-background to-muted/20">
+        <Card className="max-w-2xl w-full border-2 border-dashed shadow-xl">
+          <CardContent className="flex flex-col items-center py-20 text-center space-y-8">
+            <div className="relative">
+              <div className="h-32 w-32 rounded-full bg-gradient-to-br from-accent/10 to-secondary/10 dark:from-accent/20 dark:to-secondary/20 flex items-center justify-center">
+                <MapPin className="h-16 w-16 text-accent" />
+              </div>
             </div>
-            <div className="space-y-3 max-w-xl">
-              <h3 className="text-3xl font-bold">Location Required</h3>
-              <p className="text-muted-foreground text-lg">
-                Before you can add services, you need to create a location for your property. 
-                This tells us where to deploy your bots and ensures we service your area.
+            <div className="space-y-3">
+              <h2 className="text-3xl font-bold">Add Your First Location</h2>
+              <p className="text-muted-foreground text-lg max-w-md">
+                Before creating services, add a location where you'd like to deploy bot services.
               </p>
             </div>
-            
-            <Alert className="max-w-xl">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                A location is required to add any service (lawn, pool, security). This ensures accurate coverage and bot deployment.
-              </AlertDescription>
-            </Alert>
-
-            <Button size="lg" onClick={() => setShowLocationWizard(true)} className="text-lg px-8 py-6">
-              <MapPin className="h-6 w-6 mr-2" />
-              Create Your First Location
+            <Button size="lg" onClick={() => setShowLocationWizard(true)} className="h-14 px-8 text-lg">
+              <Plus className="h-6 w-6 mr-2" />
+              Add Location
               <ArrowRight className="h-6 w-6 ml-2" />
             </Button>
           </CardContent>
         </Card>
-      ) : gardens.length === 0 && pools.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Sprout className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No Services Yet</h3>
-            <p className="text-muted-foreground text-center mb-6">
-              Get started by adding your first automated service
-            </p>
-            <Button onClick={() => navigate('/portal/services/add')} size="lg">
+      </div>
+    );
+  }
+
+  if (services.length === 0) {
+    return (
+      <div className="p-6 md:p-8 lg:p-12 space-y-8 max-w-[1800px] mx-auto">
+        {/* Header - matching theme */}
+        <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/10 via-white/70 to-accent/10 dark:from-secondary dark:via-secondary/40 dark:to-muted/40 p-4 md:p-6 shadow-md">
+          <div className="pointer-events-none absolute -top-12 -right-12 h-40 w-40 rounded-full bg-primary/20 blur-2xl"></div>
+          <div className="pointer-events-none absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-accent/20 blur-2xl"></div>
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Services</h1>
+                <p className="text-sm md:text-base text-muted-foreground mt-1">Automated property management</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button onClick={() => navigate('/portal/services/add')} className="h-9 px-4 py-2">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Service
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Empty State */}
+        <div className="max-w-2xl mx-auto">
+          <Card className="border-2 shadow-lg overflow-hidden">
+            <CardContent className="p-8 md:p-12 text-center space-y-6">
+              <div className="relative inline-block">
+                <div className="h-24 w-24 rounded-2xl bg-primary/10 backdrop-blur-sm border-2 border-primary/20 flex items-center justify-center mx-auto">
+                  <Sprout className="h-12 w-12 text-primary" />
+                </div>
+                <div className="absolute -bottom-2 -right-2 h-10 w-10 rounded-xl bg-primary shadow-lg flex items-center justify-center">
+                  <Plus className="h-5 w-5 text-primary-foreground" />
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <h2 className="text-2xl md:text-3xl font-bold">Ready to Automate?</h2>
+                <p className="text-base text-muted-foreground max-w-lg mx-auto">
+                  Create your first automated service and experience the future of property management
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 max-w-md mx-auto pt-4">
+                {[
+                  { icon: Sprout, label: 'Lawn Care', color: 'text-green-600 dark:text-green-500' },
+                  { icon: Droplets, label: 'Pool Cleaning', color: 'text-blue-600 dark:text-blue-500' },
+                  { icon: Shield, label: 'Security', color: 'text-amber-600 dark:text-amber-500' },
+                  { icon: CloudSun, label: 'Weather', color: 'text-sky-600 dark:text-sky-500' }
+                ].map(({ icon: Icon, label, color }) => (
+                  <div key={label} className="p-3 rounded-xl bg-muted/50 border border-border hover:bg-muted transition-all">
+                    <Icon className={`h-6 w-6 ${color} mb-2 mx-auto`} />
+                    <p className="text-xs font-medium">{label}</p>
+                  </div>
+                ))}
+              </div>
+
+              <Button 
+                size="lg" 
+                onClick={() => navigate('/portal/services/add')} 
+                className="shadow-lg h-12 px-8 mt-4"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Create Your First Service
+                <ArrowRight className="h-5 w-5 ml-2" />
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 md:p-8 lg:p-12 space-y-8 max-w-[1800px] mx-auto">
+      {/* Modern Header */}
+      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/10 via-white/70 to-accent/10 dark:from-secondary dark:via-secondary/40 dark:to-muted/40 p-4 md:p-6 shadow-md">
+        <div className="pointer-events-none absolute -top-12 -right-12 h-40 w-40 rounded-full bg-primary/20 blur-2xl"></div>
+        <div className="pointer-events-none absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-accent/20 blur-2xl"></div>
+        <div className="relative flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Services</h1>
+              <p className="text-sm md:text-base text-muted-foreground mt-1">Manage your automated property services</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button 
+              onClick={() => navigate('/portal/services/add')} 
+              className="h-9 px-4 py-2"
+            >
               <Plus className="h-4 w-4 mr-2" />
-              Add Your First Service
+              New Service
             </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          {/* Garden Services */}
-          {gardens.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Sprout className="h-5 w-5 text-green-600" />
-                <h2 className="text-xl font-semibold">Services</h2>
-                <Badge variant="secondary">{gardens.length}</Badge>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {gardens.map(garden => (
-                  <GardenCard key={garden.id} garden={garden} />
-                ))}
-              </div>
-            </div>
-          )}
+          </div>
+        </div>
+      </div>
 
-          {/* Pool Services */}
-          {pools.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Droplets className="h-5 w-5 text-blue-600" />
-                <h2 className="text-xl font-semibold">Pools</h2>
-                <Badge variant="secondary">{pools.length}</Badge>
+      {/* Stats Bar */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="group p-6 rounded-2xl bg-card border shadow-sm hover:shadow-md transition-all">
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-12 w-12 rounded-xl bg-accent/10 dark:bg-accent/20 flex items-center justify-center">
+                  <Activity className="h-6 w-6 text-accent" />
+                </div>
+                <TrendingUp className="h-4 w-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {pools.map(pool => (
-                  <Card key={pool.id} className="hover:shadow-lg transition-all">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                            <img src="/images/pool-icon.png" alt="Pool" className="h-6 w-6" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-xl">{pool.name}</CardTitle>
-                            <CardDescription className="flex items-center gap-2 mt-1">
-                              <MapPin className="h-3 w-3" />
-                              {pool.location?.name || 'Unknown Location'}
-                            </CardDescription>
-                          </div>
-                        </div>
-                        <Badge variant="secondary">Pool</Badge>
+              <p className="text-3xl font-bold text-foreground">{activeCount}</p>
+              <p className="text-sm text-muted-foreground mt-1">Active Services</p>
+            </div>
+
+            <div className="group p-6 rounded-2xl bg-card border shadow-sm hover:shadow-md transition-all">
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-12 w-12 rounded-xl bg-secondary/10 dark:bg-secondary/20 flex items-center justify-center">
+                  <MapPin className="h-6 w-6 text-secondary" />
+                </div>
+                <TrendingUp className="h-4 w-4 text-secondary opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <p className="text-3xl font-bold text-foreground">{locations.length}</p>
+              <p className="text-sm text-muted-foreground mt-1">Locations</p>
+            </div>
+
+            <div className="group p-6 rounded-2xl bg-card border shadow-sm hover:shadow-md transition-all">
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-12 w-12 rounded-xl bg-accent/10 dark:bg-accent/20 flex items-center justify-center">
+                  <Bot className="h-6 w-6 text-accent" />
+                </div>
+                <TrendingUp className="h-4 w-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <p className="text-3xl font-bold text-foreground">{totalBots}</p>
+              <p className="text-sm text-muted-foreground mt-1">Bots Deployed</p>
+            </div>
+
+            <div className="group p-6 rounded-2xl bg-card border shadow-sm hover:shadow-md transition-all">
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center">
+                  <Ruler className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <TrendingUp className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <p className="text-3xl font-bold text-foreground">{Math.round(totalArea).toLocaleString()}</p>
+              <p className="text-sm text-muted-foreground mt-1">Total Area (m²)</p>
+            </div>
+      </div>
+
+      {/* Search & Filter */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            placeholder="Search by service or location name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-12 h-12 text-base bg-card rounded-xl shadow-sm"
+          />
+        </div>
+        <div className="flex gap-2">
+          {['all', 'active', 'pending'].map((status) => (
+            <Button
+              key={status}
+              variant={filterStatus === status ? 'default' : 'outline'}
+              onClick={() => setFilterStatus(status)}
+              size="sm"
+              className={`h-12 px-5 capitalize rounded-xl ${filterStatus === status ? 'shadow-md' : ''}`}
+            >
+              {status} ({status === 'all' ? services.length : 
+                        status === 'active' ? activeCount :
+                        services.filter(s => s.status === 'pending_setup' || s.status === 'pending_installation').length})
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* Services Grid */}
+      {filteredServices.length > 0 ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredServices.map((service) => {
+              const Icon = getServiceIcon(service.service_type);
+              const colors = getServiceColor(service.service_type);
+              const status = getStatusInfo(service);
+              
+            return (
+              <Card 
+                key={service.id} 
+                className="group relative overflow-hidden border shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer bg-card"
+                onClick={() => navigate(`/portal/service/${service.id}`)}
+              >
+                {/* Gradient Top Border */}
+                <div className={`absolute top-0 left-0 right-0 h-1 ${colors.bg}`} />
+                
+                {/* Hover Glow Effect */}
+                <div className={`absolute inset-0 ${colors.light} opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`} />
+                
+                <CardHeader className="relative pb-4 pt-6">
+                  <div className="flex items-start gap-4">
+                    {/* Icon */}
+                    <div className={`relative h-16 w-16 rounded-2xl ${colors.light} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300`}>
+                      <Icon className={`h-8 w-8 ${colors.text}`} />
+                      {/* Status Dot */}
+                      <div className={`absolute -top-1 -right-1 h-4 w-4 ${status.color} rounded-full border-2 border-card`} />
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-xl font-bold mb-2 truncate group-hover:text-primary transition-colors">
+                        {service.name}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">{service.location?.name}</span>
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">
-                        {pool.pool_type} • {pool.volume_liters}L
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
-      )}
+                      <Badge variant="outline" className="mt-3 text-xs">
+                        <Circle className={`h-2 w-2 mr-1.5 fill-current ${status.color.replace('bg-', 'text-')}`} />
+                        {status.text}
+                      </Badge>
+                    </div>
 
+                    {/* Arrow */}
+                    <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <ArrowRight className="h-5 w-5 text-primary group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="relative space-y-4 pt-2">
+                  {/* Stats */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="text-center p-4 rounded-xl bg-muted">
+                      <Sprout className="h-4 w-4 text-accent mx-auto mb-1.5" />
+                      <p className="text-2xl font-bold text-foreground">{service.garden_count}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Gardens</p>
+                    </div>
+                    <div className="text-center p-4 rounded-xl bg-muted">
+                      <Bot className="h-4 w-4 text-secondary mx-auto mb-1.5" />
+                      <p className="text-2xl font-bold text-foreground">{service.bot_count}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Bots</p>
+                    </div>
+                    <div className="text-center p-4 rounded-xl bg-muted">
+                      <Ruler className="h-4 w-4 text-muted-foreground mx-auto mb-1.5" />
+                      <p className="text-2xl font-bold text-foreground">{Math.round(service.total_area)}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Area m²</p>
+                    </div>
+                  </div>
+
+                  {/* Alert if pending */}
+                  {service.status === 'pending_setup' && (
+                    <Alert className="border-l-4 border-l-accent bg-accent/5 dark:bg-accent/10">
+                      <Info className="h-4 w-4 text-accent" />
+                      <AlertDescription className="text-xs text-foreground/90">
+                        Installation pending - we'll reach out within 24-48 hours
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="text-center py-20">
+          <Card className="max-w-md mx-auto border-dashed">
+            <CardContent className="py-12">
+              <Search className="h-16 w-16 mx-auto text-slate-300 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No services found</h3>
+              <p className="text-sm text-muted-foreground mb-4">Try adjusting your search or filters</p>
+              <Button variant="outline" onClick={() => {
+                setSearchQuery('');
+                setFilterStatus('all');
+              }}>
+                Clear All Filters
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
-

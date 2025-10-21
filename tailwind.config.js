@@ -52,26 +52,23 @@ module.exports = {
 					'4': 'hsl(var(--chart-4))',
 					'5': 'hsl(var(--chart-5))'
 				},
-				// Custom brand colors used in layout/sidebars
-				// Fresh & Tech Color Scheme
-				'botkorp-green-50': '#ecfdf5',
-				'botkorp-green-500': '#10B981', // Emerald-500 - Primary
-				'botkorp-green-600': '#059669', // Emerald-600 - Darker green
-				'botkorp-blue-500': '#3B82F6', // Blue-500 - Secondary
-				'botkorp-blue-600': '#2563EB', // Blue-600 - Darker blue
-				'botkorp-slate-700': '#334155', // Slate-700
-				'botkorp-slate-800': '#1E293B', // Slate-800
-				'botkorp-slate-900': '#0F172A', // Slate-900 - Accent
-				'accent-blue': '#3B82F6', // Secondary blue
-				// Legacy aliases for backwards compatibility
-				'botkorp-grey-700': '#334155',
-				'botkorp-grey-800': '#1E293B',
-				'botkorp-grey-900': '#0F172A'
+				// Custom brand colors - Modern Tech Color Scheme
+				'botkorp-black': '#121212', // Matte black - Primary
+				'botkorp-black-light': '#1a1a1a', // Slightly lighter black
+				'botkorp-orange': '#FF6B35', // Bright tangerine - Accent
+				'botkorp-orange-dark': '#E85A2A', // Darker orange for hover
+				'botkorp-slate-blue': '#4F5D75', // Slate blue-gray - Supporting
+				'botkorp-silver': '#B0B3B8', // Cool silver - Supporting
+				'botkorp-silver-light': '#D0D2D5', // Lighter silver
+				// Legacy aliases for backwards compatibility (mapped to new colors)
+				'botkorp-grey-700': '#4F5D75',
+				'botkorp-grey-800': '#1a1a1a',
+				'botkorp-grey-900': '#121212'
 			},
 			boxShadow: {
-				'glow': '0 0 20px rgba(59, 130, 246, 0.30)', // Blue glow
-				'glow-lg': '0 0 40px rgba(16, 185, 129, 0.35)', // Green glow
-				'glow-green': '0 0 30px rgba(16, 185, 129, 0.35)' // Green glow
+				'glow': '0 0 20px rgba(255, 107, 53, 0.30)', // Orange glow
+				'glow-lg': '0 0 40px rgba(255, 107, 53, 0.35)', // Orange glow large
+				'glow-orange': '0 0 30px rgba(255, 107, 53, 0.35)' // Orange glow
 			},
 			keyframes: {
   			'accordion-down': {
