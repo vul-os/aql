@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import LoadingLottie from '@/components/ui/loading-lottie';
 import { 
   Battery, 
   Thermometer, 
@@ -136,10 +137,11 @@ export default function ServiceBotStatus() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-          <p>Loading service status...</p>
-        </div>
+        <LoadingLottie
+          src="https://lottie.host/51fee83a-3e79-41b0-8a20-77f890b9b6f1/iUangPxwIF.lottie"
+          message="Loading service status..."
+          size="md"
+        />
       </div>
     );
   }

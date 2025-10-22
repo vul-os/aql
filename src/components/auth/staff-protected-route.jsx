@@ -1,14 +1,19 @@
 import React from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/context/auth-context'
+import LoadingLottie from '@/components/ui/loading-lottie'
 
 const StaffProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth()
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-600"></div>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <LoadingLottie 
+          src="https://lottie.host/51fee83a-3e79-41b0-8a20-77f890b9b6f1/iUangPxwIF.lottie"
+          message="Loading..." 
+          size="md" 
+        />
       </div>
     )
   }

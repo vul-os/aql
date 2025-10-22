@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import LoadingLottie from '@/components/ui/loading-lottie';
 import {
   Bot,
   Sprout,
@@ -518,8 +519,12 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center h-full min-h-screen">
+        <LoadingLottie
+          src="https://lottie.host/51fee83a-3e79-41b0-8a20-77f890b9b6f1/iUangPxwIF.lottie"
+          message="Loading dashboard..."
+          size="md"
+        />
       </div>
     );
   }
@@ -1397,4 +1402,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
 

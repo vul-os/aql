@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import LoadingLottie from '@/components/ui/loading-lottie';
 import {
   MapPin, 
   Sprout, 
@@ -522,15 +523,14 @@ export default function AddServicePage() {
       {loading && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
           <Card className="w-full max-w-md border-2 border-primary/20 shadow-2xl">
-            <CardContent className="p-8 text-center space-y-4">
-              <div className="flex justify-center">
-                <Loader2 className="h-16 w-16 animate-spin text-primary" />
-              </div>
+            <CardContent className="p-8 text-center space-y-6">
+              <LoadingLottie 
+                src="https://lottie.host/51fee83a-3e79-41b0-8a20-77f890b9b6f1/iUangPxwIF.lottie"
+                size="md" 
+                message="Creating Your Service..."
+              />
               <div className="space-y-2">
-                <h3 className="text-xl font-bold">
-                  Creating Your Service...
-                </h3>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Setting up your service, creating gardens, and generating agreements. This may take a moment.
                 </p>
               </div>

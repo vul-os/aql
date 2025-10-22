@@ -268,3 +268,102 @@
     font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   }
 }
+
+/* ====================================
+   Custom Loading Mower Animations
+   ==================================== */
+@keyframes mower-move {
+  0%, 100% {
+    transform: translateX(-120px);
+  }
+  50% {
+    transform: translateX(120px);
+  }
+}
+
+@keyframes sway {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+@keyframes spin-wheel {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin-fast {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fade-trail {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes particles {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes mower-bounce {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-mower-move {
+  animation: mower-move 4s ease-in-out infinite;
+}
+
+.animate-mower-bounce {
+  animation: mower-bounce 1.5s ease-in-out infinite;
+}
+
+.animate-sway {
+  animation: sway 2s ease-in-out infinite;
+}
+
+.animate-spin-wheel {
+  animation: spin-wheel 0.3s linear infinite;
+}
+
+.animate-spin-fast {
+  animation: spin-fast 0.5s linear infinite;
+}
+
+.animate-fade-trail {
+  animation: fade-trail 2s ease-in-out infinite;
+}
+
+.animate-particles {
+  animation: particles 1s ease-out infinite;
+}

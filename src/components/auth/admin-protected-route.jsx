@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/auth-context';
 import { supabase } from '@/lib/supabase';
 import { AlertCircle } from 'lucide-react';
+import LoadingLottie from '@/components/ui/loading-lottie';
 
 /**
  * AdminProtectedRoute - Only allows admin users to access the route
@@ -53,8 +54,12 @@ const AdminProtectedRoute = ({ children }) => {
   // Still loading auth state
   if (loading || checking) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <LoadingLottie 
+          src="https://lottie.host/51fee83a-3e79-41b0-8a20-77f890b9b6f1/iUangPxwIF.lottie"
+          message="Verifying access..." 
+          size="md" 
+        />
       </div>
     );
   }

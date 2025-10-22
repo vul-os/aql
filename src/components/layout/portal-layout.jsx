@@ -213,164 +213,260 @@ export default function PortalLayout() {
   };
 
   const Sidebar = ({ mobile = false }) => (
-    <div className={`flex flex-col h-full bg-gradient-to-b from-background to-muted dark:from-botkorp-black dark:to-botkorp-slate-blue text-foreground dark:text-white border-r relative`}>
-      {/* Background overlays for subtle pattern and shine */}
-      {!mobile && (
-        <>
-          <div className="pointer-events-none absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_20%_20%,_rgba(0,0,0,0.05),_transparent_40%)] dark:bg-[radial-gradient(circle_at_20%_20%,_rgba(255,255,255,0.15),_transparent_40%)]" />
-        </>
-      )}
-
-      {/* Logo - Clickable to landing */}
+    <div className={`flex flex-col h-full bg-gray-900 text-white border-r border-gray-800 relative shadow-xl overflow-hidden`}>
+      {/* Background Image from Pexels - More Visible! */}
       <div 
-        className="p-4 border-b border-border flex items-center gap-3 cursor-pointer hover:bg-muted/50 dark:hover:bg-white/10 backdrop-blur-sm transition-colors"
+        className="pointer-events-none absolute inset-0 bg-cover bg-center"
+        style={{ 
+          backgroundImage: 'url(https://images.pexels.com/photos/3590443/pexels-photo-3590443.jpeg?auto=compress&cs=tinysrgb&w=400&h=800&fit=crop)',
+        }}
+      />
+      
+      {/* Light overlay for readability - Much more transparent */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-gray-900/40 via-gray-900/30 to-gray-900/50" />
+      
+      {/* Subtle pattern overlay */}
+      <div 
+        className="pointer-events-none absolute inset-0 opacity-[0.02]" 
+        style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.1) 1px, transparent 0)', backgroundSize: '24px 24px' }} 
+      />
+
+      {/* Logo Section - Enhanced with backdrop */}
+      <div 
+        className="relative p-6 border-b border-white/10 flex items-center gap-3 cursor-pointer group overflow-hidden"
         onClick={() => {
           navigate('/');
           if (mobile) setMobileMenuOpen(false);
         }}
       >
-        <div className="relative">
-          <div className="absolute -inset-2 rounded-full shadow-glow-orange" />
-          <Bot className="relative h-8 w-8 text-accent drop-shadow" />
+        {/* Hover effect background */}
+        <div className="absolute inset-0 bg-gradient-to-r from-botkorp-orange/0 via-botkorp-orange/20 to-botkorp-orange/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        
+        <div className="relative flex items-center justify-center h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange to-red-500 shadow-lg shadow-botkorp-orange/50 group-hover:scale-110 group-hover:shadow-botkorp-orange/70 transition-all duration-300">
+          <Bot className="h-6 w-6 text-white" />
         </div>
-        <h1 className="text-xl font-bold tracking-tight">Bot Korp</h1>
+        <div className="relative">
+          <h1 className="text-xl font-bold tracking-tight text-white">
+            Bot Korp
+          </h1>
+          <p className="text-[10px] text-white/60 uppercase tracking-wider font-semibold">
+            Control Panel
+          </p>
+        </div>
       </div>
 
-      {/* Main Navigation */}
-      <nav className="flex-1 p-3 space-y-2">
-        {mainNavItems.map((item) => (
-          <button
-            key={item.path}
-            className={`w-full flex items-center justify-start gap-3 px-3 py-2 rounded-xl transition-all group ${
-              isActivePath(item.path)
-                ? 'bg-accent text-accent-foreground shadow-lg'
-                : 'text-foreground/70 dark:text-white/80 hover:bg-muted dark:hover:bg-white/10 hover:backdrop-blur-sm'
-            }`}
-            onClick={() => {
-              navigate(item.path);
-              if (mobile) setMobileMenuOpen(false);
-            }}
-          >
-            <span className={`inline-flex items-center justify-center h-8 w-8 rounded-lg ${
-              isActivePath(item.path)
-                ? 'bg-white/20'
-                : 'bg-muted/50 dark:bg-white/5 group-hover:bg-muted dark:group-hover:bg-white/10'
-            }`}>
-              {item.icon}
-            </span>
-            <span className="ml-1 font-medium">{item.label}</span>
-            {isActivePath(item.path) && (
-              <span className="ml-auto h-6 w-1.5 rounded-full bg-white/80" />
-            )}
-          </button>
-        ))}
+      {/* Main Navigation - Clean transparent design */}
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        <div className="space-y-1">
+          {mainNavItems.map((item) => (
+            <button
+              key={item.path}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group relative overflow-hidden ${
+                isActivePath(item.path)
+                  ? 'bg-gradient-to-r from-botkorp-orange to-red-500 text-white shadow-lg shadow-botkorp-orange/30'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white'
+              }`}
+              onClick={() => {
+                navigate(item.path);
+                if (mobile) setMobileMenuOpen(false);
+              }}
+            >
+              {/* Active indicator bar */}
+              {isActivePath(item.path) && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-white rounded-r-full shadow-lg shadow-white/50" />
+              )}
+              
+              {/* Icon */}
+              <span className={`flex-shrink-0 transition-transform duration-200 ${
+                isActivePath(item.path) 
+                  ? 'text-white scale-110' 
+                  : 'text-white/60 group-hover:text-botkorp-orange group-hover:scale-110'
+              }`}>
+                {item.icon}
+              </span>
+              
+              {/* Label */}
+              <span className={`flex-1 text-left font-medium text-sm ${
+                isActivePath(item.path) ? 'text-white' : ''
+              }`}>
+                {item.label}
+              </span>
+
+              {/* Chevron for active state */}
+              {isActivePath(item.path) && (
+                <ChevronDown className="h-4 w-4 text-white rotate-[-90deg]" />
+              )}
+            </button>
+          ))}
+        </div>
       </nav>
 
-      {/* Admin Navigation (only visible to admins) */}
-      {isAdmin && (
-        <div className="px-3 pb-3">
-          <div className="border-t border-border pt-3 mt-3">
-            <div className="flex items-center gap-2 px-3 mb-2">
-              <Shield className="h-4 w-4 text-muted-foreground" />
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Admin</p>
-            </div>
-            <div className="space-y-1">
-              {adminNavItems.map((item) => (
-                <button
-                  key={item.path}
-                  className={`w-full flex items-center justify-start gap-3 px-3 py-2 rounded-xl transition-all group ${
-                    isActivePath(item.path)
-                      ? 'bg-secondary text-secondary-foreground shadow-lg'
-                      : 'text-foreground/70 dark:text-white/80 hover:bg-muted dark:hover:bg-white/10 hover:backdrop-blur-sm'
-                  }`}
-                  onClick={() => {
-                    navigate(item.path);
-                    if (mobile) setMobileMenuOpen(false);
-                  }}
-                >
-                  <span className={`inline-flex items-center justify-center h-8 w-8 rounded-lg ${
-                    isActivePath(item.path)
-                      ? 'bg-white/20'
-                      : 'bg-muted/50 dark:bg-white/5 group-hover:bg-muted dark:group-hover:bg-white/10'
-                  }`}>
-                    {item.icon}
-                  </span>
-                  <span className="ml-1 font-medium text-sm">{item.label}</span>
-                  {isActivePath(item.path) && (
-                    <span className="ml-auto h-6 w-1.5 rounded-full bg-white/80" />
-                  )}
-                </button>
-              ))}
+      {/* Admin Section & Bottom Navigation - With Blur */}
+      <div className="mt-auto backdrop-blur-md bg-white/5">
+        {/* Admin Navigation (only visible to admins) */}
+        {isAdmin && (
+          <div className="px-4 pb-3 pt-4">
+            <div className="border-b border-white/10 pb-4">
+              <div className="flex items-center gap-2 px-2 mb-3">
+                <div className="h-6 w-6 rounded-md bg-purple-500/20 flex items-center justify-center">
+                  <Shield className="h-3.5 w-3.5 text-purple-400" />
+                </div>
+                <p className="text-xs font-bold text-white/60 uppercase tracking-wider">
+                  Admin Tools
+                </p>
+              </div>
+              <div className="space-y-1">
+                {adminNavItems.map((item) => (
+                  <button
+                    key={item.path}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group relative overflow-hidden ${
+                      isActivePath(item.path)
+                        ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg shadow-purple-500/30'
+                        : 'text-white/80 hover:bg-white/10 hover:text-white'
+                    }`}
+                    onClick={() => {
+                      navigate(item.path);
+                      if (mobile) setMobileMenuOpen(false);
+                    }}
+                  >
+                    {/* Active indicator */}
+                    {isActivePath(item.path) && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-white rounded-r-full shadow-lg shadow-white/50" />
+                    )}
+                    
+                    <span className={`flex-shrink-0 transition-transform duration-200 ${
+                      isActivePath(item.path) 
+                        ? 'text-white scale-110' 
+                        : 'text-white/60 group-hover:text-purple-400 group-hover:scale-110'
+                    }`}>
+                      {item.icon}
+                    </span>
+                    <span className={`flex-1 text-left font-medium text-xs ${
+                      isActivePath(item.path) ? 'text-white' : ''
+                    }`}>
+                      {item.label}
+                    </span>
+                    {isActivePath(item.path) && (
+                      <ChevronDown className="h-3.5 w-3.5 text-white rotate-[-90deg]" />
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Bottom Navigation - Settings */}
-      <div className="p-4 border-t border-border mt-auto">
+        {/* Bottom Navigation - Settings & Organizations */}
+        <div className="p-4 border-t border-white/10 space-y-3">
+        {/* Settings Button */}
         {bottomNavItems.map((item) => (
           <button
             key={item.path}
-            className={`w-full flex items-center justify-start gap-3 px-3 py-2 rounded-xl transition-all ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group relative overflow-hidden ${
               isActivePath(item.path)
-                ? 'bg-accent text-accent-foreground shadow-lg'
-                : 'text-foreground/70 dark:text-white/80 hover:bg-muted dark:hover:bg-white/10 hover:backdrop-blur-sm'
+                ? 'bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-lg shadow-gray-900/50'
+                : 'text-white/80 hover:bg-white/10 hover:text-white'
             }`}
             onClick={() => {
               navigate(item.path);
               if (mobile) setMobileMenuOpen(false);
             }}
           >
-            <span className={`inline-flex items-center justify-center h-8 w-8 rounded-lg ${
-              isActivePath(item.path)
-                ? 'bg-white/20'
-                : 'bg-muted/50 dark:bg-white/5'
+            {isActivePath(item.path) && (
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-white rounded-r-full shadow-lg shadow-white/50" />
+            )}
+            <span className={`flex-shrink-0 transition-transform duration-200 ${
+              isActivePath(item.path) 
+                ? 'text-white scale-110' 
+                : 'text-white/60 group-hover:text-white group-hover:scale-110'
             }`}>
               {item.icon}
             </span>
-            <span className="ml-1 font-medium">{item.label}</span>
+            <span className={`flex-1 text-left font-medium text-sm ${
+              isActivePath(item.path) ? 'text-white' : ''
+            }`}>
+              {item.label}
+            </span>
           </button>
         ))}
 
-        {/* Organizations at bottom */}
-        <div className="mt-4 pt-4 border-t border-border">
-          <p className="text-sm text-muted-foreground mb-2">Organizations</p>
-          <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+        {/* Organization Selector - Compact Dropdown Style */}
+        <div className="pt-3 border-t border-white/10">
+          <div className="flex items-center gap-2 px-2 mb-2">
+            <Building className="h-4 w-4 text-white/60" />
+            <p className="text-xs font-bold text-white/60 uppercase tracking-wider">
+              Organization
+            </p>
+          </div>
+          
+          {/* Current Organization Display */}
+          <div className="space-y-1 max-h-32 overflow-y-auto scrollbar-thin pr-1">
             {organizations.map((org) => (
               <button
                 key={org.organization_id}
-                className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                className={`w-full text-left px-3 py-2.5 rounded-lg transition-all duration-200 group ${
                   selectedOrg?.organization_id === org.organization_id
-                    ? 'bg-accent/10 text-accent font-medium'
-                    : 'text-foreground/80 dark:text-white/80 hover:bg-muted dark:hover:bg-white/10'
+                    ? 'bg-gradient-to-r from-blue-500/40 to-blue-600/40 border border-blue-400/60 shadow-lg shadow-blue-500/25'
+                    : 'text-white/80 hover:bg-white/10'
                 }`}
                 onClick={() => {
                   handleOrgChange(org);
                   if (mobile) setMobileMenuOpen(false);
                 }}
               >
-                {org.organization_name}
+                <div className="flex items-center gap-2">
+                  <div className={`h-7 w-7 rounded-lg flex items-center justify-center text-xs font-bold shadow-md ${
+                    selectedOrg?.organization_id === org.organization_id
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-white/10 text-white/80'
+                  }`}>
+                    {org.organization_name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-medium truncate ${
+                      selectedOrg?.organization_id === org.organization_id
+                        ? 'text-white'
+                        : 'text-white/90'
+                    }`}>
+                      {org.organization_name}
+                    </p>
+                    <p className="text-xs text-white/50 capitalize">
+                      {org.member_role}
+                    </p>
+                  </div>
+                  {selectedOrg?.organization_id === org.organization_id && (
+                    <div className="h-2 w-2 rounded-full bg-blue-400 animate-pulse shadow-lg shadow-blue-400/50" />
+                  )}
+                </div>
               </button>
             ))}
+            
             {/* Create Organization Button */}
             <button
-              className="w-full text-left px-3 py-2 rounded-lg transition-colors text-foreground/80 dark:text-white/80 hover:bg-muted dark:hover:bg-white/10 border border-border border-dashed flex items-center gap-2"
+              className="w-full text-left px-3 py-2.5 rounded-lg transition-all duration-200 text-white/80 hover:bg-white/10 hover:text-white border-2 border-dashed border-white/30 hover:border-botkorp-orange flex items-center gap-2 group"
               onClick={() => setShowCreateOrgDialog(true)}
             >
-              <Plus className="h-4 w-4" />
-              Create Organization
+              <div className="h-7 w-7 rounded-lg bg-white/10 flex items-center justify-center group-hover:bg-botkorp-orange group-hover:text-white transition-colors shadow-md">
+                <Plus className="h-4 w-4" />
+              </div>
+              <span className="text-sm font-medium group-hover:text-botkorp-orange transition-colors">
+                Create New
+              </span>
             </button>
           </div>
         </div>
 
         {/* Organization Info (mobile only) */}
         {mobile && selectedOrg && (
-          <div className="mt-4 pt-4 border-t border-border">
-            <p className="text-sm text-muted-foreground mb-2">Organization</p>
-            <p className="font-semibold">{selectedOrg.organization_name}</p>
-            <p className="text-xs text-muted-foreground capitalize">{selectedOrg.member_role}</p>
+          <div className="pt-3 border-t border-white/10">
+            <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+              <p className="text-xs text-white/50 mb-1">Current Organization</p>
+              <p className="font-semibold text-white">{selectedOrg.organization_name}</p>
+              <p className="text-xs text-white/60 capitalize mt-0.5">{selectedOrg.member_role}</p>
+            </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
@@ -389,43 +485,47 @@ export default function PortalLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:block w-64 flex-shrink-0">
+      {/* Desktop Sidebar - Enhanced width */}
+      <aside className="hidden md:block w-80 flex-shrink-0">
         <Sidebar />
       </aside>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Toolbar */}
-        <header className="relative border-b bg-gradient-to-r from-background to-muted/20 dark:from-botkorp-black dark:to-botkorp-slate-blue/80 backdrop-blur supports-[backdrop-filter]:bg-transparent shadow-md">
-          <div className="flex items-center justify-between p-4 gap-3">
+        {/* Toolbar - White Background */}
+        <header className="relative" style={{ backgroundColor: '#F9FAFB' }}>
+          <div className="flex items-center justify-between px-4 py-2.5 gap-2">
             {/* Mobile Menu Button */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild className="md:hidden">
-                <Button variant="ghost" size="icon">
-                  <Menu className="h-6 w-6" />
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-800">
+                  <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-64">
+              <SheetContent side="left" className="p-0 w-80">
                 <Sidebar mobile />
               </SheetContent>
             </Sheet>
 
-            {/* Location Dropdown (replaces Organization selector) */}
+            {/* Location Dropdown - Transparent */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
-                  className="gap-2 rounded-xl bg-white/70 dark:bg-white/5 backdrop-blur border-white/60 hover:bg-white/90 dark:hover:bg-white/10 shadow-sm"
+                  className="gap-2 rounded-md border-white/20 dark:border-white/10 bg-transparent hover:bg-white/10 dark:hover:bg-white/5 shadow-none transition-all duration-200 h-9 px-2.5"
                 >
-                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-gradient-to-br from-botkorp-orange to-botkorp-slate-blue text-white text-[11px] font-semibold shadow" aria-hidden>
+                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-md bg-gradient-to-br from-botkorp-orange via-red-500 to-red-600 text-white text-xs font-bold shadow-sm" aria-hidden>
                     {selectedLocation?.name?.[0]?.toUpperCase() || 'L'}
                   </span>
-                  <MapPin className="h-4 w-4 text-botkorp-slate-blue dark:text-white/80" />
-                  <span className="hidden sm:inline max-w-[180px] truncate">
-                    {selectedLocation?.name || 'Select location'}
-                  </span>
-                  <ChevronDown className="h-4 w-4" />
+                  <div className="hidden sm:flex flex-col items-start">
+                    <span className="text-[10px] text-gray-600 dark:text-gray-300 font-medium leading-tight">
+                      Location
+                    </span>
+                    <span className="text-xs font-semibold text-gray-900 dark:text-white max-w-[120px] truncate leading-tight">
+                      {selectedLocation?.name || 'Select location'}
+                    </span>
+                  </div>
+                  <ChevronDown className="h-3.5 w-3.5 text-gray-600 dark:text-gray-300" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-64">
@@ -470,25 +570,25 @@ export default function PortalLayout() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Search bar */}
-            <div className="hidden md:flex flex-1 mx-2">
+            {/* Search bar - Transparent */}
+            <div className="hidden md:flex flex-1 mx-3">
               <div className="relative w-full max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
                 <Input
-                  placeholder="Search..."
-                  className="pl-9 rounded-xl bg-white/70 dark:bg-white/5 backdrop-blur border"
+                  placeholder="Search services, bots, locations..."
+                  className="h-9 pl-8 pr-3 py-1.5 text-sm rounded-md bg-transparent border-white/20 dark:border-white/10 focus:bg-white/10 dark:focus:bg-white/5 focus:ring-2 focus:ring-botkorp-orange/20 transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400"
                 />
               </div>
             </div>
 
             {/* Notifications & User Menu */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <NotificationCenter />
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                    <Avatar className="h-10 w-10">
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0">
+                    <Avatar className="h-8 w-8">
                       <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email} />
                       <AvatarFallback>{getUserInitials()}</AvatarFallback>
                     </Avatar>
@@ -544,8 +644,8 @@ export default function PortalLayout() {
           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-y-auto bg-muted/10">
+        {/* Page Content - Enhanced */}
+        <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-950">
           <Outlet context={{ 
             selectedOrg,
             organization: selectedOrg ? {

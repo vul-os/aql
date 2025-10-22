@@ -19,7 +19,9 @@ import {
   ChevronRight,
   LayoutDashboard,
   Sun,
-  Moon
+  Moon,
+  BookOpen,
+  Scale
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -37,15 +39,17 @@ export default function DocsLayout() {
     {
       title: 'Getting Started',
       items: [
-        { title: 'Home', href: `${basePath}` , icon: <Home className="h-4 w-4" /> },
+        { title: 'Documentation Home', href: `${basePath}` , icon: <Home className="h-4 w-4" /> },
+        { title: 'Onboarding Guide', href: `${basePath}/onboarding-guide`, icon: <BookOpen className="h-4 w-4" /> },
         { title: 'FAQ', href: `${basePath}/faq`, icon: <HelpCircle className="h-4 w-4" /> },
       ]
     },
     {
-      title: 'Legal',
+      title: 'Legal & Terms',
       items: [
-        { title: 'Privacy Policy', href: `${basePath}/privacy-policy`, icon: <Shield className="h-4 w-4" /> },
+        { title: 'Bot Rental Terms', href: `${basePath}/bot-rental-terms`, icon: <Scale className="h-4 w-4" /> },
         { title: 'Terms of Service', href: `${basePath}/terms-of-service`, icon: <FileText className="h-4 w-4" /> },
+        { title: 'Privacy Policy', href: `${basePath}/privacy-policy`, icon: <Shield className="h-4 w-4" /> },
         { title: 'Cookie Policy', href: `${basePath}/cookie-policy`, icon: <Cookie className="h-4 w-4" /> },
       ]
     }
@@ -56,6 +60,18 @@ export default function DocsLayout() {
       return location.pathname === basePath || location.pathname === `${basePath}/`;
     }
     return location.pathname === href;
+  };
+
+  // Get current page title for breadcrumbs
+  const getCurrentPageTitle = () => {
+    for (const section of navigation) {
+      for (const item of section.items) {
+        if (isActive(item.href)) {
+          return item.title;
+        }
+      }
+    }
+    return 'Documentation';
   };
 
   const Sidebar = ({ mobile = false }) => (
@@ -205,6 +221,19 @@ export default function DocsLayout() {
 
         {/* Main Content */}
         <main className="flex-1 lg:pl-8 py-8 min-w-0">
+          {/* Breadcrumbs */}
+          {location.pathname !== basePath && location.pathname !== `${basePath}/` && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+              <Link 
+                to={basePath} 
+                className="hover:text-foreground transition-colors"
+              >
+                Documentation
+              </Link>
+              <ChevronRight className="h-4 w-4" />
+              <span className="text-foreground">{getCurrentPageTitle()}</span>
+            </div>
+          )}
           <Outlet />
         </main>
       </div>

@@ -39,7 +39,7 @@ def make_request(method, endpoint, data=None):
 
 def get_first_service():
     """Find the first available service record"""
-    result = make_request('GET', 'service_records?limit=1')
+    result = make_request('GET', 'services?limit=1')
     if result and len(result) > 0:
         return result[0]
     return None

@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
+import LoadingLottie from '@/components/ui/loading-lottie';
+import { ANIMATIONS } from '@/lib/animations';
 import {
   Sprout,
   MapPin,
@@ -179,10 +181,11 @@ export default function ServicesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground">Loading services...</p>
-        </div>
+        <LoadingLottie
+          src={ANIMATIONS.loading}
+          message="Loading services..."
+          size="md"
+        />
       </div>
     );
   }

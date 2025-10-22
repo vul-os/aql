@@ -119,12 +119,12 @@ export default function DocsHome() {
   return (
     <div className="max-w-4xl space-y-12">
       {/* Hero Section */}
-      <div className="space-y-4">
-        <Badge variant="secondary">Documentation</Badge>
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+      <div className="space-y-4 pb-8 border-b">
+        <Badge variant="secondary" className="mb-2">Documentation</Badge>
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
           Welcome to Bot Korp Docs
         </h1>
-        <p className="text-xl text-muted-foreground">
+        <p className="text-xl text-muted-foreground max-w-3xl">
           Everything you need to know about managing your autonomous bots and automating your property.
         </p>
       </div>

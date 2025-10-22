@@ -7,10 +7,8 @@ RLS
 
 ANDILE
 
-keep track of bot data, on off, direction rpm, distance, orentation 3d, accelleration 3d, rotation 3d, temp, humidity, rain, battery 
-bot location history, bot events? also for pool bots, make generic bot data maybe have common fields and json field
-
 LOGO
+
 Make email templates look good
 make invite supabase functions look good
 make backend html emails look good
@@ -20,7 +18,7 @@ MAKE EVERYTHING MOBILE FRIENDLY
 make these pages, META AND INSTAGRAM PAGES, AND LINKEDIN? AND TIKTOK?
 add animations to landing page 
 make a better blank services page
-every page on docs have route to it in side bar, have a nice home for docs make it look good
+✅ every page on docs have route to it in side bar, have a nice home for docs make it look good
 google login
 location selector not updating when a location is created, active location also
 loading animation, make nice, make it like a mower or robot or whatever 
@@ -31,8 +29,15 @@ HARD
 service calander, get how many locations to service in month on a map, service completed, 
 in create service, create the service there becasuse if api fails, service is not finished 
 
-
-learn how to run supabase locally, what files to change in frontend and backend?
 EMAIL SUPPORT@BOTKORP.COM gets sent to a specific email? 
 email footers for gmail?
 add picture of product to landing page
+learn how to run supabase locally, what files to change in frontend and backend?
+
+
+
+
+keep track of bot data, on off, direction rpm, distance, orentation 3d, accelleration 3d, rotation 3d, temp, humidity, rain, battery 
+bot location history, bot events? 
+
+-> Make migration for this 

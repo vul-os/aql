@@ -1,15 +1,17 @@
 import * as React from "react"
 import * as ProgressPrimitive from "@radix-ui/react-progress"
+import LoadingLottie from "./loading-lottie"
 
 import { cn } from "@/lib/utils"
 
 const Progress = React.forwardRef(({ className, value, message, ...props }, ref) => (
   <div className="flex flex-col items-center justify-center min-h-screen">
     <div className="text-center mb-4">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-      {message && (
-        <p className="text-gray-600 text-lg">{message}</p>
-      )}
+      <LoadingLottie 
+        src="https://lottie.host/51fee83a-3e79-41b0-8a20-77f890b9b6f1/iUangPxwIF.lottie"
+        message={message}
+        size="md"
+      />
     </div>
     <ProgressPrimitive.Root
       ref={ref}

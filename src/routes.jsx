@@ -71,6 +71,10 @@ const CookiePolicyPage = lazyImport(() => import('./pages/docs/cookie-policy-pag
 // 404 page
 const NotFound = lazyImport(() => import('./pages/not-found'));
 
+// Demo/Test pages
+const LoadingMowerDemo = lazyImport(() => import('./components/ui/loading-mower-demo'));
+const LoadingLottieDemo = lazyImport(() => import('./components/ui/loading-lottie-demo'));
+
 const Protected = ({ children }) => (
   <ProtectedRoute>{children}</ProtectedRoute>
 );
@@ -105,6 +109,10 @@ const AppRoutes = () => {
 
         {/* Public add service route (for landing page) */}
         <Route path="/add-service" element={<AddServicePublic />} />
+
+        {/* Demo/Test routes */}
+        <Route path="/demo/loading" element={<LoadingMowerDemo />} />
+        <Route path="/demo/lottie" element={<LoadingLottieDemo />} />
 
         {/* Protected portal routes */}
         <Route path="/portal" element={

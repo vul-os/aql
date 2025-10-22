@@ -8,6 +8,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import LoadingLottie from '@/components/ui/loading-lottie';
+import { ANIMATIONS } from '@/lib/animations';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -523,7 +525,11 @@ export default function ServiceDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <LoadingLottie
+          src={ANIMATIONS.loading}
+          message="Loading service details..."
+          size="md"
+        />
       </div>
     );
   }
