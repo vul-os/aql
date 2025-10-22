@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { 
   Battery, 
   Thermometer, 
@@ -15,7 +16,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
-  Loader2
+  Loader2,
+  Info,
+  ArrowLeft
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 
@@ -26,6 +29,7 @@ import { format, formatDistanceToNow } from 'date-fns';
  */
 export default function ServiceBotStatus() {
   const { serviceId } = useParams();
+  const navigate = useNavigate();
   
   const [botData, setBotData] = useState(null);
   const [sensorHistory, setSensorHistory] = useState([]);
@@ -46,15 +50,18 @@ export default function ServiceBotStatus() {
       
       // First, get the service to find the location_id
       const { data: serviceData, error: serviceError } = await supabase
-        .from('service_records')
-        .select('location_id')
+        .from('services')
+        .select('location_id, name')
         .eq('id', serviceId)
         .single();
       
-      if (serviceError) throw serviceError;
+      if (serviceError) {
+        console.error('Service fetch error:', serviceError);
+        throw new Error('Unable to load service information');
+      }
       
-      if (!serviceData) {
-        setError('Service not found');
+      if (!serviceData || !serviceData.location_id) {
+        setError('Service location not configured. Please contact support.');
         setLoading(false);
         return;
       }
@@ -66,11 +73,12 @@ export default function ServiceBotStatus() {
         .rpc('get_location_bot_data', { location_id_input: locationId });
       
       if (rpcError) {
-        throw rpcError;
+        console.error('RPC error:', rpcError);
+        throw new Error('Unable to load bot data. Please try again.');
       }
       
       if (!data || data.length === 0) {
-        setError('No bot found for this service location');
+        setError('No bot assigned yet. Bot assignment happens during installation.');
         setLoading(false);
         return;
       }
@@ -91,7 +99,7 @@ export default function ServiceBotStatus() {
       setLoading(false);
     } catch (err) {
       console.error('Error fetching bot data:', err);
-      setError(err.message);
+      setError(err.message || 'An unexpected error occurred');
       setLoading(false);
     }
   };
@@ -138,11 +146,39 @@ export default function ServiceBotStatus() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-2" />
-          <p className="text-lg font-semibold mb-2">Unable to load bot status</p>
-          <p className="text-muted-foreground">{error}</p>
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Card className="max-w-md w-full border-0 shadow-lg">
+            <CardContent className="p-8 text-center">
+              <div className="h-16 w-16 rounded-full bg-yellow-100 dark:bg-yellow-900/20 flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="w-8 h-8 text-yellow-600 dark:text-yellow-500" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Unable to Load Bot Status</h3>
+              <p className="text-muted-foreground mb-6">{error}</p>
+              
+              {error.includes('No bot assigned') && (
+                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-left">
+                  <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                    <Info className="w-4 h-4 text-blue-600" />
+                    What's Next?
+                  </h4>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    <li>• Bots are assigned during installation</li>
+                    <li>• Our team will contact you within 24-48 hours</li>
+                    <li>• You'll receive a notification when your bot is active</li>
+                  </ul>
+                </div>
+              )}
+              
+              <Button
+                onClick={() => window.location.reload()}
+                variant="outline"
+                className="mt-6"
+              >
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -165,6 +201,19 @@ export default function ServiceBotStatus() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {/* Breadcrumb/Back Button */}
+      <div className="flex items-center gap-3">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => navigate(`/portal/service/${serviceId}`)}
+          className="h-9 px-3"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Service
+        </Button>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

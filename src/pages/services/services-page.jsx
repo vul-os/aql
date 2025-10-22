@@ -469,6 +469,22 @@ export default function ServicesPage() {
                       </AlertDescription>
                     </Alert>
                   )}
+
+                  {/* Quick Action: View Bot Status */}
+                  {service.status === 'active' && !service.is_paused && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-9"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/portal/service/${service.id}/bot-status`);
+                      }}
+                    >
+                      <Activity className="h-4 w-4 mr-2" />
+                      View Bot Status
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             );

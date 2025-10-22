@@ -70,17 +70,17 @@ BEGIN
         -- Recent events (last 20)
         (SELECT json_agg(e.* ORDER BY e.event_timestamp DESC)
          FROM (
-             SELECT * FROM bot_events 
-             WHERE bot_id = b.id 
-             ORDER BY event_timestamp DESC 
+             SELECT * FROM bot_events be
+             WHERE be.bot_id = b.id 
+             ORDER BY be.event_timestamp DESC 
              LIMIT 20
          ) e),
         -- Location trail (last 100 points)
         (SELECT json_agg(lh.* ORDER BY lh.recorded_at DESC)
          FROM (
-             SELECT * FROM bot_location_history 
-             WHERE bot_id = b.id 
-             ORDER BY recorded_at DESC 
+             SELECT * FROM bot_location_history blh
+             WHERE blh.bot_id = b.id 
+             ORDER BY blh.recorded_at DESC 
              LIMIT 100
          ) lh),
         -- Today's statistics
@@ -131,7 +131,7 @@ BEGIN
         RAISE EXCEPTION 'Access denied';
     END IF;
     
-    -- Return data for all bots at this location
+    -- Return data for all bots at this location (FIXED: added table aliases)
     RETURN QUERY
     SELECT 
         b.id,
@@ -145,16 +145,16 @@ BEGIN
          LIMIT 1),
         (SELECT json_agg(e.* ORDER BY e.event_timestamp DESC)
          FROM (
-             SELECT * FROM bot_events 
-             WHERE bot_id = b.id 
-             ORDER BY event_timestamp DESC 
+             SELECT * FROM bot_events be
+             WHERE be.bot_id = b.id 
+             ORDER BY be.event_timestamp DESC 
              LIMIT 20
          ) e),
         (SELECT json_agg(lh.* ORDER BY lh.recorded_at DESC)
          FROM (
-             SELECT * FROM bot_location_history 
-             WHERE bot_id = b.id 
-             ORDER BY recorded_at DESC 
+             SELECT * FROM bot_location_history blh
+             WHERE blh.bot_id = b.id 
+             ORDER BY blh.recorded_at DESC 
              LIMIT 100
          ) lh),
         (SELECT row_to_json(ds.*)

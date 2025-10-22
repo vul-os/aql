@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Battery, 
@@ -18,7 +19,8 @@ import {
   Clock,
   Loader2,
   BarChart3,
-  History
+  History,
+  ArrowLeft
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 
@@ -29,6 +31,7 @@ import { format, formatDistanceToNow } from 'date-fns';
  */
 export default function LocationBotStatusPage() {
   const { locationId } = useParams();
+  const navigate = useNavigate();
   
   const [botData, setBotData] = useState(null);
   const [sensorHistory, setSensorHistory] = useState([]);
@@ -152,6 +155,19 @@ export default function LocationBotStatusPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {/* Breadcrumb/Back Button */}
+      <div className="flex items-center gap-3">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => navigate('/portal')}
+          className="h-9 px-3"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Dashboard
+        </Button>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

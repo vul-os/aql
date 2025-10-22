@@ -630,7 +630,10 @@ export default function ServiceDetailPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <Card 
+                className="border-0 shadow-lg hover:shadow-xl transition-all cursor-pointer hover:scale-105"
+                onClick={() => navigate(`/portal/service/${id}/bot-status`)}
+              >
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-secondary to-secondary/80 flex items-center justify-center shadow-lg">
@@ -639,6 +642,10 @@ export default function ServiceDetailPage() {
                   </div>
                   <p className="text-4xl font-bold text-slate-900 dark:text-white mb-1">{gardens.length}</p>
                   <p className="text-sm text-muted-foreground font-medium">Bots Active</p>
+                  <div className="mt-2 flex items-center gap-1 text-xs text-secondary font-medium">
+                    <Activity className="h-3 w-3" />
+                    View Status →
+                  </div>
                 </CardContent>
               </Card>
 

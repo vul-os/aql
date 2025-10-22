@@ -5,22 +5,34 @@
 
 -- Add new telemetry types for specific sensors
 -- Note: We're extending the existing bot_telemetry table's telemetry_type enum
-ALTER TABLE bot_telemetry DROP CONSTRAINT IF EXISTS bot_telemetry_telemetry_type_check;
-ALTER TABLE bot_telemetry 
-    ADD CONSTRAINT bot_telemetry_telemetry_type_check 
-    CHECK (telemetry_type IN (
-        'status', 'location', 'battery', 'temperature', 'humidity',
-        'soil_moisture', 'water_quality', 'motion_detected', 'obstacle_detected',
-        'weather_data', 'system_health', 'custom',
-        -- New sensor types
-        'sensors_snapshot',  -- Complete sensor reading (all sensors at once)
-        'movement',          -- Direction, RPM, distance
-        'orientation',       -- 3D orientation (pitch, roll, yaw)
-        'acceleration',      -- 3D acceleration
-        'rotation',          -- 3D rotation rates
-        'rain',              -- Rain sensor
-        'environmental'      -- Combined temp, humidity, rain
-    ));
+DO $$ 
+BEGIN
+    -- Drop the old constraint if it exists
+    IF EXISTS (
+        SELECT 1 FROM information_schema.table_constraints 
+        WHERE constraint_name = 'bot_telemetry_telemetry_type_check' 
+        AND table_name = 'bot_telemetry'
+    ) THEN
+        ALTER TABLE bot_telemetry DROP CONSTRAINT bot_telemetry_telemetry_type_check;
+    END IF;
+    
+    -- Add the new constraint with extended types
+    ALTER TABLE bot_telemetry 
+        ADD CONSTRAINT bot_telemetry_telemetry_type_check 
+        CHECK (telemetry_type IN (
+            'status', 'location', 'battery', 'temperature', 'humidity',
+            'soil_moisture', 'water_quality', 'motion_detected', 'obstacle_detected',
+            'weather_data', 'system_health', 'custom',
+            -- New sensor types
+            'sensors_snapshot',  -- Complete sensor reading (all sensors at once)
+            'movement',          -- Direction, RPM, distance
+            'orientation',       -- 3D orientation (pitch, roll, yaw)
+            'acceleration',      -- 3D acceleration
+            'rotation',          -- 3D rotation rates
+            'rain',              -- Rain sensor
+            'environmental'      -- Combined temp, humidity, rain
+        ));
+END $$;
 
 -- BOT_LOCATION_HISTORY TABLE
 -- Track GPS positions over time to show where the bot has been
