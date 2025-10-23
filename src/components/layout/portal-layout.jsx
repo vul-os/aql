@@ -83,6 +83,8 @@ export default function PortalLayout() {
 
   const mainNavItems = [
     { icon: <LayoutDashboard className="h-5 w-5" />, label: 'Dashboard', path: '/portal' },
+    { icon: <MapPin className="h-5 w-5" />, label: 'Locations', path: '/portal/locations' },
+    { icon: <Bot className="h-5 w-5" />, label: 'Bots', path: '/portal/bots' },
     { icon: <Sprout className="h-5 w-5" />, label: 'Services', path: '/portal/services' },
     { icon: <Users className="h-5 w-5" />, label: 'Members', path: '/portal/members' },
     { icon: <CreditCard className="h-5 w-5" />, label: 'Billing', path: '/portal/billing' },
@@ -90,7 +92,7 @@ export default function PortalLayout() {
 
   const adminNavItems = [
     { icon: <FileCheck className="h-5 w-5" />, label: 'Approvals', path: '/admin/approvals' },
-    { icon: <Bot className="h-5 w-5" />, label: 'Bot Management', path: '/admin/bot-management' },
+    { icon: <Wrench className="h-5 w-5" />, label: 'Bot Management', path: '/admin/bot-management' },
   ];
 
   const bottomNavItems = [
@@ -255,13 +257,13 @@ export default function PortalLayout() {
         </div>
       </div>
 
-      {/* Main Navigation - Clean transparent design */}
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        <div className="space-y-1">
+      {/* Main Navigation - Clean transparent design with professional spacing */}
+      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+        <div className="space-y-2">
           {mainNavItems.map((item) => (
             <button
               key={item.path}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group relative overflow-hidden ${
+              className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-lg transition-all duration-200 group relative overflow-hidden ${
                 isActivePath(item.path)
                   ? 'bg-gradient-to-r from-botkorp-orange to-red-500 text-white shadow-lg shadow-botkorp-orange/30'
                   : 'text-white/80 hover:bg-white/10 hover:text-white'
@@ -301,8 +303,8 @@ export default function PortalLayout() {
         </div>
       </nav>
 
-      {/* Admin Section & Bottom Navigation - With Blur */}
-      <div className="mt-auto backdrop-blur-md bg-white/5">
+      {/* Admin Section & Bottom Navigation - Clean without blur */}
+      <div className="mt-auto bg-gray-900/40">
         {/* Admin Navigation (only visible to admins) */}
         {isAdmin && (
           <div className="px-4 pb-3 pt-4">
