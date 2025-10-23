@@ -85,3 +85,6 @@ export UPDATE_INTERVAL
 # Run the simulator
 python3 bot_simulator.py
 
+
+
+

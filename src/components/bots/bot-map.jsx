@@ -208,3 +208,6 @@ export default function BotMap({ botId, currentLocation, locationHistory }) {
   );
 }
 
+
+
+

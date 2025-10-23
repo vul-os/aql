@@ -154,3 +154,6 @@ export default function BotBatteryChart({ botId, timeRange = '24h' }) {
   );
 }
 
+
+
+

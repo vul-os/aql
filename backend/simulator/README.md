@@ -154,3 +154,6 @@ screen -r bot-sim
 - Verify database connection
 - Check Supabase credentials
 
+
+
+

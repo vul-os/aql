@@ -182,3 +182,6 @@ export default function BotTemperatureChart({ botId, timeRange = '24h' }) {
   );
 }
 
+
+
+
