@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Battery, 
   Thermometer, 
@@ -14,9 +15,14 @@ import {
   Navigation,
   AlertTriangle,
   CheckCircle2,
-  Clock
+  Clock,
+  TrendingUp,
+  Map as MapIcon
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
+import BotMap from '@/components/bots/bot-map';
+import BotBatteryChart from '@/components/bots/bot-battery-chart';
+import BotTemperatureChart from '@/components/bots/bot-temperature-chart';
 
 /**
  * Bot Dashboard Page
@@ -44,12 +50,36 @@ export default function BotDashboardPage() {
         table: 'bot_sensor_readings',
         filter: `bot_id=eq.${botId}`
       }, (payload) => {
+        console.log('📡 Real-time sensor reading:', payload.new);
         setLatestSensor(payload.new);
+        
+        // Update bot info battery level
+        if (payload.new.battery_percentage !== undefined) {
+          setBotInfo(prev => ({
+            ...prev,
+            battery_level: payload.new.battery_percentage
+          }));
+        }
+      })
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'bot_events',
+        filter: `bot_id=eq.${botId}`
+      }, (payload) => {
+        console.log('📡 Real-time event:', payload.new);
+        setRecentEvents(prev => [payload.new, ...prev].slice(0, 20));
       })
       .subscribe();
 
+    // Refresh dashboard data every 30 seconds
+    const interval = setInterval(() => {
+      fetchBotData();
+    }, 30000);
+
     return () => {
       subscription.unsubscribe();
+      clearInterval(interval);
     };
   }, [botId]);
 
@@ -57,37 +87,64 @@ export default function BotDashboardPage() {
     setLoading(true);
     
     try {
-      // Fetch bot info to get location_id
+      // Fetch bot info
       const { data: bot, error: botError } = await supabase
         .from('bots')
-        .select('*, location_id')
+        .select('*')
         .eq('id', botId)
         .single();
       
       if (botError) throw botError;
-      
       setBotInfo(bot);
 
-      if (!bot.location_id) {
-        console.warn('Bot has no location assigned');
-        setLoading(false);
-        return;
+      // Fetch latest sensor reading
+      const { data: sensorData, error: sensorError } = await supabase
+        .from('bot_sensor_readings')
+        .select('*')
+        .eq('bot_id', botId)
+        .order('recorded_at', { ascending: false })
+        .limit(1);
+      
+      if (sensorError) throw sensorError;
+      if (sensorData && sensorData.length > 0) {
+        setLatestSensor(sensorData[0]);
       }
 
-      // Use RPC function to get bot data
-      const { data: botData, error: rpcError } = await supabase
-        .rpc('get_location_bot_data', { location_id_input: bot.location_id });
+      // Fetch recent events (last 20)
+      const { data: eventsData, error: eventsError } = await supabase
+        .from('bot_events')
+        .select('*')
+        .eq('bot_id', botId)
+        .order('event_timestamp', { ascending: false })
+        .limit(20);
       
-      if (rpcError) throw rpcError;
+      if (eventsError) throw eventsError;
+      setRecentEvents(eventsData || []);
 
-      if (botData && botData.length > 0) {
-        const data = botData[0];
-        
-        // Parse JSONB fields from RPC response
-        setLatestSensor(data.latest_sensor_reading);
-        setRecentEvents(data.recent_events || []);
-        setLocationHistory(data.location_trail || []);
-        setTodayStats(data.today_stats);
+      // Fetch location history (last 100 points)
+      const { data: locationData, error: locationError } = await supabase
+        .from('bot_location_history')
+        .select('*')
+        .eq('bot_id', botId)
+        .order('recorded_at', { ascending: false })
+        .limit(100);
+      
+      if (locationError) throw locationError;
+      setLocationHistory(locationData || []);
+
+      // Fetch today's statistics
+      const today = new Date().toISOString().split('T')[0];
+      const { data: statsData, error: statsError } = await supabase
+        .from('bot_daily_statistics')
+        .select('*')
+        .eq('bot_id', botId)
+        .eq('date', today)
+        .single();
+      
+      if (statsError && statsError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+        console.error('Error fetching stats:', statsError);
+      } else if (statsData) {
+        setTodayStats(statsData);
       }
 
     } catch (error) {
@@ -427,22 +484,68 @@ export default function BotDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Location Map would go here */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Location History</CardTitle>
-          <CardDescription>
-            {locationHistory.length} GPS points recorded
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-gray-100 rounded-lg h-64 flex items-center justify-center">
-            <p className="text-muted-foreground">
-              Map component goes here (use Leaflet or Google Maps)
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Analytics Tabs */}
+      <Tabs defaultValue="charts" className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="charts" className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Charts
+          </TabsTrigger>
+          <TabsTrigger value="map" className="flex items-center gap-2">
+            <MapIcon className="w-4 h-4" />
+            Location Map
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="charts" className="space-y-6">
+          {/* Battery Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Battery Level (Last 24 Hours)</CardTitle>
+              <CardDescription>Battery percentage over time</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BotBatteryChart botId={botId} />
+            </CardContent>
+          </Card>
+
+          {/* Temperature & Humidity Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Temperature & Humidity (Last 24 Hours)</CardTitle>
+              <CardDescription>Environmental conditions over time</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BotTemperatureChart botId={botId} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="map">
+          {/* Location Map */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Location History & Trail</CardTitle>
+              <CardDescription>
+                {locationHistory.length} GPS points recorded | Last update: {latestSensor?.recorded_at 
+                  ? formatDistanceToNow(new Date(latestSensor.recorded_at), { addSuffix: true })
+                  : 'Never'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BotMap 
+                botId={botId}
+                currentLocation={latestSensor ? {
+                  lat: latestSensor.latitude,
+                  lng: latestSensor.longitude,
+                  heading: latestSensor.direction_degrees
+                } : null}
+                locationHistory={locationHistory}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

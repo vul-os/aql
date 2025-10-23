@@ -213,21 +213,21 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-      {/* Header - Modern, Clean Design */}
+    <div className="min-h-screen bg-white dark:bg-botkorp-black">
+      {/* Header - Professional, Solid Colors */}
       <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled 
-          ? 'bg-white/95 dark:bg-slate-950/95 backdrop-blur-lg border-b border-slate-200 dark:border-slate-800 shadow-sm' 
-          : 'bg-white/50 dark:bg-slate-950/50 backdrop-blur-md border-b border-white/10'
+          ? 'bg-white dark:bg-botkorp-black border-b border-gray-200 dark:border-botkorp-slate-blue/30 shadow-md' 
+          : 'bg-white/98 dark:bg-botkorp-black/98 backdrop-blur-sm border-b border-gray-100 dark:border-botkorp-slate-blue/20'
       }`}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 sm:h-18">
+          <div className="flex items-center justify-between h-14 sm:h-16">
             {/* Logo */}
-            <div className="flex items-center gap-2.5 cursor-pointer group" onClick={() => navigate('/')}> 
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md group-hover:shadow-lg transition-all group-hover:scale-105">
+            <div className="flex items-center gap-2 cursor-pointer group" onClick={() => navigate('/')}> 
+              <div className="h-9 w-9 rounded-lg bg-botkorp-orange flex items-center justify-center shadow-sm group-hover:shadow-md transition-all group-hover:scale-105">
                 <Bot className="h-5 w-5 text-white" />
-          </div>
-              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
+              </div>
+              <h1 className="text-lg sm:text-xl font-bold text-botkorp-black dark:text-white">
                 Bot Korp
               </h1>
             </div>
@@ -237,44 +237,44 @@ export default function LandingPage() {
               <Button 
                 variant="ghost" 
                 onClick={() => navigate('/docs')} 
-                className="hidden sm:flex text-foreground/70 hover:text-primary hover:bg-primary/5 font-medium"
+                className="hidden sm:flex text-botkorp-slate-blue hover:text-botkorp-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-botkorp-slate-blue/20 font-medium"
               >
-              Docs
-            </Button>
+                Docs
+              </Button>
               
             {user && hasOrganization ? (
               <Button 
                 onClick={() => navigate('/portal')}
-                  className="gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md hover:shadow-lg transition-all hover:scale-105 font-semibold"
+                className="gap-2 bg-botkorp-black dark:bg-botkorp-orange hover:bg-botkorp-slate-blue dark:hover:bg-botkorp-orange-dark text-white shadow-sm hover:shadow-md transition-all font-semibold"
               >
-                  <LayoutDashboard className="h-4 w-4" />
-                  <span className="hidden sm:inline">Dashboard</span>
-                  <span className="sm:hidden">Portal</span>
+                <LayoutDashboard className="h-4 w-4" />
+                <span className="hidden sm:inline">Dashboard</span>
+                <span className="sm:hidden">Portal</span>
               </Button>
             ) : user ? (
-                <Button 
-                  onClick={() => navigate('/portal')} 
-                  className="gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md hover:shadow-lg transition-all hover:scale-105 font-semibold"
-                >
-                  <LayoutDashboard className="h-4 w-4" />
-                  <span className="hidden sm:inline">Dashboard</span>
-                  <span className="sm:hidden">Portal</span>
+              <Button 
+                onClick={() => navigate('/portal')} 
+                className="gap-2 bg-botkorp-black dark:bg-botkorp-orange hover:bg-botkorp-slate-blue dark:hover:bg-botkorp-orange-dark text-white shadow-sm hover:shadow-md transition-all font-semibold"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                <span className="hidden sm:inline">Dashboard</span>
+                <span className="sm:hidden">Portal</span>
               </Button>
             ) : (
               <>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => navigate('/auth/login')} 
-                    className="text-foreground/70 hover:text-primary hover:bg-primary/5 font-medium"
-                  >
+                <Button 
+                  variant="ghost" 
+                  onClick={() => navigate('/auth/login')} 
+                  className="text-botkorp-slate-blue hover:text-botkorp-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-botkorp-slate-blue/20 font-medium"
+                >
                   Login
                 </Button>
                 <Button 
                   onClick={() => navigate('/auth/register')}
-                    className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md hover:shadow-lg transition-all hover:scale-105 font-semibold"
+                  className="bg-botkorp-orange hover:bg-botkorp-orange-dark text-white shadow-sm hover:shadow-md transition-all font-semibold"
                 >
-                    <span className="hidden sm:inline">Get Started</span>
-                    <span className="sm:hidden">Sign Up</span>
+                  <span className="hidden sm:inline">Get Started</span>
+                  <span className="sm:hidden">Sign Up</span>
                 </Button>
               </>
             )}
@@ -283,67 +283,69 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Pilot Banner - Below Header */}
-      <div className="fixed top-16 sm:top-[72px] left-0 right-0 z-40 bg-gradient-to-r from-muted/50 via-accent/10 to-muted/50 dark:from-botkorp-black dark:via-botkorp-slate-blue dark:to-botkorp-black border-b border-accent/20 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-2.5">
-          <div className="flex items-center justify-center gap-2 text-sm">
+      {/* Pilot Banner - Subtle Animation */}
+      <div className="fixed top-14 sm:top-16 left-0 right-0 z-40 bg-botkorp-orange dark:bg-botkorp-slate-blue border-b border-botkorp-orange-dark dark:border-botkorp-slate-blue/50 overflow-hidden">
+        <div className="container mx-auto px-4 py-2">
+          <div className="flex items-center justify-center gap-2 text-sm animate-[fadeIn_1s_ease-out]">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-60"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
             </span>
-            <p className="text-foreground">
-              <strong className="font-semibold text-primary">Pilot Program Now Active</strong> — Be among the first to experience automated property care in South Africa!
+            <p className="text-white">
+              <strong className="font-semibold">Pilot Program Now Active</strong> <span className="hidden sm:inline">— Be among the first to experience automated property care in South Africa!</span>
             </p>
           </div>
         </div>
+        {/* Subtle sliding gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-[slideInRight_3s_ease-in-out_infinite] pointer-events-none"></div>
       </div>
 
-      {/* Hero Section - full viewport with integrated coverage search */}
-      <section className="relative h-screen flex items-center mt-[110px] overflow-hidden">
-        {/* Background Image with Overlays */}
-        <div className="absolute inset-0 overflow-hidden">
+      {/* Hero Section - Fits in viewport */}
+      <section className="relative mt-20 sm:mt-24 h-[calc(100vh-96px)] sm:h-[calc(100vh-104px)] flex items-center pb-8 sm:pb-12 overflow-hidden">
+        {/* Background Image with Solid Overlay */}
+        <div className="absolute inset-0">
           <img 
             src="/images/lawn.jpg" 
             alt="Automated lawn care" 
-            className="w-full h-full object-cover object-center transition-transform duration-[10000ms] hover:scale-105"
+            className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-black/25 to-black/40" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20" />
+          {/* Solid color overlay - no gradients */}
+          <div className="absolute inset-0 bg-botkorp-black/50 dark:bg-botkorp-black/70" />
         </div>
 
         {/* Content */}
-        <div className="relative w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center">
+        <div className="relative w-full max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center">
           
-          {/* Headline */}
-          <div className="text-center mb-12 lg:mb-16 animate-[fadeIn_1s_ease-out]">
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight tracking-tight drop-shadow-2xl">
+          {/* Headline - More compact */}
+          <div className="text-center mb-6 lg:mb-8 animate-[fadeIn_1s_ease-out]">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight tracking-tight drop-shadow-2xl">
               Property services managed
             </h1>
-            <h1 className="mt-2 text-5xl md:text-[4.125rem] lg:text-7xl font-bold text-white leading-tight tracking-tight drop-shadow-2xl">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary/90 to-primary/70">
+            <h1 className="mt-1 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight drop-shadow-2xl">
+              <span className="text-botkorp-orange">
                 automatically.
               </span>
             </h1>
-            <p className="mt-8 text-xl md:text-2xl text-white/95 font-light max-w-3xl mx-auto drop-shadow-lg leading-relaxed">
+            <p className="mt-4 sm:mt-6 text-base sm:text-lg md:text-xl text-white/90 font-light max-w-2xl mx-auto drop-shadow-lg leading-relaxed">
               Professional lawn, pool, and security automation for homes and businesses across South Africa.
             </p>
           </div>
 
-          {/* Search Box - Clean StorNextDoor Style */}
-          <div className="w-full max-w-3xl mx-auto animate-[fadeInUp_0.7s_ease-out_0.3s_both]">
-            <div className="relative bg-white rounded-2xl shadow-2xl transition-all duration-300 hover:shadow-xl">
-              <div className="flex items-center px-3 sm:px-4 py-3 sm:py-3">
-                <MapPin className="text-primary mr-2 sm:mr-3 flex-shrink-0 h-5 w-5" />
+          {/* Search Box - Professional Solid Design */}
+          <div className="w-full max-w-2xl mx-auto animate-[fadeInUp_0.7s_ease-out_0.3s_both]">
+            <div className="relative bg-white dark:bg-botkorp-black-light rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl border-2 border-gray-200 dark:border-botkorp-slate-blue/30">
+              <div className="flex items-center px-3 sm:px-4 py-2.5 sm:py-3">
+                <MapPin className="text-botkorp-orange mr-2 sm:mr-3 flex-shrink-0 h-5 w-5" />
                 <div className="flex-1 min-w-0">
-                <AddressSearch
-                  onAddressSelect={handleAddressSelect}
-                    placeholder="Enter Address"
-                  storageKey="lastSearchedAddress"
-                    className="border-none shadow-none focus-visible:ring-0 py-2 sm:py-3 text-base sm:text-lg placeholder:text-gray-400 px-0 h-auto outline-none"
-                />
-                  </div>
+                  <AddressSearch
+                    onAddressSelect={handleAddressSelect}
+                    placeholder="Enter your address"
+                    storageKey="lastSearchedAddress"
+                    className="border-none shadow-none focus-visible:ring-0 py-1.5 sm:py-2 text-sm sm:text-base placeholder:text-gray-400 dark:placeholder:text-botkorp-silver px-0 h-auto outline-none dark:text-white"
+                  />
+                </div>
                 <Button
-                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium bg-primary text-white hover:bg-gradient-to-r from-primary to-primary/80 hover:scale-105 active:scale-95 transition-all duration-200 shadow-sm hover:shadow-md h-12 rounded-lg px-6 ml-2 sm:ml-3 text-sm"
+                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold bg-botkorp-orange hover:bg-botkorp-orange-dark text-white transition-all duration-200 shadow-sm hover:shadow-md h-10 rounded-lg px-4 sm:px-6 ml-2 sm:ml-3 text-sm"
                   disabled={searching}
                   onClick={() => {
                     // Trigger search if needed
@@ -354,48 +356,46 @@ export default function LandingPage() {
                   ) : (
                     <>
                       <ArrowRight className="h-4 w-4" />
-                      <span className="hidden md:inline">Find</span>
+                      <span className="hidden md:inline">Check</span>
                     </>
                   )}
-                      </Button>
-                    </div>
-                            </div>
-
-            {/* Feature Cards */}
-            <div className="mt-8 sm:mt-12 flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-6 animate-[fadeIn_1s_ease-out_0.6s_both]">
-              <div className="flex items-center bg-gray-900/80 backdrop-blur-sm rounded-xl sm:rounded-2xl px-4 sm:px-6 py-3 sm:py-4 border border-primary/30 shadow-lg hover:shadow-xl hover:bg-gray-900/90 hover:border-primary/50 transition-all w-full sm:w-auto">
-                <div className="bg-primary/20 p-2 sm:p-3 rounded-full mr-3 sm:mr-4">
-                  <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
-                          </div>
-                <div className="text-white">
-                  <p className="font-medium text-xs sm:text-sm">Automated lawn</p>
-                  <p className="font-medium text-xs sm:text-sm">mowing service</p>
-                          </div>
-                        </div>
-              <div className="flex items-center bg-gray-900/80 backdrop-blur-sm rounded-xl sm:rounded-2xl px-4 sm:px-6 py-3 sm:py-4 border border-accent/30 shadow-lg hover:shadow-xl hover:bg-gray-900/90 hover:border-accent/50 transition-all w-full sm:w-auto">
-                <div className="bg-accent/20 p-2 sm:p-3 rounded-full mr-3 sm:mr-4">
-                  <Sprout className="w-5 h-5 sm:w-6 sm:h-6 text-accent" />
-                    </div>
-                <div className="text-white">
-                  <p className="font-medium text-xs sm:text-sm">Professional results,</p>
-                  <p className="font-medium text-xs sm:text-sm">effortless care</p>
-                  </div>
+                </Button>
               </div>
             </div>
 
-            {/* Trust Indicators */}
-            <div className="mt-8 sm:mt-12 pt-4 sm:pt-6 border-t border-white/10 flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8 text-white/90 animate-[fadeIn_1s_ease-out_0.9s_both]">
+            {/* Feature Cards - Compact */}
+            <div className="mt-5 flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-4 animate-[fadeIn_1s_ease-out_0.6s_both]">
+              <div className="flex items-center bg-botkorp-slate-blue rounded-lg px-4 py-2.5 border border-botkorp-silver/20 shadow-md hover:shadow-lg hover:bg-botkorp-slate-blue/90 transition-all w-full sm:w-auto">
+                <div className="bg-botkorp-orange rounded-full p-2 mr-3">
+                  <Bot className="w-4 h-4 text-white" />
+                </div>
+                <div className="text-white">
+                  <p className="font-semibold text-xs">Automated lawn mowing</p>
+                </div>
+              </div>
+              <div className="flex items-center bg-botkorp-slate-blue rounded-lg px-4 py-2.5 border border-botkorp-silver/20 shadow-md hover:shadow-lg hover:bg-botkorp-slate-blue/90 transition-all w-full sm:w-auto">
+                <div className="bg-botkorp-orange rounded-full p-2 mr-3">
+                  <Sprout className="w-4 h-4 text-white" />
+                </div>
+                <div className="text-white">
+                  <p className="font-semibold text-xs">Professional results</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Trust Indicators - Compact */}
+            <div className="mt-5 pt-4 border-t border-white/20 flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-6 text-white/90 animate-[fadeIn_1s_ease-out_0.9s_both]">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
-                <span className="text-xs sm:text-sm font-light">No Long-term Contracts</span>
+                <CheckCircle2 className="w-4 h-4 text-botkorp-orange" />
+                <span className="text-xs font-medium">No Contracts</span>
               </div>
               <div className="flex items-center gap-2">
-                <Sprout className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
-                <span className="text-xs sm:text-sm font-light">Eco-friendly Technology</span>
+                <Sprout className="w-4 h-4 text-botkorp-orange" />
+                <span className="text-xs font-medium">Eco-friendly</span>
               </div>
               <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-secondary" />
-                <span className="text-xs sm:text-sm font-light">South African Based</span>
+                <MapPin className="w-4 h-4 text-botkorp-orange" />
+                <span className="text-xs font-medium">SA Based</span>
               </div>
             </div>
           </div>
@@ -467,163 +467,159 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Services Section - impactful cards */}
-      <section id="services" className="container mx-auto px-4 py-20 md:py-28">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 mb-6">
-              <div className="h-1 w-12 bg-primary rounded-full"></div>
-              <Bot className="h-5 w-5 text-primary" />
-              <div className="h-1 w-12 bg-primary rounded-full"></div>
+      {/* Services Section - Solid Colors */}
+      <section id="services" className="bg-gray-50 dark:bg-botkorp-black-light py-16 md:py-20">
+        <div className="container mx-auto px-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 mb-4">
+                <div className="h-1 w-12 bg-botkorp-orange rounded-full"></div>
+                <Bot className="h-5 w-5 text-botkorp-orange" />
+                <div className="h-1 w-12 bg-botkorp-orange rounded-full"></div>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-3 text-botkorp-black dark:text-white">
+                Automated Property Services
+              </h2>
+              <p className="text-base md:text-lg text-botkorp-slate-blue dark:text-botkorp-silver max-w-3xl mx-auto">
+                Specialized bots designed for <span className="text-botkorp-orange font-semibold">effortless maintenance</span> across homes and businesses
+              </p>
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-              Automated Property Services
-            </h2>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-              Specialized bots designed for <span className="text-primary font-semibold">effortless maintenance</span> across homes and businesses
-            </p>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-            {/* Mow Bot */}
-            <Card className="overflow-hidden group hover:shadow-2xl transition-all duration-300 border-2 hover:border-primary/30">
-              <div className="h-32 bg-gradient-to-br from-primary/30 via-primary/20 to-primary/10 flex items-center justify-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
-                <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-primary to-primary/70 text-primary-foreground flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
-                  {services[0].icon}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Mow Bot */}
+              <Card className="overflow-hidden group hover:shadow-xl transition-all duration-300 border-2 border-gray-200 dark:border-botkorp-slate-blue/30 hover:border-botkorp-orange">
+                <div className="h-28 bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center relative">
+                  <div className="h-16 w-16 rounded-full bg-botkorp-orange text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    {services[0].icon}
+                  </div>
                 </div>
-              </div>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl font-bold">{services[0].title}</CardTitle>
-                <CardDescription className="text-sm leading-relaxed">{services[0].description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2.5">
-                  {services[0].features.map((f,i)=> (
-                    <li key={i} className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-muted-foreground">{f}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg font-bold text-botkorp-black dark:text-white">{services[0].title}</CardTitle>
+                  <CardDescription className="text-sm leading-relaxed text-botkorp-slate-blue dark:text-botkorp-silver">{services[0].description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {services[0].features.map((f,i)=> (
+                      <li key={i} className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-botkorp-orange mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-botkorp-slate-blue dark:text-botkorp-silver">{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
 
-            {/* Pool Bot */}
-            <Card className="overflow-hidden group opacity-60 relative">
-              <Badge className="absolute top-3 right-3 z-10 bg-yellow-500/90 text-yellow-950">Coming Soon</Badge>
-              <div className="h-32 bg-gradient-to-br from-blue-500/30 via-blue-500/20 to-blue-500/10 flex items-center justify-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
-                <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-blue-500 to-blue-500/70 text-white flex items-center justify-center shadow-xl">
-                  {services[1].icon}
+              {/* Pool Bot */}
+              <Card className="overflow-hidden group opacity-60 relative border-2 border-gray-200 dark:border-botkorp-slate-blue/30">
+                <Badge className="absolute top-3 right-3 z-10 bg-yellow-500 text-yellow-950 font-semibold">Coming Soon</Badge>
+                <div className="h-28 bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center relative">
+                  <div className="h-16 w-16 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg">
+                    {services[1].icon}
+                  </div>
                 </div>
-              </div>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl font-bold">{services[1].title}</CardTitle>
-                <CardDescription className="text-sm leading-relaxed">{services[1].description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2.5">
-                  {services[1].features.map((f,i)=> (
-                    <li key={i} className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-muted-foreground">{f}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg font-bold text-botkorp-black dark:text-white">{services[1].title}</CardTitle>
+                  <CardDescription className="text-sm leading-relaxed text-botkorp-slate-blue dark:text-botkorp-silver">{services[1].description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {services[1].features.map((f,i)=> (
+                      <li key={i} className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-botkorp-slate-blue dark:text-botkorp-silver">{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
 
-            {/* Security Bot */}
-            <Card className="overflow-hidden group opacity-60 relative">
-              <Badge className="absolute top-3 right-3 z-10 bg-yellow-500/90 text-yellow-950">Coming Soon</Badge>
-              <div className="h-32 bg-gradient-to-br from-slate-700/30 via-slate-700/20 to-slate-700/10 flex items-center justify-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
-                <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-slate-700 to-slate-700/70 text-white flex items-center justify-center shadow-xl">
-                  {services[2].icon}
+              {/* Security Bot */}
+              <Card className="overflow-hidden group opacity-60 relative border-2 border-gray-200 dark:border-botkorp-slate-blue/30">
+                <Badge className="absolute top-3 right-3 z-10 bg-yellow-500 text-yellow-950 font-semibold">Coming Soon</Badge>
+                <div className="h-28 bg-botkorp-slate-blue/10 dark:bg-botkorp-slate-blue/30 flex items-center justify-center relative">
+                  <div className="h-16 w-16 rounded-full bg-botkorp-slate-blue text-white flex items-center justify-center shadow-lg">
+                    {services[2].icon}
+                  </div>
                 </div>
-              </div>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl font-bold">{services[2].title}</CardTitle>
-                <CardDescription className="text-sm leading-relaxed">{services[2].description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2.5">
-                  {services[2].features.map((f,i)=> (
-                    <li key={i} className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-slate-700 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-muted-foreground">{f}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg font-bold text-botkorp-black dark:text-white">{services[2].title}</CardTitle>
+                  <CardDescription className="text-sm leading-relaxed text-botkorp-slate-blue dark:text-botkorp-silver">{services[2].description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {services[2].features.map((f,i)=> (
+                      <li key={i} className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-botkorp-slate-blue mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-botkorp-slate-blue dark:text-botkorp-silver">{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
 
-            {/* Weather Station */}
-            <Card className="overflow-hidden group opacity-60 relative">
-              <Badge className="absolute top-3 right-3 z-10 bg-yellow-500/90 text-yellow-950">Coming Soon</Badge>
-              <div className="h-32 bg-gradient-to-br from-orange-500/30 via-orange-500/20 to-orange-500/10 flex items-center justify-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
-                <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-orange-500 to-orange-500/70 text-white flex items-center justify-center shadow-xl">
-                  {services[3].icon}
+              {/* Weather Station */}
+              <Card className="overflow-hidden group opacity-60 relative border-2 border-gray-200 dark:border-botkorp-slate-blue/30">
+                <Badge className="absolute top-3 right-3 z-10 bg-yellow-500 text-yellow-950 font-semibold">Coming Soon</Badge>
+                <div className="h-28 bg-orange-500/10 dark:bg-orange-500/20 flex items-center justify-center relative">
+                  <div className="h-16 w-16 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-lg">
+                    {services[3].icon}
+                  </div>
                 </div>
-              </div>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl font-bold">{services[3].title}</CardTitle>
-                <CardDescription className="text-sm leading-relaxed">{services[3].description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2.5">
-                  {services[3].features.map((f,i)=> (
-                    <li key={i} className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-muted-foreground">{f}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg font-bold text-botkorp-black dark:text-white">{services[3].title}</CardTitle>
+                  <CardDescription className="text-sm leading-relaxed text-botkorp-slate-blue dark:text-botkorp-silver">{services[3].description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {services[3].features.map((f,i)=> (
+                      <li key={i} className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-botkorp-slate-blue dark:text-botkorp-silver">{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* How It Works - Split Layout with Preview */}
-      <section id="how" className="relative overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-botkorp-black via-botkorp-slate-blue to-botkorp-black" />
-        
-        <div className="container mx-auto px-4 py-20 md:py-28">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center max-w-7xl mx-auto">
+      {/* How It Works - Solid Colors */}
+      <section id="how" className="relative overflow-hidden bg-botkorp-slate-blue dark:bg-botkorp-black">
+        <div className="container mx-auto px-4 py-16 md:py-20">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center max-w-7xl mx-auto">
             
             {/* Left Column - Copy Content */}
-            <div className="space-y-8 lg:space-y-10">
+            <div className="space-y-6 lg:space-y-8">
               {/* Header */}
               <div>
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">
+                <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3 leading-tight">
                   How Bot Korp works
                 </h2>
-                <p className="text-base sm:text-lg text-white/70 max-w-xl leading-relaxed">
+                <p className="text-base sm:text-lg text-white/80 max-w-xl leading-relaxed">
                   Simple, secure, and seamless automation for homes and businesses across South Africa.
                 </p>
               </div>
 
               {/* Segmented Toggle */}
-              <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1 w-full sm:w-auto">
+              <div className="inline-flex rounded-lg border-2 border-white/20 bg-botkorp-black/30 p-1 w-full sm:w-auto">
                 <button 
                   onClick={() => setActiveAudience('homeowner')} 
-                  className={`flex-1 sm:flex-none px-4 sm:px-6 py-3 rounded-lg text-sm font-medium transition-all ${
+                  className={`flex-1 sm:flex-none px-4 sm:px-6 py-2.5 rounded-md text-sm font-semibold transition-all ${
                     activeAudience === 'homeowner' 
-                      ? 'bg-primary text-white shadow-lg' 
-                      : 'text-white/80 hover:text-white'
+                      ? 'bg-botkorp-orange text-white shadow-md' 
+                      : 'text-white/70 hover:text-white'
                   }`}
                 >
                   Homeowners
                 </button>
                 <button 
                   onClick={() => setActiveAudience('installer')} 
-                  className={`flex-1 sm:flex-none px-4 sm:px-6 py-3 rounded-lg text-sm font-medium transition-all ${
+                  className={`flex-1 sm:flex-none px-4 sm:px-6 py-2.5 rounded-md text-sm font-semibold transition-all ${
                     activeAudience === 'installer' 
-                      ? 'bg-blue-600 text-white shadow-lg' 
-                      : 'text-white/80 hover:text-white'
+                      ? 'bg-botkorp-orange text-white shadow-md' 
+                      : 'text-white/70 hover:text-white'
                   }`}
                 >
                   Businesses
@@ -632,88 +628,88 @@ export default function LandingPage() {
 
               {/* Steps - Vertical Layout */}
               {activeAudience === 'homeowner' ? (
-                <div className="space-y-6 md:space-y-8">
-                  <div className="flex gap-4 md:gap-6 group">
+                <div className="space-y-5">
+                  <div className="flex gap-4 group">
                     <div className="flex-shrink-0">
-                      <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-primary text-white flex items-center justify-center text-xl font-bold shadow-lg group-hover:scale-110 transition-transform">
+                      <div className="h-12 w-12 rounded-full bg-botkorp-orange text-white flex items-center justify-center text-lg font-bold shadow-md group-hover:scale-110 transition-transform">
                         1
                       </div>
                     </div>
                     <div className="text-white pt-1">
-                      <div className="font-semibold text-lg md:text-xl mb-2">Check Coverage</div>
-                      <div className="text-white/70 text-sm md:text-base leading-relaxed">
+                      <div className="font-semibold text-lg mb-1.5">Check Coverage</div>
+                      <div className="text-white/70 text-sm leading-relaxed">
                         Enter your address to verify we service your area.
                       </div>
                     </div>
                   </div>
                   
-                  <div className="flex gap-4 md:gap-6 group">
+                  <div className="flex gap-4 group">
                     <div className="flex-shrink-0">
-                      <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-bold shadow-lg group-hover:scale-110 transition-transform">
+                      <div className="h-12 w-12 rounded-full bg-botkorp-orange text-white flex items-center justify-center text-lg font-bold shadow-md group-hover:scale-110 transition-transform">
                         2
                       </div>
                     </div>
                     <div className="text-white pt-1">
-                      <div className="font-semibold text-lg md:text-xl mb-2">Installation in Days</div>
-                      <div className="text-white/70 text-sm md:text-base leading-relaxed">
+                      <div className="font-semibold text-lg mb-1.5">Installation in Days</div>
+                      <div className="text-white/70 text-sm leading-relaxed">
                         Certified professionals handle setup, safety checks, and training.
                       </div>
                     </div>
                   </div>
                   
-                  <div className="flex gap-4 md:gap-6 group">
+                  <div className="flex gap-4 group">
                     <div className="flex-shrink-0">
-                      <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-accent text-white flex items-center justify-center text-xl font-bold shadow-lg group-hover:scale-110 transition-transform">
+                      <div className="h-12 w-12 rounded-full bg-botkorp-orange text-white flex items-center justify-center text-lg font-bold shadow-md group-hover:scale-110 transition-transform">
                         3
                       </div>
                     </div>
                     <div className="text-white pt-1">
-                      <div className="font-semibold text-lg md:text-xl mb-2">Monitor & Save</div>
-                      <div className="text-white/70 text-sm md:text-base leading-relaxed">
+                      <div className="font-semibold text-lg mb-1.5">Monitor & Save</div>
+                      <div className="text-white/70 text-sm leading-relaxed">
                         Track everything from your dashboard. Automation runs on schedule.
                       </div>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="space-y-6 md:space-y-8">
-                  <div className="flex gap-4 md:gap-6 group">
+                <div className="space-y-5">
+                  <div className="flex gap-4 group">
                     <div className="flex-shrink-0">
-                      <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-primary text-white flex items-center justify-center text-xl font-bold shadow-lg group-hover:scale-110 transition-transform">
+                      <div className="h-12 w-12 rounded-full bg-botkorp-orange text-white flex items-center justify-center text-lg font-bold shadow-md group-hover:scale-110 transition-transform">
                         1
                       </div>
                     </div>
                     <div className="text-white pt-1">
-                      <div className="font-semibold text-lg md:text-xl mb-2">Partner with Us</div>
-                      <div className="text-white/70 text-sm md:text-base leading-relaxed">
+                      <div className="font-semibold text-lg mb-1.5">Partner with Us</div>
+                      <div className="text-white/70 text-sm leading-relaxed">
                         Join our network and offer automated services to your clients.
                       </div>
                     </div>
                   </div>
                   
-                  <div className="flex gap-4 md:gap-6 group">
+                  <div className="flex gap-4 group">
                     <div className="flex-shrink-0">
-                      <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-secondary text-white flex items-center justify-center text-xl font-bold shadow-lg group-hover:scale-110 transition-transform">
+                      <div className="h-12 w-12 rounded-full bg-botkorp-orange text-white flex items-center justify-center text-lg font-bold shadow-md group-hover:scale-110 transition-transform">
                         2
                       </div>
                     </div>
                     <div className="text-white pt-1">
-                      <div className="font-semibold text-lg md:text-xl mb-2">Manage Deployments</div>
-                      <div className="text-white/70 text-sm md:text-base leading-relaxed">
+                      <div className="font-semibold text-lg mb-1.5">Manage Deployments</div>
+                      <div className="text-white/70 text-sm leading-relaxed">
                         Track all installations and client services from one dashboard.
                       </div>
                     </div>
                   </div>
                   
-                  <div className="flex gap-4 md:gap-6 group">
+                  <div className="flex gap-4 group">
                     <div className="flex-shrink-0">
-                      <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-accent text-white flex items-center justify-center text-xl font-bold shadow-lg group-hover:scale-110 transition-transform">
+                      <div className="h-12 w-12 rounded-full bg-botkorp-orange text-white flex items-center justify-center text-lg font-bold shadow-md group-hover:scale-110 transition-transform">
                         3
                       </div>
                     </div>
                     <div className="text-white pt-1">
-                      <div className="font-semibold text-lg md:text-xl mb-2">Scale Revenue</div>
-                      <div className="text-white/70 text-sm md:text-base leading-relaxed">
+                      <div className="font-semibold text-lg mb-1.5">Scale Revenue</div>
+                      <div className="text-white/70 text-sm leading-relaxed">
                         Build recurring revenue with automated property management.
                       </div>
                     </div>
@@ -722,11 +718,11 @@ export default function LandingPage() {
               )}
 
               {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <div className="flex flex-col sm:flex-row gap-3 pt-4">
                 <Button 
                   size="lg" 
                   onClick={() => navigate('/auth/register')} 
-                  className="shadow-xl hover:shadow-2xl transition-all"
+                  className="bg-botkorp-orange hover:bg-botkorp-orange-dark text-white shadow-lg hover:shadow-xl transition-all font-semibold"
                 >
                   Get started
                   <ArrowRight className="ml-2 h-5 w-5" />
@@ -735,7 +731,7 @@ export default function LandingPage() {
                   size="lg" 
                   variant="outline" 
                   onClick={() => navigate('/docs')} 
-                  className="bg-white/5 text-white border-white/10 hover:bg-white/10 shadow-lg"
+                  className="bg-white/10 text-white border-2 border-white/30 hover:bg-white/20 shadow-md"
                 >
                   View docs
                 </Button>
@@ -750,7 +746,7 @@ export default function LandingPage() {
                 <img 
                   src="/images/phone-template.png" 
                   alt="Phone Frame" 
-                  className="relative w-full h-auto z-10 pointer-events-none select-none drop-shadow-xl"
+                  className="relative w-full h-auto z-10 pointer-events-none select-none drop-shadow-2xl"
                 />
                 
                 {/* Preview Container - positioned absolutely inside the phone screen */}
@@ -760,8 +756,8 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                {/* Decorative glow - subtle */}
-                <div className="absolute -inset-6 bg-gradient-to-r from-accent/10 via-secondary/10 to-accent/10 blur-3xl -z-10 opacity-60" />
+                {/* Subtle shadow glow */}
+                <div className="absolute -inset-6 bg-botkorp-orange/10 blur-3xl -z-10 opacity-40" />
               </div>
             </div>
 
@@ -770,20 +766,14 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Calculator Section */}
-      <section className="relative overflow-hidden py-20 md:py-28 bg-gradient-to-br from-background via-muted/20 to-background">
-        {/* Decorative background */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-          <div className="absolute top-20 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 left-1/4 w-96 h-96 bg-secondary/5 rounded-full blur-3xl" />
-        </div>
-
-        <div className="container mx-auto px-4 relative z-10">
+      <section className="relative overflow-hidden py-16 md:py-20 bg-white dark:bg-botkorp-black">
+        <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <Badge variant="outline" className="mb-4">Transparent Pricing</Badge>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-              Calculate Your <span className="text-primary">Monthly Cost</span>
+            <Badge variant="outline" className="mb-4 border-botkorp-orange text-botkorp-orange font-semibold">Transparent Pricing</Badge>
+            <h2 className="text-3xl md:text-4xl font-bold mb-3 text-botkorp-black dark:text-white">
+              Calculate Your <span className="text-botkorp-orange">Monthly Cost</span>
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-base md:text-lg text-botkorp-slate-blue dark:text-botkorp-silver max-w-2xl mx-auto">
               Simple, transparent pricing with no hidden fees. See exactly what you'll pay.
             </p>
           </div>
@@ -793,57 +783,57 @@ export default function LandingPage() {
       </section>
 
       {/* Coverage Areas Section */}
-      <section id="coverage-map" className="relative overflow-hidden bg-gradient-to-b from-muted/30 to-background py-20 md:py-28">
+      <section id="coverage-map" className="relative overflow-hidden bg-gray-50 dark:bg-botkorp-black-light py-16 md:py-20">
         <div className="container mx-auto px-4">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-12 md:mb-16">
-              <div className="inline-flex items-center gap-2 mb-6">
-                <div className="h-1 w-12 bg-primary rounded-full"></div>
-                <MapPin className="h-5 w-5 text-primary" />
-                <div className="h-1 w-12 bg-primary rounded-full"></div>
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 mb-4">
+                <div className="h-1 w-12 bg-botkorp-orange rounded-full"></div>
+                <MapPin className="h-5 w-5 text-botkorp-orange" />
+                <div className="h-1 w-12 bg-botkorp-orange rounded-full"></div>
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              <h2 className="text-3xl md:text-4xl font-bold mb-3 text-botkorp-black dark:text-white">
                 Where We Serve
               </h2>
-              <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              <p className="text-base md:text-lg text-botkorp-slate-blue dark:text-botkorp-silver max-w-2xl mx-auto leading-relaxed">
                 Currently operating across key areas in South Africa, with expansion plans nationwide
               </p>
             </div>
 
             {loadingCoverageAreas ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <Loader2 className="h-8 w-8 animate-spin text-botkorp-orange" />
               </div>
             ) : coverageAreas.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {coverageAreas.map((area) => (
-                  <Card key={area.id} className="overflow-hidden group hover:shadow-xl transition-all duration-300 border-2 hover:border-primary/30">
-                    <CardHeader className="bg-gradient-to-br from-primary/5 to-primary/10 pb-4">
+                  <Card key={area.id} className="overflow-hidden group hover:shadow-xl transition-all duration-300 border-2 border-gray-200 dark:border-botkorp-slate-blue/30 hover:border-botkorp-orange">
+                    <CardHeader className="bg-botkorp-orange/10 dark:bg-botkorp-orange/20 pb-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <CardTitle className="text-xl font-bold mb-1">{area.area_name}</CardTitle>
-                          <CardDescription className="flex items-center gap-1.5 text-sm">
+                          <CardTitle className="text-lg font-bold mb-1 text-botkorp-black dark:text-white">{area.area_name}</CardTitle>
+                          <CardDescription className="flex items-center gap-1.5 text-sm text-botkorp-slate-blue dark:text-botkorp-silver">
                             <MapPin className="h-3.5 w-3.5" />
                             {area.city}, {area.province}
                           </CardDescription>
                         </div>
-                        <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0" />
+                        <CheckCircle2 className="h-6 w-6 text-botkorp-orange flex-shrink-0" />
                       </div>
                     </CardHeader>
                     <CardContent className="pt-4">
                       {/* Service Types */}
                       <div className="mb-4">
-                        <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase">Available Services</p>
+                        <p className="text-xs font-semibold text-botkorp-slate-blue dark:text-botkorp-silver mb-2 uppercase">Available Services</p>
                         <div className="flex flex-wrap gap-1.5">
                           {area.service_types?.map((service, idx) => (
                             <Badge 
                               key={service} 
                               variant="outline"
                               className={`text-xs ${
-                                service === 'mow_bot' ? 'border-primary/30 bg-primary/5 text-primary' :
-                                service === 'pool_bot' ? 'border-blue-500/30 bg-blue-500/5 text-blue-600' :
-                                service === 'security_bot' ? 'border-slate-500/30 bg-slate-500/5 text-slate-600' :
-                                'border-orange-500/30 bg-orange-500/5 text-orange-600'
+                                service === 'mow_bot' ? 'border-botkorp-orange bg-botkorp-orange/10 text-botkorp-orange' :
+                                service === 'pool_bot' ? 'border-blue-500 bg-blue-500/10 text-blue-600' :
+                                service === 'security_bot' ? 'border-botkorp-slate-blue bg-botkorp-slate-blue/10 text-botkorp-slate-blue' :
+                                'border-orange-500 bg-orange-500/10 text-orange-600'
                               }`}
                             >
                               {service.replace('_', ' ').replace('bot', '').trim()}
@@ -855,15 +845,15 @@ export default function LandingPage() {
                       {/* Postal Codes */}
                       {area.postal_codes && area.postal_codes.length > 0 && (
                         <div>
-                          <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase">Postal Codes</p>
+                          <p className="text-xs font-semibold text-botkorp-slate-blue dark:text-botkorp-silver mb-2 uppercase">Postal Codes</p>
                           <div className="flex flex-wrap gap-1.5">
                             {area.postal_codes.slice(0, 4).map((code) => (
-                              <Badge key={code} variant="secondary" className="text-xs font-mono">
+                              <Badge key={code} className="text-xs font-mono bg-botkorp-slate-blue/20 text-botkorp-black dark:text-white border-0">
                                 {code}
                               </Badge>
                             ))}
                             {area.postal_codes.length > 4 && (
-                              <Badge variant="secondary" className="text-xs">
+                              <Badge className="text-xs bg-botkorp-slate-blue/20 text-botkorp-black dark:text-white border-0">
                                 +{area.postal_codes.length - 4} more
                               </Badge>
                             )}
@@ -875,11 +865,11 @@ export default function LandingPage() {
                 ))}
               </div>
             ) : (
-              <Card className="border-dashed border-2">
+              <Card className="border-dashed border-2 border-gray-300 dark:border-botkorp-slate-blue/30">
                 <CardContent className="py-16 text-center">
-                  <MapPin className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">Coverage Areas Coming Soon</h3>
-                  <p className="text-muted-foreground">
+                  <MapPin className="h-16 w-16 text-botkorp-slate-blue dark:text-botkorp-silver mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold mb-2 text-botkorp-black dark:text-white">Coverage Areas Coming Soon</h3>
+                  <p className="text-botkorp-slate-blue dark:text-botkorp-silver">
                     We're currently setting up our service areas. Check back soon!
                   </p>
                 </CardContent>
@@ -889,14 +879,14 @@ export default function LandingPage() {
             {/* CTA */}
             {coverageAreas.length > 0 && (
               <div className="mt-12 text-center">
-                <p className="text-muted-foreground mb-4">
+                <p className="text-botkorp-slate-blue dark:text-botkorp-silver mb-4">
                   Don't see your area? We're expanding rapidly!
                 </p>
                 <Button 
                   onClick={() => navigate('/auth/register')} 
                   variant="outline"
                   size="lg"
-                  className="group"
+                  className="group border-2 border-botkorp-orange text-botkorp-orange hover:bg-botkorp-orange hover:text-white"
                 >
                   Join Waitlist
                   <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -908,63 +898,52 @@ export default function LandingPage() {
       </section>
 
       {/* FAQ / Trust Building Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-background to-muted/30">
-        {/* Decorative elements */}
-        <div className="absolute top-20 right-10 w-72 h-72 bg-secondary/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 left-10 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-secondary/3 rounded-full blur-3xl" />
-        
-        <div className="container mx-auto px-4 py-20 md:py-28 relative">
+      <section className="relative overflow-hidden bg-white dark:bg-botkorp-black">
+        <div className="container mx-auto px-4 py-16 md:py-20">
           <div className="max-w-4xl mx-auto">
             {/* Header */}
-            <div className="text-center mb-16">
-              <div className="inline-flex items-center justify-center h-14 w-14 rounded-full bg-gradient-to-br from-primary/10 to-secondary/10 text-secondary mb-4 ring-4 ring-secondary/5">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center justify-center h-14 w-14 rounded-full bg-botkorp-orange/20 text-botkorp-orange mb-4 ring-4 ring-botkorp-orange/10">
                 <Shield className="h-7 w-7" />
               </div>
-              <h3 className="text-3xl md:text-4xl font-bold mb-4">Questions? We've got <span className="text-secondary">answers</span>.</h3>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              <h3 className="text-3xl md:text-4xl font-bold mb-3 text-botkorp-black dark:text-white">Questions? We've got <span className="text-botkorp-orange">answers</span>.</h3>
+              <p className="text-base md:text-lg text-botkorp-slate-blue dark:text-botkorp-silver max-w-2xl mx-auto">
                 Everything you need to know about Bot Korp automation
               </p>
             </div>
 
             {/* FAQ Accordion Items */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               {[
                 {
                   icon: Shield,
                   question: "Is it safe for my pets and children?",
-                  answer: "Absolutely. Our bots are equipped with advanced sensors and boundary detection systems. They automatically stop when they detect obstacles, pets, or people. The Mow Bot uses lift and tilt sensors that immediately halt the blades if picked up or tipped over. All bots undergo rigorous safety testing and meet international safety standards.",
-                  gradient: "from-emerald-500/10 via-primary/5 to-transparent"
+                  answer: "Absolutely. Our bots are equipped with advanced sensors and boundary detection systems. They automatically stop when they detect obstacles, pets, or people. The Mow Bot uses lift and tilt sensors that immediately halt the blades if picked up or tipped over. All bots undergo rigorous safety testing and meet international safety standards."
                 },
                 {
                   icon: Droplets,
                   question: "What happens if it rains?",
-                  answer: "Our bots are weather-smart! The Mow Bot has a rain sensor that automatically sends it back to the charging station during rain and resumes once conditions improve. The Weather Station continuously monitors conditions and adjusts all bot schedules accordingly. All outdoor bots are IP65-rated for water resistance.",
-                  gradient: "from-blue-500/10 via-primary/5 to-transparent"
+                  answer: "Our bots are weather-smart! The Mow Bot has a rain sensor that automatically sends it back to the charging station during rain and resumes once conditions improve. The Weather Station continuously monitors conditions and adjusts all bot schedules accordingly. All outdoor bots are IP65-rated for water resistance."
                 },
                 {
                   icon: CreditCard,
                   question: "How much does installation cost?",
-                  answer: "Installation costs vary by service type and property size. Mow Bot installation typically ranges from R4,500-R8,500 (includes boundary wire setup and configuration). Pool Bot installation starts at R3,000. We offer free site assessments to give you an accurate quote. Installation is included in some premium subscription plans.",
-                  gradient: "from-purple-500/10 via-primary/5 to-transparent"
+                  answer: "Installation costs vary by service type and property size. Mow Bot installation typically ranges from R4,500-R8,500 (includes boundary wire setup and configuration). Pool Bot installation starts at R3,000. We offer free site assessments to give you an accurate quote. Installation is included in some premium subscription plans."
                 },
                 {
                   icon: Wrench,
                   question: "Who handles maintenance and repairs?",
-                  answer: "All maintenance is included in your subscription! Our certified technicians perform regular check-ups, blade replacements, software updates, and repairs at no extra cost. If anything goes wrong, simply report it through the portal and we'll send a technician within 24-48 hours. We also provide a replacement bot if repairs take longer than 3 days.",
-                  gradient: "from-orange-500/10 via-primary/5 to-transparent"
+                  answer: "All maintenance is included in your subscription! Our certified technicians perform regular check-ups, blade replacements, software updates, and repairs at no extra cost. If anything goes wrong, simply report it through the portal and we'll send a technician within 24-48 hours. We also provide a replacement bot if repairs take longer than 3 days."
                 },
                 {
                   icon: Clock,
                   question: "Can I control the schedule?",
-                  answer: "Yes! You have full control through our mobile-friendly portal. Set custom schedules, adjust mowing patterns, enable/disable services, and get real-time notifications. Want the lawn mowed before a weekend BBQ? Just trigger it manually. You can also set quiet hours to ensure bots don't run when you're sleeping or entertaining guests.",
-                  gradient: "from-pink-500/10 via-primary/5 to-transparent"
+                  answer: "Yes! You have full control through our mobile-friendly portal. Set custom schedules, adjust mowing patterns, enable/disable services, and get real-time notifications. Want the lawn mowed before a weekend BBQ? Just trigger it manually. You can also set quiet hours to ensure bots don't run when you're sleeping or entertaining guests."
                 },
                 {
                   icon: MapPin,
                   question: "What if you don't service my area yet?",
-                  answer: "We're rapidly expanding across South Africa! If we don't currently service your area, join our waitlist and we'll notify you as soon as we launch nearby. We prioritize expansion based on demand, so the more interest we get from an area, the sooner we'll be there. You'll also receive an early-bird discount when we launch.",
-                  gradient: "from-cyan-500/10 via-primary/5 to-transparent"
+                  answer: "We're rapidly expanding across South Africa! If we don't currently service your area, join our waitlist and we'll notify you as soon as we launch nearby. We prioritize expansion based on demand, so the more interest we get from an area, the sooner we'll be there. You'll also receive an early-bird discount when we launch."
                 }
               ].map((faq, index) => {
                 const Icon = faq.icon;
@@ -973,37 +952,34 @@ export default function LandingPage() {
                 return (
                   <div
                     key={index}
-                    className={`group relative rounded-2xl border-2 transition-all duration-300 overflow-hidden ${
+                    className={`group relative rounded-xl border-2 transition-all duration-300 overflow-hidden ${
                       isOpen 
-                        ? 'border-primary/40 shadow-xl shadow-primary/5' 
-                        : 'border-border/50 hover:border-primary/20 shadow-lg'
+                        ? 'border-botkorp-orange shadow-xl' 
+                        : 'border-gray-200 dark:border-botkorp-slate-blue/30 hover:border-botkorp-orange/50 shadow-md'
                     }`}
                   >
-                    {/* Background gradient */}
-                    <div className={`absolute inset-0 bg-gradient-to-r ${faq.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
-                    
                     {/* Question Button */}
                     <button
                       onClick={() => setOpenFaqIndex(isOpen ? null : index)}
-                      className="w-full text-left p-6 relative z-10 flex items-start gap-4 transition-all"
+                      className="w-full text-left p-5 relative z-10 flex items-start gap-4 transition-all bg-white dark:bg-botkorp-black-light hover:bg-gray-50 dark:hover:bg-botkorp-slate-blue/10"
                     >
                       {/* Icon */}
                       <div className={`flex-shrink-0 transition-all duration-300 ${
                         isOpen ? 'scale-110' : 'scale-100'
                       }`}>
-                        <div className={`h-12 w-12 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                        <div className={`h-11 w-11 rounded-lg flex items-center justify-center transition-all duration-300 ${
                           isOpen 
-                            ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' 
-                            : 'bg-primary/10 text-primary group-hover:bg-primary/20'
+                            ? 'bg-botkorp-orange text-white shadow-md' 
+                            : 'bg-botkorp-orange/10 text-botkorp-orange group-hover:bg-botkorp-orange/20'
                         }`}>
-                          <Icon className="h-6 w-6" />
+                          <Icon className="h-5 w-5" />
                         </div>
                       </div>
                       
                       {/* Question */}
                       <div className="flex-1 pt-1">
-                        <h4 className={`text-lg md:text-xl font-semibold transition-colors ${
-                          isOpen ? 'text-primary' : 'text-foreground group-hover:text-primary'
+                        <h4 className={`text-base md:text-lg font-semibold transition-colors ${
+                          isOpen ? 'text-botkorp-orange' : 'text-botkorp-black dark:text-white group-hover:text-botkorp-orange'
                         }`}>
                           {faq.question}
                         </h4>
@@ -1013,10 +989,10 @@ export default function LandingPage() {
                       <div className={`flex-shrink-0 transition-all duration-300 ${
                         isOpen ? 'rotate-180' : 'rotate-0'
                       }`}>
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center transition-all ${
+                        <div className={`h-9 w-9 rounded-full flex items-center justify-center transition-all ${
                           isOpen 
-                            ? 'bg-primary/10 text-primary' 
-                            : 'bg-muted/50 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'
+                            ? 'bg-botkorp-orange/10 text-botkorp-orange' 
+                            : 'bg-gray-100 dark:bg-botkorp-slate-blue/20 text-botkorp-slate-blue dark:text-botkorp-silver group-hover:bg-botkorp-orange/10 group-hover:text-botkorp-orange'
                         }`}>
                           <ChevronDown className="h-5 w-5" />
                         </div>
@@ -1029,9 +1005,9 @@ export default function LandingPage() {
                         isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                       }`}
                     >
-                      <div className="px-6 pb-6 pl-[88px]">
-                        <div className="border-l-2 border-primary/20 pl-6">
-                          <p className="text-muted-foreground leading-relaxed">
+                      <div className="px-5 pb-5 pl-[76px] bg-white dark:bg-botkorp-black-light">
+                        <div className="border-l-2 border-botkorp-orange/30 pl-5">
+                          <p className="text-sm text-botkorp-slate-blue dark:text-botkorp-silver leading-relaxed">
                             {faq.answer}
                           </p>
                         </div>
@@ -1043,9 +1019,9 @@ export default function LandingPage() {
             </div>
 
             {/* Footer note */}
-            <div className="text-center mt-12 p-6 rounded-2xl bg-gradient-to-r from-primary/5 via-transparent to-primary/5 border border-primary/10">
-              <p className="text-sm text-muted-foreground">
-                Still have questions? <a href="mailto:support@botkorp.com" className="text-primary hover:underline font-semibold">Contact our team</a> — we're here to help!
+            <div className="text-center mt-12 p-6 rounded-xl bg-botkorp-orange/10 dark:bg-botkorp-orange/20 border-2 border-botkorp-orange/30">
+              <p className="text-sm text-botkorp-black dark:text-white">
+                Still have questions? <a href="mailto:support@botkorp.com" className="text-botkorp-orange hover:underline font-semibold">Contact our team</a> — we're here to help!
               </p>
             </div>
           </div>

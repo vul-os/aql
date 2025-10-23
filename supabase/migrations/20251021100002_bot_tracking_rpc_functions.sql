@@ -314,9 +314,9 @@ BEGIN
         RAISE EXCEPTION 'User not associated with an organization';
     END IF;
     
-    -- Return locations with bot data
+    -- Return locations with bot data (DISTINCT ON to prevent duplicates)
     RETURN QUERY
-    SELECT 
+    SELECT DISTINCT ON (l.id)
         l.id,
         l.name,
         l.address,
@@ -339,7 +339,7 @@ BEGIN
     ) sr ON true
     WHERE l.organization_id = v_user_org_id
       AND l.is_active = true
-    ORDER BY l.name;
+    ORDER BY l.id, l.name;
 END;
 $$;
 

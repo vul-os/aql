@@ -45,6 +45,7 @@
     "date-fns": "^3.6.0",
     "firebase": "^11.4.0",
     "framer-motion": "^12.5.0",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.471.0",
     "postcss": "^8.4.49",
     "react": "^19.0.0",
