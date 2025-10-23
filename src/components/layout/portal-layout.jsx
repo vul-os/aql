@@ -84,7 +84,6 @@ export default function PortalLayout() {
   const mainNavItems = [
     { icon: <LayoutDashboard className="h-5 w-5" />, label: 'Dashboard', path: '/portal' },
     { icon: <MapPin className="h-5 w-5" />, label: 'Locations', path: '/portal/locations' },
-    { icon: <Bot className="h-5 w-5" />, label: 'Bots', path: '/portal/bots' },
     { icon: <Sprout className="h-5 w-5" />, label: 'Services', path: '/portal/services' },
     { icon: <Users className="h-5 w-5" />, label: 'Members', path: '/portal/members' },
     { icon: <CreditCard className="h-5 w-5" />, label: 'Billing', path: '/portal/billing' },

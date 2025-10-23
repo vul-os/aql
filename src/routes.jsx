@@ -136,9 +136,6 @@ const AppRoutes = () => {
           <Route path="locations" element={<LocationsPage />} />
           <Route path="location/:locationId/bot-status" element={<LocationBotStatusPage />} />
           
-          {/* Bots */}
-          <Route path="bots" element={<BotsPage />} />
-          
           {/* Settings - with optional tab sub-route */}
           <Route path="settings" element={<SettingsPage />} />
           <Route path="settings/:tab" element={<SettingsPage />} />
