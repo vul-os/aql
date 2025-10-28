@@ -10,7 +10,7 @@ python main.py
 
 ### Terminal 2: Start Simulator
 ```bash
-cd backend/simulator
+cd seed
 ./quick-start.sh
 # OR
 python bot_simulator.py

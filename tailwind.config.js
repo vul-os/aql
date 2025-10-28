@@ -71,37 +71,82 @@ module.exports = {
 				'glow-orange': '0 0 30px rgba(255, 107, 53, 0.35)' // Orange glow
 			},
 			keyframes: {
-  			'accordion-down': {
-  				from: {
-  					height: '0'
-  				},
-  				to: {
-  					height: 'var(--radix-accordion-content-height)'
-  				}
-  			},
-  			'accordion-up': {
-  				from: {
-  					height: 'var(--radix-accordion-content-height)'
-  				},
-  				to: {
-  					height: '0'
-  				}
-				},
-				float: {
-					'0%, 100%': { transform: 'translateY(0)' },
-					'50%': { transform: 'translateY(-10px)' }
-				},
-				slideInRight: {
-					'0%': { transform: 'translateX(100%)' },
-					'100%': { transform: 'translateX(0)' }
+ 			'accordion-down': {
+ 				from: {
+ 					height: '0'
+ 				},
+ 				to: {
+ 					height: 'var(--radix-accordion-content-height)'
+ 				}
+ 			},
+ 			'accordion-up': {
+ 				from: {
+ 					height: 'var(--radix-accordion-content-height)'
+ 				},
+ 				to: {
+ 					height: '0'
+ 				}
+			},
+			float: {
+				'0%, 100%': { transform: 'translateY(0)' },
+				'50%': { transform: 'translateY(-10px)' }
+			},
+			slideInRight: {
+				'0%': { transform: 'translateX(100%)' },
+				'100%': { transform: 'translateX(0)' }
+			},
+			'border-beam': {
+				'100%': {
+					'offset-distance': '100%'
 				}
-  		},
-			animation: {
-  			'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out',
-				'float': 'float 3s ease-in-out infinite',
-				'slide-in-right': 'slideInRight 0.3s ease-out'
-  		}
+			},
+			'shimmer-slide': {
+				to: {
+					transform: 'translate(calc(100cqw - 100%), 0)'
+				}
+			},
+			'spin-around': {
+				'0%': {
+					transform: 'translateZ(0) rotate(0)'
+				},
+				'15%, 35%': {
+					transform: 'translateZ(0) rotate(90deg)'
+				},
+				'65%, 85%': {
+					transform: 'translateZ(0) rotate(270deg)'
+				},
+				'100%': {
+					transform: 'translateZ(0) rotate(360deg)'
+				}
+			},
+			'shine': {
+				'from': {
+					'backgroundPosition': '0 0'
+				},
+				'to': {
+					'backgroundPosition': '-200% 0'
+				}
+			},
+			'shimmer': {
+				'0%': {
+					transform: 'translateX(-100%)'
+				},
+				'100%': {
+					transform: 'translateX(100%)'
+				}
+			}
+ 		},
+		animation: {
+ 			'accordion-down': 'accordion-down 0.2s ease-out',
+			'accordion-up': 'accordion-up 0.2s ease-out',
+			'float': 'float 3s ease-in-out infinite',
+			'slide-in-right': 'slideInRight 0.3s ease-out',
+			'border-beam': 'border-beam calc(var(--duration)*1s) infinite linear',
+			'shimmer-slide': 'shimmer-slide var(--speed) ease-in-out infinite alternate',
+			'spin-around': 'spin-around calc(var(--speed) * 2) infinite linear',
+			'shine': 'shine 2s linear infinite',
+			'shimmer': 'shimmer 3s ease-in-out infinite'
+ 		}
   	}
   },
   plugins: [require("tailwindcss-animate")],

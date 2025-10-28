@@ -66,9 +66,8 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { API, BACKEND_URL } from '@/lib/config';
 import { useAuth } from '@/context/auth-context';
 import SignaturePad from '@/components/services/signature-pad';
-import BotMap from '@/components/bots/bot-map';
-import BotBatteryChart from '@/components/bots/bot-battery-chart';
-import BotTemperatureChart from '@/components/bots/bot-temperature-chart';
+import ServiceEnvironmentalData from '@/components/services/service-environmental-data';
+import ServiceMowingSessions from '@/components/services/service-mowing-sessions';
 
 export default function ServiceDetailPage() {
   const { id, tab } = useParams();
@@ -80,8 +79,8 @@ export default function ServiceDetailPage() {
   const [agreements, setAgreements] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Get current tab from URL or default to 'bot-status'
-  const activeTab = tab || 'bot-status';
+  // Get current tab from URL or default to 'service-data'
+  const activeTab = tab || 'service-data';
   
   // Handle tab change - update URL without page refresh
   const handleTabChange = (newTab) => {
@@ -109,74 +108,11 @@ export default function ServiceDetailPage() {
   const [showBillingConfirm, setShowBillingConfirm] = useState(false);
   const [newPricing, setNewPricing] = useState(null);
 
-  // Bot status state
-  const [botData, setBotData] = useState(null);
-  const [botLoading, setBotLoading] = useState(false);
-  const [botError, setBotError] = useState(null);
-
   useEffect(() => {
     if (id) {
       loadServiceDetails();
     }
   }, [id]);
-
-  // Auto-refresh bot data when on bot-status tab
-  useEffect(() => {
-    if (activeTab === 'bot-status') {
-      loadBotData();
-      const interval = setInterval(loadBotData, 30000); // Refresh every 30 seconds
-      return () => clearInterval(interval);
-    }
-  }, [activeTab, id]);
-
-  const loadBotData = async () => {
-    if (!id) return;
-    
-    try {
-      setBotLoading(true);
-      setBotError(null);
-      
-      // Get service to find location_id
-      const { data: serviceData, error: serviceError } = await supabase
-        .from('services')
-        .select('location_id')
-        .eq('id', id)
-        .single();
-      
-      if (serviceError || !serviceData?.location_id) {
-        setBotError('Service location not configured');
-        setBotLoading(false);
-        return;
-      }
-      
-      // Get bot data for this location
-      const { data, error: rpcError } = await supabase
-        .rpc('get_location_bot_data', { location_id_input: serviceData.location_id });
-      
-      if (rpcError) {
-        console.error('Error fetching bot data:', rpcError);
-        setBotError('Unable to load bot data');
-        setBotLoading(false);
-        return;
-      }
-      
-      if (!data || data.length === 0) {
-        setBotError('No bot assigned yet. Bot assignment happens during installation.');
-        setBotLoading(false);
-        return;
-      }
-      
-      console.log('✅ Bot data loaded:', data[0]);
-      console.log('📍 Location trail points:', data[0]?.location_trail?.length || 0);
-      console.log('📊 Today stats:', data[0]?.today_stats);
-      setBotData(data[0]);
-      setBotLoading(false);
-    } catch (error) {
-      console.error('Error loading bot data:', error);
-      setBotError(error.message || 'An unexpected error occurred');
-      setBotLoading(false);
-    }
-  };
 
   const loadServiceDetails = async () => {
     try {
@@ -656,9 +592,9 @@ export default function ServiceDetailPage() {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 h-14 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-xl shadow-sm">
-            <TabsTrigger value="bot-status" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-md transition-all text-sm font-medium">
-              <Bot className="h-4 w-4 mr-2" />
-              Bot Status
+            <TabsTrigger value="service-data" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-md transition-all text-sm font-medium">
+              <Activity className="h-4 w-4 mr-2" />
+              Service Data
             </TabsTrigger>
             <TabsTrigger value="gardens" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-md transition-all text-sm font-medium">
               <Sprout className="h-4 w-4 mr-2" />
@@ -674,348 +610,79 @@ export default function ServiceDetailPage() {
             </TabsTrigger>
           </TabsList>
 
-          {/* BOT STATUS TAB */}
-          <TabsContent value="bot-status" className="space-y-6">
-            {botLoading ? (
-              <div className="flex items-center justify-center min-h-[400px]">
-                <LoadingLottie
-                  src={ANIMATIONS.loading}
-                  message="Loading bot status..."
-                  size="md"
-                />
+          {/* SERVICE DATA TAB */}
+          <TabsContent value="service-data" className="space-y-6">
+            {gardens.length > 0 ? (
+              <div className="space-y-8">
+                {gardens.map((garden) => (
+                  <div key={garden.id} className="space-y-6">
+                    {/* Garden Header */}
+                    <div className="flex items-center gap-3 pb-4 border-b">
+                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center shadow-lg">
+                        <Sprout className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-bold">{garden.name}</h2>
+                        <p className="text-sm text-muted-foreground">
+                          {Math.round(garden.area_sqm)} m² • Service quality and performance data
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Environmental Data */}
+                    <Card className="border-0 shadow-lg">
+                      <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950">
+                        <CardTitle className="flex items-center gap-2">
+                          <Thermometer className="w-5 h-5 text-green-600" />
+                          Environmental Conditions
+                        </CardTitle>
+                        <CardDescription>Current weather and soil conditions for {garden.name}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="pt-6">
+                        <ServiceEnvironmentalData gardenId={garden.id} />
+                      </CardContent>
+                    </Card>
+
+                    {/* Mowing Sessions */}
+                    <Card className="border-0 shadow-lg">
+                      <CardHeader className="bg-gradient-to-r from-accent/5 to-secondary/5 dark:from-accent/10 dark:to-secondary/10">
+                        <CardTitle className="flex items-center gap-2">
+                          <Activity className="w-5 h-5 text-accent" />
+                          Service History
+                        </CardTitle>
+                        <CardDescription>Recent mowing sessions and performance for {garden.name}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="pt-6">
+                        <ServiceMowingSessions gardenId={garden.id} />
+                      </CardContent>
+                    </Card>
+                  </div>
+                ))}
               </div>
-            ) : botError ? (
+            ) : (
               <Card className="border-0 shadow-lg">
                 <CardContent className="p-8 text-center">
-                  <div className="h-16 w-16 rounded-full bg-yellow-100 dark:bg-yellow-900/20 flex items-center justify-center mx-auto mb-4">
-                    <AlertTriangle className="w-8 h-8 text-yellow-600 dark:text-yellow-500" />
+                  <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center mx-auto mb-4">
+                    <Sprout className="w-8 h-8 text-green-600 dark:text-green-500" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">Unable to Load Bot Status</h3>
-                  <p className="text-muted-foreground mb-6">{botError}</p>
-                  
-                  {botError.includes('No bot assigned') && (
-                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-left max-w-md mx-auto">
-                      <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                        <Info className="w-4 h-4 text-blue-600" />
-                        What's Next?
-                      </h4>
-                      <ul className="text-xs text-muted-foreground space-y-1">
-                        <li>• Bots are assigned during installation</li>
-                        <li>• Our team will contact you within 24-48 hours</li>
-                        <li>• You'll receive a notification when your bot is active</li>
+                  <h3 className="text-xl font-semibold mb-2">No Gardens Configured</h3>
+                  <p className="text-muted-foreground mb-6">
+                    Gardens will appear here after service setup. Once configured, you'll see environmental data and mowing session history.
+                  </p>
+                  <Alert className="max-w-md mx-auto">
+                    <Info className="h-4 w-4" />
+                    <AlertDescription className="text-sm text-left">
+                      <strong>What you'll see here:</strong>
+                      <ul className="mt-2 space-y-1 text-xs">
+                        <li>• Real-time environmental conditions (temperature, humidity, soil moisture)</li>
+                        <li>• Mowing session history with coverage and performance metrics</li>
+                        <li>• Service quality trends and analytics</li>
                       </ul>
-                    </div>
-                  )}
-                  
-                  <Button
-                    onClick={loadBotData}
-                    variant="outline"
-                    className="mt-6"
-                  >
-                    <Activity className="h-4 w-4 mr-2" />
-                    Retry
-                  </Button>
+                    </AlertDescription>
+                  </Alert>
                 </CardContent>
               </Card>
-            ) : botData ? (
-              <>
-                {/* Bot Status Header */}
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-600 via-green-500 to-emerald-400 p-6 shadow-lg">
-                  <div className="absolute inset-0 bg-grid-white/10"></div>
-                  <div className="relative flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="text-4xl">🤖</span>
-                        <div>
-                          <h2 className="text-2xl font-bold text-white">
-                            {botData.bot_name || 'Bot Status'}
-                          </h2>
-                          <p className="text-green-50 text-sm">
-                            {botData.bot_type === 'mow_bot' ? 'Lawn Mowing Bot' : 'Service Bot'}
-                          </p>
-                        </div>
-                      </div>
-                      {botData.latest_sensor_reading?.recorded_at && (
-                        <p className="text-green-100 text-xs">
-                          Last updated {formatDistanceToNow(new Date(botData.latest_sensor_reading.recorded_at), { addSuffix: true })}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <Badge className={`${botData.bot_status === 'online' ? 'bg-white text-green-700' : 'bg-gray-500 text-white'} px-4 py-2 text-sm shadow-lg border-0`}>
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${botData.bot_status === 'online' ? 'bg-green-600 animate-pulse' : 'bg-gray-300'}`}></span>
-                          {botData.bot_status?.toUpperCase() || 'OFFLINE'}
-                        </div>
-                      </Badge>
-                      {botData.latest_sensor_reading?.is_on && (
-                        <Badge className="bg-white text-green-700 px-4 py-2 shadow-lg border-0">
-                          <Zap className="w-4 h-4 mr-1" />
-                          Active
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {/* Battery Card */}
-                  <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <div className="absolute inset-0 bg-gradient-to-br from-green-400 to-emerald-600 opacity-5"></div>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2 text-gray-700">
-                        <div className={`p-2 rounded-lg ${(botData.latest_sensor_reading?.battery_percentage || 0) > 60 ? 'bg-green-100' : (botData.latest_sensor_reading?.battery_percentage || 0) > 30 ? 'bg-yellow-100' : 'bg-red-100'}`}>
-                          <Battery className={`w-5 h-5 ${(botData.latest_sensor_reading?.battery_percentage || 0) > 60 ? 'text-green-600' : (botData.latest_sensor_reading?.battery_percentage || 0) > 30 ? 'text-yellow-600' : 'text-red-600'}`} />
-                        </div>
-                        Battery
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                        {botData.latest_sensor_reading?.battery_percentage || 0}%
-                      </div>
-                      <div className="flex items-center gap-2 mt-2">
-                        {botData.latest_sensor_reading?.is_charging && <Zap className="w-3 h-3 text-yellow-500" />}
-                        <p className="text-xs text-gray-600">
-                          {botData.latest_sensor_reading?.is_charging ? 'Charging' : 'Not charging'}
-                        </p>
-                      </div>
-                      <div className="mt-3 bg-gray-200 rounded-full h-2 overflow-hidden">
-                        <div 
-                          className={`h-full transition-all duration-500 ${(botData.latest_sensor_reading?.battery_percentage || 0) > 60 ? 'bg-green-500' : (botData.latest_sensor_reading?.battery_percentage || 0) > 30 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                          style={{ width: `${botData.latest_sensor_reading?.battery_percentage || 0}%` }}
-                        ></div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Temperature Card */}
-                  <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-red-500 opacity-5"></div>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2 text-gray-700">
-                        <div className="p-2 rounded-lg bg-orange-100">
-                          <Thermometer className="w-5 h-5 text-orange-600" />
-                        </div>
-                        Temperature
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-                        {botData.latest_sensor_reading?.temperature_celsius?.toFixed(1) || '--'}°C
-                      </div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Droplets className="w-3 h-3 text-blue-500" />
-                        <p className="text-xs text-gray-600">
-                          {botData.latest_sensor_reading?.humidity_percentage?.toFixed(0) || '--'}% humidity
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Activity Card */}
-                  <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-indigo-600 opacity-5"></div>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2 text-gray-700">
-                        <div className={`p-2 rounded-lg ${botData.latest_sensor_reading?.is_on ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                          <Gauge className={`w-5 h-5 ${botData.latest_sensor_reading?.is_on ? 'text-blue-600' : 'text-gray-600'}`} />
-                        </div>
-                        Activity
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                        {botData.latest_sensor_reading?.is_on ? 'Working' : 'Idle'}
-                      </div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <TrendingUp className="w-3 h-3 text-blue-500" />
-                        <p className="text-xs text-gray-600">
-                          {botData.latest_sensor_reading?.rpm || 0} RPM
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Weather Card */}
-                  <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <div className="absolute inset-0 bg-gradient-to-br from-sky-400 to-blue-600 opacity-5"></div>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2 text-gray-700">
-                        <div className={`p-2 rounded-lg ${botData.latest_sensor_reading?.is_raining ? 'bg-blue-100' : 'bg-yellow-100'}`}>
-                          {botData.latest_sensor_reading?.is_raining ? '🌧️' : '☀️'}
-                        </div>
-                        Weather
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-4xl font-bold">
-                        {botData.latest_sensor_reading?.is_raining ? '🌧️' : '☀️'}
-                      </div>
-                      <p className="text-xs text-gray-600 mt-2">
-                        {botData.latest_sensor_reading?.is_raining ? 'Rain detected' : 'Clear conditions'}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Map and Graphs */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Bot Location Map */}
-                  <Card className="border-0 shadow-lg">
-                    <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
-                      <CardTitle className="flex items-center gap-2">
-                        <MapPin className="w-5 h-5 text-green-600" />
-                        Live Location
-                      </CardTitle>
-                      <CardDescription>Real-time bot position and movement trail</CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                      <BotMap
-                        botId={botData.bot_id}
-                        currentLocation={botData.latest_sensor_reading ? {
-                          lat: botData.latest_sensor_reading.latitude,
-                          lng: botData.latest_sensor_reading.longitude,
-                          heading: botData.latest_sensor_reading.direction_degrees || 0
-                        } : null}
-                        locationHistory={botData.location_trail || []}
-                      />
-                    </CardContent>
-                  </Card>
-
-                  {/* Today's Performance */}
-                  <Card className="border-0 shadow-lg">
-                    <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950">
-                      <CardTitle className="flex items-center gap-2">
-                        <BarChart3 className="w-5 h-5 text-green-600" />
-                        Today's Performance
-                      </CardTitle>
-                      <CardDescription>{format(new Date(), 'EEEE, MMMM d, yyyy')}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-6 space-y-4">
-                      {botData.today_stats ? (
-                        <>
-                          <div className="flex justify-between items-center p-3 rounded-lg bg-slate-50 dark:bg-slate-900">
-                            <span className="text-sm text-muted-foreground flex items-center gap-2">
-                              <Clock className="w-4 h-4" />
-                              Runtime
-                            </span>
-                            <span className="font-bold text-lg">
-                              {Math.floor(botData.today_stats.total_runtime_minutes / 60)}h {botData.today_stats.total_runtime_minutes % 60}m
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center p-3 rounded-lg bg-slate-50 dark:bg-slate-900">
-                            <span className="text-sm text-muted-foreground flex items-center gap-2">
-                              <Navigation className="w-4 h-4" />
-                              Distance
-                            </span>
-                            <span className="font-bold text-lg">{botData.today_stats.total_distance_meters?.toFixed(0) || 0}m</span>
-                          </div>
-                          <div className="flex justify-between items-center p-3 rounded-lg bg-slate-50 dark:bg-slate-900">
-                            <span className="text-sm text-muted-foreground flex items-center gap-2">
-                              <MapPin className="w-4 h-4" />
-                              Area Covered
-                            </span>
-                            <span className="font-bold text-lg">{botData.today_stats.area_covered_sqm?.toFixed(0) || 0}m²</span>
-                          </div>
-                          <div className="flex justify-between items-center p-3 rounded-lg bg-slate-50 dark:bg-slate-900">
-                            <span className="text-sm text-muted-foreground flex items-center gap-2">
-                              <Battery className="w-4 h-4" />
-                              Avg Battery
-                            </span>
-                            <span className="font-bold text-lg">{botData.today_stats.average_battery_level?.toFixed(0) || 0}%</span>
-                          </div>
-                          {botData.today_stats.error_count > 0 && (
-                            <div className="flex justify-between items-center p-3 rounded-lg bg-red-50 dark:bg-red-950">
-                              <span className="text-sm text-red-700 dark:text-red-300 flex items-center gap-2">
-                                <AlertTriangle className="w-4 h-4" />
-                                Issues
-                              </span>
-                              <Badge variant="destructive">{botData.today_stats.error_count} errors</Badge>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <p className="text-sm text-muted-foreground text-center py-8">No activity data available for today</p>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Battery Chart */}
-                <Card className="border-0 shadow-lg">
-                  <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950">
-                    <CardTitle className="flex items-center gap-2">
-                      <Battery className="w-5 h-5 text-green-600" />
-                      Battery Level (Last 24 Hours)
-                    </CardTitle>
-                    <CardDescription>Track battery charge and discharge cycles</CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <BotBatteryChart botId={botData.bot_id} timeRange="24h" />
-                  </CardContent>
-                </Card>
-
-                {/* Temperature Chart */}
-                <Card className="border-0 shadow-lg">
-                  <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950">
-                    <CardTitle className="flex items-center gap-2">
-                      <Thermometer className="w-5 h-5 text-orange-600" />
-                      Temperature & Humidity (Last 24 Hours)
-                    </CardTitle>
-                    <CardDescription>Environmental conditions during operation</CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <BotTemperatureChart botId={botData.bot_id} timeRange="24h" />
-                  </CardContent>
-                </Card>
-
-                {/* Recent Events */}
-                {botData.recent_events && botData.recent_events.length > 0 && (
-                  <Card className="border-0 shadow-lg">
-                    <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
-                      <CardTitle className="flex items-center gap-2">
-                        <History className="w-5 h-5 text-blue-600" />
-                        Recent Events
-                      </CardTitle>
-                      <CardDescription>Latest bot activities and notifications</CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                      <div className="space-y-3">
-                        {botData.recent_events.slice(0, 5).map((event) => (
-                          <div key={event.id} className="flex items-start gap-3 p-4 border rounded-lg hover:shadow-md transition-all">
-                            <div className="flex-shrink-0 mt-0.5">
-                              {event.severity === 'error' || event.severity === 'critical' ? (
-                                <AlertTriangle className="w-5 h-5 text-red-500" />
-                              ) : event.severity === 'warning' ? (
-                                <AlertTriangle className="w-5 h-5 text-yellow-500" />
-                              ) : (
-                                <CheckCircle className="w-5 h-5 text-green-500" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h4 className="font-semibold text-sm">{event.title}</h4>
-                                <Badge variant={event.severity === 'error' ? 'destructive' : 'secondary'} className="text-xs">
-                                  {event.severity}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-muted-foreground">{event.description}</p>
-                              {event.event_timestamp && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {formatDistanceToNow(new Date(event.event_timestamp), { addSuffix: true })}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </>
-            ) : null}
+            )}
           </TabsContent>
 
           {/* GARDENS TAB */}

@@ -521,205 +521,75 @@ def send_invoice_email():
         }), 500
 
 
-# ==================== Bot Data Tracking Endpoints ====================
+# ==================== Service Data Tracking Endpoints ====================
 
-@app.route('/api/bots/<bot_id>/sensor-reading', methods=['POST'])
-def create_sensor_reading(bot_id):
+@app.route('/api/services/<service_id>/environmental-data', methods=['POST'])
+def create_environmental_data(service_id):
     """
-    Receive sensor data from bot/simulator and store it
+    Receive environmental sensor data and store it
     
     Expected JSON body:
     {
-        "recorded_at": "2025-10-23T14:30:45Z",  // optional
-        "is_on": true,
-        "battery_percentage": 87,
-        "battery_voltage": 12.4,
-        "is_charging": false,
-        "direction_degrees": 135.5,
-        "rpm": 3200,
-        "distance_traveled_cm": 25.3,
-        "speed_cm_per_sec": 15.8,
-        "pitch": -2.3,
-        "roll": 1.5,
-        "yaw": 135.5,
-        "acceleration_x": 0.15,
-        "acceleration_y": -0.05,
-        "acceleration_z": 9.81,
-        "rotation_x": 0.2,
-        "rotation_y": -0.1,
-        "rotation_z": 5.5,
+        "bot_id": "uuid",  // Which bot collected this data
+        "garden_id": "uuid",  // For garden data
+        "pool_id": "uuid",  // For pool data
         "temperature_celsius": 28.5,
         "humidity_percentage": 65.0,
         "is_raining": false,
-        "rain_intensity": 0,
+        "soil_moisture_percentage": 45.0,  // For gardens
+        "water_ph": 7.2,  // For pools
         "latitude": -29.8587,
         "longitude": 31.0218,
-        "gps_accuracy_meters": 3.5,
-        "bot_specific_data": {...}
+        "recorded_at": "2025-10-23T14:30:45Z"  // optional
     }
     """
     try:
         data = request.get_json()
+        bot_id = data.get('bot_id')
+        garden_id = data.get('garden_id')
+        pool_id = data.get('pool_id')
         
-        # Prepare sensor reading data
-        reading_data = {
-            'bot_id': bot_id,
-            **{k: v for k, v in data.items() if v is not None}
-        }
+        if not bot_id:
+            return jsonify({'success': False, 'error': 'bot_id is required'}), 400
         
-        # Insert sensor reading
-        result = supabase.table('bot_sensor_readings').insert(reading_data).execute()
-        reading_id = result.data[0]['id']
+        # Store in appropriate table based on service type
+        if garden_id:
+            env_data = {
+                'garden_id': garden_id,
+                'bot_id': bot_id,
+                'temperature_celsius': data.get('temperature_celsius'),
+                'humidity_percentage': data.get('humidity_percentage'),
+                'soil_moisture_percentage': data.get('soil_moisture_percentage'),
+                'is_raining': data.get('is_raining'),
+                'rain_intensity': data.get('rain_intensity'),
+                'latitude': data.get('latitude'),
+                'longitude': data.get('longitude'),
+                'sensor_data': data.get('sensor_data', {}),
+                'recorded_at': data.get('recorded_at', datetime.now().isoformat())
+            }
+            result = supabase.table('garden_environmental_data').insert(env_data).execute()
+        elif pool_id:
+            env_data = {
+                'pool_id': pool_id,
+                'bot_id': bot_id,
+                'air_temperature_celsius': data.get('air_temperature_celsius'),
+                'water_temperature_celsius': data.get('water_temperature_celsius'),
+                'humidity_percentage': data.get('humidity_percentage'),
+                'water_ph': data.get('water_ph'),
+                'chlorine_level': data.get('chlorine_level'),
+                'turbidity': data.get('turbidity'),
+                'sensor_data': data.get('sensor_data', {}),
+                'recorded_at': data.get('recorded_at', datetime.now().isoformat())
+            }
+            result = supabase.table('pool_environmental_data').insert(env_data).execute()
+        else:
+            return jsonify({'success': False, 'error': 'Either garden_id or pool_id is required'}), 400
         
         # Update bot status
-        bot_updates = {
-            'last_online_at': datetime.now().isoformat()
-        }
-        
-        if data.get('battery_percentage') is not None:
-            bot_updates['battery_level'] = data['battery_percentage']
-        
-        if data.get('is_on') is not None:
-            bot_updates['status'] = 'active' if data['is_on'] else 'idle'
-        
-        supabase.table('bots').update(bot_updates).eq('id', bot_id).execute()
-        
-        # If GPS coordinates provided, add to location history
-        if data.get('latitude') and data.get('longitude'):
-            location_data = {
-                'bot_id': bot_id,
-                'latitude': data['latitude'],
-                'longitude': data['longitude'],
-                'accuracy': data.get('gps_accuracy_meters'),
-                'heading': data.get('direction_degrees'),
-                'speed': data.get('speed_cm_per_sec', 0) / 100 if data.get('speed_cm_per_sec') else None,
-                'is_moving': data.get('speed_cm_per_sec', 0) > 1 if data.get('speed_cm_per_sec') else False
-            }
-            supabase.table('bot_location_history').insert(location_data).execute()
-        
-        # Check for alerts
-        check_and_create_alerts(bot_id, data)
-        
-        return jsonify({
-            'success': True,
-            'id': reading_id
-        })
-        
-    except Exception as e:
-        print(f"❌ Error creating sensor reading: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/bots/<bot_id>/sensor-readings', methods=['GET'])
-def get_sensor_readings(bot_id):
-    """
-    Get sensor readings for a bot
-    
-    Query params:
-    - start_date: ISO datetime string (default: 24 hours ago)
-    - end_date: ISO datetime string (default: now)
-    - limit: int (default: 100, max: 1000)
-    """
-    try:
-        from datetime import timedelta
-        
-        # Parse query params
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-        limit = int(request.args.get('limit', 100))
-        limit = min(limit, 1000)  # Cap at 1000
-        
-        # Default to last 24 hours
-        if not start_date:
-            start_date = (datetime.now() - timedelta(hours=24)).isoformat()
-        
-        # Build query
-        query = supabase.table('bot_sensor_readings')\
-            .select('*')\
-            .eq('bot_id', bot_id)\
-            .gte('recorded_at', start_date)\
-            .order('recorded_at', desc=True)\
-            .limit(limit)
-        
-        if end_date:
-            query = query.lte('recorded_at', end_date)
-        
-        result = query.execute()
-        
-        return jsonify({
-            'success': True,
-            'data': result.data,
-            'count': len(result.data)
-        })
-        
-    except Exception as e:
-        print(f"❌ Error fetching sensor readings: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/bots/<bot_id>/latest-reading', methods=['GET'])
-def get_latest_sensor_reading(bot_id):
-    """Get the most recent sensor reading for a bot"""
-    try:
-        result = supabase.table('bot_sensor_readings')\
-            .select('*')\
-            .eq('bot_id', bot_id)\
-            .order('recorded_at', desc=True)\
-            .limit(1)\
-            .execute()
-        
-        if not result.data:
-            return jsonify({
-                'success': True,
-                'data': None
-            })
-        
-        return jsonify({
-            'success': True,
-            'data': result.data[0]
-        })
-        
-    except Exception as e:
-        print(f"❌ Error fetching latest reading: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/bots/<bot_id>/location', methods=['POST'])
-def create_location_point(bot_id):
-    """
-    Log a GPS location point
-    
-    Expected JSON body:
-    {
-        "latitude": -29.8587,
-        "longitude": 31.0218,
-        "altitude": 45.2,
-        "accuracy": 3.5,
-        "heading": 135.5,
-        "speed": 0.15,
-        "is_moving": true
-    }
-    """
-    try:
-        data = request.get_json()
-        
-        location_data = {
-            'bot_id': bot_id,
-            **data
-        }
-        
-        result = supabase.table('bot_location_history').insert(location_data).execute()
+        supabase.table('bots').update({
+            'last_online_at': datetime.now().isoformat(),
+            'status': 'active'
+        }).eq('id', bot_id).execute()
         
         return jsonify({
             'success': True,
@@ -727,113 +597,7 @@ def create_location_point(bot_id):
         })
         
     except Exception as e:
-        print(f"❌ Error creating location point: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/bots/<bot_id>/location-history', methods=['GET'])
-def get_location_history(bot_id):
-    """
-    Get location history for a bot
-    
-    Query params:
-    - start_date: ISO datetime string (default: 24 hours ago)
-    - end_date: ISO datetime string (default: now)
-    - limit: int (default: 100, max: 1000)
-    """
-    try:
-        from datetime import timedelta
-        
-        # Parse query params
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-        limit = int(request.args.get('limit', 100))
-        limit = min(limit, 1000)
-        
-        # Default to last 24 hours
-        if not start_date:
-            start_date = (datetime.now() - timedelta(hours=24)).isoformat()
-        
-        # Build query
-        query = supabase.table('bot_location_history')\
-            .select('*')\
-            .eq('bot_id', bot_id)\
-            .gte('recorded_at', start_date)\
-            .order('recorded_at', desc=False)\
-            .limit(limit)
-        
-        if end_date:
-            query = query.lte('recorded_at', end_date)
-        
-        result = query.execute()
-        
-        return jsonify({
-            'success': True,
-            'data': result.data,
-            'count': len(result.data)
-        })
-        
-    except Exception as e:
-        print(f"❌ Error fetching location history: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/bots/<bot_id>/events', methods=['POST'])
-def create_bot_event(bot_id):
-    """
-    Log a bot event
-    
-    Expected JSON body:
-    {
-        "event_type": "started",
-        "severity": "info",
-        "title": "Mowing Started",
-        "description": "Bot began routine mowing operation",
-        "data": {...},
-        "latitude": -29.8587,
-        "longitude": 31.0218
-    }
-    """
-    try:
-        data = request.get_json()
-        
-        event_data = {
-            'bot_id': bot_id,
-            **data
-        }
-        
-        result = supabase.table('bot_events').insert(event_data).execute()
-        event_id = result.data[0]['id']
-        
-        # Create alert if severity is warning or higher
-        if data.get('severity') in ['warning', 'error', 'critical']:
-            # Get bot info for location_id
-            bot = supabase.table('bots').select('location_id').eq('id', bot_id).single().execute()
-            
-            alert_data = {
-                'bot_id': bot_id,
-                'location_id': bot.data['location_id'],
-                'alert_type': data.get('event_type', 'custom'),
-                'severity': data['severity'],
-                'title': data['title'],
-                'message': data.get('description'),
-                'data': data.get('data', {})
-            }
-            supabase.table('bot_alerts').insert(alert_data).execute()
-        
-        return jsonify({
-            'success': True,
-            'id': event_id
-        })
-        
-    except Exception as e:
-        print(f"❌ Error creating event: {str(e)}")
+        print(f"❌ Error creating environmental data: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({
@@ -842,16 +606,311 @@ def create_bot_event(bot_id):
         }), 500
 
 
-@app.route('/api/bots/<bot_id>/events', methods=['GET'])
-def get_bot_events(bot_id):
+@app.route('/api/services/<service_id>/mowing-sessions/<session_id>/sensor-data', methods=['POST'])
+def create_mowing_sensor_data(service_id, session_id):
     """
-    Get events for a bot
+    Add sensor data to an active mowing session
+    
+    Expected JSON body:
+    {
+        "blade_rpm": 3200,
+        "drive_rpm": 150,
+        "direction_degrees": 135.5,
+        "pitch": -2.3,
+        "roll": 1.5,
+        "yaw": 135.5,
+        "accel_x": 0.15,
+        "accel_y": -0.05,
+        "accel_z": 9.81,
+        "gyro_x": 0.2,
+        "gyro_y": -0.1,
+        "gyro_z": 5.5,
+        "battery_percentage": 87,
+        "battery_voltage": 12.4,
+        "temperature_celsius": 28.5,
+        "humidity_percentage": 65.0,
+        "latitude": -29.8587,
+        "longitude": 31.0218,
+        "sensor_data": {...}  // Additional sensor data as JSON
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        sensor_data = {
+            'session_id': session_id,
+            'recorded_at': data.get('recorded_at', datetime.now().isoformat()),
+            **{k: v for k, v in data.items() if k != 'recorded_at' and v is not None}
+        }
+        
+        result = supabase.table('garden_mowing_sensor_data').insert(sensor_data).execute()
+        
+        # Update session with latest location if GPS provided
+        if data.get('latitude') and data.get('longitude'):
+            # Append to location trail
+            session = supabase.table('garden_mowing_sessions').select('location_trail').eq('id', session_id).single().execute()
+            trail = session.data.get('location_trail', []) if session.data else []
+            trail.append({
+                'lat': data['latitude'],
+                'lon': data['longitude'],
+                'timestamp': datetime.now().isoformat()
+            })
+            supabase.table('garden_mowing_sessions').update({
+                'location_trail': trail
+            }).eq('id', session_id).execute()
+        
+        return jsonify({
+            'success': True,
+            'id': result.data[0]['id']
+        })
+        
+    except Exception as e:
+        print(f"❌ Error creating mowing sensor data: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/gardens/<garden_id>/mowing-sessions', methods=['POST'])
+def start_mowing_session(garden_id):
+    """
+    Start a new mowing session
+    
+    Expected JSON body:
+    {
+        "bot_id": "uuid",
+        "battery_start_percentage": 95
+    }
+    """
+    try:
+        data = request.get_json()
+        bot_id = data.get('bot_id')
+        
+        if not bot_id:
+            return jsonify({'success': False, 'error': 'bot_id is required'}), 400
+        
+        session_data = {
+            'garden_id': garden_id,
+            'bot_id': bot_id,
+            'session_start': datetime.now().isoformat(),
+            'battery_start_percentage': data.get('battery_start_percentage'),
+            'completion_status': 'active',
+            'location_trail': []
+        }
+        
+        result = supabase.table('garden_mowing_sessions').insert(session_data).execute()
+        session_id = result.data[0]['id']
+        
+        # Update bot status
+        supabase.table('bots').update({
+            'status': 'active',
+            'last_online_at': datetime.now().isoformat()
+        }).eq('id', bot_id).execute()
+        
+        # Create service event
+        garden = supabase.table('gardens').select('service_id').eq('id', garden_id).single().execute()
+        if garden.data:
+            event_data = {
+                'service_id': garden.data['service_id'],
+                'bot_id': bot_id,
+                'mowing_session_id': session_id,
+                'event_type': 'session_started',
+                'severity': 'info',
+                'title': 'Mowing Session Started',
+                'description': f'Bot started mowing session for garden {garden_id}'
+            }
+            supabase.table('service_events').insert(event_data).execute()
+        
+        return jsonify({
+            'success': True,
+            'session_id': session_id
+        })
+        
+    except Exception as e:
+        print(f"❌ Error starting mowing session: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/gardens/<garden_id>/mowing-sessions/<session_id>', methods=['PATCH'])
+def end_mowing_session(garden_id, session_id):
+    """
+    End a mowing session
+    
+    Expected JSON body:
+    {
+        "battery_end_percentage": 72,
+        "area_covered_sqm": 250.5,
+        "distance_traveled_meters": 1250.3,
+        "completion_status": "completed",  // or "interrupted", "low_battery", "rain", "error"
+        "notes": "Optional notes"
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        # Get session to calculate duration
+        session = supabase.table('garden_mowing_sessions').select('*').eq('id', session_id).single().execute()
+        if not session.data:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        
+        session_start = datetime.fromisoformat(session.data['session_start'])
+        session_end = datetime.now()
+        duration_minutes = int((session_end - session_start).total_seconds() / 60)
+        
+        battery_start = session.data.get('battery_start_percentage')
+        battery_end = data.get('battery_end_percentage')
+        battery_consumed = battery_start - battery_end if (battery_start and battery_end) else None
+        
+        update_data = {
+            'session_end': session_end.isoformat(),
+            'duration_minutes': duration_minutes,
+            'battery_end_percentage': battery_end,
+            'battery_consumed_percentage': battery_consumed,
+            'area_covered_sqm': data.get('area_covered_sqm'),
+            'distance_traveled_meters': data.get('distance_traveled_meters'),
+            'completion_status': data.get('completion_status', 'completed'),
+            'notes': data.get('notes'),
+            'updated_at': datetime.now().isoformat()
+        }
+        
+        supabase.table('garden_mowing_sessions').update(update_data).eq('id', session_id).execute()
+        
+        # Update bot status
+        bot_id = session.data['bot_id']
+        supabase.table('bots').update({
+            'status': 'idle',
+            'battery_level': battery_end,
+            'last_online_at': datetime.now().isoformat()
+        }).eq('id', bot_id).execute()
+        
+        # Create service event
+        garden = supabase.table('gardens').select('service_id').eq('id', garden_id).single().execute()
+        if garden.data:
+            event_data = {
+                'service_id': garden.data['service_id'],
+                'bot_id': bot_id,
+                'mowing_session_id': session_id,
+                'event_type': 'session_completed',
+                'severity': 'info',
+                'title': 'Mowing Session Completed',
+                'description': f'Duration: {duration_minutes} min, Area: {update_data.get("area_covered_sqm", 0):.1f} m²',
+                'data': update_data
+            }
+            supabase.table('service_events').insert(event_data).execute()
+        
+        return jsonify({
+            'success': True,
+            'session_id': session_id,
+            'duration_minutes': duration_minutes
+        })
+        
+    except Exception as e:
+        print(f"❌ Error ending mowing session: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/gardens/<garden_id>/environmental-data', methods=['GET'])
+def get_garden_environmental_data(garden_id):
+    """
+    Get environmental data for a garden
+    
+    Query params:
+    - hours: Hours of data to retrieve (default: 24)
+    - limit: Maximum records (default: 100, max: 1000)
+    """
+    try:
+        from datetime import timedelta
+        
+        hours = int(request.args.get('hours', 24))
+        limit = int(request.args.get('limit', 100))
+        limit = min(limit, 1000)
+        
+        start_time = (datetime.now() - timedelta(hours=hours)).isoformat()
+        
+        result = supabase.table('garden_environmental_data')\
+            .select('*')\
+            .eq('garden_id', garden_id)\
+            .gte('recorded_at', start_time)\
+            .order('recorded_at', desc=True)\
+            .limit(limit)\
+            .execute()
+        
+        return jsonify({
+            'success': True,
+            'data': result.data,
+            'count': len(result.data)
+        })
+        
+    except Exception as e:
+        print(f"❌ Error fetching environmental data: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/gardens/<garden_id>/mowing-sessions', methods=['GET'])
+def get_mowing_sessions(garden_id):
+    """
+    Get mowing sessions for a garden
+    
+    Query params:
+    - days: Days of history (default: 30)
+    - limit: Maximum records (default: 20, max: 100)
+    """
+    try:
+        from datetime import timedelta
+        
+        days = int(request.args.get('days', 30))
+        limit = int(request.args.get('limit', 20))
+        limit = min(limit, 100)
+        
+        start_date = (datetime.now() - timedelta(days=days)).isoformat()
+        
+        result = supabase.table('garden_mowing_sessions')\
+            .select('*')\
+            .eq('garden_id', garden_id)\
+            .gte('session_start', start_date)\
+            .order('session_start', desc=True)\
+            .limit(limit)\
+            .execute()
+        
+        return jsonify({
+            'success': True,
+            'data': result.data,
+            'count': len(result.data)
+        })
+        
+    except Exception as e:
+        print(f"❌ Error fetching mowing sessions: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/services/<service_id>/events', methods=['GET'])
+def get_service_events(service_id):
+    """
+    Get events for a service
     
     Query params:
     - event_type: Filter by event type
     - severity: Filter by severity
-    - start_date: ISO datetime string (default: 7 days ago)
-    - end_date: ISO datetime string (default: now)
+    - days: Days of history (default: 7)
     - limit: int (default: 50, max: 500)
     """
     try:
@@ -860,25 +919,19 @@ def get_bot_events(bot_id):
         # Parse query params
         event_type = request.args.get('event_type')
         severity = request.args.get('severity')
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
+        days = int(request.args.get('days', 7))
         limit = int(request.args.get('limit', 50))
         limit = min(limit, 500)
         
-        # Default to last 7 days
-        if not start_date:
-            start_date = (datetime.now() - timedelta(days=7)).isoformat()
+        start_date = (datetime.now() - timedelta(days=days)).isoformat()
         
         # Build query
-        query = supabase.table('bot_events')\
+        query = supabase.table('service_events')\
             .select('*')\
-            .eq('bot_id', bot_id)\
+            .eq('service_id', service_id)\
             .gte('event_timestamp', start_date)\
             .order('event_timestamp', desc=True)\
             .limit(limit)
-        
-        if end_date:
-            query = query.lte('event_timestamp', end_date)
         
         if event_type:
             query = query.eq('event_type', event_type)
@@ -895,200 +948,82 @@ def get_bot_events(bot_id):
         })
         
     except Exception as e:
-        print(f"❌ Error fetching events: {str(e)}")
+        print(f"❌ Error fetching service events: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
         }), 500
 
 
-@app.route('/api/bots/<bot_id>/dashboard', methods=['GET'])
-def get_bot_dashboard(bot_id):
+@app.route('/api/services/<service_id>/dashboard', methods=['GET'])
+def get_service_dashboard(service_id):
     """
-    Get all data needed for bot dashboard
+    Get all data needed for service dashboard
     
     Returns:
-    - Bot info
-    - Latest sensor reading
-    - Recent events (last 20)
-    - Location history (last 100 points)
-    - Today's statistics
+    - Service info
+    - Gardens with latest environmental data
+    - Recent mowing sessions
+    - Recent events
     """
     try:
-        # Get bot info
-        bot = supabase.table('bots').select('*').eq('id', bot_id).single().execute()
+        from datetime import timedelta
         
-        # Get latest sensor reading
-        latest_sensor = supabase.table('bot_sensor_readings')\
-            .select('*')\
-            .eq('bot_id', bot_id)\
-            .order('recorded_at', desc=True)\
-            .limit(1)\
+        # Get service info
+        service = supabase.table('services').select('*').eq('id', service_id).single().execute()
+        
+        # Get gardens for this service
+        gardens = supabase.table('gardens').select('*').eq('service_id', service_id).execute()
+        
+        # Get latest environmental data for each garden
+        garden_data = []
+        for garden in gardens.data:
+            latest_env = supabase.table('garden_environmental_data')\
+                .select('*')\
+                .eq('garden_id', garden['id'])\
+                .order('recorded_at', desc=True)\
+                .limit(1)\
+                .execute()
+            
+            garden_data.append({
+                **garden,
+                'latest_environmental': latest_env.data[0] if latest_env.data else None
+            })
+        
+        # Get recent mowing sessions (last 7 days)
+        start_date = (datetime.now() - timedelta(days=7)).isoformat()
+        sessions = supabase.table('garden_mowing_sessions')\
+            .select('*, gardens(name)')\
+            .in_('garden_id', [g['id'] for g in gardens.data])\
+            .gte('session_start', start_date)\
+            .order('session_start', desc=True)\
+            .limit(10)\
             .execute()
         
-        # Get recent events (last 20)
-        recent_events = supabase.table('bot_events')\
+        # Get recent events
+        events = supabase.table('service_events')\
             .select('*')\
-            .eq('bot_id', bot_id)\
+            .eq('service_id', service_id)\
             .order('event_timestamp', desc=True)\
             .limit(20)\
             .execute()
         
-        # Get location history (last 100 points)
-        location_history = supabase.table('bot_location_history')\
-            .select('*')\
-            .eq('bot_id', bot_id)\
-            .order('recorded_at', desc=False)\
-            .limit(100)\
-            .execute()
-        
-        # Get today's statistics
-        from datetime import date
-        today_stats_result = supabase.table('bot_daily_statistics')\
-            .select('*')\
-            .eq('bot_id', bot_id)\
-            .eq('date', date.today().isoformat())\
-            .execute()
-        
-        today_stats = today_stats_result.data[0] if today_stats_result.data else None
-        
         return jsonify({
             'success': True,
-            'bot': bot.data,
-            'latest_sensor': latest_sensor.data[0] if latest_sensor.data else None,
-            'recent_events': recent_events.data,
-            'location_history': location_history.data,
-            'today_stats': today_stats
+            'service': service.data,
+            'gardens': garden_data,
+            'recent_sessions': sessions.data,
+            'recent_events': events.data
         })
         
     except Exception as e:
-        print(f"❌ Error fetching dashboard data: {str(e)}")
+        print(f"❌ Error fetching service dashboard: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({
             'success': False,
             'error': str(e)
         }), 500
-
-
-@app.route('/api/bots/<bot_id>/statistics/daily', methods=['GET'])
-def get_daily_statistics(bot_id):
-    """
-    Get daily statistics for a bot
-    
-    Query params:
-    - start_date: Date string (default: 30 days ago)
-    - end_date: Date string (default: today)
-    """
-    try:
-        from datetime import timedelta, date
-        
-        # Parse query params
-        start_date_str = request.args.get('start_date')
-        end_date_str = request.args.get('end_date')
-        
-        # Default to last 30 days
-        if not start_date_str:
-            start_date = (date.today() - timedelta(days=30)).isoformat()
-        else:
-            start_date = start_date_str
-        
-        if not end_date_str:
-            end_date = date.today().isoformat()
-        else:
-            end_date = end_date_str
-        
-        # Build query
-        result = supabase.table('bot_daily_statistics')\
-            .select('*')\
-            .eq('bot_id', bot_id)\
-            .gte('date', start_date)\
-            .lte('date', end_date)\
-            .order('date', desc=True)\
-            .execute()
-        
-        return jsonify({
-            'success': True,
-            'data': result.data,
-            'count': len(result.data)
-        })
-        
-    except Exception as e:
-        print(f"❌ Error fetching daily statistics: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-def check_and_create_alerts(bot_id, sensor_data):
-    """Check sensor readings and create alerts if needed"""
-    try:
-        # Get bot info for location_id
-        bot = supabase.table('bots').select('location_id').eq('id', bot_id).single().execute()
-        location_id = bot.data['location_id']
-        
-        # Low battery alert (< 20%)
-        if sensor_data.get('battery_percentage') is not None and sensor_data['battery_percentage'] < 20:
-            event_data = {
-                'bot_id': bot_id,
-                'event_type': 'low_battery_warning',
-                'severity': 'warning',
-                'title': f"Low Battery - {sensor_data['battery_percentage']}%",
-                'description': 'Battery level below 20%',
-                'data': {'battery_percentage': sensor_data['battery_percentage']}
-            }
-            supabase.table('bot_events').insert(event_data).execute()
-            
-            alert_data = {
-                'bot_id': bot_id,
-                'location_id': location_id,
-                'alert_type': 'low_battery',
-                'severity': 'warning',
-                'title': f"Low Battery - {sensor_data['battery_percentage']}%",
-                'message': 'Battery level below 20%',
-                'data': {'battery_percentage': sensor_data['battery_percentage']}
-            }
-            supabase.table('bot_alerts').insert(alert_data).execute()
-        
-        # Rain detected
-        if sensor_data.get('is_raining'):
-            event_data = {
-                'bot_id': bot_id,
-                'event_type': 'rain_detected',
-                'severity': 'info',
-                'title': 'Rain Detected',
-                'description': 'Rain sensor triggered',
-                'data': {'rain_intensity': sensor_data.get('rain_intensity', 0)}
-            }
-            supabase.table('bot_events').insert(event_data).execute()
-        
-        # High temperature (> 45°C)
-        if sensor_data.get('temperature_celsius') is not None and sensor_data['temperature_celsius'] > 45:
-            event_data = {
-                'bot_id': bot_id,
-                'event_type': 'temperature_threshold_exceeded',
-                'severity': 'warning',
-                'title': f"High Temperature - {sensor_data['temperature_celsius']}°C",
-                'description': 'Temperature above safe threshold',
-                'data': {'temperature': sensor_data['temperature_celsius']}
-            }
-            supabase.table('bot_events').insert(event_data).execute()
-            
-            alert_data = {
-                'bot_id': bot_id,
-                'location_id': location_id,
-                'alert_type': 'custom',
-                'severity': 'warning',
-                'title': f"High Temperature - {sensor_data['temperature_celsius']}°C",
-                'message': 'Temperature above safe threshold',
-                'data': {'temperature': sensor_data['temperature_celsius']}
-            }
-            supabase.table('bot_alerts').insert(alert_data).execute()
-            
-    except Exception as e:
-        print(f"⚠️  Error checking alerts: {str(e)}")
-        # Don't fail the main request if alert creation fails
 
 
 # ==================== Helper Functions ====================

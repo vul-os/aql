@@ -5,8 +5,17 @@ import { Thermometer } from 'lucide-react';
 import { format } from 'date-fns';
 
 /**
- * Bot Temperature & Humidity Chart Component
- * Displays temperature and humidity over time (last 24 hours)
+ * Bot Temperature & Humidity Chart Component - DEPRECATED
+ * 
+ * ⚠️ DEPRECATION WARNING ⚠️
+ * This component uses bot-centric data (bot_sensor_readings table) which has been removed.
+ * The system is now SERVICE-CENTRIC.
+ * 
+ * For environmental data, use:
+ * - ServiceEnvironmentalData component for garden conditions
+ * - Service dashboard to view environmental trends
+ * 
+ * This component is kept for backward compatibility with admin dashboards only.
  * 
  * Props:
  * - botId: Bot UUID

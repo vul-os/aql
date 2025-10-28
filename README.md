@@ -2,13 +2,22 @@
 
 A comprehensive platform for managing autonomous bots and smart property automation. Bot Korp provides centralized control for mowing bots, pool cleaners, security bots, weather stations, and complete property management automation.
 
+> **🎯 Service-Centric Architecture:** BotKorp tracks service quality (how well gardens are mowed, pools cleaned) rather than just bot telemetry. See [`SERVICE_DATA_ARCHITECTURE.md`](SERVICE_DATA_ARCHITECTURE.md) for details.
+
 ## Features
 
+### 🌿 Service Management (Service-Centric)
+- **Garden Services**: Automated lawn mowing with session tracking and performance metrics
+- **Pool Services**: Pool cleaning with water quality monitoring
+- **Environmental Monitoring**: Real-time temperature, humidity, soil moisture tracking
+- **Session History**: Complete mowing/cleaning session records with area coverage, battery usage, and GPS trails
+- **Service Events**: Alerts for weather, low battery, obstacles, and service completion
+
 ### 🤖 Bot Management
-- **MowBots**: Automated lawn mowing robots with smart scheduling
-- **PoolBots**: Pool cleaning robots with maintenance scheduling
+- **MowBots**: Autonomous mowing robots assigned to gardens
+- **PoolBots**: Pool cleaning robots with maintenance tracking
 - **Weather Stations**: Environmental sensors for weather and soil data
-- Real-time status monitoring and command control
+- Real-time bot status and command control
 - Automated scheduling based on weather and conditions
 
 ### 🏠 Smart Home Integration
@@ -89,14 +98,69 @@ A comprehensive platform for managing autonomous bots and smart property automat
 
 The project includes comprehensive database migrations:
 
-1. **Core Tables**: profiles, places, place_members, coverage_areas
-2. **Bot Tables**: bots, bot_schedules, bot_sensors, bot_commands
-3. **Smart Device Tables**: device_types, smart_devices, device_states, device_commands, device_schedules, device_groups, scenes
+1. **Core Tables**: profiles, organizations, locations, coverage_areas
+2. **Bot Tables**: bots, bot_sensor_readings, bot_location_history, bot_events, bot_daily_statistics
+3. **Service Tables**: services, gardens, pools, rental_agreements, invoices
+4. **Smart Device Tables**: device_types, smart_devices, device_states, device_commands, device_schedules, device_groups, scenes
 
 ### Key Database Functions
-- `create_user_profile()` - Automatically creates user profile and default place
-- `create_default_place()` - Creates a default place for new users
+- `create_user_profile()` - Automatically creates user profile and default organization
+- `get_service_bot_data()` - Retrieves bot data for a service
 - `check_coverage()` - Checks if a location is covered by service
+
+## Bot Data System
+
+The platform includes a comprehensive bot data tracking system:
+
+### 📚 Documentation
+- **[Bot Data Architecture](BOT_DATA_ARCHITECTURE.md)** - Complete system architecture and data flow
+- **[Quick Reference Guide](QUICK_BOT_DATA_REFERENCE.md)** - Quick answers and examples
+- **[Seed/Simulator README](seed/README.md)** - Simulator scripts documentation
+
+### 🔧 Available Tools
+1. **Single Bot Simulator** (`seed/bot_simulator.py`) - Real-time simulation for one bot
+2. **Service Bot Simulator** (`seed/service_bot_simulator.py`) - Service-centric simulation
+3. **Data Generator** (`seed/bot_data.py`) - Generate historical test data for all bots
+
+### 🚀 Quick Start - Bot Simulation
+
+**Generate historical data for testing:**
+```bash
+cd seed
+python bot_data.py
+```
+
+**Simulate a single bot in real-time:**
+```bash
+cd seed
+export BOT_ID="your-bot-uuid"
+export BACKEND_URL="http://localhost:8080"
+python bot_simulator.py
+```
+
+**Simulate service bot with mowing sessions:**
+```bash
+cd seed
+export GARDEN_ID="your-garden-uuid"
+export SERVICE_ID="your-service-uuid"
+export BACKEND_URL="http://localhost:8080"
+python service_bot_simulator.py
+```
+
+### 📊 Data Tables
+- **bot_sensor_readings** - Real-time sensor data (battery, temp, GPS, movement)
+- **bot_location_history** - GPS trail and movement tracking
+- **bot_events** - Important events (low battery, rain detected, etc.)
+- **bot_daily_statistics** - Daily aggregated statistics
+
+### 🔌 Backend API Endpoints
+- `POST /api/bots/{bot_id}/sensor-reading` - Send sensor data
+- `GET /api/bots/{bot_id}/dashboard` - Get all bot data
+- `GET /api/bots/{bot_id}/sensor-readings` - Query sensor history
+- `GET /api/bots/{bot_id}/location-history` - Get GPS trail
+- `GET /api/bots/{bot_id}/events` - Get event history
+
+See [BOT_DATA_ARCHITECTURE.md](BOT_DATA_ARCHITECTURE.md) for complete documentation.
 
 ## Project Structure
 

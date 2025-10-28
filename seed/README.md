@@ -1,10 +1,12 @@
-# Database Seeder
+# Database Seeder & Simulators
 
-This directory contains scripts to seed the BotKorp database with test data.
+This directory contains scripts to seed the BotKorp database with test data and simulate bot operations.
 
-## What it seeds
+## What it contains
 
-### main.py - Base Data Seeder
+### Data Seeders
+
+#### main.py - Base Data Seeder
 
 1. **Test User**
    - Email: `botkorpza@gmail.com`
@@ -14,7 +16,7 @@ This directory contains scripts to seed the BotKorp database with test data.
    - Parses `coverage.kml` and uploads coverage areas to the database
    - Includes cities like Durban, Montclair, Westville, Durban North, etc.
 
-### bot_data.py - Bot Tracking Data Generator
+#### bot_data.py - Bot Tracking Data Generator
 
 Generates realistic bot tracking data for testing the bot monitoring system:
 
@@ -22,6 +24,24 @@ Generates realistic bot tracking data for testing the bot monitoring system:
 2. **Sensor Readings** - Battery, temperature, humidity, RPM, orientation, acceleration data
 3. **Bot Events** - Powered on/off, charging, obstacles, battery warnings, etc.
 4. **Daily Statistics** - Aggregated daily performance metrics
+
+### Bot Simulators
+
+#### bot_simulator.py - Single Bot Simulator
+Simulates a single bot sending real-time sensor data to the backend API. Generates continuous telemetry data including movement, battery drain/charging cycles, environmental sensors, and events.
+
+#### service_bot_simulator.py - Service-Centric Bot Simulator
+Simulates a bot performing mowing service work with:
+- Mowing session creation and completion
+- Environmental data monitoring (temperature, humidity, rain)
+- Detailed sensor data during mowing (blade RPM, GPS tracking, battery usage)
+- Session metrics (area covered, distance traveled)
+
+### Helper Scripts
+
+- **create-test-bot.py** - Creates a test bot in the database ready for simulation
+- **create-bots-for-location.py** - Creates multiple bots for a location/service
+- **quick-start-test-bot.sh** - Quick start script to run the bot simulator
 
 ## Prerequisites
 
@@ -76,6 +96,50 @@ python seed/main.py         # Seed users and coverage
 python seed/bot_data.py     # Generate bot data
 ```
 
+### Run Bot Simulators
+
+#### Create test bot first
+
+```bash
+cd seed
+python create-test-bot.py
+```
+
+#### Run single bot simulator (legacy)
+
+```bash
+cd seed
+export BOT_ID="550e8400-e29b-41d4-a716-446655440000"
+export BACKEND_URL="http://localhost:8080"
+python bot_simulator.py
+```
+
+Or use the quick-start script:
+
+```bash
+cd seed
+./quick-start-test-bot.sh
+```
+
+#### Run service bot simulator (recommended)
+
+```bash
+cd seed
+export GARDEN_ID="your-garden-uuid"
+export SERVICE_ID="your-service-uuid"
+export BOT_ID="550e8400-e29b-41d4-a716-446655440000"  # Optional
+export BACKEND_URL="http://localhost:8080"
+python service_bot_simulator.py
+```
+
+This will:
+- Start a mowing session automatically
+- Send environmental data (temperature, humidity, rain sensors)
+- Send detailed mowing sensor data (blade RPM, GPS tracking, etc.)
+- Track session metrics (area covered, distance traveled)
+- Handle battery drain and session completion
+- Restart sessions when battery is recharged
+
 ## What happens
 
 1. **User Creation**
@@ -92,12 +156,28 @@ python seed/bot_data.py     # Generate bot data
 
 ## Files
 
+### Seeders
 - `main.py` - Main seeder script that orchestrates user and coverage seeding
 - `bot_data.py` - Bot tracking data generator (location history, sensors, events, stats)
+- `seed_service_data.py` - Service data seeder
 - `upload_coverage.py` - KML parser and coverage uploader
 - `coverage.kml` - KML file containing coverage area boundaries
-- `test-coverage-query.sql` - SQL queries for testing coverage data
-- `debug-coverage.md` - Debug notes for coverage functionality
+
+### Simulators
+- `bot_simulator.py` - Legacy single bot real-time simulator
+- `service_bot_simulator.py` - Service-centric bot simulator with mowing sessions
+- `create-test-bot.py` - Helper to create test bot in database
+- `create-bots-for-location.py` - Helper to create multiple bots for a location
+- `quick-start-test-bot.sh` - Quick start script for bot simulator
+
+### Database Migrations
+Service data migrations are in `supabase/migrations/`:
+- `20251024120001_create_service_data_tables.sql` - Create new service-centric tables
+
+Note: Old bot-centric tables are already dropped by the initial `drop_everything.sql` migration.
+
+### Utilities
+- `verify_tables.py` - Verify database tables exist
 
 ## Troubleshooting
 

@@ -130,7 +130,7 @@ def create_test_bot():
     print()
     print("Next steps:")
     print("  1. Make sure backend is running: cd backend && python main.py")
-    print("  2. Run the simulator: cd backend/simulator && python bot_simulator.py")
+    print("  2. Run the simulator: cd seed && python bot_simulator.py")
     print("  3. View dashboard: http://localhost:5173/admin/bot/" + TEST_BOT_ID)
     print()
     

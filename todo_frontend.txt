@@ -5,6 +5,15 @@ BILLING SETUP AND TESTING
 have a system with pg cron tiggering a python cf, once a day, to notify 2 days in advance of service
 RLS
 
+
+EMAIL SUPPORT@BOTKORP.COM gets sent to a specific email? 
+email footers for gmail?
+add picture of product to landing page
+learn how to run supabase locally, what files to change in frontend and backend?
+
+
+
+
 ANDILE
 
 LOGO
@@ -29,15 +38,13 @@ HARD
 service calander, get how many locations to service in month on a map, service completed, 
 in create service, create the service there becasuse if api fails, service is not finished 
 
-EMAIL SUPPORT@BOTKORP.COM gets sent to a specific email? 
-email footers for gmail?
-add picture of product to landing page
-learn how to run supabase locally, what files to change in frontend and backend?
-
-
-
 
 keep track of bot data, on off, direction rpm, distance, orentation 3d, accelleration 3d, rotation 3d, temp, humidity, rain, battery 
 bot location history, bot events? 
 
 -> Make migration for this 
+
+
+
+checkout an older branch and look at the colour theme and look and feel. 
+
