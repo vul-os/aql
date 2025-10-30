@@ -293,6 +293,8 @@ def generate_sensor_data_for_session(session_id, session_start, duration_minutes
         pitch = round(random.uniform(-5, 5), 2)
         roll = round(random.uniform(-5, 5), 2)
         yaw = round(angle, 2)
+        if yaw >= 360:  # Safety check after rounding
+            yaw = 0.0
         
         # 3D Acceleration
         accel_x = round(random.uniform(-0.5, 0.5), 4)

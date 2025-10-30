@@ -23,6 +23,8 @@ import { format, formatDistanceToNow } from 'date-fns';
 import BotMap from '@/components/bots/bot-map';
 import BotBatteryChart from '@/components/bots/bot-battery-chart';
 import BotTemperatureChart from '@/components/bots/bot-temperature-chart';
+import LoadingLottie from '@/components/ui/loading-lottie';
+import PageHeader from '@/components/ui/page-header';
 
 /**
  * Bot Dashboard Page
@@ -185,11 +187,12 @@ export default function BotDashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <Activity className="w-8 h-8 animate-spin mx-auto mb-2" />
-          <p>Loading bot data...</p>
-        </div>
+      <div className="flex items-center justify-center h-full min-h-screen">
+        <LoadingLottie
+          src="https://lottie.host/51fee83a-3e79-41b0-8a20-77f890b9b6f1/iUangPxwIF.lottie"
+          message="Loading bot data..."
+          size="md"
+        />
       </div>
     );
   }
@@ -198,49 +201,60 @@ export default function BotDashboardPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-2" />
-          <p>Bot not found</p>
+          <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-red-500/10 dark:bg-red-500/20 mb-4">
+            <AlertTriangle className="h-10 w-10 text-red-500" />
+          </div>
+          <h3 className="text-lg font-bold mb-1">Bot not found</h3>
+          <p className="text-sm text-muted-foreground">The requested bot could not be found</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="p-3 md:p-5 space-y-5 max-w-[1800px] mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">{botInfo.name}</h1>
-          <p className="text-muted-foreground">Serial: {botInfo.serial_number}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge className={getStatusColor(botInfo.status)}>
-            {botInfo.status}
-          </Badge>
-          {latestSensor?.is_on && (
-            <Badge variant="outline" className="bg-green-50">
-              <Power className="w-3 h-3 mr-1" />
-              On
+      <div className="space-y-3 animate-in fade-in slide-in-from-top-3 duration-500">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold flex items-center gap-2">
+              <Bot className="h-5 w-5 text-botkorp-orange" />
+              {botInfo.name}
+            </h1>
+            <p className="text-muted-foreground text-xs mt-1">Serial: {botInfo.serial_number}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge className={`${getStatusColor(botInfo.status)} text-white border-0 text-xs`}>
+              {botInfo.status}
             </Badge>
-          )}
+            {latestSensor?.is_on && (
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                <Power className="w-3 h-3 mr-1" />
+                On
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Quick Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {/* Battery */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Battery className={`w-4 h-4 ${getBatteryColor(latestSensor?.battery_percentage || 0)}`} />
+        <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 shadow-sm">
+          <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
+          <CardHeader className="relative pb-2">
+            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <div className="h-6 w-6 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center">
+                <Battery className={`h-3 w-3 ${getBatteryColor(latestSensor?.battery_percentage || 0)}`} />
+              </div>
               Battery
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="relative">
+            <div className="text-2xl font-bold tabular-nums">
               {latestSensor?.battery_percentage || 0}%
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] text-muted-foreground font-medium mt-0.5">
               {latestSensor?.battery_voltage || 0}V
               {latestSensor?.is_charging && ' • Charging'}
             </p>
@@ -248,36 +262,42 @@ export default function BotDashboardPage() {
         </Card>
 
         {/* Temperature */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Thermometer className="w-4 h-4" />
+        <Card className="relative overflow-hidden border-l-4 border-l-blue-500 hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-75 shadow-sm">
+          <div className="absolute inset-0 bg-blue-500/0 group-hover:bg-blue-500/5 transition-all duration-300" />
+          <CardHeader className="relative pb-2">
+            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <div className="h-6 w-6 rounded-lg bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center">
+                <Thermometer className="h-3 w-3 text-blue-600" />
+              </div>
               Temperature
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="relative">
+            <div className="text-2xl font-bold tabular-nums">
               {latestSensor?.temperature_celsius?.toFixed(1) || '--'}°C
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] text-muted-foreground font-medium mt-0.5">
               Humidity: {latestSensor?.humidity_percentage?.toFixed(0) || '--'}%
             </p>
           </CardContent>
         </Card>
 
         {/* RPM */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Gauge className="w-4 h-4" />
+        <Card className="relative overflow-hidden border-l-4 border-l-purple-500 hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-150 shadow-sm">
+          <div className="absolute inset-0 bg-purple-500/0 group-hover:bg-purple-500/5 transition-all duration-300" />
+          <CardHeader className="relative pb-2">
+            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <div className="h-6 w-6 rounded-lg bg-purple-500/10 dark:bg-purple-500/20 flex items-center justify-center">
+                <Gauge className="h-3 w-3 text-purple-600" />
+              </div>
               Motor RPM
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="relative">
+            <div className="text-2xl font-bold tabular-nums">
               {latestSensor?.rpm || 0}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] text-muted-foreground font-medium mt-0.5">
               {latestSensor?.bot_specific_data?.blade_rpm 
                 ? `Blade: ${latestSensor.bot_specific_data.blade_rpm}`
                 : 'Idle'}
@@ -286,19 +306,22 @@ export default function BotDashboardPage() {
         </Card>
 
         {/* Location */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
+        <Card className="relative overflow-hidden border-l-4 border-l-emerald-500 hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200 shadow-sm">
+          <div className="absolute inset-0 bg-emerald-500/0 group-hover:bg-emerald-500/5 transition-all duration-300" />
+          <CardHeader className="relative pb-2">
+            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <div className="h-6 w-6 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center">
+                <MapPin className="h-3 w-3 text-emerald-600" />
+              </div>
               Location
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-sm font-mono">
+          <CardContent className="relative">
+            <div className="text-xs font-mono tabular-nums">
               {latestSensor?.latitude?.toFixed(4) || '--'},
               {latestSensor?.longitude?.toFixed(4) || '--'}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] text-muted-foreground font-medium mt-0.5">
               Heading: {latestSensor?.direction_degrees?.toFixed(0) || '--'}°
             </p>
           </CardContent>
@@ -306,12 +329,15 @@ export default function BotDashboardPage() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* Sensor Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Sensor Readings</CardTitle>
-            <CardDescription>
+        <Card className="border-0 shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <div className="h-0.5 w-6 bg-botkorp-orange rounded-full" />
+              <CardTitle className="text-sm">Sensor Readings</CardTitle>
+            </div>
+            <CardDescription className="text-xs">
               Last updated: {latestSensor?.recorded_at 
                 ? formatDistanceToNow(new Date(latestSensor.recorded_at), { addSuffix: true })
                 : 'Never'}
@@ -399,10 +425,13 @@ export default function BotDashboardPage() {
         </Card>
 
         {/* Today's Statistics */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Today's Statistics</CardTitle>
-            <CardDescription>{format(new Date(), 'MMMM d, yyyy')}</CardDescription>
+        <Card className="border-0 shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500 delay-350">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <div className="h-0.5 w-6 bg-botkorp-orange rounded-full" />
+              <CardTitle className="text-sm">Today's Statistics</CardTitle>
+            </div>
+            <CardDescription className="text-xs">{format(new Date(), 'MMMM d, yyyy')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {todayStats ? (

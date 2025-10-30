@@ -3,9 +3,90 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Loader2, Scissors, Clock, Ruler, Battery, MapPin, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Loader2, Scissors, Clock, Ruler, Battery, MapPin, AlertTriangle, TrendingUp, Target, Activity } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { format, formatDuration, intervalToDuration } from 'date-fns';
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  RadialBarChart,
+  RadialBar,
+  PolarAngleAxis,
+  Cell
+} from 'recharts';
+
+/**
+ * Custom Tooltip for Session Charts
+ */
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-lg border border-border">
+        <p className="text-xs font-semibold mb-2">
+          {label}
+        </p>
+        {payload.map((entry, index) => (
+          <div key={index} className="flex items-center justify-between gap-3 text-xs">
+            <span className="flex items-center gap-1.5">
+              <div 
+                className="w-2 h-2 rounded-full" 
+                style={{ backgroundColor: entry.color }}
+              />
+              {entry.name}
+            </span>
+            <span className="font-bold">{entry.value?.toFixed(1)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
+/**
+ * Radial Success Rate Component
+ */
+const RadialSuccessRate = ({ percentage }) => {
+  const data = [{ value: percentage, fill: '#f97316' }];
+  
+  return (
+    <div className="relative">
+      <ResponsiveContainer width="100%" height={140}>
+        <RadialBarChart 
+          cx="50%" 
+          cy="50%" 
+          innerRadius="60%" 
+          outerRadius="90%" 
+          data={data} 
+          startAngle={180} 
+          endAngle={0}
+        >
+          <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+          <RadialBar
+            background={{ fill: '#e5e7eb' }}
+            dataKey="value"
+            cornerRadius={10}
+            fill="#f97316"
+          />
+        </RadialBarChart>
+      </ResponsiveContainer>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-3xl font-bold text-botkorp-orange">{percentage?.toFixed(0)}%</div>
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Success Rate</div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 /**
  * Service Mowing Sessions Component
@@ -97,130 +178,207 @@ export default function ServiceMowingSessions({ gardenId }) {
   const totalArea = completedSessions.reduce((sum, s) => sum + (s.area_covered_sqm || 0), 0);
   const avgArea = completedSessions.length > 0 ? totalArea / completedSessions.length : 0;
   const totalDistance = completedSessions.reduce((sum, s) => sum + (s.distance_traveled_meters || 0), 0);
+  const successRate = sessions.length > 0 ? ((completedSessions.length / sessions.length) * 100) : 0;
+  
+  // Prepare chart data for performance trends
+  const performanceData = sessions.slice(0, 10).reverse().map(session => ({
+    date: format(new Date(session.session_start), 'MMM d'),
+    area: session.area_covered_sqm || 0,
+    duration: session.duration_minutes || 0,
+    battery: session.battery_start_percentage - (session.battery_end_percentage || 0)
+  }));
 
   return (
     <div className="space-y-4">
-      {/* Statistics Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Sessions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{sessions.length}</div>
-            <p className="text-xs text-muted-foreground">
-              {completedSessions.length} completed
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Ruler className="h-4 w-4" />
-              Area Covered
+      {/* Enhanced Statistics Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="relative overflow-hidden border-t-4 border-t-botkorp-orange hover:shadow-lg transition-all duration-300">
+          <div className="absolute inset-0 bg-botkorp-orange/5 pointer-events-none" />
+          <CardHeader className="pb-2 pt-3">
+            <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-botkorp-orange uppercase tracking-wider">
+              <Activity className="h-3.5 w-3.5" />
+              Sessions
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalArea.toFixed(1)} m²</div>
-            <p className="text-xs text-muted-foreground">
-              Avg: {avgArea.toFixed(1)} m² per session
+          <CardContent className="pb-3">
+            <div className="text-3xl font-bold tabular-nums">{sessions.length}</div>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              {completedSessions.length} completed successfully
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
+        <Card className="relative overflow-hidden border-t-4 border-t-blue-500 hover:shadow-lg transition-all duration-300">
+          <div className="absolute inset-0 bg-blue-500/5 pointer-events-none" />
+          <CardHeader className="pb-2 pt-3">
+            <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-blue-700 dark:text-blue-500 uppercase tracking-wider">
+              <Ruler className="h-3.5 w-3.5" />
+              Coverage
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pb-3">
+            <div className="text-3xl font-bold tabular-nums">{totalArea.toFixed(1)}</div>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              m² total • Avg: {avgArea.toFixed(1)} m²
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden border-t-4 border-t-green-500 hover:shadow-lg transition-all duration-300">
+          <div className="absolute inset-0 bg-green-500/5 pointer-events-none" />
+          <CardHeader className="pb-2 pt-3">
+            <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-green-700 dark:text-green-500 uppercase tracking-wider">
+              <MapPin className="h-3.5 w-3.5" />
               Distance
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{(totalDistance / 1000).toFixed(2)} km</div>
-            <p className="text-xs text-muted-foreground">
-              Total traveled
+          <CardContent className="pb-3">
+            <div className="text-3xl font-bold tabular-nums">{(totalDistance / 1000).toFixed(2)}</div>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              km total traveled
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
+        <Card className="relative overflow-hidden border-t-4 border-t-botkorp-orange hover:shadow-lg transition-all duration-300">
+          <div className="absolute inset-0 bg-botkorp-orange/5 pointer-events-none" />
+          <CardHeader className="pb-2 pt-3">
+            <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-botkorp-orange uppercase tracking-wider">
+              <Target className="h-3.5 w-3.5" />
               Success Rate
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {sessions.length > 0 ? ((completedSessions.length / sessions.length) * 100).toFixed(0) : 0}%
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Completion rate
-            </p>
+          <CardContent className="pb-3 px-2">
+            <RadialSuccessRate percentage={successRate} />
           </CardContent>
         </Card>
       </div>
 
+      {/* Performance Trends Chart */}
+      {performanceData.length > 0 && (
+        <Card className="border-t-4 border-t-botkorp-orange shadow-md hover:shadow-lg transition-all duration-300">
+          <CardHeader className="pb-3 pt-4 bg-gradient-to-r from-botkorp-orange/5 to-transparent">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-bold">Performance Trends</CardTitle>
+                <CardDescription className="text-[10px]">Coverage and efficiency over recent sessions</CardDescription>
+              </div>
+              <Badge variant="outline" className="text-[10px] border-botkorp-orange/30 bg-botkorp-orange/5">
+                Last 10 Sessions
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <ResponsiveContainer width="100%" height={250}>
+              <AreaChart data={performanceData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#f97316" stopOpacity={0.1}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fontSize: 11 }}
+                  stroke="#94a3b8"
+                />
+                <YAxis 
+                  tick={{ fontSize: 11 }}
+                  stroke="#94a3b8"
+                  label={{ value: 'm²', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#64748b' } }}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend 
+                  wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
+                  iconType="circle"
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="area" 
+                  stroke="#f97316" 
+                  strokeWidth={2}
+                  fill="url(#colorArea)"
+                  name="Area Covered (m²)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Sessions List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Sessions</CardTitle>
-          <CardDescription>Last 20 mowing sessions</CardDescription>
+      <Card className="border-t-4 border-t-botkorp-orange shadow-md hover:shadow-lg transition-all duration-300">
+        <CardHeader className="pb-3 pt-4 bg-gradient-to-r from-botkorp-orange/5 to-transparent">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-sm font-bold">Recent Sessions</CardTitle>
+              <CardDescription className="text-[10px]">Detailed history of mowing activities</CardDescription>
+            </div>
+            <Badge variant="outline" className="text-[10px] border-botkorp-orange/30 bg-botkorp-orange/5">
+              {sessions.length} Total
+            </Badge>
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {sessions.map((session) => (
+        <CardContent className="pt-4">
+          <div className="space-y-2.5">
+            {sessions.map((session, index) => (
               <div 
                 key={session.id}
-                className="flex items-start justify-between p-4 border rounded-lg hover:bg-accent transition-colors cursor-pointer"
+                className="relative flex items-start justify-between p-3 border-l-4 rounded-lg hover:shadow-md transition-all duration-300 cursor-pointer animate-in fade-in slide-in-from-bottom-2"
+                style={{ 
+                  animationDelay: `${index * 30}ms`,
+                  borderLeftColor: session.completion_status === 'completed' ? '#f97316' : '#94a3b8'
+                }}
                 onClick={() => setSelectedSession(session.id === selectedSession ? null : session.id)}
               >
-                <div className="space-y-1 flex-1">
-                  <div className="flex items-center gap-2">
-                    <Scissors className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">
+                <div className="absolute inset-0 bg-botkorp-orange/0 hover:bg-botkorp-orange/5 rounded-lg transition-all pointer-events-none" />
+                
+                <div className="space-y-2 flex-1 relative">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Scissors className="h-3.5 w-3.5 text-botkorp-orange" />
+                    <span className="text-xs font-semibold">
                       {format(new Date(session.session_start), 'MMM d, yyyy h:mm a')}
                     </span>
                     {getStatusBadge(session.completion_status)}
                   </div>
                   
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2 text-sm">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
                     {session.duration_minutes && (
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-muted-foreground">{session.duration_minutes} min</span>
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <Clock className="h-3 w-3 flex-shrink-0" />
+                        <span>{session.duration_minutes} min</span>
                       </div>
                     )}
                     
                     {session.area_covered_sqm && (
-                      <div className="flex items-center gap-1">
-                        <Ruler className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-muted-foreground">{session.area_covered_sqm.toFixed(1)} m²</span>
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <Ruler className="h-3 w-3 flex-shrink-0" />
+                        <span>{session.area_covered_sqm.toFixed(1)} m²</span>
                       </div>
                     )}
                     
                     {session.battery_end_percentage !== null && (
-                      <div className="flex items-center gap-1">
-                        <Battery className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-muted-foreground">
-                          {session.battery_start_percentage}% → {session.battery_end_percentage}%
-                        </span>
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <Battery className="h-3 w-3 flex-shrink-0" />
+                        <span>{session.battery_start_percentage}% → {session.battery_end_percentage}%</span>
                       </div>
                     )}
                     
                     {session.distance_traveled_meters && (
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-muted-foreground">{session.distance_traveled_meters.toFixed(0)} m</span>
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <MapPin className="h-3 w-3 flex-shrink-0" />
+                        <span>{session.distance_traveled_meters.toFixed(0)} m</span>
                       </div>
                     )}
                   </div>
 
                   {/* Expanded Details */}
                   {selectedSession === session.id && session.notes && (
-                    <div className="mt-3 pt-3 border-t text-sm text-muted-foreground">
-                      <p><strong>Notes:</strong> {session.notes}</p>
+                    <div className="mt-2.5 pt-2.5 border-t text-xs">
+                      <p className="text-muted-foreground">
+                        <strong className="text-foreground">Notes:</strong> {session.notes}
+                      </p>
                     </div>
                   )}
                 </div>

@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import LoadingLottie from '@/components/ui/loading-lottie';
 import { ANIMATIONS } from '@/lib/animations';
+import PageHeader from '@/components/ui/page-header';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,7 +59,10 @@ import {
   TrendingUp,
   Zap,
   History,
-  BarChart3
+  BarChart3,
+  Target,
+  Timer,
+  Leaf
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -535,7 +539,7 @@ export default function ServiceDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center h-full min-h-screen">
         <LoadingLottie
           src={ANIMATIONS.loading}
           message="Loading service details..."
@@ -550,109 +554,190 @@ export default function ServiceDetailPage() {
   const totalArea = gardens.reduce((sum, g) => sum + parseFloat(g.area_sqm || 0), 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
-      <div className="max-w-7xl mx-auto p-6 md:p-8 lg:p-12 space-y-8">
+    <>
+      <div className="p-3 md:p-5 space-y-5">
         
-        {/* Breadcrumb Header */}
-        <div className="flex items-center gap-3 text-sm text-muted-foreground mb-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/portal/services')} className="h-9 px-3 hover:bg-slate-100">
-            <ArrowLeft className="h-4 w-4 mr-2" />
+        {/* Breadcrumb Navigation */}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground animate-in fade-in slide-in-from-top-3 duration-500">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => navigate('/portal/services')} 
+            className="h-7 px-2 hover:bg-botkorp-orange/10 hover:text-botkorp-orange transition-all duration-300"
+          >
+            <ArrowLeft className="h-3 w-3 mr-1.5" />
             Services
           </Button>
           <span>/</span>
-          <span className="font-medium text-slate-900 dark:text-white">{service.name}</span>
+          <span className="font-semibold text-foreground">{service.name}</span>
         </div>
 
-        {/* Page Header */}
-        <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/10 via-white/70 to-accent/10 dark:from-secondary dark:via-secondary/40 dark:to-muted/40 p-4 md:p-6 shadow-md">
-          <div className="pointer-events-none absolute -top-12 -right-12 h-40 w-40 rounded-full bg-primary/20 blur-2xl"></div>
-          <div className="pointer-events-none absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-accent/20 blur-2xl"></div>
-          <div className="relative flex items-start justify-between gap-4">
-            <div className="flex items-start gap-3 flex-1">
-              <div className="flex-1">
-                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{service.name}</h1>
-                <div className="flex flex-wrap items-center gap-3 mt-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    <span>{service.location?.name}</span>
-                  </div>
-                  <div className="h-1 w-1 rounded-full bg-slate-300" />
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    <span>Created {format(new Date(service.created_at), 'MMM d, yyyy')}</span>
-                  </div>
-                  <div className="h-1 w-1 rounded-full bg-slate-300" />
-                  {getStatusBadge()}
-                </div>
+        {/* Enhanced Page Header */}
+        <div className="space-y-3 animate-in fade-in slide-in-from-top-3 duration-500">
+          <PageHeader
+            title={service.name}
+            subtitle={`${service.location?.name || 'Unknown Location'} • ${gardens.length} Garden${gardens.length !== 1 ? 's' : ''} • ${Math.round(totalArea)} m²`}
+            icon={<Sprout className="h-5 w-5 text-botkorp-orange" />}
+            badge={getStatusBadge()}
+          />
+        </div>
+
+        {/* Quick Stats Overview */}
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
+          {/* Total Area Stat */}
+          <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group shadow-sm">
+            <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
+            <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Total Area</CardTitle>
+              <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-botkorp-orange transition-all duration-300">
+                <Ruler className="h-3.5 w-3.5 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
               </div>
-            </div>
-          </div>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="text-2xl font-bold tabular-nums">{Math.round(totalArea)}</div>
+              <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Square Meters</p>
+            </CardContent>
+          </Card>
+
+          {/* Active Bots Stat */}
+          <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group shadow-sm">
+            <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
+            <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Active Bots</CardTitle>
+              <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-botkorp-orange transition-all duration-300">
+                <Bot className="h-3.5 w-3.5 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
+              </div>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="text-2xl font-bold tabular-nums">{gardens.length}</div>
+              <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Deployed</p>
+            </CardContent>
+          </Card>
+
+          {/* Gardens Stat */}
+          <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group shadow-sm">
+            <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
+            <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Gardens</CardTitle>
+              <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-botkorp-orange transition-all duration-300">
+                <Sprout className="h-3.5 w-3.5 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
+              </div>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="text-2xl font-bold tabular-nums">{gardens.length}</div>
+              <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Configured</p>
+            </CardContent>
+          </Card>
+
+          {/* Service Frequency Stat */}
+          <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group shadow-sm">
+            <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
+            <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Frequency</CardTitle>
+              <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-botkorp-orange transition-all duration-300">
+                <Calendar className="h-3.5 w-3.5 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
+              </div>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="text-2xl font-bold tabular-nums">{scheduleData.servicesPerMonth || 2}</div>
+              <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Visits/Month</p>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 h-14 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-xl shadow-sm">
-            <TabsTrigger value="service-data" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-md transition-all text-sm font-medium">
-              <Activity className="h-4 w-4 mr-2" />
+        {/* Enhanced Tabs */}
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-5 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200">
+          <TabsList className="grid w-full grid-cols-4 h-12 bg-muted/50 p-1 rounded-xl shadow-sm border animate-in fade-in zoom-in-95 duration-300">
+            <TabsTrigger 
+              value="service-data" 
+              className="rounded-lg data-[state=active]:bg-botkorp-orange data-[state=active]:text-white data-[state=active]:shadow-md transition-all text-xs font-semibold hover:bg-botkorp-orange/10"
+            >
+              <Activity className="h-3.5 w-3.5 mr-1.5" />
               Service Data
             </TabsTrigger>
-            <TabsTrigger value="gardens" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-md transition-all text-sm font-medium">
-              <Sprout className="h-4 w-4 mr-2" />
+            <TabsTrigger 
+              value="gardens" 
+              className="rounded-lg data-[state=active]:bg-botkorp-orange data-[state=active]:text-white data-[state=active]:shadow-md transition-all text-xs font-semibold hover:bg-botkorp-orange/10"
+            >
+              <Sprout className="h-3.5 w-3.5 mr-1.5" />
               Gardens
             </TabsTrigger>
-            <TabsTrigger value="agreements" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-md transition-all text-sm font-medium">
-              <FileText className="h-4 w-4 mr-2" />
+            <TabsTrigger 
+              value="agreements" 
+              className="rounded-lg data-[state=active]:bg-botkorp-orange data-[state=active]:text-white data-[state=active]:shadow-md transition-all text-xs font-semibold hover:bg-botkorp-orange/10"
+            >
+              <FileText className="h-3.5 w-3.5 mr-1.5" />
               Agreements
             </TabsTrigger>
-            <TabsTrigger value="settings" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-md transition-all text-sm font-medium">
-              <Settings className="h-4 w-4 mr-2" />
+            <TabsTrigger 
+              value="settings" 
+              className="rounded-lg data-[state=active]:bg-botkorp-orange data-[state=active]:text-white data-[state=active]:shadow-md transition-all text-xs font-semibold hover:bg-botkorp-orange/10"
+            >
+              <Settings className="h-3.5 w-3.5 mr-1.5" />
               Settings
             </TabsTrigger>
           </TabsList>
 
           {/* SERVICE DATA TAB */}
-          <TabsContent value="service-data" className="space-y-6">
+          <TabsContent value="service-data" className="space-y-5">
             {gardens.length > 0 ? (
-              <div className="space-y-8">
-                {gardens.map((garden) => (
-                  <div key={garden.id} className="space-y-6">
-                    {/* Garden Header */}
-                    <div className="flex items-center gap-3 pb-4 border-b">
-                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center shadow-lg">
-                        <Sprout className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <h2 className="text-2xl font-bold">{garden.name}</h2>
-                        <p className="text-sm text-muted-foreground">
-                          {Math.round(garden.area_sqm)} m² • Service quality and performance data
-                        </p>
+              <div className="space-y-6">
+                {gardens.map((garden, index) => (
+                  <div key={garden.id} className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${index * 100}ms` }}>
+                    {/* Premium Garden Header */}
+                    <div className="flex items-center gap-2">
+                      <div className="h-0.5 w-8 bg-botkorp-orange rounded-full" />
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-botkorp-orange flex items-center justify-center shadow-md">
+                          <Sprout className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <h2 className="text-lg font-bold">{garden.name}</h2>
+                          <p className="text-xs text-muted-foreground">
+                            {Math.round(garden.area_sqm)} m² coverage area
+                          </p>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Environmental Data */}
-                    <Card className="border-0 shadow-lg">
-                      <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950">
-                        <CardTitle className="flex items-center gap-2">
-                          <Thermometer className="w-5 h-5 text-green-600" />
-                          Environmental Conditions
-                        </CardTitle>
-                        <CardDescription>Current weather and soil conditions for {garden.name}</CardDescription>
+                    {/* Environmental Data Card */}
+                    <Card className="border-t-4 border-t-botkorp-orange shadow-md hover:shadow-xl transition-all duration-300">
+                      <CardHeader className="pb-3 pt-4 bg-gradient-to-r from-botkorp-orange/5 to-transparent">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 flex items-center justify-center">
+                              <Thermometer className="w-4 h-4 text-botkorp-orange" />
+                            </div>
+                            <div>
+                              <CardTitle className="text-sm font-bold">Environmental Conditions</CardTitle>
+                              <CardDescription className="text-[10px]">Real-time weather & soil data</CardDescription>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="text-[10px] border-botkorp-orange/30 bg-botkorp-orange/5">Live</Badge>
+                        </div>
                       </CardHeader>
-                      <CardContent className="pt-6">
+                      <CardContent className="pt-4">
                         <ServiceEnvironmentalData gardenId={garden.id} />
                       </CardContent>
                     </Card>
 
-                    {/* Mowing Sessions */}
-                    <Card className="border-0 shadow-lg">
-                      <CardHeader className="bg-gradient-to-r from-accent/5 to-secondary/5 dark:from-accent/10 dark:to-secondary/10">
-                        <CardTitle className="flex items-center gap-2">
-                          <Activity className="w-5 h-5 text-accent" />
-                          Service History
-                        </CardTitle>
-                        <CardDescription>Recent mowing sessions and performance for {garden.name}</CardDescription>
+                    {/* Service History Card */}
+                    <Card className="border-t-4 border-t-botkorp-orange shadow-md hover:shadow-xl transition-all duration-300">
+                      <CardHeader className="pb-3 pt-4 bg-gradient-to-r from-botkorp-orange/5 to-transparent">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 flex items-center justify-center">
+                              <Activity className="w-4 h-4 text-botkorp-orange" />
+                            </div>
+                            <div>
+                              <CardTitle className="text-sm font-bold">Service History</CardTitle>
+                              <CardDescription className="text-[10px]">Performance & mowing sessions</CardDescription>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="text-[10px] border-botkorp-orange/30 bg-botkorp-orange/5">Recent</Badge>
+                        </div>
                       </CardHeader>
-                      <CardContent className="pt-6">
+                      <CardContent className="pt-4">
                         <ServiceMowingSessions gardenId={garden.id} />
                       </CardContent>
                     </Card>
@@ -660,23 +745,34 @@ export default function ServiceDetailPage() {
                 ))}
               </div>
             ) : (
-              <Card className="border-0 shadow-lg">
-                <CardContent className="p-8 text-center">
-                  <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center mx-auto mb-4">
-                    <Sprout className="w-8 h-8 text-green-600 dark:text-green-500" />
+              <Card className="border-2 border-dashed bg-muted/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <CardContent className="py-16 text-center">
+                  <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-botkorp-orange/10 dark:bg-botkorp-orange/20 mb-5 animate-in zoom-in-50 duration-500 delay-100 shadow-sm">
+                    <Sprout className="h-10 w-10 text-botkorp-orange animate-pulse" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">No Gardens Configured</h3>
-                  <p className="text-muted-foreground mb-6">
+                  <h3 className="text-lg font-bold mb-2 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-200">
+                    No Gardens Configured
+                  </h3>
+                  <p className="text-muted-foreground mb-6 max-w-md mx-auto text-sm leading-relaxed animate-in fade-in slide-in-from-bottom-2 duration-500 delay-300">
                     Gardens will appear here after service setup. Once configured, you'll see environmental data and mowing session history.
                   </p>
-                  <Alert className="max-w-md mx-auto">
-                    <Info className="h-4 w-4" />
-                    <AlertDescription className="text-sm text-left">
-                      <strong>What you'll see here:</strong>
-                      <ul className="mt-2 space-y-1 text-xs">
-                        <li>• Real-time environmental conditions (temperature, humidity, soil moisture)</li>
-                        <li>• Mowing session history with coverage and performance metrics</li>
-                        <li>• Service quality trends and analytics</li>
+                  <Alert className="max-w-md mx-auto border-botkorp-orange/20 bg-botkorp-orange/5 animate-in fade-in zoom-in-50 duration-500 delay-400">
+                    <Info className="h-4 w-4 text-botkorp-orange" />
+                    <AlertDescription className="text-xs text-left">
+                      <strong className="text-sm">What you'll see here:</strong>
+                      <ul className="mt-2 space-y-1.5">
+                        <li className="flex items-start gap-2">
+                          <Thermometer className="h-3 w-3 text-botkorp-orange mt-0.5 flex-shrink-0" />
+                          <span>Real-time environmental conditions</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Activity className="h-3 w-3 text-botkorp-orange mt-0.5 flex-shrink-0" />
+                          <span>Mowing session history with metrics</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <TrendingUp className="h-3 w-3 text-botkorp-orange mt-0.5 flex-shrink-0" />
+                          <span>Service quality trends & analytics</span>
+                        </li>
                       </ul>
                     </AlertDescription>
                   </Alert>
@@ -688,50 +784,98 @@ export default function ServiceDetailPage() {
           {/* GARDENS TAB */}
           <TabsContent value="gardens" className="space-y-4">
             {gardens.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                {gardens.map((garden, index) => (
-                  <Card key={garden.id} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group">
-                    <CardHeader className="pb-4 pt-6">
-                      <div className="flex items-start gap-3">
-                        <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center shadow-lg flex-shrink-0 group-hover:scale-110 transition-transform">
-                          <Sprout className="h-7 w-7 text-white" />
+              <>
+                {/* Section Header */}
+                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <div className="h-0.5 w-8 bg-botkorp-orange rounded-full" />
+                  <h2 className="text-sm font-bold uppercase tracking-wide flex items-center gap-2">
+                    All Gardens
+                    <Badge variant="secondary" className="h-5 px-2 text-[10px] bg-botkorp-orange/10 text-botkorp-orange border-botkorp-orange/20 font-semibold">
+                      {gardens.length}
+                    </Badge>
+                  </h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {gardens.map((garden, index) => (
+                    <Card 
+                      key={garden.id} 
+                      className="relative overflow-hidden border-t-4 border-t-botkorp-orange hover:shadow-xl transition-all duration-300 cursor-pointer group animate-in fade-in slide-in-from-bottom-4 hover:-translate-y-1 shadow-md"
+                      style={{ animationDelay: `${index * 50}ms`, animationDuration: '500ms' }}
+                    >
+                      {/* Premium overlay */}
+                      <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300 pointer-events-none" />
+                      
+                      <CardHeader className="relative pb-3 pt-4">
+                        <div className="flex items-start gap-3">
+                          <div className="h-11 w-11 rounded-xl bg-botkorp-orange flex items-center justify-center flex-shrink-0 group-hover:shadow-lg group-hover:scale-105 transition-all duration-300">
+                            <Sprout className="h-5 w-5 text-white" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="text-base font-bold mb-0.5 truncate group-hover:text-botkorp-orange transition-colors duration-300">
+                              {garden.name}
+                            </CardTitle>
+                            <p className="text-[10px] text-muted-foreground">Garden #{index + 1}</p>
+                            <Badge variant="outline" className="mt-1.5 text-[10px] h-5 border-botkorp-orange/30 bg-botkorp-orange/5">
+                              Active
+                            </Badge>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <CardTitle className="text-lg font-bold mb-1 truncate">{garden.name}</CardTitle>
-                          <p className="text-xs text-muted-foreground">Garden #{index + 1}</p>
-                          <Badge variant="outline" className="mt-2 text-xs">Active</Badge>
+                      </CardHeader>
+                      
+                      <CardContent className="relative space-y-3 pb-4">
+                        {/* Stats Grid */}
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <div className="relative group/stat">
+                            <div className="text-center p-3 rounded-lg border border-border bg-muted/30 hover:border-botkorp-orange/50 hover:bg-botkorp-orange/5 transition-all duration-300">
+                              <div className="flex items-center justify-center mb-1.5">
+                                <div className="h-7 w-7 rounded-md bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover/stat:bg-botkorp-orange transition-all duration-300">
+                                  <Ruler className="h-3.5 w-3.5 text-botkorp-orange group-hover/stat:text-white transition-colors duration-300" />
+                                </div>
+                              </div>
+                              <div className="text-xl font-bold tabular-nums">{Math.round(garden.area_sqm)}</div>
+                              <p className="text-[10px] text-muted-foreground font-medium">m² Area</p>
+                            </div>
+                          </div>
+                          
+                          <div className="relative group/stat">
+                            <div className="text-center p-3 rounded-lg border border-border bg-muted/30 hover:border-botkorp-orange/50 hover:bg-botkorp-orange/5 transition-all duration-300">
+                              <div className="flex items-center justify-center mb-1.5">
+                                <div className="h-7 w-7 rounded-md bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover/stat:bg-botkorp-orange transition-all duration-300">
+                                  <Bot className="h-3.5 w-3.5 text-botkorp-orange group-hover/stat:text-white transition-colors duration-300" />
+                                </div>
+                              </div>
+                              <div className="text-xl font-bold tabular-nums">1</div>
+                              <p className="text-[10px] text-muted-foreground font-medium">Bot</p>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 text-center">
-                          <Ruler className="h-4 w-4 text-slate-400 mx-auto mb-1" />
-                          <p className="text-xl font-bold">{Math.round(garden.area_sqm)}</p>
-                          <p className="text-xs text-muted-foreground">m² Area</p>
-                        </div>
-                        <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 text-center">
-                          <Bot className="h-4 w-4 text-slate-400 mx-auto mb-1" />
-                          <p className="text-xl font-bold">1</p>
-                          <p className="text-xs text-muted-foreground">Bot</p>
-                        </div>
-                      </div>
-                      {garden.created_at && (
-                        <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
-                          <span>Added</span>
-                          <span className="font-medium">{format(new Date(garden.created_at), 'MMM d, yyyy')}</span>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+
+                        {/* Metadata */}
+                        {garden.created_at && (
+                          <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-2 border-t">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              Added
+                            </span>
+                            <span className="font-semibold">{format(new Date(garden.created_at), 'MMM d, yyyy')}</span>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </>
             ) : (
-              <Card className="border-2 border-dashed">
+              <Card className="border-2 border-dashed bg-muted/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <CardContent className="py-16 text-center">
-                  <Sprout className="h-16 w-16 mx-auto text-slate-300 mb-4" />
-                  <p className="text-lg font-medium text-slate-600">No gardens configured</p>
-                  <p className="text-sm text-muted-foreground mt-2">Gardens will appear here after service setup</p>
+                  <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-botkorp-orange/10 dark:bg-botkorp-orange/20 mb-5 animate-in zoom-in-50 duration-500 delay-100 shadow-sm">
+                    <Sprout className="h-10 w-10 text-botkorp-orange animate-pulse" />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2">No Gardens Configured</h3>
+                  <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
+                    Gardens will appear here after service setup is complete
+                  </p>
                 </CardContent>
               </Card>
             )}
@@ -740,97 +884,139 @@ export default function ServiceDetailPage() {
           {/* AGREEMENTS TAB */}
           <TabsContent value="agreements" className="space-y-4">
             {agreements.length > 0 ? (
-              <div className="space-y-4">
-                {agreements.map((agreement) => {
-                  const garden = gardens.find(g => g.id === agreement.garden_id);
-                  return (
-                    <Card key={agreement.id} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
-                      <CardHeader className="pb-4 pt-6">
-                        <div className="flex flex-col gap-3">
-                          <div className="flex items-start gap-3">
-                            <div className="h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-gradient-to-br from-secondary to-secondary/80 flex items-center justify-center shadow-lg flex-shrink-0">
-                              <FileText className="h-6 w-6 md:h-7 md:w-7 text-white" />
+              <>
+                {/* Section Header */}
+                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <div className="h-0.5 w-8 bg-botkorp-orange rounded-full" />
+                  <h2 className="text-sm font-bold uppercase tracking-wide flex items-center gap-2">
+                    Rental Agreements
+                    <Badge variant="secondary" className="h-5 px-2 text-[10px] bg-botkorp-orange/10 text-botkorp-orange border-botkorp-orange/20 font-semibold">
+                      {agreements.length}
+                    </Badge>
+                  </h2>
+                </div>
+
+                <div className="space-y-3">
+                  {agreements.map((agreement, index) => {
+                    const garden = gardens.find(g => g.id === agreement.garden_id);
+                    return (
+                      <Card 
+                        key={agreement.id} 
+                        className="border-l-4 border-l-botkorp-orange shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group animate-in fade-in slide-in-from-bottom-3"
+                        style={{ animationDelay: `${index * 50}ms`, animationDuration: '500ms' }}
+                      >
+                        <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300 pointer-events-none" />
+                        
+                        <CardHeader className="relative pb-3 pt-4">
+                          <div className="flex flex-col sm:flex-row gap-3 sm:items-start">
+                            <div className="flex items-start gap-3 flex-1 min-w-0">
+                              <div className="h-11 w-11 rounded-xl bg-botkorp-orange flex items-center justify-center shadow-md flex-shrink-0 group-hover:scale-105 transition-all duration-300">
+                                <FileText className="h-5 w-5 text-white" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <CardTitle className="text-sm font-bold mb-1 truncate group-hover:text-botkorp-orange transition-colors duration-300">
+                                  {agreement.agreement_number}
+                                </CardTitle>
+                                <p className="text-xs text-muted-foreground">{garden?.name || 'Unknown Garden'}</p>
+                                {agreement.signed_at && (
+                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-1">
+                                    <CheckCircle className="h-3 w-3 text-botkorp-orange" />
+                                    <span>Signed {format(new Date(agreement.signed_at), 'MMM d, yyyy')}</span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <CardTitle className="text-base md:text-lg font-bold mb-1 break-words">{agreement.agreement_number}</CardTitle>
-                              <p className="text-sm text-muted-foreground">{garden?.name || 'Unknown Garden'}</p>
-                              {agreement.signed_at && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Signed {format(new Date(agreement.signed_at), 'MMM d, yyyy')}
-                                </p>
-                              )}
+                            <Badge variant="outline" className="capitalize text-[10px] h-5 border-botkorp-orange/30 bg-botkorp-orange/5 self-start">
+                              {agreement.status}
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        
+                        <CardContent className="relative space-y-3 pb-4">
+                          {/* Pricing Card */}
+                          <div className="p-4 rounded-xl bg-gradient-to-br from-botkorp-orange/5 to-botkorp-orange/10 border-2 border-botkorp-orange/20">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-[10px] font-bold text-botkorp-orange uppercase tracking-wider">Bot Rental (Monthly)</p>
+                              <DollarSign className="h-4 w-4 text-botkorp-orange" />
                             </div>
-                            <Badge variant="outline" className="capitalize text-xs">{agreement.status}</Badge>
+                            <p className="text-3xl font-bold text-foreground mb-2 tabular-nums">
+                              R{parseFloat(agreement.bot_rental_total || 0).toFixed(2)}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
+                              <span className="font-medium">R150/month per bot</span>
+                              <span>•</span>
+                              <span className="font-medium">{agreement.number_of_bots || 1} bot{(agreement.number_of_bots || 1) > 1 ? 's' : ''}</span>
+                            </div>
                           </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="p-4 md:p-5 rounded-xl bg-gradient-to-br from-secondary/5 to-secondary/10 dark:from-secondary/10 dark:to-secondary/20 border-2 border-secondary/20 dark:border-secondary/30">
-                          <p className="text-xs font-medium text-secondary mb-2">Bot Rental (Monthly)</p>
-                          <p className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-                            R{parseFloat(agreement.bot_rental_total || 0).toFixed(2)}
-                          </p>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span>R150/month per bot</span>
-                            <span>•</span>
-                            <span>{agreement.number_of_bots || 1} bot{(agreement.number_of_bots || 1) > 1 ? 's' : ''}</span>
-                          </div>
-                        </div>
-                        {agreement.agreement_pdf_url && (
-                          <Button
-                            variant="outline"
-                            className="w-full h-10 md:h-11 text-sm md:text-base hover:bg-accent/5 hover:border-accent/30 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(agreement.agreement_pdf_url, '_blank');
-                            }}
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            Download PDF
-                          </Button>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
+
+                          {/* Download Button */}
+                          {agreement.agreement_pdf_url && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full h-9 text-xs hover:bg-botkorp-orange hover:text-white hover:border-botkorp-orange transition-all duration-300 active:scale-95"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(agreement.agreement_pdf_url, '_blank');
+                              }}
+                            >
+                              <Download className="h-3.5 w-3.5 mr-2" />
+                              Download PDF Agreement
+                            </Button>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </>
             ) : (
-              <Card className="border-2 border-dashed">
+              <Card className="border-2 border-dashed bg-muted/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <CardContent className="py-16 text-center">
-                  <FileText className="h-16 w-16 mx-auto text-slate-300 mb-4" />
-                  <p className="text-lg font-medium text-slate-600">No rental agreements</p>
-                  <p className="text-sm text-muted-foreground mt-2">Agreements will be created after service setup</p>
+                  <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-botkorp-orange/10 dark:bg-botkorp-orange/20 mb-5 animate-in zoom-in-50 duration-500 delay-100 shadow-sm">
+                    <FileText className="h-10 w-10 text-botkorp-orange animate-pulse" />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2">No Rental Agreements</h3>
+                  <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
+                    Agreements will be created after service setup is complete
+                  </p>
                 </CardContent>
               </Card>
             )}
           </TabsContent>
 
           {/* SETTINGS TAB */}
-          <TabsContent value="settings" className="space-y-6">
+          <TabsContent value="settings" className="space-y-4">
+            {/* Section Header */}
+            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <div className="h-0.5 w-8 bg-botkorp-orange rounded-full" />
+              <h2 className="text-sm font-bold uppercase tracking-wide">Service Configuration</h2>
+            </div>
+
             {/* Edit Service Name */}
-            <Card className="border-0 shadow-lg">
-              <CardHeader className="pb-4">
+            <Card className="border-t-4 border-t-botkorp-orange shadow-md hover:shadow-lg transition-all duration-300 animate-in fade-in slide-in-from-bottom-3 duration-500">
+              <CardHeader className="pb-3 pt-4 bg-gradient-to-r from-botkorp-orange/5 to-transparent">
                 <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                    <Edit2 className="h-6 w-6 text-slate-600 dark:text-slate-400" />
+                  <div className="h-10 w-10 rounded-xl bg-botkorp-orange/10 flex items-center justify-center">
+                    <Edit2 className="h-5 w-5 text-botkorp-orange" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl">Service Name</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-0.5">Change how this service appears</p>
+                    <CardTitle className="text-sm font-bold">Service Name</CardTitle>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Change how this service appears</p>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-4">
                 {editingName ? (
                   <div className="space-y-3">
                     <div className="space-y-2">
-                      <Label htmlFor="serviceName">Service Name</Label>
+                      <Label htmlFor="serviceName" className="text-xs font-semibold">Service Name</Label>
                       <Input
                         id="serviceName"
                         value={newServiceName}
                         onChange={(e) => setNewServiceName(e.target.value)}
                         placeholder="e.g., Home - Lawn Care"
-                        className="h-11 text-base"
+                        className="h-10 text-sm focus:border-botkorp-orange focus:ring-2 focus:ring-botkorp-orange/20"
                         autoFocus
                       />
                     </div>
@@ -838,12 +1024,12 @@ export default function ServiceDetailPage() {
                       <Button
                         onClick={handleUpdateServiceName}
                         disabled={processing || !newServiceName.trim()}
-                        className="flex-1 h-11"
+                        className="flex-1 h-9 text-xs bg-botkorp-orange hover:bg-botkorp-orange/90 active:scale-95 transition-all"
                       >
                         {processing ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                         ) : (
-                          <Check className="h-4 w-4 mr-2" />
+                          <Check className="h-3.5 w-3.5 mr-1.5" />
                         )}
                         Save Changes
                       </Button>
@@ -854,24 +1040,25 @@ export default function ServiceDetailPage() {
                           setNewServiceName(service.name);
                         }}
                         disabled={processing}
-                        className="flex-1 h-11"
+                        className="flex-1 h-9 text-xs hover:bg-muted active:scale-95 transition-all"
                       >
                         Cancel
                       </Button>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-muted/30 border border-border hover:border-botkorp-orange/30 transition-all duration-300">
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Current Name</p>
-                      <p className="text-lg font-semibold">{service.name}</p>
+                      <p className="text-[10px] text-muted-foreground mb-1 font-medium uppercase tracking-wider">Current Name</p>
+                      <p className="text-sm font-bold">{service.name}</p>
                     </div>
                     <Button
                       variant="outline"
+                      size="sm"
                       onClick={() => setEditingName(true)}
-                      className="h-10"
+                      className="h-8 text-xs hover:bg-botkorp-orange hover:text-white hover:border-botkorp-orange transition-all active:scale-95"
                     >
-                      <Edit2 className="h-4 w-4 mr-2" />
+                      <Edit2 className="h-3.5 w-3.5 mr-1.5" />
                       Edit
                     </Button>
                   </div>
@@ -880,29 +1067,32 @@ export default function ServiceDetailPage() {
             </Card>
 
             {/* Service Schedule Editor */}
-            <Card className="border-0 shadow-lg">
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-xl bg-secondary/10 dark:bg-secondary/20 flex items-center justify-center">
-                    <Calendar className="h-6 w-6 text-secondary" />
-                  </div>
-                  <div className="flex-1">
-                    <CardTitle className="text-xl">Service Schedule</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-0.5">When bots will service this property</p>
+            <Card className="border-t-4 border-t-botkorp-orange shadow-md hover:shadow-lg transition-all duration-300 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-75">
+              <CardHeader className="pb-3 pt-4 bg-gradient-to-r from-botkorp-orange/5 to-transparent">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="h-10 w-10 rounded-xl bg-botkorp-orange/10 flex items-center justify-center">
+                      <Calendar className="h-5 w-5 text-botkorp-orange" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-sm font-bold">Service Schedule</CardTitle>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">When bots will service this property</p>
+                    </div>
                   </div>
                   {!editingSchedule && (
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setEditingSchedule(true)}
+                      className="h-8 text-xs hover:bg-botkorp-orange hover:text-white hover:border-botkorp-orange transition-all active:scale-95"
                     >
-                      <Edit2 className="h-4 w-4 mr-2" />
+                      <Edit2 className="h-3.5 w-3.5 mr-1.5" />
                       Edit
                     </Button>
                   )}
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-4">
                 {editingSchedule ? (
                   <div className="space-y-6">
                     {/* Edge Trimming Frequency */}
@@ -1069,12 +1259,12 @@ export default function ServiceDetailPage() {
                       <Button
                         onClick={handlePrepareScheduleUpdate}
                         disabled={processing || !scheduleData.isValid}
-                        className="flex-1 h-11"
+                        className="flex-1 h-10 text-xs bg-botkorp-orange hover:bg-botkorp-orange/90 active:scale-95 transition-all"
                       >
                         {processing ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                         ) : (
-                          <CheckCircle className="h-4 w-4 mr-2" />
+                          <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
                         )}
                         {scheduleData.servicesPerMonth !== currentSchedule?.servicesPerMonth ? 'Update Schedule & Billing' : 'Save Schedule'}
                       </Button>
@@ -1086,35 +1276,35 @@ export default function ServiceDetailPage() {
                           loadServiceDetails();
                         }}
                         disabled={processing}
-                        className="flex-1 h-11"
+                        className="flex-1 h-10 text-xs hover:bg-muted active:scale-95 transition-all"
                       >
                         Cancel
                       </Button>
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    <div className="p-5 rounded-xl bg-gradient-to-br from-secondary/5 to-secondary/10 dark:from-secondary/10 dark:to-secondary/20 border-2 border-secondary/20 dark:border-secondary/30">
-                      <div className="space-y-3">
+                  <div className="space-y-2.5">
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-botkorp-orange/5 to-botkorp-orange/10 border-2 border-botkorp-orange/20">
+                      <div className="space-y-2.5">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Preferred Day</span>
-                          <Badge variant="outline" className="capitalize">
+                          <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Preferred Day</span>
+                          <Badge variant="outline" className="capitalize text-[10px] h-5 border-botkorp-orange/30 bg-botkorp-orange/5">
                             {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][scheduleData.dayOfWeek || 1]}
                           </Badge>
                         </div>
                         
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Time Window</span>
-                          <Badge variant="outline">
+                          <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Time Window</span>
+                          <Badge variant="outline" className="text-[10px] h-5 border-botkorp-orange/30 bg-botkorp-orange/5">
                             {scheduleData.timeWindowStart || '08:00'} - {scheduleData.timeWindowEnd || '12:00'}
-                                  </Badge>
-                            </div>
+                          </Badge>
+                        </div>
                         
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Edge Trimming Visits/Month</span>
-                          <Badge variant="outline">
-                            {scheduleData.servicesPerMonth || 2} visit{(scheduleData.servicesPerMonth || 2) > 1 ? 's' : ''}
-                                </Badge>
+                          <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Edge Trimming</span>
+                          <Badge variant="outline" className="text-[10px] h-5 border-botkorp-orange/30 bg-botkorp-orange/5">
+                            {scheduleData.servicesPerMonth || 2} visit{(scheduleData.servicesPerMonth || 2) > 1 ? 's' : ''}/month
+                          </Badge>
                         </div>
                       </div>
                     </div>
@@ -1124,22 +1314,22 @@ export default function ServiceDetailPage() {
             </Card>
 
             {/* Modify Gardens */}
-            <Card className="border-0 shadow-lg">
-              <CardHeader className="pb-4">
+            <Card className="border-t-4 border-t-botkorp-orange shadow-md hover:shadow-lg transition-all duration-300 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-150">
+              <CardHeader className="pb-3 pt-4 bg-gradient-to-r from-botkorp-orange/5 to-transparent">
                 <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-xl bg-secondary/10 dark:bg-secondary/20 flex items-center justify-center">
-                    <Bot className="h-6 w-6 text-secondary" />
+                  <div className="h-10 w-10 rounded-xl bg-botkorp-orange/10 flex items-center justify-center">
+                    <Bot className="h-5 w-5 text-botkorp-orange" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl">Number of Gardens</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-0.5">Adjust service coverage (requires approval)</p>
+                    <CardTitle className="text-sm font-bold">Number of Gardens</CardTitle>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Adjust service coverage (requires approval)</p>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-5">
-                <Alert className="border-l-4 border-l-accent bg-accent/5 dark:bg-accent/10">
-                  <Info className="h-4 w-4 text-accent" />
-                  <AlertDescription className="text-sm text-foreground/90">
+              <CardContent className="space-y-4 pt-4">
+                <Alert className="border-l-4 border-l-botkorp-orange bg-botkorp-orange/5">
+                  <Info className="h-4 w-4 text-botkorp-orange" />
+                  <AlertDescription className="text-xs">
                     Each garden requires one bot. Changes need admin approval and your signature.
                   </AlertDescription>
                 </Alert>
@@ -1184,22 +1374,22 @@ export default function ServiceDetailPage() {
                 </div>
 
                 {newGardenCount !== gardens.length && (
-                  <div className="space-y-3">
-                    <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-950/20">
+                  <div className="space-y-2.5">
+                    <Alert className="border-l-4 border-l-orange-500 bg-orange-50 dark:bg-orange-950/20">
                       <AlertCircle className="h-4 w-4 text-orange-600" />
-                      <AlertDescription className="text-sm text-orange-900 dark:text-orange-200">
+                      <AlertDescription className="text-xs text-orange-900 dark:text-orange-200">
                         <strong>Admin approval required</strong> - Changes will be reviewed within 24 hours
                       </AlertDescription>
                     </Alert>
                     
                     <Button
-                      className="w-full h-12 text-base font-semibold shadow-md"
+                      className="w-full h-10 text-xs font-semibold shadow-md bg-botkorp-orange hover:bg-botkorp-orange/90 active:scale-95 transition-all"
                       onClick={() => {
                         setModifyAction(newGardenCount > gardens.length ? 'add' : 'remove');
                         setShowModifyDialog(true);
                       }}
                     >
-                      <FileText className="h-5 w-5 mr-2" />
+                      <FileText className="h-4 w-4 mr-2" />
                       Request Amendment ({newGardenCount > gardens.length ? '+' : ''}{newGardenCount - gardens.length} Garden{Math.abs(newGardenCount - gardens.length) !== 1 ? 's' : ''})
                     </Button>
                   </div>
@@ -1208,23 +1398,23 @@ export default function ServiceDetailPage() {
             </Card>
 
             {/* Service Controls */}
-            <Card className="border-0 shadow-lg">
-              <CardHeader className="pb-4">
+            <Card className="border-t-4 border-t-botkorp-orange shadow-md hover:shadow-lg transition-all duration-300 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200">
+              <CardHeader className="pb-3 pt-4 bg-gradient-to-r from-botkorp-orange/5 to-transparent">
                 <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                    <Power className="h-6 w-6 text-slate-600 dark:text-slate-400" />
+                  <div className="h-10 w-10 rounded-xl bg-botkorp-orange/10 flex items-center justify-center">
+                    <Power className="h-5 w-5 text-botkorp-orange" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl">Service Controls</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-0.5">Pause or manage this service</p>
+                    <CardTitle className="text-sm font-bold">Service Controls</CardTitle>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Pause or manage this service</p>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-2.5 pt-4">
                 {service.is_paused && service.paused_at && (
-                  <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+                  <Alert className="border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-950/20">
                     <Pause className="h-4 w-4 text-amber-600" />
-                    <AlertDescription className="text-sm text-amber-900 dark:text-amber-200">
+                    <AlertDescription className="text-xs text-amber-900 dark:text-amber-200">
                       Paused since {format(new Date(service.paused_at), 'MMM d, yyyy h:mm a')}
                     </AlertDescription>
                   </Alert>
@@ -1232,17 +1422,21 @@ export default function ServiceDetailPage() {
 
                 <Button
                   variant={service.is_paused ? "default" : "outline"}
-                  className={`w-full h-11 md:h-12 justify-start text-sm md:text-base font-medium ${service.is_paused ? 'bg-accent hover:bg-accent/90 shadow-md' : ''}`}
+                  className={`w-full h-10 justify-start text-xs font-semibold transition-all active:scale-95 ${
+                    service.is_paused 
+                      ? 'bg-botkorp-orange hover:bg-botkorp-orange/90 shadow-md text-white' 
+                      : 'hover:bg-muted'
+                  }`}
                   onClick={() => service.is_paused ? setShowResumeDialog(true) : setShowPauseDialog(true)}
                 >
                   {service.is_paused ? (
                     <>
-                      <Play className="h-4 w-4 md:h-5 md:w-5 mr-2 md:mr-3" />
+                      <Play className="h-4 w-4 mr-2" />
                       Resume Service
                     </>
                   ) : (
                     <>
-                      <Pause className="h-4 w-4 md:h-5 md:w-5 mr-2 md:mr-3" />
+                      <Pause className="h-4 w-4 mr-2" />
                       Pause Service
                     </>
                   )}
@@ -1250,11 +1444,11 @@ export default function ServiceDetailPage() {
 
                 <Button
                   variant="destructive"
-                  className="w-full h-11 md:h-12 justify-start text-sm md:text-base font-medium shadow-md bg-red-600 hover:bg-red-700"
+                  className="w-full h-10 justify-start text-xs font-semibold shadow-md bg-red-600 hover:bg-red-700 transition-all active:scale-95"
                   onClick={handleEmergencyStop}
                   disabled={processing}
                 >
-                  <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 mr-2 md:mr-3" />
+                  <AlertTriangle className="h-4 w-4 mr-2" />
                   {processing ? 'Stopping...' : 'Emergency Stop All Bots'}
                 </Button>
 
@@ -1528,7 +1722,7 @@ export default function ServiceDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }
 

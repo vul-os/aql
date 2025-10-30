@@ -173,30 +173,6 @@
     border: 1px solid rgba(255, 107, 53, 0.2);
   }
 
-  /* Custom scrollbar for sidebar */
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 100vh;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.25);
-  }
-
-  /* Firefox */
-  .custom-scrollbar {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
-  }
-
   /* Mobile-first responsive utilities */
   .mobile-container {
     @apply px-4 sm:px-6 lg:px-8;
@@ -316,15 +292,6 @@
     to {
       transform: translateX(100%);
     }
-  }
-
-  /* Animation delays */
-  .delay-75 {
-    animation-delay: 75ms;
-  }
-
-  .delay-150 {
-    animation-delay: 150ms;
   }
 }
 

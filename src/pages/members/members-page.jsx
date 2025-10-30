@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import LoadingLottie from '@/components/ui/loading-lottie';
 import {
   Select,
   SelectContent,
@@ -51,7 +52,10 @@ import {
   Trash2,
   Loader2,
   Clock,
-  X
+  X,
+  Search,
+  UserCheck,
+  Building
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -68,6 +72,7 @@ export default function MembersPage() {
   const [inviting, setInviting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Invite form state
   const [inviteForm, setInviteForm] = useState({
@@ -329,162 +334,272 @@ export default function MembersPage() {
     return member.user?.email?.[0]?.toUpperCase() || 'U';
   };
 
+  const filteredMembers = members.filter(member =>
+    member.user?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    member.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    member.role?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center h-full min-h-screen">
+        <LoadingLottie
+          src="https://lottie.host/51fee83a-3e79-41b0-8a20-77f890b9b6f1/iUangPxwIF.lottie"
+          message="Loading team members..."
+          size="md"
+        />
       </div>
     );
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+    <div className="p-3 md:p-5 space-y-5">
+      {/* Header Section */}
+      <div className="space-y-3 animate-in fade-in slide-in-from-top-3 duration-500">
         <PageHeader
           title="Team Members"
-          subtitle="Manage team members and their permissions"
-          actions={
-            <DialogTrigger asChild>
-              <Button>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Invite Member
-              </Button>
-            </DialogTrigger>
-          }
+          subtitle={`Manage your ${members.length} team member${members.length !== 1 ? 's' : ''} and their permissions`}
+          icon={<Users className="h-5 w-5 text-botkorp-orange" />}
         />
-          <DialogTrigger asChild>
-            <Button>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Invite Member
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Invite Team Member</DialogTitle>
-              <DialogDescription>
-                Send an email invitation to join your organization. They can accept within 7 days.
-              </DialogDescription>
-            </DialogHeader>
 
-            <form onSubmit={handleInviteMember} className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={inviteForm.email}
-                  onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
-                  placeholder="member@example.com"
-                  required
-                />
+        {/* Action Bar */}
+        <div className="flex flex-col sm:flex-row gap-2.5 justify-between items-start sm:items-center">
+          <div className="relative flex-1 max-w-md w-full group">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-botkorp-orange transition-colors duration-300" />
+            <Input
+              placeholder="Search members..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-8 text-sm focus:border-botkorp-orange focus:ring-2 focus:ring-botkorp-orange/20 transition-all duration-300"
+            />
+          </div>
+          <Button 
+            onClick={() => setDialogOpen(true)}
+            className="w-full sm:w-auto h-8 text-sm bg-botkorp-orange hover:bg-botkorp-orange/90 text-white hover:shadow-lg transition-all duration-300 active:scale-95 group"
+          >
+            <UserPlus className="h-3.5 w-3.5 mr-1.5 group-hover:rotate-12 transition-transform duration-300" />
+            Invite Member
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats Overview */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        {/* Total Members Stat */}
+        <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 shadow-sm">
+          <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
+          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Total Members</CardTitle>
+            <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-botkorp-orange transition-all duration-300">
+              <Users className="h-3.5 w-3.5 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
+            </div>
+          </CardHeader>
+          <CardContent className="relative">
+            <div className="text-2xl font-bold tabular-nums">{members.length}</div>
+            <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Active</p>
+          </CardContent>
+        </Card>
+
+        {/* Pending Invitations Stat */}
+        <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-75 shadow-sm">
+          <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
+          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Pending</CardTitle>
+            <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-botkorp-orange transition-all duration-300">
+              <Clock className="h-3.5 w-3.5 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
+            </div>
+          </CardHeader>
+          <CardContent className="relative">
+            <div className="text-2xl font-bold tabular-nums">{invitations.length}</div>
+            <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Invitations</p>
+          </CardContent>
+        </Card>
+
+        {/* Admins Count Stat */}
+        <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-150 shadow-sm">
+          <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
+          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Admins</CardTitle>
+            <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-botkorp-orange transition-all duration-300">
+              <Shield className="h-3.5 w-3.5 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
+            </div>
+          </CardHeader>
+          <CardContent className="relative">
+            <div className="text-2xl font-bold tabular-nums">
+              {members.filter(m => m.role === 'admin' || m.role === 'owner').length}
+            </div>
+            <p className="text-[10px] text-muted-foreground font-medium mt-0.5">& Owners</p>
+          </CardContent>
+        </Card>
+
+        {/* Organization Stat */}
+        <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200 shadow-sm">
+          <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
+          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Organization</CardTitle>
+            <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-botkorp-orange transition-all duration-300">
+              <Building className="h-3.5 w-3.5 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
+            </div>
+          </CardHeader>
+          <CardContent className="relative">
+            <div className="text-sm font-bold truncate">
+              {selectedOrg?.organization_name || 'N/A'}
+            </div>
+            <p className="text-[10px] text-muted-foreground font-medium mt-0.5 capitalize">
+              {selectedOrg?.member_role || 'Member'}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Invite Member Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-lg animate-in fade-in zoom-in-95 duration-300">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center">
+                <UserPlus className="h-4 w-4 text-botkorp-orange" />
               </div>
+              Invite Team Member
+            </DialogTitle>
+            <DialogDescription>
+              Send an email invitation to join your organization. They can accept within 7 days.
+            </DialogDescription>
+          </DialogHeader>
 
-              <div className="space-y-2">
-                <Label htmlFor="role">Role *</Label>
-                <Select
-                  value={inviteForm.role}
-                  onValueChange={(value) => setInviteForm({ ...inviteForm, role: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">
-                      <div className="flex flex-col items-start">
-                        <span className="font-semibold">Admin</span>
-                        <span className="text-xs text-muted-foreground">Full access to everything</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="manager">
-                      <div className="flex flex-col items-start">
-                        <span className="font-semibold">Manager</span>
-                        <span className="text-xs text-muted-foreground">Manage bots, locations, view billing</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="operator">
-                      <div className="flex flex-col items-start">
-                        <span className="font-semibold">Operator</span>
-                        <span className="text-xs text-muted-foreground">Control bots only</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="viewer">
-                      <div className="flex flex-col items-start">
-                        <span className="font-semibold">Viewer</span>
-                        <span className="text-xs text-muted-foreground">View-only access</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="member">
-                      <div className="flex flex-col items-start">
-                        <span className="font-semibold">Member</span>
-                        <span className="text-xs text-muted-foreground">Basic access</span>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Permissions are automatically assigned based on role
-                </p>
-              </div>
+          <form onSubmit={handleInviteMember} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={inviteForm.email}
+                onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+                placeholder="member@example.com"
+                required
+              />
+            </div>
 
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={inviting}>
-                  {inviting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Mail className="h-4 w-4 mr-2" />
-                      Send Invitation
-                    </>
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+            <div className="space-y-2">
+              <Label htmlFor="role">Role *</Label>
+              <Select
+                value={inviteForm.role}
+                onValueChange={(value) => setInviteForm({ ...inviteForm, role: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">
+                    <div className="flex flex-col items-start">
+                      <span className="font-semibold">Admin</span>
+                      <span className="text-xs text-muted-foreground">Full access to everything</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="manager">
+                    <div className="flex flex-col items-start">
+                      <span className="font-semibold">Manager</span>
+                      <span className="text-xs text-muted-foreground">Manage bots, locations, view billing</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="operator">
+                    <div className="flex flex-col items-start">
+                      <span className="font-semibold">Operator</span>
+                      <span className="text-xs text-muted-foreground">Control bots only</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="viewer">
+                    <div className="flex flex-col items-start">
+                      <span className="font-semibold">Viewer</span>
+                      <span className="text-xs text-muted-foreground">View-only access</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="member">
+                    <div className="flex flex-col items-start">
+                      <span className="font-semibold">Member</span>
+                      <span className="text-xs text-muted-foreground">Basic access</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Permissions are automatically assigned based on role
+              </p>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} className="h-8">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={inviting} className="h-8 bg-botkorp-orange hover:bg-botkorp-orange/90 text-white">
+                {inviting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="h-4 w-4 mr-2" />
+                    Send Invitation
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Pending Invitations */}
       {invitations.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-primary" />
-              Pending Invitations ({invitations.length})
-            </CardTitle>
-            <CardDescription>
+        <Card className="border-t-4 border-t-botkorp-orange shadow-md animate-in fade-in slide-in-from-bottom-3 duration-500">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-0.5 w-8 bg-botkorp-orange rounded-full" />
+                <CardTitle className="text-sm font-bold uppercase tracking-wide flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-botkorp-orange" />
+                  Pending Invitations
+                  <Badge variant="secondary" className="h-5 px-2 text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/20 font-semibold">
+                    {invitations.length}
+                  </Badge>
+                </CardTitle>
+              </div>
+            </div>
+            <CardDescription className="text-xs mt-1">
               Invitations waiting to be accepted
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {invitations.map((invitation) => (
-                <div key={invitation.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/5 transition-colors">
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Mail className="h-5 w-5 text-primary" />
+              {invitations.map((invitation, index) => (
+                <div 
+                  key={invitation.id} 
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-botkorp-orange/5 hover:border-botkorp-orange/30 transition-all duration-300 group animate-in fade-in slide-in-from-left-3"
+                  style={{ animationDelay: `${index * 50}ms`, animationDuration: '300ms' }}
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="h-9 w-9 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center flex-shrink-0 group-hover:bg-botkorp-orange transition-all duration-300">
+                      <Mail className="h-4 w-4 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
                     </div>
-                    <div className="flex-1">
-                      <p className="font-medium">{invitation.email}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">{invitation.email}</p>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <Badge variant="secondary" className="capitalize">
+                        <Badge variant="secondary" className="capitalize h-5 px-2 text-[10px] bg-botkorp-orange/10 text-botkorp-orange border-botkorp-orange/20">
                           {invitation.role}
                         </Badge>
                         {invitation.inviter && (
-                          <span className="text-xs text-muted-foreground">
-                            Invited by {invitation.inviter.full_name || invitation.inviter.first_name}
-                          </span>
+                          <>
+                            <span className="text-[10px] text-muted-foreground">
+                              by {invitation.inviter.full_name || invitation.inviter.first_name}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground">•</span>
+                          </>
                         )}
-                        <span className="text-xs text-muted-foreground">•</span>
-                        <span className="text-xs text-muted-foreground">
-                          Sent {format(new Date(invitation.created_at), 'MMM d, yyyy')}
+                        <span className="text-[10px] text-muted-foreground">
+                          {format(new Date(invitation.created_at), 'MMM d, yyyy')}
                         </span>
-                        <span className="text-xs text-muted-foreground">•</span>
-                        <span className="text-xs text-amber-600 font-medium">
+                        <span className="text-[10px] text-muted-foreground">•</span>
+                        <span className="text-[10px] text-amber-600 font-medium">
                           Expires {format(new Date(invitation.expires_at), 'MMM d')}
                         </span>
                       </div>
@@ -494,9 +609,9 @@ export default function MembersPage() {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleCancelInvitation(invitation.id)}
-                    className="hover:bg-destructive/10 hover:text-destructive"
+                    className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive transition-all duration-300 flex-shrink-0"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               ))}
@@ -506,43 +621,60 @@ export default function MembersPage() {
       )}
 
       {/* Members List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Active Members ({members.length})
-          </CardTitle>
-          <CardDescription>
-            Current members of {selectedOrg?.organization_name}
+      <Card className="border-t-4 border-t-botkorp-orange shadow-md animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="h-0.5 w-8 bg-botkorp-orange rounded-full" />
+              <CardTitle className="text-sm font-bold uppercase tracking-wide flex items-center gap-2">
+                <Users className="h-4 w-4 text-botkorp-orange" />
+                Active Members
+                <Badge variant="secondary" className="h-5 px-2 text-[10px] bg-botkorp-orange/10 text-botkorp-orange border-botkorp-orange/20 font-semibold">
+                  {filteredMembers.length}
+                </Badge>
+              </CardTitle>
+            </div>
+          </div>
+          <CardDescription className="text-xs mt-1">
+            {searchQuery 
+              ? `${filteredMembers.length} of ${members.length} members match your search`
+              : `Current members of ${selectedOrg?.organization_name}`
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {members.length > 0 ? (
+          {filteredMembers.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Member</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Joined</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="text-xs font-bold">Member</TableHead>
+                    <TableHead className="text-xs font-bold">Role</TableHead>
+                    <TableHead className="text-xs font-bold">Status</TableHead>
+                    <TableHead className="text-xs font-bold">Joined</TableHead>
+                    <TableHead className="text-right text-xs font-bold">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {members.map((member) => (
-                    <TableRow key={member.id}>
+                  {filteredMembers.map((member, index) => (
+                    <TableRow 
+                      key={member.id} 
+                      className="group hover:bg-botkorp-orange/5 transition-all duration-300 animate-in fade-in slide-in-from-left-3"
+                      style={{ animationDelay: `${index * 30}ms`, animationDuration: '300ms' }}
+                    >
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <Avatar>
+                          <Avatar className="h-9 w-9 border-2 border-botkorp-orange/20 group-hover:border-botkorp-orange transition-all duration-300">
                             <AvatarImage src={member.user?.avatar_url} />
-                            <AvatarFallback>{getUserInitials(member)}</AvatarFallback>
+                            <AvatarFallback className="bg-botkorp-orange/10 text-botkorp-orange font-semibold text-xs">
+                              {getUserInitials(member)}
+                            </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium">
+                            <p className="font-semibold text-sm">
                               {member.user?.full_name || 'Unknown User'}
                             </p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-[11px] text-muted-foreground">
                               {member.user?.email}
                             </p>
                           </div>
@@ -554,10 +686,10 @@ export default function MembersPage() {
                           onValueChange={(newRole) => handleUpdateMemberRole(member.id, newRole)}
                           disabled={member.role === 'owner' || member.user_id === user?.id}
                         >
-                          <SelectTrigger className="w-[150px]">
-                            <Badge variant={getRoleBadgeVariant(member.role)} className="gap-1">
+                          <SelectTrigger className="w-[140px] h-8 border-botkorp-orange/20">
+                            <Badge variant={getRoleBadgeVariant(member.role)} className="gap-1 bg-botkorp-orange/10 text-botkorp-orange border-botkorp-orange/20 hover:bg-botkorp-orange hover:text-white transition-colors duration-300">
                               {getRoleIcon(member.role)}
-                              <span className="capitalize">{member.role}</span>
+                              <span className="capitalize text-[11px]">{member.role}</span>
                             </Badge>
                           </SelectTrigger>
                           <SelectContent>
@@ -572,14 +704,18 @@ export default function MembersPage() {
                       <TableCell>
                         <Badge
                           variant={member.status === 'active' ? 'default' : 'secondary'}
+                          className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px] h-5 px-2"
                         >
+                          <UserCheck className="h-3 w-3 mr-1" />
                           {member.status}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {member.joined_at
-                          ? format(new Date(member.joined_at), 'MMM d, yyyy')
-                          : 'N/A'}
+                        <span className="text-xs text-muted-foreground">
+                          {member.joined_at
+                            ? format(new Date(member.joined_at), 'MMM d, yyyy')
+                            : 'N/A'}
+                        </span>
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
@@ -587,9 +723,9 @@ export default function MembersPage() {
                           size="sm"
                           onClick={() => handleRemoveMember(member.id)}
                           disabled={member.role === 'owner' || member.user_id === user?.id}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          className="h-8 w-8 p-0 text-destructive hover:text-white hover:bg-destructive transition-all duration-300 active:scale-95"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -598,17 +734,30 @@ export default function MembersPage() {
               </Table>
             </div>
           ) : (
-            <div className="text-center py-12">
-              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No members yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Invite team members to collaborate on Bot Korp
-              </p>
-              <Button onClick={() => setDialogOpen(true)}>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Invite Member
-              </Button>
-            </div>
+            <Card className="border-2 border-dashed bg-muted/20 shadow-sm">
+              <CardContent className="pt-12 pb-12 text-center">
+                <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-botkorp-orange/10 dark:bg-botkorp-orange/20 mb-5 animate-in zoom-in-50 duration-500 delay-100 shadow-sm">
+                  <Users className="h-10 w-10 text-botkorp-orange animate-pulse" />
+                </div>
+                <h3 className="text-lg font-bold mb-2">
+                  {searchQuery ? 'No members found' : 'No members yet'}
+                </h3>
+                <p className="text-muted-foreground mb-8 max-w-sm mx-auto text-sm leading-relaxed">
+                  {searchQuery 
+                    ? 'Try adjusting your search terms to find the member you\'re looking for'
+                    : 'Invite team members to collaborate and manage your Bot Korp organization together'}
+                </p>
+                {!searchQuery && (
+                  <Button 
+                    onClick={() => setDialogOpen(true)}
+                    className="bg-botkorp-orange hover:bg-botkorp-orange/90 text-white hover:shadow-lg shadow-md transition-all duration-300 active:scale-95 h-10 px-6 font-medium"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Invite Member
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
           )}
         </CardContent>
       </Card>

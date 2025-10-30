@@ -53,6 +53,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import PageHeader from '@/components/ui/page-header';
+import LoadingLottie from '@/components/ui/loading-lottie';
 import { format } from 'date-fns';
 
 export default function BotManagementPage() {
@@ -484,106 +485,136 @@ export default function BotManagementPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <div className="flex items-center justify-center h-full min-h-screen">
+        <LoadingLottie
+          src="https://lottie.host/51fee83a-3e79-41b0-8a20-77f890b9b6f1/iUangPxwIF.lottie"
+          message="Loading bot data..."
+          size="md"
+        />
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-[1800px] mx-auto">
-      <PageHeader
-        title="Bot Management"
-        subtitle="Manage bot locations, assignments, status, and maintenance records"
-        icon={<Bot className="h-6 w-6" />}
-      />
+    <div className="p-3 md:p-5 space-y-5 max-w-[1800px] mx-auto">
+      <div className="space-y-3 animate-in fade-in slide-in-from-top-3 duration-500">
+        <PageHeader
+          title="Bot Management"
+          subtitle="Manage bot locations, assignments, status, and maintenance records"
+          icon={<Bot className="h-5 w-5 text-botkorp-orange" />}
+        />
+      </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border-0 shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Bots</CardTitle>
-            <Bot className="h-4 w-4 text-muted-foreground" />
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 shadow-sm">
+          <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
+          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Total Bots</CardTitle>
+            <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-botkorp-orange transition-all duration-300">
+              <Bot className="h-3.5 w-3.5 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{bots.length}</div>
+          <CardContent className="relative">
+            <div className="text-2xl font-bold tabular-nums">{bots.length}</div>
+            <p className="text-[10px] text-muted-foreground font-medium mt-0.5">All locations</p>
           </CardContent>
         </Card>
-        <Card className="border-0 shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Bots</CardTitle>
-            <Activity className="h-4 w-4 text-emerald-600" />
+        <Card className="relative overflow-hidden border-l-4 border-l-emerald-500 hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-75 shadow-sm">
+          <div className="absolute inset-0 bg-emerald-500/0 group-hover:bg-emerald-500/5 transition-all duration-300" />
+          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Active Bots</CardTitle>
+            <div className="h-8 w-8 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-500 transition-all duration-300">
+              <Activity className="h-3.5 w-3.5 text-emerald-600 group-hover:text-white transition-colors duration-300" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">
+          <CardContent className="relative">
+            <div className="text-2xl font-bold text-emerald-600 tabular-nums">
               {bots.filter(b => b.status === 'online' || b.status === 'active').length}
             </div>
+            <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Currently online</p>
           </CardContent>
         </Card>
-        <Card className="border-0 shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Maintenance</CardTitle>
-            <Wrench className="h-4 w-4 text-orange-600" />
+        <Card className="relative overflow-hidden border-l-4 border-l-orange-500 hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-150 shadow-sm">
+          <div className="absolute inset-0 bg-orange-500/0 group-hover:bg-orange-500/5 transition-all duration-300" />
+          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Maintenance</CardTitle>
+            <div className="h-8 w-8 rounded-lg bg-orange-500/10 dark:bg-orange-500/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-orange-500 transition-all duration-300">
+              <Wrench className="h-3.5 w-3.5 text-orange-600 group-hover:text-white transition-colors duration-300" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
+          <CardContent className="relative">
+            <div className="text-2xl font-bold text-orange-600 tabular-nums">
               {bots.filter(b => b.status === 'maintenance').length}
             </div>
+            <p className="text-[10px] text-muted-foreground font-medium mt-0.5">In service</p>
           </CardContent>
         </Card>
-        <Card className="border-0 shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Service Records</CardTitle>
-            <FileText className="h-4 w-4 text-blue-600" />
+        <Card className="relative overflow-hidden border-l-4 border-l-blue-500 hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200 shadow-sm">
+          <div className="absolute inset-0 bg-blue-500/0 group-hover:bg-blue-500/5 transition-all duration-300" />
+          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Service Records</CardTitle>
+            <div className="h-8 w-8 rounded-lg bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-blue-500 transition-all duration-300">
+              <FileText className="h-3.5 w-3.5 text-blue-600 group-hover:text-white transition-colors duration-300" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{records.length}</div>
+          <CardContent className="relative">
+            <div className="text-2xl font-bold text-blue-600 tabular-nums">{records.length}</div>
+            <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Total logged</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="grid w-full max-w-3xl grid-cols-3">
-          <TabsTrigger value="overview" className="flex items-center gap-2">
-            <Bot className="h-4 w-4" />
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-5">
+        <TabsList className="grid w-full max-w-3xl grid-cols-3 h-9">
+          <TabsTrigger value="overview" className="flex items-center gap-1.5 text-xs">
+            <Bot className="h-3.5 w-3.5" />
             Bot Overview
           </TabsTrigger>
-          <TabsTrigger value="unassigned" className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4" />
+          <TabsTrigger value="unassigned" className="flex items-center gap-1.5 text-xs">
+            <AlertCircle className="h-3.5 w-3.5" />
             Unassigned ({unassignedGardens.length + unassignedPools.length})
           </TabsTrigger>
-          <TabsTrigger value="maintenance" className="flex items-center gap-2">
-            <Wrench className="h-4 w-4" />
+          <TabsTrigger value="maintenance" className="flex items-center gap-1.5 text-xs">
+            <Wrench className="h-3.5 w-3.5" />
             Maintenance Logs
           </TabsTrigger>
         </TabsList>
 
         {/* Bot Overview Tab */}
-        <TabsContent value="overview" className="space-y-4">
+        <TabsContent value="overview" className="space-y-3">
           {/* Search Bar */}
-          <div className="flex gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="flex flex-col sm:flex-row gap-2.5">
+            <div className="relative flex-1 group">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-botkorp-orange transition-colors duration-300" />
               <Input
                 placeholder="Search by bot name, serial, location, address, or organization..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-11 h-11"
+                className="pl-9 h-8 text-sm focus:border-botkorp-orange focus:ring-2 focus:ring-botkorp-orange/20 transition-all duration-300"
               />
             </div>
-            <Button onClick={() => setShowCreateBotDialog(true)} className="h-11 bg-emerald-600 hover:bg-emerald-700">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button 
+              onClick={() => setShowCreateBotDialog(true)} 
+              className="w-full sm:w-auto h-8 text-sm bg-botkorp-orange hover:bg-botkorp-orange/90 text-white hover:shadow-lg transition-all duration-300 active:scale-95 group"
+            >
+              <Plus className="h-3.5 w-3.5 mr-1.5 group-hover:rotate-90 transition-transform duration-300" />
               Create Bot
             </Button>
           </div>
 
           {/* Bots Table */}
-          <Card className="border-0 shadow-lg">
-            <CardHeader>
+          <Card className="border-0 shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300">
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle>All Bots ({filteredBots.length})</CardTitle>
-                <Badge variant="secondary">{bots.filter(b => b.status === 'online' || b.status === 'active').length} Active</Badge>
+                <div className="flex items-center gap-2">
+                  <div className="h-0.5 w-6 bg-botkorp-orange rounded-full" />
+                  <CardTitle className="text-sm">All Bots ({filteredBots.length})</CardTitle>
+                </div>
+                <Badge variant="secondary" className="h-5 px-2 text-[10px] bg-emerald-500/10 text-emerald-700 border-emerald-500/20 font-semibold">
+                  {bots.filter(b => b.status === 'online' || b.status === 'active').length} Active
+                </Badge>
               </div>
             </CardHeader>
             <CardContent>
@@ -592,47 +623,47 @@ export default function BotManagementPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Bot</TableHead>
-                        <TableHead>Current Location</TableHead>
-                        <TableHead>Assigned Garden</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead className="text-xs">Bot</TableHead>
+                        <TableHead className="text-xs">Current Location</TableHead>
+                        <TableHead className="text-xs">Assigned Garden</TableHead>
+                        <TableHead className="text-xs">Status</TableHead>
+                        <TableHead className="text-right text-xs">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredBots.map((bot) => (
-                        <TableRow key={bot.id}>
+                        <TableRow key={bot.id} className="hover:bg-muted/30 transition-colors">
                           <TableCell>
                             <div>
-                              <p className="font-semibold">{bot.name}</p>
-                              <p className="text-xs text-muted-foreground font-mono">{bot.serial_number || 'No Serial'}</p>
+                              <p className="font-semibold text-sm">{bot.name}</p>
+                              <p className="text-[11px] text-muted-foreground font-mono">{bot.serial_number || 'No Serial'}</p>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div>
-                              <div className="flex items-center gap-2">
-                                <MapPin className="h-3.5 w-3.5 text-blue-600" />
-                                <span className="font-medium">{bot.location?.name || 'Unassigned'}</span>
+                              <div className="flex items-center gap-1.5">
+                                <MapPin className="h-3 w-3 text-botkorp-orange" />
+                                <span className="font-medium text-sm">{bot.location?.name || 'Unassigned'}</span>
                               </div>
                               {bot.location?.address && (
-                                <p className="text-xs text-muted-foreground mt-0.5">{bot.location.address}</p>
+                                <p className="text-[11px] text-muted-foreground mt-0.5">{bot.location.address}</p>
                               )}
                               {bot.location?.organization && (
-                                <div className="flex items-center gap-1.5 mt-1">
-                                  <Building className="h-3 w-3 text-slate-400" />
-                                  <span className="text-xs text-muted-foreground">{bot.location.organization.name}</span>
+                                <div className="flex items-center gap-1 mt-1">
+                                  <Building className="h-2.5 w-2.5 text-slate-400" />
+                                  <span className="text-[11px] text-muted-foreground">{bot.location.organization.name}</span>
                                 </div>
                               )}
                             </div>
                           </TableCell>
                           <TableCell>
                             {bot.assigned_garden ? (
-                              <div className="flex items-center gap-2">
-                                <Sprout className="h-3.5 w-3.5 text-emerald-600" />
-                                <span className="text-sm">{bot.assigned_garden.name}</span>
+                              <div className="flex items-center gap-1.5">
+                                <Sprout className="h-3 w-3 text-emerald-600" />
+                                <span className="text-xs">{bot.assigned_garden.name}</span>
                               </div>
                             ) : (
-                              <span className="text-xs text-muted-foreground italic">Not assigned</span>
+                              <span className="text-[11px] text-muted-foreground italic">Not assigned</span>
                             )}
                           </TableCell>
                           <TableCell>
@@ -642,6 +673,7 @@ export default function BotManagementPage() {
                             <Button
                               variant="outline"
                               size="sm"
+                              className="h-7 text-xs hover:border-botkorp-orange hover:bg-botkorp-orange hover:text-white transition-all duration-300 active:scale-95"
                               onClick={() => {
                                 setSelectedBot(bot);
                                 setBotForm({
@@ -652,7 +684,7 @@ export default function BotManagementPage() {
                                 setShowBotDialog(true);
                               }}
                             >
-                              <Edit className="h-4 w-4 mr-2" />
+                              <Edit className="h-3 w-3 mr-1.5" />
                               Manage
                             </Button>
                           </TableCell>
@@ -662,9 +694,12 @@ export default function BotManagementPage() {
                   </Table>
                 </div>
               ) : (
-                <div className="py-12 text-center text-muted-foreground">
-                  <Bot className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>No bots found matching your search</p>
+                <div className="py-16 text-center">
+                  <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-botkorp-orange/10 dark:bg-botkorp-orange/20 mb-4 animate-in zoom-in-50 duration-500 delay-100">
+                    <Bot className="h-8 w-8 text-botkorp-orange animate-pulse" />
+                  </div>
+                  <h3 className="text-sm font-bold mb-1">No bots found</h3>
+                  <p className="text-xs text-muted-foreground">Try adjusting your search terms</p>
                 </div>
               )}
             </CardContent>
@@ -809,29 +844,35 @@ export default function BotManagementPage() {
         </TabsContent>
 
         {/* Maintenance Tab */}
-        <TabsContent value="maintenance" className="space-y-4">
+        <TabsContent value="maintenance" className="space-y-3">
           {/* Actions Bar */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="flex flex-col sm:flex-row gap-2.5">
+            <div className="relative flex-1 group">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-botkorp-orange transition-colors duration-300" />
               <Input
                 placeholder="Search records by bot, title, technician..."
                 value={maintenanceSearchQuery}
                 onChange={(e) => setMaintenanceSearchQuery(e.target.value)}
-                className="pl-11 h-11"
+                className="pl-9 h-8 text-sm focus:border-botkorp-orange focus:ring-2 focus:ring-botkorp-orange/20 transition-all duration-300"
               />
             </div>
-            <Button onClick={() => setShowMaintenanceDialog(true)} className="h-11">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button 
+              onClick={() => setShowMaintenanceDialog(true)} 
+              className="w-full sm:w-auto h-8 text-sm bg-botkorp-orange hover:bg-botkorp-orange/90 text-white hover:shadow-lg transition-all duration-300 active:scale-95 group"
+            >
+              <Plus className="h-3.5 w-3.5 mr-1.5 group-hover:rotate-90 transition-transform duration-300" />
               Log Maintenance
             </Button>
           </div>
 
           {/* Records Table */}
-          <Card className="border-0 shadow-lg">
-            <CardHeader>
+          <Card className="border-0 shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300">
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle>Maintenance History ({filteredRecords.length})</CardTitle>
+                <div className="flex items-center gap-2">
+                  <div className="h-0.5 w-6 bg-botkorp-orange rounded-full" />
+                  <CardTitle className="text-sm">Maintenance History ({filteredRecords.length})</CardTitle>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -840,32 +881,32 @@ export default function BotManagementPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Bot</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Details</TableHead>
-                        <TableHead>Technician</TableHead>
-                        <TableHead className="text-right">Cost</TableHead>
+                        <TableHead className="text-xs">Date</TableHead>
+                        <TableHead className="text-xs">Bot</TableHead>
+                        <TableHead className="text-xs">Type</TableHead>
+                        <TableHead className="text-xs">Details</TableHead>
+                        <TableHead className="text-xs">Technician</TableHead>
+                        <TableHead className="text-right text-xs">Cost</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredRecords.map((record) => (
-                        <TableRow key={record.id}>
+                        <TableRow key={record.id} className="hover:bg-muted/30 transition-colors">
                           <TableCell className="whitespace-nowrap">
                             <div>
-                              <p className="font-medium text-sm">
+                              <p className="font-medium text-xs">
                                 {format(new Date(record.service_start || record.created_at), 'MMM d, yyyy')}
                               </p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-[11px] text-muted-foreground">
                                 {format(new Date(record.service_start || record.created_at), 'h:mm a')}
                               </p>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div>
-                              <p className="font-semibold">{record.bot?.name || 'Unknown'}</p>
-                              <p className="text-xs text-muted-foreground font-mono">{record.bot?.serial_number}</p>
-                              <p className="text-xs text-muted-foreground">{record.bot?.location?.name}</p>
+                              <p className="font-semibold text-sm">{record.bot?.name || 'Unknown'}</p>
+                              <p className="text-[11px] text-muted-foreground font-mono">{record.bot?.serial_number}</p>
+                              <p className="text-[11px] text-muted-foreground">{record.bot?.location?.name}</p>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -873,21 +914,21 @@ export default function BotManagementPage() {
                           </TableCell>
                           <TableCell className="max-w-md">
                             <div>
-                              <p className="font-medium text-sm">{record.title}</p>
+                              <p className="font-medium text-xs">{record.title}</p>
                               {record.description && (
-                                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{record.description}</p>
+                                <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{record.description}</p>
                               )}
                               {record.parts_replaced && (
-                                <p className="text-xs text-blue-600 mt-1">Parts: {record.parts_replaced}</p>
+                                <p className="text-[11px] text-blue-600 mt-1">Parts: {record.parts_replaced}</p>
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm">{record.performed_by_name || 'N/A'}</TableCell>
+                          <TableCell className="text-xs">{record.performed_by_name || 'N/A'}</TableCell>
                           <TableCell className="text-right">
                             {record.total_cost ? (
-                              <span className="font-bold">R{parseFloat(record.total_cost).toFixed(2)}</span>
+                              <span className="font-bold text-xs">R{parseFloat(record.total_cost).toFixed(2)}</span>
                             ) : (
-                              <span className="text-muted-foreground text-sm">-</span>
+                              <span className="text-muted-foreground text-[11px]">-</span>
                             )}
                           </TableCell>
                         </TableRow>
@@ -896,10 +937,12 @@ export default function BotManagementPage() {
                   </Table>
                 </div>
               ) : (
-                <div className="py-16 text-center text-muted-foreground">
-                  <Wrench className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium">No maintenance records found</p>
-                  <p className="text-sm mt-2">Log your first maintenance activity</p>
+                <div className="py-16 text-center">
+                  <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-500/10 dark:bg-orange-500/20 mb-4 animate-in zoom-in-50 duration-500 delay-100">
+                    <Wrench className="h-8 w-8 text-orange-600 animate-pulse" />
+                  </div>
+                  <h3 className="text-sm font-bold mb-1">No maintenance records found</h3>
+                  <p className="text-xs text-muted-foreground">Log your first maintenance activity</p>
                 </div>
               )}
             </CardContent>

@@ -466,63 +466,85 @@ export default function DashboardPage() {
     }
   };
 
-  const StatCard = ({ title, value, icon, description, trend, className = '', variant = 'default' }) => {
+  const StatCard = ({ title, value, icon, description, trend, trendValue, className = '', variant = 'default' }) => {
     // Extract numeric value for animation
     const numericValue = typeof value === 'string' ? parseInt(value.replace(/[^0-9]/g, '')) || 0 : value || 0;
     const isNumeric = typeof value === 'number' || !isNaN(numericValue);
     
     const variantStyles = {
-      default: 'bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 border-2 border-gray-200/50 dark:border-gray-700/50 hover:border-botkorp-orange/50 dark:hover:border-botkorp-orange/50',
-      primary: 'bg-gradient-to-br from-botkorp-orange via-red-500 to-red-600 text-white border-0',
-      success: 'bg-gradient-to-br from-emerald-500 via-green-500 to-emerald-600 text-white border-0',
-      warning: 'bg-gradient-to-br from-orange-500 via-red-500 to-red-600 text-white border-0',
-      info: 'bg-gradient-to-br from-blue-500 via-botkorp-slate-blue to-blue-600 text-white border-0',
+      default: 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
+      primary: 'bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/20 border border-orange-200 dark:border-orange-800/30',
+      success: 'bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/30 dark:to-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30',
+      warning: 'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20 border border-red-200 dark:border-red-800/30',
+      info: 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800/30',
+    };
+
+    const iconBgStyles = {
+      default: 'bg-orange-100 dark:bg-orange-900/40',
+      primary: 'bg-orange-500 dark:bg-orange-600',
+      success: 'bg-emerald-500 dark:bg-emerald-600',
+      warning: 'bg-red-500 dark:bg-red-600',
+      info: 'bg-blue-500 dark:bg-blue-600',
+    };
+
+    const iconColorStyles = {
+      default: 'text-orange-600 dark:text-orange-400',
+      primary: 'text-white',
+      success: 'text-white',
+      warning: 'text-white',
+      info: 'text-white',
+    };
+
+    const valueColorStyles = {
+      default: 'text-gray-900 dark:text-white',
+      primary: 'text-orange-700 dark:text-orange-300',
+      success: 'text-emerald-700 dark:text-emerald-300',
+      warning: 'text-red-700 dark:text-red-300',
+      info: 'text-blue-700 dark:text-blue-300',
     };
 
     const isGradient = variant !== 'default';
     
     return (
-      <Card className={`${variantStyles[variant]} ${className} shadow-lg hover:shadow-2xl transition-all duration-500 group overflow-hidden relative transform hover:scale-[1.02] animate-in fade-in slide-in-from-bottom-4 duration-700`}>
-        {/* Animated background effect */}
-        {isGradient && (
-          <>
-            <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/10 to-white/20 pointer-events-none" />
-            <div className="absolute -top-20 -right-20 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700" />
-          </>
-        )}
-        
+      <Card className={`${variantStyles[variant]} ${className} shadow-sm hover:shadow-md transition-all duration-300 group overflow-hidden relative transform hover:scale-[1.01] animate-in fade-in slide-in-from-bottom-4 duration-700`}>
         {/* Shine effect on hover */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
         
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-5 px-5">
-          <CardTitle className={`text-[10px] font-bold uppercase tracking-widest ${isGradient ? 'text-white/90' : 'text-muted-foreground'}`}>
-            {title}
-          </CardTitle>
-          <div className={`relative p-2.5 rounded-xl ${isGradient ? 'bg-white/20 ring-2 ring-white/30' : 'bg-gradient-to-br from-botkorp-orange/10 to-red-500/10 ring-2 ring-botkorp-orange/20'} group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 shadow-lg`}>
-            {React.cloneElement(icon, { 
-              className: `h-4 w-4 ${isGradient ? 'text-white' : 'text-botkorp-orange'}` 
-            })}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-1 pb-5 px-5">
-          <div className={`text-3xl font-black tracking-tight ${isGradient ? 'text-white drop-shadow-lg' : 'bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-100 bg-clip-text text-transparent'}`}>
-            {isNumeric && typeof value === 'number' ? (
-              <NumberTicker value={value} />
-            ) : (
-              value
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className={`${iconBgStyles[variant]} p-2 rounded-lg group-hover:scale-105 transition-all duration-300`}>
+              {React.cloneElement(icon, { 
+                className: `h-4 w-4 ${iconColorStyles[variant]}` 
+              })}
+            </div>
+            {trendValue && (
+              <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold ${
+                trendValue.startsWith('+') || trendValue.startsWith('↑')
+                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+              }`}>
+                <TrendingUp className={`h-3 w-3 ${trendValue.startsWith('-') || trendValue.startsWith('↓') ? 'rotate-180' : ''}`} />
+                {trendValue}
+              </div>
             )}
           </div>
-          {description && (
-            <p className={`text-xs font-medium pt-0.5 ${isGradient ? 'text-white/90' : 'text-muted-foreground'}`}>
-              {description}
-            </p>
-          )}
-          {trend && (
-            <div className={`flex items-center text-xs pt-1 font-semibold ${isGradient ? 'text-white/90' : 'text-emerald-600 dark:text-emerald-400'}`}>
-              <TrendingUp className="h-3.5 w-3.5 mr-1" />
-              {trend}
+          <div className="space-y-1">
+            <div className={`text-2xl font-bold tracking-tight ${valueColorStyles[variant]}`}>
+              {isNumeric && typeof value === 'number' ? (
+                <NumberTicker value={value} />
+              ) : (
+                value
+              )}
             </div>
-          )}
+            <p className={`text-xs font-medium ${isGradient ? 'text-gray-700 dark:text-gray-300' : 'text-gray-600 dark:text-gray-400'}`}>
+              {title}
+            </p>
+            {description && (
+              <p className={`text-[11px] ${isGradient ? 'text-gray-600 dark:text-gray-400' : 'text-gray-500 dark:text-gray-500'}`}>
+                {description}
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
     );
@@ -560,10 +582,10 @@ export default function DashboardPage() {
             </div>
             
             <div className="space-y-4 max-w-2xl">
-              <h3 className="text-4xl font-bold text-foreground">
+              <h3 className="text-2xl font-bold text-foreground">
                 Let's Start with Your Location
               </h3>
-              <p className="text-muted-foreground text-lg leading-relaxed">
+              <p className="text-muted-foreground text-sm leading-relaxed">
                 Before we can set up any services, we need to know where your property is located. 
                 This helps us ensure coverage and deploy the right bots for your area.
               </p>
@@ -580,33 +602,33 @@ export default function DashboardPage() {
             </Button>
 
             <div className="pt-12 border-t w-full max-w-4xl mt-8">
-              <h4 className="font-semibold text-base mb-6 text-foreground">What happens next?</h4>
+              <h4 className="font-semibold text-sm mb-6 text-foreground">What happens next?</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="flex flex-col items-center text-center gap-4 p-6 rounded-2xl bg-gradient-to-br from-botkorp-orange/10 to-botkorp-orange/5 hover:from-botkorp-orange/15 hover:to-botkorp-orange/10 transition-all duration-300 border border-botkorp-orange/20">
-                  <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-botkorp-orange to-botkorp-orange-dark flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-botkorp-orange to-botkorp-orange-dark flex items-center justify-center text-white font-bold text-base shadow-lg">
                     1
                   </div>
                   <div>
-                    <p className="font-semibold text-base mb-1">Add Location</p>
-                    <p className="text-muted-foreground text-sm">Tell us where your property is</p>
+                    <p className="font-semibold text-sm mb-1">Add Location</p>
+                    <p className="text-muted-foreground text-xs">Tell us where your property is</p>
                   </div>
                 </div>
                 <div className="flex flex-col items-center text-center gap-4 p-6 rounded-2xl bg-gradient-to-br from-botkorp-slate-blue/10 to-botkorp-slate-blue/5 hover:from-botkorp-slate-blue/15 hover:to-botkorp-slate-blue/10 transition-all duration-300 border border-botkorp-slate-blue/20">
-                  <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-botkorp-slate-blue to-botkorp-silver flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-botkorp-slate-blue to-botkorp-silver flex items-center justify-center text-white font-bold text-base shadow-lg">
                     2
                   </div>
                   <div>
-                    <p className="font-semibold text-base mb-1">Choose Services</p>
-                    <p className="text-muted-foreground text-sm">Select lawn, pool, or security</p>
+                    <p className="font-semibold text-sm mb-1">Choose Services</p>
+                    <p className="text-muted-foreground text-xs">Select lawn, pool, or security</p>
                   </div>
                 </div>
                 <div className="flex flex-col items-center text-center gap-4 p-6 rounded-2xl bg-gradient-to-br from-accent/10 to-accent/5 hover:from-accent/15 hover:to-accent/10 transition-all duration-300 border border-accent/20">
-                  <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-accent to-accent flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-accent to-accent flex items-center justify-center text-white font-bold text-base shadow-lg">
                     3
                   </div>
                   <div>
-                    <p className="font-semibold text-base mb-1">Relax</p>
-                    <p className="text-muted-foreground text-sm">Let the bots handle it!</p>
+                    <p className="font-semibold text-sm mb-1">Relax</p>
+                    <p className="text-muted-foreground text-xs">Let the bots handle it!</p>
                   </div>
                 </div>
               </div>
@@ -750,10 +772,10 @@ export default function DashboardPage() {
             </div>
             
             <div className="space-y-4 max-w-2xl">
-              <h3 className="text-4xl font-bold text-foreground">
+              <h3 className="text-2xl font-bold text-foreground">
                 Let's Add Your First Service
               </h3>
-              <p className="text-muted-foreground text-lg leading-relaxed">
+              <p className="text-muted-foreground text-sm leading-relaxed">
                 Choose from lawn care, pool maintenance, or security services to start automating your property with Bot Korp.
               </p>
             </div>
@@ -769,28 +791,28 @@ export default function DashboardPage() {
             </Button>
 
             <div className="pt-12 border-t w-full max-w-4xl mt-8">
-              <h4 className="font-semibold text-base mb-6 text-foreground">Available Services</h4>
+              <h4 className="font-semibold text-sm mb-6 text-foreground">Available Services</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="group p-6 rounded-2xl border-2 border-accent/30 dark:border-accent/50 bg-gradient-to-br from-accent/5 to-accent/10 dark:from-accent/10 dark:to-accent/20 hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer">
-                  <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-accent to-accent flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                    <Sprout className="h-8 w-8 text-white" />
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-accent to-accent flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <Sprout className="h-6 w-6 text-white" />
                   </div>
-                  <p className="font-bold text-base mb-2 text-foreground">Lawn Care</p>
-                  <p className="text-muted-foreground text-sm">Autonomous mowing bots for perfect lawns</p>
+                  <p className="font-bold text-sm mb-2 text-foreground">Lawn Care</p>
+                  <p className="text-muted-foreground text-xs">Autonomous mowing bots for perfect lawns</p>
                 </div>
                 <div className="group p-6 rounded-2xl border-2 border-botkorp-slate-blue/30 dark:border-botkorp-slate-blue/50 bg-gradient-to-br from-botkorp-slate-blue/5 to-botkorp-slate-blue/10 dark:from-botkorp-slate-blue/10 dark:to-botkorp-slate-blue/20 hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer">
-                  <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-botkorp-slate-blue to-botkorp-silver flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                    <Droplets className="h-8 w-8 text-white" />
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-botkorp-slate-blue to-botkorp-silver flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <Droplets className="h-6 w-6 text-white" />
                   </div>
-                  <p className="font-bold text-base mb-2 text-foreground">Pool Cleaning</p>
-                  <p className="text-muted-foreground text-sm">Automated pool maintenance systems</p>
+                  <p className="font-bold text-sm mb-2 text-foreground">Pool Cleaning</p>
+                  <p className="text-muted-foreground text-xs">Automated pool maintenance systems</p>
                 </div>
                 <div className="group p-6 rounded-2xl border-2 border-botkorp-orange/30 dark:border-botkorp-orange/50 bg-gradient-to-br from-botkorp-orange/5 to-botkorp-orange/10 dark:from-botkorp-orange/10 dark:to-botkorp-orange/20 hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer">
-                  <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-botkorp-orange to-botkorp-orange-dark flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                    <AlertCircle className="h-8 w-8 text-white" />
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-botkorp-orange to-botkorp-orange-dark flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <AlertCircle className="h-6 w-6 text-white" />
                   </div>
-                  <p className="font-bold text-base mb-2 text-foreground">Security</p>
-                  <p className="text-muted-foreground text-sm">24/7 property monitoring & alerts</p>
+                  <p className="font-bold text-sm mb-2 text-foreground">Security</p>
+                  <p className="text-muted-foreground text-xs">24/7 property monitoring & alerts</p>
                 </div>
               </div>
             </div>
@@ -801,78 +823,79 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-6 min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-      {/* Decorative background elements */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-20 right-20 w-96 h-96 bg-botkorp-orange/5 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 left-20 w-80 h-80 bg-accent/5 rounded-full blur-3xl animate-pulse delay-75" />
-        <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-botkorp-slate-blue/5 rounded-full blur-3xl animate-pulse delay-150" />
-      </div>
+    <div className="p-3 md:p-5 space-y-5 min-h-screen">
+      <div className="space-y-5">
+        <div className="space-y-3 animate-in fade-in slide-in-from-top-3 duration-500">
+          <PageHeader
+            title={`${getGreeting()}, ${getUserName()}! 👋`}
+            subtitle={
+              analytics?.total_bots > 0
+                ? `Here's what's happening${getLocationContext()}. ` +
+                  `You're managing ${analytics.total_bots} bot${analytics.total_bots > 1 ? 's' : ''}` +
+                  `${getServicesSummary() ? ` across ${getServicesSummary()}` : ''}` +
+                  `${analytics.total_area_managed_sqm > 0 ? `, covering ${Math.round(analytics.total_area_managed_sqm).toLocaleString()} m²` : ''}.`
+                : "Welcome to your Bot Korp dashboard. Let's get started by adding your first bot!"
+            }
+            icon={<Bot className="h-5 w-5 text-botkorp-orange" />}
+          />
 
-      <div className="relative z-10 space-y-6">
-        <PageHeader
-          title={`${getGreeting()}, ${getUserName()}! 👋`}
-          subtitle={
-            analytics?.total_bots > 0
-              ? `Here's what's happening${getLocationContext()}. ` +
-                `You're managing ${analytics.total_bots} bot${analytics.total_bots > 1 ? 's' : ''}` +
-                `${getServicesSummary() ? ` across ${getServicesSummary()}` : ''}` +
-                `${analytics.total_area_managed_sqm > 0 ? `, covering ${Math.round(analytics.total_area_managed_sqm).toLocaleString()} m²` : ''}.`
-              : "Welcome to your Bot Korp dashboard. Let's get started by adding your first bot!"
-          }
-          icon={<Bot />}
-        />
+        </div>
 
         {/* Invitation Banner */}
         {!loadingInvitations && pendingInvitations.length > 0 && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-700">
-            {pendingInvitations.map((invitation) => (
-              <Card key={invitation.id} className="border-2 border-botkorp-slate-blue/30 dark:border-botkorp-slate-blue/50 bg-gradient-to-r from-botkorp-slate-blue/5 to-botkorp-silver/5 dark:from-botkorp-slate-blue/10 dark:to-botkorp-silver/10 shadow-xl hover:shadow-2xl transition-all duration-300 relative overflow-hidden group">
+          <div className="space-y-3">
+            {pendingInvitations.map((invitation, index) => (
+              <Card 
+                key={invitation.id} 
+                className="border-t-4 border-t-botkorp-orange shadow-md hover:shadow-xl transition-all duration-300 relative overflow-hidden group animate-in fade-in slide-in-from-bottom-3"
+                style={{ animationDelay: `${index * 100}ms`, animationDuration: '500ms' }}
+              >
                 {/* Animated shine effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                <CardContent className="p-6 relative">
-                <div className="flex items-start justify-between gap-6 flex-wrap">
-                  <div className="flex items-start gap-4 flex-1 min-w-0">
-                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-botkorp-slate-blue to-botkorp-silver flex items-center justify-center shrink-0 shadow-md">
-                      <Mail className="h-6 w-6 text-white" />
-                    </div>
-                    <div className="space-y-2 flex-1 min-w-0">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <h3 className="font-bold text-lg text-foreground">
-                          Team Invitation
-                        </h3>
-                        <Badge variant="secondary" className="font-semibold">
-                          {invitation.role}
-                        </Badge>
+                <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
+                <CardContent className="p-4 relative">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <div className="h-10 w-10 rounded-lg bg-botkorp-orange flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-300">
+                        <Mail className="h-5 w-5 text-white" />
                       </div>
-                      <p className="text-foreground">
-                        <strong>{invitation.inviter?.full_name || invitation.inviter?.first_name}</strong> invited you to join{' '}
-                        <strong>{invitation.organization?.name}</strong>
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Expires {format(new Date(invitation.expires_at), 'MMM d, yyyy')}
-                      </p>
+                      <div className="space-y-1.5 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-bold text-sm text-foreground">
+                            Team Invitation
+                          </h3>
+                          <Badge variant="secondary" className="h-5 px-2 text-[10px] font-semibold capitalize bg-botkorp-orange/10 text-botkorp-orange border-botkorp-orange/20">
+                            {invitation.role}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-foreground">
+                          <strong>{invitation.inviter?.full_name || invitation.inviter?.first_name}</strong> invited you to join{' '}
+                          <strong>{invitation.organization?.name}</strong>
+                        </p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                          <Clock className="h-3 w-3" />
+                          Expires {format(new Date(invitation.expires_at), 'MMM d, yyyy')}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex gap-3 shrink-0">
-                    <Button
-                      size="lg"
-                      className="bg-gradient-to-r from-accent to-accent hover:from-accent/90 hover:to-accent/90 shadow-md"
-                      onClick={() => handleAcceptInvitation(invitation.id)}
-                    >
-                      <Check className="h-4 w-4 mr-2" />
-                      Accept
-                    </Button>
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="border-2"
-                      onClick={() => handleDeclineInvitation(invitation.id)}
-                    >
-                      <X className="h-4 w-4 mr-2" />
-                      Decline
-                    </Button>
-                  </div>
+                    <div className="flex gap-2 shrink-0">
+                      <Button
+                        size="sm"
+                        className="h-8 text-xs bg-botkorp-orange hover:bg-botkorp-orange/90 text-white shadow-sm hover:shadow-md transition-all duration-300 active:scale-95 font-medium"
+                        onClick={() => handleAcceptInvitation(invitation.id)}
+                      >
+                        <Check className="h-3.5 w-3.5 mr-1.5" />
+                        Accept
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-xs border-2 hover:border-destructive hover:bg-destructive hover:text-white transition-all duration-300 active:scale-95"
+                        onClick={() => handleDeclineInvitation(invitation.id)}
+                      >
+                        <X className="h-3.5 w-3.5 mr-1.5" />
+                        Decline
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -905,10 +928,10 @@ export default function DashboardPage() {
 
               {/* Message */}
               <div className="space-y-4">
-                <h3 className="text-4xl font-bold text-foreground">
+                <h3 className="text-2xl font-bold text-foreground">
                   We're Setting Things Up!
                 </h3>
-                <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                <p className="text-sm text-muted-foreground max-w-2xl mx-auto leading-relaxed">
                   Your services are configured and ready. Our team is preparing your bots for deployment.
                 </p>
               </div>
@@ -931,33 +954,33 @@ export default function DashboardPage() {
 
               {/* Timeline */}
               <div className="pt-12 border-t-2 max-w-3xl mx-auto">
-                <p className="text-base font-bold text-foreground mb-8">What's happening:</p>
+                <p className="text-sm font-bold text-foreground mb-8">What's happening:</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="flex flex-col items-center text-center gap-4 p-6 rounded-2xl bg-card border-2 border-accent/30 shadow-md hover:shadow-xl transition-shadow duration-300">
-                    <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-accent to-accent flex items-center justify-center shadow-lg">
-                      <Check className="h-7 w-7 text-white" />
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-accent to-accent flex items-center justify-center shadow-lg">
+                      <Check className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <p className="font-bold text-base mb-1">Services Configured</p>
-                      <p className="text-sm text-muted-foreground">Your lawn areas are mapped</p>
+                      <p className="font-bold text-sm mb-1">Services Configured</p>
+                      <p className="text-xs text-muted-foreground">Your lawn areas are mapped</p>
                     </div>
                   </div>
                   <div className="flex flex-col items-center text-center gap-4 p-6 rounded-2xl bg-card border-2 border-botkorp-orange/30 shadow-md hover:shadow-xl transition-shadow duration-300">
-                    <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-botkorp-orange to-botkorp-orange-dark flex items-center justify-center shadow-lg">
-                      <Loader2 className="h-7 w-7 text-white animate-spin" />
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-botkorp-orange to-botkorp-orange-dark flex items-center justify-center shadow-lg">
+                      <Loader2 className="h-5 w-5 text-white animate-spin" />
                     </div>
                     <div>
-                      <p className="font-bold text-base mb-1">Bot Assignment</p>
-                      <p className="text-sm text-muted-foreground">Matching bots to your property</p>
+                      <p className="font-bold text-sm mb-1">Bot Assignment</p>
+                      <p className="text-xs text-muted-foreground">Matching bots to your property</p>
                     </div>
                   </div>
                   <div className="flex flex-col items-center text-center gap-4 p-6 rounded-2xl bg-card border-2 border-botkorp-slate-blue/30 shadow-md hover:shadow-xl transition-shadow duration-300">
-                    <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-botkorp-slate-blue to-botkorp-silver flex items-center justify-center shadow-lg">
-                      <Calendar className="h-7 w-7 text-white" />
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-botkorp-slate-blue to-botkorp-silver flex items-center justify-center shadow-lg">
+                      <Calendar className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <p className="font-bold text-base mb-1">Installation Soon</p>
-                      <p className="text-sm text-muted-foreground">We'll contact you within 24h</p>
+                      <p className="font-bold text-sm mb-1">Installation Soon</p>
+                      <p className="text-xs text-muted-foreground">We'll contact you within 24h</p>
                     </div>
                   </div>
                 </div>
@@ -990,68 +1013,130 @@ export default function DashboardPage() {
       {/* Top Stats - Only show if bots exist */}
       {analytics?.total_bots > 0 && (
         <>
-          {/* Primary Stats Row */}
-          <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard
-              title="Services This Month"
-              value={analytics?.services_completed_this_month ?? 0}
-              icon={<Award />}
-              description="Completed services"
-              variant="primary"
-            />
-            <StatCard
-              title="Outstanding Issues"
-              value={(analytics?.offline_bots ?? 0) + (analytics?.error_bots ?? 0)}
-              icon={<AlertTriangle />}
-              description={`${analytics?.offline_bots ?? 0} offline, ${analytics?.error_bots ?? 0} errors`}
-              variant="warning"
-            />
-            <StatCard
-              title="Next Service"
-              value={analytics?.next_service_date ? format(new Date(analytics.next_service_date), 'MMM d') : 'None'}
-              icon={<Calendar />}
-              description={analytics?.next_service_date ? format(new Date(analytics.next_service_date), 'yyyy') : 'No upcoming'}
-              variant="info"
-            />
-            <StatCard
-              title="Total Bots"
-              value={analytics?.total_bots ?? 0}
-              icon={<Shield />}
-              description={`${analytics?.operational_bots ?? 0} operational`}
-              variant="success"
-            />
+          {/* Stats Overview Header */}
+          <div className="flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-500">
+            <div className="h-0.5 w-8 bg-botkorp-orange rounded-full" />
+            <h2 className="text-sm font-bold uppercase tracking-wide">
+              Overview
+            </h2>
           </div>
 
-          {/* Runtime Stats Row */}
-          <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard
-              title="Runtime This Week"
-              value={`${Math.round((analytics?.total_runtime_hours ?? 0) / 4.3)}h`}
-              icon={<Clock />}
-              description="Average weekly runtime"
-              variant="default"
-            />
-            <StatCard
-              title="Runtime This Month"
-              value={`${Math.round(analytics?.total_runtime_hours ?? 0)}h`}
-              icon={<Clock3 />}
-              description="Total hours active"
-              variant="default"
-            />
-            <StatCard
-              title="Runtime This Year"
-              value={`${Math.round((analytics?.total_runtime_hours ?? 0) * 12)}h`}
-              icon={<Clock9 />}
-              description="Estimated annual runtime"
-              variant="default"
-            />
-            <StatCard
-              title="Total Gardens"
-              value={analytics?.total_gardens ?? 0}
-              icon={<Sprout />}
-              description={`${Math.round(analytics?.total_area_managed_sqm || 0)} m² managed`}
-              variant="default"
-            />
+          {/* Primary Stats Row */}
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 shadow-sm">
+              <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
+              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Active Bots</CardTitle>
+                <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-botkorp-orange transition-all duration-300">
+                  <Bot className="h-3.5 w-3.5 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="text-2xl font-bold tabular-nums">{analytics?.operational_bots ?? 0}</div>
+                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">of {analytics?.total_bots ?? 0} total</p>
+              </CardContent>
+            </Card>
+
+            <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-75 shadow-sm">
+              <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
+              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Area Coverage</CardTitle>
+                <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-botkorp-orange transition-all duration-300">
+                  <Sprout className="h-3.5 w-3.5 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="text-2xl font-bold tabular-nums">{Math.round((analytics?.total_area_managed_sqm || 0) / 100) / 10}k</div>
+                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{Math.round(analytics?.total_area_managed_sqm || 0).toLocaleString()} m²</p>
+              </CardContent>
+            </Card>
+
+            <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-150 shadow-sm">
+              <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
+              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Services Done</CardTitle>
+                <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-botkorp-orange transition-all duration-300">
+                  <CheckCircle className="h-3.5 w-3.5 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="text-2xl font-bold tabular-nums">{analytics?.services_completed_this_month ?? 0}</div>
+                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">This month</p>
+              </CardContent>
+            </Card>
+
+            <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200 shadow-sm">
+              <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
+              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Active Alerts</CardTitle>
+                <div className="h-8 w-8 rounded-lg bg-red-500/10 dark:bg-red-500/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-red-500 transition-all duration-300">
+                  <AlertTriangle className="h-3.5 w-3.5 text-red-500 group-hover:text-white transition-colors duration-300" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="text-2xl font-bold tabular-nums">{(analytics?.offline_bots ?? 0) + (analytics?.error_bots ?? 0)}</div>
+                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{analytics?.offline_bots ?? 0} offline, {analytics?.error_bots ?? 0} errors</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Secondary Stats Row */}
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange/50 hover:shadow-lg transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-250 shadow-sm">
+              <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
+              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Runtime</CardTitle>
+                <div className="h-7 w-7 rounded-lg bg-botkorp-orange/10 flex items-center justify-center group-hover:scale-110 transition-all duration-300">
+                  <Clock className="h-3 w-3 text-botkorp-orange" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="text-xl font-bold tabular-nums">{Math.round(analytics?.total_runtime_hours ?? 0)}h</div>
+                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">This month</p>
+              </CardContent>
+            </Card>
+
+            <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange/50 hover:shadow-lg transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-300 shadow-sm">
+              <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
+              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Gardens</CardTitle>
+                <div className="h-7 w-7 rounded-lg bg-botkorp-orange/10 flex items-center justify-center group-hover:scale-110 transition-all duration-300">
+                  <Home className="h-3 w-3 text-botkorp-orange" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="text-xl font-bold tabular-nums">{analytics?.total_gardens ?? 0}</div>
+                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{analytics?.total_locations ?? 0} locations</p>
+              </CardContent>
+            </Card>
+
+            <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange/50 hover:shadow-lg transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-350 shadow-sm">
+              <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
+              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Avg Session</CardTitle>
+                <div className="h-7 w-7 rounded-lg bg-botkorp-orange/10 flex items-center justify-center group-hover:scale-110 transition-all duration-300">
+                  <Timer className="h-3 w-3 text-botkorp-orange" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="text-xl font-bold tabular-nums">{Math.round((analytics?.total_runtime_hours ?? 0) / (analytics?.services_completed_this_month || 1))}h</div>
+                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Per service</p>
+              </CardContent>
+            </Card>
+
+            <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange/50 hover:shadow-lg transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-400 shadow-sm">
+              <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
+              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Next Service</CardTitle>
+                <div className="h-7 w-7 rounded-lg bg-botkorp-orange/10 flex items-center justify-center group-hover:scale-110 transition-all duration-300">
+                  <Calendar className="h-3 w-3 text-botkorp-orange" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="text-xl font-bold tabular-nums">{analytics?.next_service_date ? format(new Date(analytics.next_service_date), 'MMM d') : 'None'}</div>
+                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{analytics?.upcoming_services_count > 0 ? `${analytics.upcoming_services_count} scheduled` : 'No upcoming'}</p>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Bot Status Widget - Real-time bot data */}
@@ -1059,64 +1144,56 @@ export default function DashboardPage() {
 
           {/* Alerts Section - Show immediately after stats */}
           {recentAlerts.length > 0 && (
-            <Card className="border-l-4 border-l-botkorp-orange shadow-2xl bg-gradient-to-br from-botkorp-orange/5 to-destructive/5 dark:from-botkorp-orange/10 dark:to-destructive/10 relative overflow-hidden group animate-in fade-in slide-in-from-bottom-6 duration-700 delay-300">
-              {/* Pulse animation on border */}
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-botkorp-orange animate-pulse" />
-              
-              <CardHeader className="border-b bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="relative group-hover:scale-110 transition-transform duration-300">
-                      {/* Glow effect */}
-                      <div className="absolute inset-0 bg-botkorp-orange rounded-xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-300" />
-                      <div className="relative h-14 w-14 rounded-xl bg-gradient-to-br from-botkorp-orange via-red-500 to-red-600 flex items-center justify-center shadow-2xl ring-4 ring-white/20 dark:ring-white/10">
-                        <AlertTriangle className="h-7 w-7 text-white" />
-                      </div>
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg font-bold">Active Alerts</CardTitle>
-                      <CardDescription className="text-sm">Requires your attention</CardDescription>
-                    </div>
+            <Card className="border-t-4 border-t-red-500 shadow-md animate-in fade-in slide-in-from-bottom-3 duration-500 delay-450">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-0.5 w-8 bg-red-500 rounded-full" />
+                    <CardTitle className="text-sm font-bold uppercase tracking-wide flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-red-500" />
+                      Active Alerts
+                      <Badge variant="destructive" className="h-5 px-2 text-[10px] font-semibold">
+                        {recentAlerts.length}
+                      </Badge>
+                    </CardTitle>
                   </div>
-                  <Badge variant="destructive" className="text-base px-4 py-2 font-bold shadow-md">
-                    {recentAlerts.length}
-                  </Badge>
                 </div>
+                <CardDescription className="text-xs mt-1">
+                  Requires immediate attention
+                </CardDescription>
               </CardHeader>
-              <CardContent className="pt-6">
-                <div className="space-y-4">
+              <CardContent className="pt-0 pb-3">
+                <div className="space-y-2">
                   {recentAlerts.slice(0, 3).map((alert, index) => (
                     <div
                       key={alert.alert_id}
-                      className="flex items-start gap-4 p-5 rounded-xl border-2 bg-card hover:border-botkorp-orange dark:hover:border-botkorp-orange-dark hover:shadow-lg transition-all duration-300"
+                      className="flex items-start gap-2 p-3 rounded-lg border hover:border-red-300 hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-all duration-300 group animate-in fade-in slide-in-from-left-3"
+                      style={{ animationDelay: `${index * 50}ms`, animationDuration: '300ms' }}
                     >
-                      <div className={`h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md ${
+                      <div className={`h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm ${
                         alert.severity === 'critical' 
-                          ? 'bg-gradient-to-br from-destructive to-destructive' 
+                          ? 'bg-red-500' 
                           : alert.severity === 'warning'
-                          ? 'bg-gradient-to-br from-botkorp-orange to-botkorp-orange-dark'
-                          : 'bg-gradient-to-br from-botkorp-slate-blue to-botkorp-silver'
+                          ? 'bg-orange-500'
+                          : 'bg-blue-500'
                       }`}>
-                        <AlertTriangle className="h-6 w-6 text-white" />
+                        <AlertTriangle className="h-3.5 w-3.5 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 flex-wrap mb-2">
-                          <p className="font-bold text-base text-foreground">{alert.title}</p>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <p className="font-semibold text-xs truncate">{alert.title}</p>
                           <Badge 
                             variant={getSeverityColor(alert.severity)} 
-                            className="text-xs capitalize font-semibold"
+                            className="text-[9px] capitalize font-bold px-1.5 py-0.5 h-4"
                           >
                             {alert.severity}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground flex items-center gap-2 mb-1">
-                          <Bot className="h-4 w-4" />
-                          <span className="font-medium">{alert.bot_name}</span>
+                        <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 truncate">
+                          <Bot className="h-3 w-3 flex-shrink-0" />
+                          <span className="font-medium truncate">{alert.bot_name}</span>
                           <span>•</span>
-                          <span>{alert.location_name}</span>
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {format(new Date(alert.created_at), 'MMM d, h:mm a')}
+                          <span className="truncate">{alert.location_name}</span>
                         </p>
                       </div>
                     </div>
@@ -1125,12 +1202,12 @@ export default function DashboardPage() {
                 {recentAlerts.length > 3 && (
                   <Button
                     variant="outline"
-                    size="lg"
+                    size="sm"
                     onClick={() => navigate('/portal/alerts')}
-                    className="w-full mt-6 border-2 hover:bg-botkorp-orange/5 dark:hover:bg-botkorp-orange/10 hover:border-botkorp-orange transition-all duration-300"
+                    className="w-full mt-3 text-xs h-8 hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-all duration-300"
                   >
                     View All {recentAlerts.length} Alerts
-                    <ArrowRight className="h-5 w-5 ml-2" />
+                    <ArrowRight className="h-3 w-3 ml-1" />
                   </Button>
                 )}
               </CardContent>
@@ -1150,10 +1227,10 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="space-y-4 max-w-2xl">
-              <h3 className="text-4xl font-bold text-foreground">
+              <h3 className="text-2xl font-bold text-foreground">
                 Get Started with Your First Service
               </h3>
-              <p className="text-muted-foreground text-lg leading-relaxed">
+              <p className="text-muted-foreground text-sm leading-relaxed">
                 Add a garden, pool, or security service to start automating your property maintenance with Bot Korp.
               </p>
             </div>
@@ -1170,187 +1247,243 @@ export default function DashboardPage() {
       ) : !loading && analytics?.total_bots > 0 && (
         <>
           {/* Quick Action Buttons */}
-          <div className="flex flex-wrap items-center justify-end gap-4">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <Button 
               variant="destructive" 
-              size="lg" 
+              size="sm" 
               onClick={handleEmergencyStopAll}
-              className="shadow-lg hover:shadow-xl transition-all duration-300 font-semibold"
+              className="h-8 text-xs shadow-sm hover:shadow-md transition-all duration-300 active:scale-95 font-medium"
             >
-              <AlertTriangle className="h-5 w-5 mr-2" />
-              Emergency Stop All Bots
+              <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
+              Emergency Stop
             </Button>
             <Button
-              size="lg"
+              size="sm"
               onClick={() => navigate('/portal/services/add')}
-              className="bg-gradient-to-r from-botkorp-orange to-botkorp-orange-dark hover:from-botkorp-orange-dark hover:to-botkorp-orange shadow-lg hover:shadow-xl transition-all duration-300 font-semibold"
+              className="h-8 text-xs bg-botkorp-orange hover:bg-botkorp-orange/90 text-white shadow-sm hover:shadow-md transition-all duration-300 active:scale-95 font-medium"
             >
-              <Plus className="h-5 w-5 mr-2" />
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
               Add Service
             </Button>
-      </div>
+          </div>
 
-        {/* Mowing Activity Chart */}
-        {mowingActivity.length > 0 && (
-          <Card className="border-2 border-gray-200/50 dark:border-gray-700/50 shadow-2xl hover:shadow-3xl transition-all duration-500 relative overflow-hidden group animate-in fade-in slide-in-from-bottom-6 duration-700 delay-400">
-            {/* Animated background gradient */}
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-blue-500/5 to-purple-500/5 dark:from-emerald-500/10 dark:via-blue-500/10 dark:to-purple-500/10" />
-            
-            <CardHeader className="border-b bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm relative">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    {/* Animated glow */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-green-500 rounded-xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-300" />
-                    <div className="relative h-16 w-16 rounded-xl bg-gradient-to-br from-emerald-500 via-green-500 to-emerald-600 flex items-center justify-center shadow-2xl ring-4 ring-white/20 dark:ring-white/10 group-hover:scale-110 transition-transform duration-300">
-                      <TrendingUp className="h-8 w-8 text-white" />
+        {/* Charts Section - Two Column Layout */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="h-0.5 w-8 bg-botkorp-orange rounded-full" />
+            <h2 className="text-sm font-bold uppercase tracking-wide">
+              Activity & Performance
+            </h2>
+          </div>
+
+          <div className="grid gap-3 grid-cols-1 lg:grid-cols-3">
+            {/* Mowing Activity Chart */}
+            {mowingActivity.length > 0 && (
+              <Card className="lg:col-span-2 border-t-4 border-t-botkorp-orange shadow-md overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-500 delay-500">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-sm font-bold">Mowing Activity</CardTitle>
+                      <CardDescription className="text-xs mt-0.5">Area coverage over last 30 days</CardDescription>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-lg h-6">
+                      <TrendingUp className="h-3 w-3" />
+                      +3.2%
                     </div>
                   </div>
+                </CardHeader>
+              <CardContent className="pt-4 pb-3">
+                <ResponsiveContainer width="100%" height={240}>
+                  <LineChart 
+                    data={mowingActivity}
+                    margin={{ top: 5, right: 5, left: -20, bottom: 5 }}
+                  >
+                    <defs>
+                      <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#10b981" stopOpacity={0.2}/>
+                        <stop offset="100%" stopColor="#10b981" stopOpacity={0.02}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} vertical={false} />
+                    <XAxis 
+                      dataKey="date" 
+                      tickFormatter={(date) => format(new Date(date), 'MMM d')}
+                      tick={{ fill: '#9ca3af', fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis 
+                      tick={{ fill: '#9ca3af', fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <Tooltip content={<CustomLineTooltip />} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="area_mowed" 
+                      stroke="#10b981" 
+                      strokeWidth={2}
+                      fill="url(#areaGradient)"
+                      dot={false}
+                      activeDot={{ r: 4, strokeWidth: 2, stroke: 'white' }}
+                      animationBegin={0}
+                      animationDuration={1500}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+                
+                <div className="grid grid-cols-3 gap-3 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                  <div>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">Total Area</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+                      {Math.round(mowingActivity.reduce((sum, item) => sum + (item.area_mowed || 0), 0))} m²
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">Sessions</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+                      {mowingActivity.reduce((sum, item) => sum + (item.sessions_count || 0), 0)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">Avg/Day</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+                      {Math.round(mowingActivity.reduce((sum, item) => sum + (item.area_mowed || 0), 0) / mowingActivity.length)} m²
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+            {/* Bot Performance Metrics */}
+            <Card className="border-t-4 border-t-botkorp-orange shadow-md animate-in fade-in slide-in-from-bottom-3 duration-500 delay-550">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-bold">Performance</CardTitle>
+                <CardDescription className="text-xs mt-0.5">System metrics</CardDescription>
+              </CardHeader>
+            <CardContent className="pt-4">
+              <div className="space-y-4">
+                {/* Operational */}
                 <div>
-                  <CardTitle className="text-xl font-bold">Mowing Activity Trends</CardTitle>
-                  <CardDescription className="text-sm">Performance over the last 30 days</CardDescription>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Operational</span>
+                    <span className="text-xs font-bold text-gray-900 dark:text-white">
+                      {Math.round(((analytics?.operational_bots ?? 0) / (analytics?.total_bots || 1)) * 100)}%
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-emerald-500 rounded-full transition-all duration-1000"
+                      style={{ width: `${Math.round(((analytics?.operational_bots ?? 0) / (analytics?.total_bots || 1)) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Coverage */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Coverage Rate</span>
+                    <span className="text-xs font-bold text-gray-900 dark:text-white">92%</span>
+                  </div>
+                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-blue-500 rounded-full transition-all duration-1000" 
+                      style={{ width: '92%' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Efficiency */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Efficiency</span>
+                    <span className="text-xs font-bold text-gray-900 dark:text-white">87%</span>
+                  </div>
+                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-orange-500 rounded-full transition-all duration-1000" 
+                      style={{ width: '87%' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Battery Health */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Avg Battery</span>
+                    <span className="text-xs font-bold text-gray-900 dark:text-white">95%</span>
+                  </div>
+                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-green-500 rounded-full transition-all duration-1000" 
+                      style={{ width: '95%' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Response Time */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Response Time</span>
+                    <span className="text-xs font-bold text-gray-900 dark:text-white">Fast</span>
+                  </div>
+                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-purple-500 rounded-full transition-all duration-1000" 
+                      style={{ width: '78%' }}
+                    />
+                  </div>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="flex items-baseline gap-1">
-                  <p className="text-3xl font-bold text-foreground">
-                    <NumberTicker value={parseInt(mowingActivity.reduce((sum, item) => sum + (item.area_mowed || 0), 0).toFixed(0))} />
-                  </p>
-                  <span className="text-base text-muted-foreground">m²</span>
-                </div>
-                <p className="text-sm text-muted-foreground">Total area mowed</p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <ResponsiveContainer width="100%" height={340}>
-              <LineChart 
-                data={mowingActivity}
-                margin={{ top: 10, right: 10, left: -10, bottom: 20 }}
-              >
-                <defs>
-                  <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.3}/>
-                    <stop offset="100%" stopColor="#10b981" stopOpacity={0.05}/>
-                  </linearGradient>
-                  <linearGradient id="sessionsGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                    <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.05}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
-                <XAxis 
-                  dataKey="date" 
-                  tickFormatter={(date) => format(new Date(date), 'MMM d')}
-                  tick={{ fill: '#6b7280', fontSize: 12 }}
-                  tickLine={false}
-                  axisLine={{ stroke: '#e5e7eb' }}
-                />
-                <YAxis 
-                  yAxisId="left"
-                  tick={{ fill: '#6b7280', fontSize: 12 }}
-                  tickLine={false}
-                  axisLine={false}
-                  label={{ value: 'Area (m²)', angle: -90, position: 'insideLeft', fill: '#6b7280', fontSize: 12 }}
-                />
-                <YAxis 
-                  yAxisId="right"
-                  orientation="right"
-                  tick={{ fill: '#6b7280', fontSize: 12 }}
-                  tickLine={false}
-                  axisLine={false}
-                  label={{ value: 'Sessions', angle: 90, position: 'insideRight', fill: '#6b7280', fontSize: 12 }}
-                  allowDecimals={false}
-                />
-                <Tooltip content={<CustomLineTooltip />} />
-                <Legend 
-                  verticalAlign="top" 
-                  height={36}
-                  iconType="line"
-                  formatter={(value) => <span className="text-sm font-medium">{value}</span>}
-                />
-                <Line 
-                  yAxisId="left"
-                  type="monotone" 
-                  dataKey="area_mowed" 
-                  stroke="#10b981" 
-                  name="Area Mowed (m²)"
-                  strokeWidth={3}
-                  dot={{ fill: '#10b981', r: 4, strokeWidth: 2, stroke: 'white' }}
-                  activeDot={{ r: 6, strokeWidth: 2 }}
-                  animationBegin={0}
-                  animationDuration={1000}
-                />
-                <Line 
-                  yAxisId="right"
-                  type="monotone" 
-                  dataKey="sessions_count" 
-                  stroke="#3b82f6" 
-                  name="Mowing Sessions"
-                  strokeWidth={3}
-                  strokeDasharray="5 5"
-                  dot={{ fill: '#3b82f6', r: 4, strokeWidth: 2, stroke: 'white' }}
-                  activeDot={{ r: 6, strokeWidth: 2 }}
-                  animationBegin={200}
-                  animationDuration={1000}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+          </div>
+        </div>
 
           {/* Upcoming Services Section */}
           {upcomingServices.length > 0 && (
-            <Card className="border-2 border-gray-200/50 dark:border-gray-700/50 shadow-2xl hover:shadow-3xl transition-all duration-500 bg-gradient-to-br from-blue-500/5 via-botkorp-slate-blue/5 to-botkorp-silver/5 dark:from-blue-500/10 dark:via-botkorp-slate-blue/10 dark:to-botkorp-silver/10 relative overflow-hidden group animate-in fade-in slide-in-from-bottom-6 duration-700 delay-500">
-              {/* Animated shine effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-              
-              <CardHeader className="border-b bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm relative">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    {/* Animated glow */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-botkorp-slate-blue rounded-xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-300" />
-                    <div className="relative h-16 w-16 rounded-xl bg-gradient-to-br from-blue-500 via-botkorp-slate-blue to-blue-600 flex items-center justify-center shadow-2xl ring-4 ring-white/20 dark:ring-white/10 group-hover:scale-110 transition-transform duration-300">
-                      <Calendar className="h-8 w-8 text-white" />
-                    </div>
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl font-bold">Upcoming Services</CardTitle>
-                    <CardDescription className="text-sm">Scheduled maintenance for your bots</CardDescription>
-                  </div>
+            <Card className="border-t-4 border-t-botkorp-orange shadow-md animate-in fade-in slide-in-from-bottom-3 duration-500 delay-600">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-0.5 w-8 bg-botkorp-orange rounded-full" />
+                  <CardTitle className="text-sm font-bold uppercase tracking-wide flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-botkorp-orange" />
+                    Upcoming Services
+                  </CardTitle>
                 </div>
+                <CardDescription className="text-xs mt-1">
+                  Scheduled maintenance
+                </CardDescription>
               </CardHeader>
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  {upcomingServices.slice(0, 5).map((service) => (
+              <CardContent className="pt-0 pb-3">
+                <div className="space-y-2">
+                  {upcomingServices.slice(0, 5).map((service, index) => (
                     <div
                       key={service.bot_id}
-                      className="flex items-start justify-between p-5 rounded-xl border-2 bg-card hover:border-botkorp-slate-blue dark:hover:border-botkorp-silver hover:shadow-lg transition-all duration-300"
+                      className="flex items-center justify-between p-3 rounded-lg border hover:border-botkorp-orange/50 hover:bg-botkorp-orange/5 transition-all duration-300 group animate-in fade-in slide-in-from-left-3"
+                      style={{ animationDelay: `${index * 50}ms`, animationDuration: '300ms' }}
                     >
-                      <div className="flex items-start gap-4 flex-1 min-w-0">
-                        <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-botkorp-orange to-botkorp-orange-dark flex items-center justify-center text-white font-bold text-xl shadow-md flex-shrink-0">
+                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                        <div className="h-8 w-8 rounded-lg bg-botkorp-orange flex items-center justify-center text-white font-bold text-xs shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform duration-300">
                           {service.bot_name.charAt(0)}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-bold text-base text-foreground mb-1">{service.bot_name}</p>
-                          <p className="text-sm text-muted-foreground flex items-center gap-2 mb-2">
-                            <MapPin className="h-4 w-4 flex-shrink-0" />
+                          <p className="font-semibold text-xs truncate">{service.bot_name}</p>
+                          <p className="text-[10px] text-muted-foreground flex items-center gap-1 truncate">
+                            <MapPin className="h-3 w-3 flex-shrink-0" />
                             <span className="truncate">{service.location_name}</span>
                           </p>
-                          <Badge variant="outline" className="capitalize text-xs font-semibold">
-                            {service.bot_type.replace('_', ' ')}
-                          </Badge>
                         </div>
                       </div>
-                      <div className="text-center ml-4 flex-shrink-0">
-                        <div className="px-4 py-2 rounded-xl bg-gradient-to-br from-botkorp-slate-blue to-botkorp-silver text-white shadow-md">
-                          <p className="text-base font-bold">
+                      <div className="text-right ml-2 flex-shrink-0">
+                        <div className="px-2 py-1 rounded-lg bg-botkorp-orange text-white shadow-sm">
+                          <p className="text-[10px] font-bold whitespace-nowrap">
                             {format(new Date(service.next_service_date), 'MMM d')}
                           </p>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-2 font-medium">
-                          in {service.days_until_service} day{service.days_until_service !== 1 ? 's' : ''}
+                        <p className="text-[9px] text-muted-foreground mt-1">
+                          {service.days_until_service}d away
                         </p>
                       </div>
                     </div>

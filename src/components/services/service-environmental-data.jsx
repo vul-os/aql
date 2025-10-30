@@ -6,6 +6,8 @@ import { Loader2, Thermometer, Droplets, CloudRain, Sprout, AlertTriangle } from
 import { supabase } from '@/lib/supabase';
 import { formatDistanceToNow } from 'date-fns';
 import {
+  AreaChart,
+  Area,
   LineChart,
   Line,
   XAxis,
@@ -13,8 +15,82 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
+  RadialBarChart,
+  RadialBar,
+  PolarAngleAxis
 } from 'recharts';
+
+/**
+ * Custom Tooltip for Environmental Charts
+ */
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-lg border border-border">
+        <p className="text-xs font-semibold mb-2">
+          {new Date(label).toLocaleString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          })}
+        </p>
+        {payload.map((entry, index) => (
+          <div key={index} className="flex items-center justify-between gap-3 text-xs">
+            <span className="flex items-center gap-1.5">
+              <div 
+                className="w-2 h-2 rounded-full" 
+                style={{ backgroundColor: entry.color }}
+              />
+              {entry.name}
+            </span>
+            <span className="font-bold">{entry.value?.toFixed(1)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
+/**
+ * Radial Progress Component
+ */
+const RadialProgress = ({ value, maxValue, color, label, unit }) => {
+  const percentage = (value / maxValue) * 100;
+  const data = [{ value: percentage, fill: color }];
+  
+  return (
+    <div className="relative">
+      <ResponsiveContainer width="100%" height={120}>
+        <RadialBarChart 
+          cx="50%" 
+          cy="50%" 
+          innerRadius="70%" 
+          outerRadius="100%" 
+          data={data} 
+          startAngle={90} 
+          endAngle={-270}
+        >
+          <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+          <RadialBar
+            background={{ fill: '#e5e7eb' }}
+            dataKey="value"
+            cornerRadius={10}
+            fill={color}
+          />
+        </RadialBarChart>
+      </ResponsiveContainer>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-xl font-bold">{value?.toFixed(0)}</div>
+          <div className="text-[10px] text-muted-foreground">{unit}</div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 /**
  * Service Environmental Data Component
@@ -107,128 +183,185 @@ export default function ServiceEnvironmentalData({ gardenId }) {
 
   return (
     <div className="space-y-4">
-      {/* Current Conditions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Current Conditions with Radial Progress */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Temperature */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Thermometer className="h-4 w-4 text-orange-500" />
+        <Card className="relative overflow-hidden border-t-4 border-t-orange-500 hover:shadow-lg transition-all duration-300">
+          <div className="absolute inset-0 bg-orange-500/5 pointer-events-none" />
+          <CardHeader className="pb-2 pt-3">
+            <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-orange-700 dark:text-orange-500 uppercase tracking-wider">
+              <Thermometer className="h-3.5 w-3.5" />
               Temperature
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {latestData.temperature_celsius?.toFixed(1) || '--'}°C
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
+          <CardContent className="pb-3">
+            <RadialProgress 
+              value={latestData.temperature_celsius || 0}
+              maxValue={50}
+              color="#f97316"
+              unit="°C"
+            />
+            <p className="text-[10px] text-center text-muted-foreground mt-2">
               Updated {formatDistanceToNow(new Date(latestData.recorded_at), { addSuffix: true })}
             </p>
           </CardContent>
         </Card>
 
         {/* Humidity */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Droplets className="h-4 w-4 text-blue-500" />
+        <Card className="relative overflow-hidden border-t-4 border-t-blue-500 hover:shadow-lg transition-all duration-300">
+          <div className="absolute inset-0 bg-blue-500/5 pointer-events-none" />
+          <CardHeader className="pb-2 pt-3">
+            <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-blue-700 dark:text-blue-500 uppercase tracking-wider">
+              <Droplets className="h-3.5 w-3.5" />
               Humidity
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {latestData.humidity_percentage?.toFixed(0) || '--'}%
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Air humidity
+          <CardContent className="pb-3">
+            <RadialProgress 
+              value={latestData.humidity_percentage || 0}
+              maxValue={100}
+              color="#3b82f6"
+              unit="%"
+            />
+            <p className="text-[10px] text-center text-muted-foreground mt-2">
+              Air humidity level
             </p>
           </CardContent>
         </Card>
 
         {/* Soil Moisture */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Sprout className="h-4 w-4 text-green-500" />
+        <Card className="relative overflow-hidden border-t-4 border-t-green-500 hover:shadow-lg transition-all duration-300">
+          <div className="absolute inset-0 bg-green-500/5 pointer-events-none" />
+          <CardHeader className="pb-2 pt-3">
+            <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-green-700 dark:text-green-500 uppercase tracking-wider">
+              <Sprout className="h-3.5 w-3.5" />
               Soil Moisture
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {latestData.soil_moisture_percentage?.toFixed(0) || '--'}%
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {latestData.soil_moisture_percentage > 60 ? 'Wet' : latestData.soil_moisture_percentage > 40 ? 'Good' : 'Dry'}
+          <CardContent className="pb-3">
+            <RadialProgress 
+              value={latestData.soil_moisture_percentage || 0}
+              maxValue={100}
+              color="#22c55e"
+              unit="%"
+            />
+            <p className="text-[10px] text-center text-muted-foreground mt-2">
+              {latestData.soil_moisture_percentage > 60 ? 'Wet soil' : latestData.soil_moisture_percentage > 40 ? 'Optimal' : 'Dry soil'}
             </p>
           </CardContent>
         </Card>
 
         {/* Weather */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <CloudRain className="h-4 w-4 text-gray-500" />
+        <Card className="relative overflow-hidden border-t-4 border-t-slate-500 hover:shadow-lg transition-all duration-300">
+          <div className="absolute inset-0 bg-slate-500/5 pointer-events-none" />
+          <CardHeader className="pb-2 pt-3">
+            <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-slate-700 dark:text-slate-400 uppercase tracking-wider">
+              <CloudRain className="h-3.5 w-3.5" />
               Weather
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
+          <CardContent className="pb-3 pt-8">
+            <div className="flex flex-col items-center gap-3">
+              <CloudRain className={`h-12 w-12 ${latestData.is_raining ? 'text-blue-500' : 'text-slate-300'}`} />
               {latestData.is_raining ? (
                 <>
-                  <Badge variant="destructive">Raining</Badge>
+                  <Badge variant="destructive" className="text-xs">Raining</Badge>
                   {latestData.rain_intensity && (
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-[10px] text-muted-foreground">
                       {latestData.rain_intensity}
                     </span>
                   )}
                 </>
               ) : (
-                <Badge variant="outline">Clear</Badge>
+                <Badge variant="outline" className="text-xs border-botkorp-orange/30 bg-botkorp-orange/5">Clear</Badge>
               )}
             </div>
+            <p className="text-[10px] text-center text-muted-foreground mt-3">
+              Current conditions
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Historical Chart */}
+      {/* Historical Chart with Area Gradients */}
       {historicalData.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Environmental Trends (24h)</CardTitle>
-            <CardDescription>Temperature and humidity over the last 24 hours</CardDescription>
+        <Card className="border-t-4 border-t-botkorp-orange shadow-md hover:shadow-lg transition-all duration-300">
+          <CardHeader className="pb-3 pt-4 bg-gradient-to-r from-botkorp-orange/5 to-transparent">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-bold">Environmental Trends (24h)</CardTitle>
+                <CardDescription className="text-[10px]">Temperature and humidity patterns over time</CardDescription>
+              </div>
+              <Badge variant="outline" className="text-[10px] border-botkorp-orange/30 bg-botkorp-orange/5">
+                Live Data
+              </Badge>
+            </div>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={historicalData}>
-                <CartesianGrid strokeDasharray="3 3" />
+          <CardContent className="pt-4">
+            <ResponsiveContainer width="100%" height={350}>
+              <AreaChart data={historicalData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#f97316" stopOpacity={0.1}/>
+                  </linearGradient>
+                  <linearGradient id="colorHumidity" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                  </linearGradient>
+                  <linearGradient id="colorSoil" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
                 <XAxis 
                   dataKey="recorded_at" 
                   tickFormatter={(value) => new Date(value).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                  tick={{ fontSize: 11 }}
+                  stroke="#94a3b8"
                 />
-                <YAxis yAxisId="left" />
-                <YAxis yAxisId="right" orientation="right" />
-                <Tooltip 
-                  labelFormatter={(value) => new Date(value).toLocaleString()}
-                  formatter={(value) => value?.toFixed(1)}
+                <YAxis 
+                  yAxisId="left" 
+                  tick={{ fontSize: 11 }}
+                  stroke="#94a3b8"
+                  label={{ value: '°C / %', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#64748b' } }}
                 />
-                <Legend />
-                <Line 
+                <Tooltip content={<CustomTooltip />} />
+                <Legend 
+                  wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
+                  iconType="circle"
+                />
+                <Area 
                   yAxisId="left"
                   type="monotone" 
                   dataKey="temperature_celsius" 
                   stroke="#f97316" 
+                  strokeWidth={2}
+                  fill="url(#colorTemp)"
                   name="Temperature (°C)"
-                  dot={false}
                 />
-                <Line 
-                  yAxisId="right"
+                <Area 
+                  yAxisId="left"
                   type="monotone" 
                   dataKey="humidity_percentage" 
                   stroke="#3b82f6" 
+                  strokeWidth={2}
+                  fill="url(#colorHumidity)"
                   name="Humidity (%)"
-                  dot={false}
                 />
-              </LineChart>
+                {historicalData[0]?.soil_moisture_percentage && (
+                  <Area 
+                    yAxisId="left"
+                    type="monotone" 
+                    dataKey="soil_moisture_percentage" 
+                    stroke="#22c55e" 
+                    strokeWidth={2}
+                    fill="url(#colorSoil)"
+                    name="Soil Moisture (%)"
+                  />
+                )}
+              </AreaChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>

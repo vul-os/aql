@@ -207,22 +207,36 @@ export default function ServiceAppointmentScheduler() {
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-full min-h-screen">
+        <div className="text-center">
+          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-botkorp-orange/10 dark:bg-botkorp-orange/20 mb-4 animate-pulse">
+            <CalendarIcon className="h-8 w-8 text-botkorp-orange" />
+          </div>
+          <p className="text-sm text-muted-foreground">Loading appointments...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      <PageHeader
-        title="Service Appointment Scheduler"
-        subtitle="Allocate appointment dates and times for customer services"
-        icon={<CalendarIcon className="h-6 w-6 text-primary" />}
-      />
+    <div className="p-3 md:p-5 space-y-5 max-w-[1800px] mx-auto">
+      <div className="space-y-3 animate-in fade-in slide-in-from-top-3 duration-500">
+        <PageHeader
+          title="Service Appointment Scheduler"
+          subtitle="Allocate appointment dates and times for customer services"
+          icon={<CalendarIcon className="h-5 w-5 text-botkorp-orange" />}
+        />
+      </div>
 
       {/* Service Selector */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Select Service</CardTitle>
-          <CardDescription>Choose a service to manage appointments</CardDescription>
+      <Card className="border-0 shadow-lg animate-in fade-in slide-in-from-bottom-3 duration-500">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <div className="h-0.5 w-6 bg-botkorp-orange rounded-full" />
+            <CardTitle className="text-sm">Select Service</CardTitle>
+          </div>
+          <CardDescription className="text-xs">Choose a service to manage appointments</CardDescription>
         </CardHeader>
         <CardContent>
           <Select
@@ -232,15 +246,15 @@ export default function ServiceAppointmentScheduler() {
               setSelectedService(service);
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-9 text-sm">
               <SelectValue placeholder="Select a service" />
             </SelectTrigger>
             <SelectContent>
               {services.map(service => (
                 <SelectItem key={service.id} value={service.id}>
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    {service.name} - {service.locations?.name} ({service.service_frequency}, {service.services_per_month}/month)
+                    <MapPin className="h-3.5 w-3.5 text-botkorp-orange" />
+                    <span className="text-xs">{service.name} - {service.locations?.name} ({service.service_frequency}, {service.services_per_month}/month)</span>
                   </div>
                 </SelectItem>
               ))}
@@ -248,12 +262,12 @@ export default function ServiceAppointmentScheduler() {
           </Select>
 
           {selectedService && (
-            <div className="mt-4 p-4 bg-muted rounded-lg space-y-2">
+            <div className="mt-3 p-3 bg-muted/50 rounded-lg space-y-2 border border-border">
               <div className="flex items-center justify-between">
-                <span className="font-semibold">{selectedService.name}</span>
-                <Badge>{selectedService.status}</Badge>
+                <span className="font-semibold text-sm">{selectedService.name}</span>
+                <Badge variant="secondary" className="h-5 px-2 text-[10px]">{selectedService.status}</Badge>
               </div>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-xs text-muted-foreground space-y-0.5">
                 <p>Location: {selectedService.locations?.name}, {selectedService.locations?.city}</p>
                 <p>Frequency: {selectedService.services_per_month} services per month</p>
                 <p>Organization: {selectedService.organizations?.name}</p>
@@ -267,15 +281,18 @@ export default function ServiceAppointmentScheduler() {
         <>
           {/* Customer Preferences */}
           {preferences.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Customer Preferences</CardTitle>
-                <CardDescription>Preferred days and time windows</CardDescription>
+            <Card className="border-0 shadow-lg animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-0.5 w-6 bg-botkorp-orange rounded-full" />
+                  <CardTitle className="text-sm">Customer Preferences</CardTitle>
+                </div>
+                <CardDescription className="text-xs">Preferred days and time windows</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
                   {preferences.map((pref, index) => (
-                    <Badge key={index} variant="outline" className="text-sm py-2">
+                    <Badge key={index} variant="outline" className="text-xs py-1.5 px-2 bg-blue-50 text-blue-700 border-blue-200">
                       <Clock className="h-3 w-3 mr-1" />
                       {getDayName(pref.day_of_week)} {pref.time_window_start}-{pref.time_window_end}
                     </Badge>
@@ -286,22 +303,27 @@ export default function ServiceAppointmentScheduler() {
           )}
 
           {/* Calendar */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>
-                  {format(currentMonth, 'MMMM yyyy')}
-                </CardTitle>
+          <Card className="border-0 shadow-lg animate-in fade-in slide-in-from-bottom-3 duration-500 delay-150">
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-0.5 w-6 bg-botkorp-orange rounded-full" />
+                  <CardTitle className="text-base">
+                    {format(currentMonth, 'MMMM yyyy')}
+                  </CardTitle>
+                </div>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="icon"
+                    className="h-8 w-8 hover:border-botkorp-orange hover:bg-botkorp-orange hover:text-white transition-all duration-300 active:scale-95"
                     onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="h-3.5 w-3.5" />
                   </Button>
                   <Button
                     variant="outline"
+                    className="h-8 text-xs hover:border-botkorp-orange hover:bg-botkorp-orange hover:text-white transition-all duration-300 active:scale-95"
                     onClick={() => setCurrentMonth(new Date())}
                   >
                     Today
@@ -309,9 +331,10 @@ export default function ServiceAppointmentScheduler() {
                   <Button
                     variant="outline"
                     size="icon"
+                    className="h-8 w-8 hover:border-botkorp-orange hover:bg-botkorp-orange hover:text-white transition-all duration-300 active:scale-95"
                     onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
                   >
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               </div>

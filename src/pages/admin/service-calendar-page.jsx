@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ServiceCalendar from '@/components/services/service-calendar';
 import ServiceLocationsMap from '@/components/services/service-locations-map';
 import Navbar from '@/components/layout/navbar';
+import PageHeader from '@/components/ui/page-header';
 import { useAuth } from '@/context/auth-context';
 
 export default function ServiceCalendarPage() {
@@ -11,34 +12,35 @@ export default function ServiceCalendarPage() {
   const [activeTab, setActiveTab] = useState('calendar');
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Navbar />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Service Calendar & Locations</h1>
-          <p className="text-gray-600 mt-2">
-            View and manage service appointments across all locations
-          </p>
+      <main className="p-3 md:p-5 space-y-5 max-w-[1800px] mx-auto">
+        <div className="space-y-3 animate-in fade-in slide-in-from-top-3 duration-500">
+          <PageHeader
+            title="Service Calendar & Locations"
+            subtitle="View and manage service appointments across all locations"
+            icon={<Calendar className="h-5 w-5 text-botkorp-orange" />}
+          />
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="calendar" className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
+          <TabsList className="grid w-full max-w-md grid-cols-2 h-9">
+            <TabsTrigger value="calendar" className="flex items-center gap-1.5 text-xs">
+              <Calendar className="h-3.5 w-3.5" />
               Calendar View
             </TabsTrigger>
-            <TabsTrigger value="map" className="flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
+            <TabsTrigger value="map" className="flex items-center gap-1.5 text-xs">
+              <MapPin className="h-3.5 w-3.5" />
               Map View
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="calendar">
+          <TabsContent value="calendar" className="animate-in fade-in slide-in-from-bottom-3 duration-500">
             <ServiceCalendar />
           </TabsContent>
 
-          <TabsContent value="map">
+          <TabsContent value="map" className="animate-in fade-in slide-in-from-bottom-3 duration-500">
             <ServiceLocationsMap />
           </TabsContent>
         </Tabs>
