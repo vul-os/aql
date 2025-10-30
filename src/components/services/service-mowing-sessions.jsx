@@ -9,18 +9,12 @@ import { format, formatDuration, intervalToDuration } from 'date-fns';
 import {
   AreaChart,
   Area,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer,
-  RadialBarChart,
-  RadialBar,
-  PolarAngleAxis,
-  Cell
+  ResponsiveContainer
 } from 'recharts';
 
 /**
@@ -49,43 +43,6 @@ const CustomTooltip = ({ active, payload, label }) => {
     );
   }
   return null;
-};
-
-/**
- * Radial Success Rate Component
- */
-const RadialSuccessRate = ({ percentage }) => {
-  const data = [{ value: percentage, fill: '#f97316' }];
-  
-  return (
-    <div className="relative">
-      <ResponsiveContainer width="100%" height={140}>
-        <RadialBarChart 
-          cx="50%" 
-          cy="50%" 
-          innerRadius="60%" 
-          outerRadius="90%" 
-          data={data} 
-          startAngle={180} 
-          endAngle={0}
-        >
-          <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
-          <RadialBar
-            background={{ fill: '#e5e7eb' }}
-            dataKey="value"
-            cornerRadius={10}
-            fill="#f97316"
-          />
-        </RadialBarChart>
-      </ResponsiveContainer>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-3xl font-bold text-botkorp-orange">{percentage?.toFixed(0)}%</div>
-          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Success Rate</div>
-        </div>
-      </div>
-    </div>
-  );
 };
 
 /**
@@ -240,16 +197,19 @@ export default function ServiceMowingSessions({ gardenId }) {
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden border-t-4 border-t-botkorp-orange hover:shadow-lg transition-all duration-300">
-          <div className="absolute inset-0 bg-botkorp-orange/5 pointer-events-none" />
+        <Card className="relative overflow-hidden border-t-4 border-t-purple-500 hover:shadow-lg transition-all duration-300">
+          <div className="absolute inset-0 bg-purple-500/5 pointer-events-none" />
           <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-botkorp-orange uppercase tracking-wider">
+            <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-purple-700 dark:text-purple-500 uppercase tracking-wider">
               <Target className="h-3.5 w-3.5" />
               Success Rate
             </CardTitle>
           </CardHeader>
-          <CardContent className="pb-3 px-2">
-            <RadialSuccessRate percentage={successRate} />
+          <CardContent className="pb-3">
+            <div className="text-3xl font-bold tabular-nums">{successRate.toFixed(0)}%</div>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              {completedSessions.length} of {sessions.length} completed
+            </p>
           </CardContent>
         </Card>
       </div>

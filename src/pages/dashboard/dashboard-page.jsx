@@ -1010,7 +1010,7 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* Top Stats - Only show if bots exist */}
+      {/* Top Stats - Bento Grid Layout */}
       {analytics?.total_bots > 0 && (
         <>
           {/* Stats Overview Header */}
@@ -1021,122 +1021,168 @@ export default function DashboardPage() {
             </h2>
           </div>
 
-          {/* Primary Stats Row */}
-          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-            <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 shadow-sm">
-              <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
-              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Active Bots</CardTitle>
-                <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-botkorp-orange transition-all duration-300">
-                  <Bot className="h-3.5 w-3.5 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
+          {/* Bento Grid Layout */}
+          <div className="grid gap-3 grid-cols-6 auto-rows-[140px] animate-in fade-in slide-in-from-bottom-3 duration-700">
+            
+            {/* Large Featured Card - Active Bots (2x2) */}
+            <Card className="col-span-6 md:col-span-2 row-span-2 relative overflow-hidden group cursor-pointer hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border-0">
+              <div className="absolute inset-0 bg-gradient-to-br from-botkorp-orange via-botkorp-orange-dark to-orange-900 opacity-95 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30" />
+              
+              <CardContent className="relative h-full flex flex-col justify-between p-6">
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-500">
+                      <Bot className="h-6 w-6 text-white" />
+                    </div>
+                    <span className="text-xs text-white/90 font-semibold uppercase tracking-wider">Active Bots</span>
+                  </div>
+                  <div className="text-6xl font-bold text-white mb-2 tracking-tight">
+                    <NumberTicker value={analytics?.operational_bots ?? 0} />
+                  </div>
+                  <p className="text-sm text-white/80 font-medium">of {analytics?.total_bots ?? 0} total bots</p>
                 </div>
-              </CardHeader>
-              <CardContent className="relative">
-                <div className="text-2xl font-bold tabular-nums">{analytics?.operational_bots ?? 0}</div>
-                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">of {analytics?.total_bots ?? 0} total</p>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shadow-lg shadow-emerald-400/50" />
+                    <span className="text-xs text-white/90 font-medium">All Operational</span>
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-white/60 group-hover:text-white group-hover:translate-x-1 transition-all duration-300" />
+                </div>
               </CardContent>
             </Card>
 
-            <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-75 shadow-sm">
-              <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
-              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Area Coverage</CardTitle>
-                <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-botkorp-orange transition-all duration-300">
-                  <Sprout className="h-3.5 w-3.5 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
+            {/* Area Coverage Card (2x1) */}
+            <Card className="col-span-6 md:col-span-2 row-span-1 border-l-4 border-l-accent hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 group">
+              <CardContent className="p-5 h-full flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground font-semibold mb-2 uppercase tracking-wider">Area Coverage</p>
+                  <div className="text-4xl font-bold mb-1">
+                    {Math.round((analytics?.total_area_managed_sqm || 0) / 100) / 10}k
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-muted-foreground">
+                      {Math.round(analytics?.total_area_managed_sqm || 0).toLocaleString()} m²
+                    </p>
+                    <div className="flex items-center gap-1 text-[10px] font-semibold text-emerald-600">
+                      <TrendingUp className="h-3 w-3" />
+                      +5%
+                    </div>
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent className="relative">
-                <div className="text-2xl font-bold tabular-nums">{Math.round((analytics?.total_area_managed_sqm || 0) / 100) / 10}k</div>
-                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{Math.round(analytics?.total_area_managed_sqm || 0).toLocaleString()} m²</p>
+                <div className="h-20 w-20 rounded-2xl bg-accent/10 dark:bg-accent/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-accent transition-all duration-300 shadow-sm">
+                  <Sprout className="h-10 w-10 text-accent group-hover:text-white transition-colors duration-300" />
+                </div>
               </CardContent>
             </Card>
 
-            <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-150 shadow-sm">
-              <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
-              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Services Done</CardTitle>
-                <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-botkorp-orange transition-all duration-300">
-                  <CheckCircle className="h-3.5 w-3.5 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
+            {/* Services Done Card (2x1) */}
+            <Card className="col-span-6 md:col-span-2 row-span-1 border-l-4 border-l-emerald-500 hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 group">
+              <CardContent className="p-5 h-full flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground font-semibold mb-2 uppercase tracking-wider">Services Done</p>
+                  <div className="text-4xl font-bold mb-1">
+                    <NumberTicker value={analytics?.services_completed_this_month ?? 0} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-muted-foreground">This month</p>
+                    <div className="flex items-center gap-1 text-[10px] font-semibold text-emerald-600">
+                      <TrendingUp className="h-3 w-3" />
+                      +12%
+                    </div>
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent className="relative">
-                <div className="text-2xl font-bold tabular-nums">{analytics?.services_completed_this_month ?? 0}</div>
-                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">This month</p>
+                <div className="h-20 w-20 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-500 transition-all duration-300 shadow-sm">
+                  <CheckCircle className="h-10 w-10 text-emerald-500 group-hover:text-white transition-colors duration-300" />
+                </div>
               </CardContent>
             </Card>
 
-            <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200 shadow-sm">
-              <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
-              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Active Alerts</CardTitle>
-                <div className="h-8 w-8 rounded-lg bg-red-500/10 dark:bg-red-500/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-red-500 transition-all duration-300">
-                  <AlertTriangle className="h-3.5 w-3.5 text-red-500 group-hover:text-white transition-colors duration-300" />
+            {/* Quick Stats - Small Cards */}
+            {/* Runtime */}
+            <Card className="col-span-3 md:col-span-2 row-span-1 border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-300 group">
+              <CardContent className="p-4 h-full flex items-center gap-3">
+                <div className="h-14 w-14 rounded-xl bg-blue-500 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                  <Clock className="h-7 w-7 text-white" />
                 </div>
-              </CardHeader>
-              <CardContent className="relative">
-                <div className="text-2xl font-bold tabular-nums">{(analytics?.offline_bots ?? 0) + (analytics?.error_bots ?? 0)}</div>
-                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{analytics?.offline_bots ?? 0} offline, {analytics?.error_bots ?? 0} errors</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Secondary Stats Row */}
-          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-            <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange/50 hover:shadow-lg transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-250 shadow-sm">
-              <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
-              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Runtime</CardTitle>
-                <div className="h-7 w-7 rounded-lg bg-botkorp-orange/10 flex items-center justify-center group-hover:scale-110 transition-all duration-300">
-                  <Clock className="h-3 w-3 text-botkorp-orange" />
+                <div className="flex-1">
+                  <div className="text-3xl font-bold">{Math.round(analytics?.total_runtime_hours ?? 0)}h</div>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Runtime</p>
                 </div>
-              </CardHeader>
-              <CardContent className="relative">
-                <div className="text-xl font-bold tabular-nums">{Math.round(analytics?.total_runtime_hours ?? 0)}h</div>
-                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">This month</p>
               </CardContent>
             </Card>
 
-            <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange/50 hover:shadow-lg transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-300 shadow-sm">
-              <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
-              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Gardens</CardTitle>
-                <div className="h-7 w-7 rounded-lg bg-botkorp-orange/10 flex items-center justify-center group-hover:scale-110 transition-all duration-300">
-                  <Home className="h-3 w-3 text-botkorp-orange" />
+            {/* Active Alerts */}
+            <Card className="col-span-3 md:col-span-2 row-span-1 border-l-4 border-l-red-500 hover:shadow-lg transition-all duration-300 group">
+              <CardContent className="p-4 h-full flex items-center gap-3">
+                <div className="h-14 w-14 rounded-xl bg-red-500 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                  <AlertTriangle className="h-7 w-7 text-white" />
                 </div>
-              </CardHeader>
-              <CardContent className="relative">
-                <div className="text-xl font-bold tabular-nums">{analytics?.total_gardens ?? 0}</div>
-                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{analytics?.total_locations ?? 0} locations</p>
+                <div className="flex-1">
+                  <div className="text-3xl font-bold">{(analytics?.offline_bots ?? 0) + (analytics?.error_bots ?? 0)}</div>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Active Alerts</p>
+                </div>
               </CardContent>
             </Card>
 
-            <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange/50 hover:shadow-lg transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-350 shadow-sm">
-              <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
-              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Avg Session</CardTitle>
-                <div className="h-7 w-7 rounded-lg bg-botkorp-orange/10 flex items-center justify-center group-hover:scale-110 transition-all duration-300">
-                  <Timer className="h-3 w-3 text-botkorp-orange" />
+            {/* Command Center / Quick Actions */}
+            <Card className="col-span-6 md:col-span-2 row-span-1 bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-950 dark:to-gray-900 text-white border-0 hover:shadow-2xl transition-all duration-300 overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-r from-botkorp-orange/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <CardContent className="p-4 h-full relative">
+                <div className="flex items-center gap-2 mb-3">
+                  <Zap className="h-4 w-4 text-botkorp-orange" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Quick Actions</span>
                 </div>
-              </CardHeader>
-              <CardContent className="relative">
-                <div className="text-xl font-bold tabular-nums">{Math.round((analytics?.total_runtime_hours ?? 0) / (analytics?.services_completed_this_month || 1))}h</div>
-                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Per service</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button 
+                    size="sm"
+                    className="h-auto py-2 px-3 flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/20 border-0 text-white text-xs"
+                    onClick={() => navigate('/portal/services/add')}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add
+                  </Button>
+                  <Button 
+                    size="sm"
+                    className="h-auto py-2 px-3 flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/20 border-0 text-white text-xs"
+                    onClick={() => navigate('/portal/bots')}
+                  >
+                    <Bot className="h-3.5 w-3.5" />
+                    Bots
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
-            <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange/50 hover:shadow-lg transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-400 shadow-sm">
-              <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
-              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Next Service</CardTitle>
-                <div className="h-7 w-7 rounded-lg bg-botkorp-orange/10 flex items-center justify-center group-hover:scale-110 transition-all duration-300">
-                  <Calendar className="h-3 w-3 text-botkorp-orange" />
+            {/* Gardens & Locations */}
+            <Card className="col-span-3 md:col-span-2 row-span-1 border-l-4 border-l-purple-500 hover:shadow-lg transition-all duration-300 group">
+              <CardContent className="p-4 h-full flex items-center gap-3">
+                <div className="h-14 w-14 rounded-xl bg-purple-500 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                  <Home className="h-7 w-7 text-white" />
                 </div>
-              </CardHeader>
-              <CardContent className="relative">
-                <div className="text-xl font-bold tabular-nums">{analytics?.next_service_date ? format(new Date(analytics.next_service_date), 'MMM d') : 'None'}</div>
-                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{analytics?.upcoming_services_count > 0 ? `${analytics.upcoming_services_count} scheduled` : 'No upcoming'}</p>
+                <div className="flex-1">
+                  <div className="text-3xl font-bold">{analytics?.total_gardens ?? 0}</div>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">{analytics?.total_locations ?? 0} Locations</p>
+                </div>
               </CardContent>
             </Card>
+
+            {/* Next Service */}
+            <Card className="col-span-3 md:col-span-2 row-span-1 border-l-4 border-l-orange-500 hover:shadow-lg transition-all duration-300 group">
+              <CardContent className="p-4 h-full flex items-center gap-3">
+                <div className="h-14 w-14 rounded-xl bg-orange-500 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                  <Calendar className="h-7 w-7 text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-3xl font-bold">{analytics?.next_service_date ? format(new Date(analytics.next_service_date), 'MMM d') : 'None'}</div>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">
+                    {analytics?.upcoming_services_count > 0 ? `${analytics.upcoming_services_count} Scheduled` : 'No Upcoming'}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
           </div>
 
           {/* Bot Status Widget - Real-time bot data */}
