@@ -472,23 +472,23 @@ export default function DashboardPage() {
     const isNumeric = typeof value === 'number' || !isNaN(numericValue);
     
     const variantStyles = {
-      default: 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
-      primary: 'bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/20 border border-orange-200 dark:border-orange-800/30',
-      success: 'bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/30 dark:to-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30',
-      warning: 'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20 border border-red-200 dark:border-red-800/30',
-      info: 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800/30',
+      default: 'bg-[#FAFAFA] dark:bg-[#1a1a1a] border-2 border-[#E5E7EB] dark:border-[#2a2a2a]',
+      primary: 'bg-[#FAFAFA] dark:bg-[#1a1a1a] border-2 border-[#FF6B35]/20 dark:border-[#FF6B35]/30',
+      success: 'bg-[#FAFAFA] dark:bg-[#1a1a1a] border-2 border-[#10B981]/20 dark:border-[#10B981]/30',
+      warning: 'bg-[#FAFAFA] dark:bg-[#1a1a1a] border-2 border-[#EF4444]/20 dark:border-[#EF4444]/30',
+      info: 'bg-[#FAFAFA] dark:bg-[#1a1a1a] border-2 border-[#4F5D75]/20 dark:border-[#4F5D75]/30',
     };
 
     const iconBgStyles = {
-      default: 'bg-orange-100 dark:bg-orange-900/40',
-      primary: 'bg-orange-500 dark:bg-orange-600',
-      success: 'bg-emerald-500 dark:bg-emerald-600',
-      warning: 'bg-red-500 dark:bg-red-600',
-      info: 'bg-blue-500 dark:bg-blue-600',
+      default: 'bg-[#E5E7EB] dark:bg-[#2a2a2a]',
+      primary: 'bg-[#FF6B35] dark:bg-[#FF6B35]',
+      success: 'bg-[#10B981] dark:bg-[#10B981]',
+      warning: 'bg-[#EF4444] dark:bg-[#EF4444]',
+      info: 'bg-[#4F5D75] dark:bg-[#4F5D75]',
     };
 
     const iconColorStyles = {
-      default: 'text-orange-600 dark:text-orange-400',
+      default: 'text-[#4F5D75] dark:text-[#B0B3B8]',
       primary: 'text-white',
       success: 'text-white',
       warning: 'text-white',
@@ -496,51 +496,57 @@ export default function DashboardPage() {
     };
 
     const valueColorStyles = {
-      default: 'text-gray-900 dark:text-white',
-      primary: 'text-orange-700 dark:text-orange-300',
-      success: 'text-emerald-700 dark:text-emerald-300',
-      warning: 'text-red-700 dark:text-red-300',
-      info: 'text-blue-700 dark:text-blue-300',
+      default: 'text-[#121212] dark:text-white',
+      primary: 'text-[#121212] dark:text-white',
+      success: 'text-[#121212] dark:text-white',
+      warning: 'text-[#121212] dark:text-white',
+      info: 'text-[#121212] dark:text-white',
     };
 
-    const isGradient = variant !== 'default';
+    const accentBarStyles = {
+      default: 'bg-[#B0B3B8]',
+      primary: 'bg-gradient-to-r from-[#FF6B35] to-[#E85A2A]',
+      success: 'bg-[#10B981]',
+      warning: 'bg-[#EF4444]',
+      info: 'bg-gradient-to-r from-[#4F5D75] to-[#6B7A94]',
+    };
     
     return (
-      <Card className={`${variantStyles[variant]} ${className} shadow-sm hover:shadow-md transition-all duration-300 group overflow-hidden relative transform hover:scale-[1.01] animate-in fade-in slide-in-from-bottom-4 duration-700`}>
-        {/* Shine effect on hover */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
+      <Card className={`${variantStyles[variant]} ${className} shadow-sm hover:shadow-md transition-all duration-300 group overflow-hidden relative animate-in fade-in slide-in-from-bottom-4 duration-700`}>
+        {/* Top accent bar */}
+        <div className={`absolute top-0 left-0 right-0 h-1 ${accentBarStyles[variant]}`} />
         
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className={`${iconBgStyles[variant]} p-2 rounded-lg group-hover:scale-105 transition-all duration-300`}>
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between mb-4">
+            <div className={`${iconBgStyles[variant]} p-2.5 rounded-lg shadow-sm`}>
               {React.cloneElement(icon, { 
-                className: `h-4 w-4 ${iconColorStyles[variant]}` 
+                className: `h-5 w-5 ${iconColorStyles[variant]}` 
               })}
             </div>
             {trendValue && (
-              <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold ${
+              <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide ${
                 trendValue.startsWith('+') || trendValue.startsWith('↑')
-                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                  ? 'bg-[#10B981]/10 text-[#10B981] dark:bg-[#10B981]/20 dark:text-[#10B981]'
+                  : 'bg-[#EF4444]/10 text-[#EF4444] dark:bg-[#EF4444]/20 dark:text-[#EF4444]'
               }`}>
                 <TrendingUp className={`h-3 w-3 ${trendValue.startsWith('-') || trendValue.startsWith('↓') ? 'rotate-180' : ''}`} />
                 {trendValue}
               </div>
             )}
           </div>
-          <div className="space-y-1">
-            <div className={`text-2xl font-bold tracking-tight ${valueColorStyles[variant]}`}>
+          <div className="space-y-2">
+            <div className={`text-3xl font-bold tracking-tight ${valueColorStyles[variant]}`}>
               {isNumeric && typeof value === 'number' ? (
                 <NumberTicker value={value} />
               ) : (
                 value
               )}
             </div>
-            <p className={`text-xs font-medium ${isGradient ? 'text-gray-700 dark:text-gray-300' : 'text-gray-600 dark:text-gray-400'}`}>
+            <p className="text-xs font-bold uppercase tracking-wide text-[#4F5D75] dark:text-[#B0B3B8]">
               {title}
             </p>
             {description && (
-              <p className={`text-[11px] ${isGradient ? 'text-gray-600 dark:text-gray-400' : 'text-gray-500 dark:text-gray-500'}`}>
+              <p className="text-[11px] text-[#B0B3B8] dark:text-[#6B7A94] mt-1">
                 {description}
               </p>
             )}
@@ -565,27 +571,26 @@ export default function DashboardPage() {
   // Welcome Screen - No Locations
   if (locations.length === 0 && !showLocationWizard) {
     return (
-      <div className="p-4 md:p-6 lg:p-8 space-y-8">
+      <div className="p-4 md:p-6 lg:p-8 space-y-8 bg-[#FAFAFA] dark:bg-[#121212] min-h-screen">
         <PageHeader
           title={`${getGreeting()}, ${getUserName()}! 👋`}
           subtitle="Welcome to Bot Korp. Let's get you started with automated property care."
           icon={<Bot />}
         />
 
-        <Card className="border-2 shadow-xl">
+        <Card className="border-2 border-[#E5E7EB] dark:border-[#2a2a2a] shadow-lg bg-white dark:bg-[#1a1a1a]">
           <CardContent className="flex flex-col items-center justify-center py-20 text-center space-y-8">
             <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-botkorp-orange/20 blur-2xl animate-pulse" />
-              <div className="relative rounded-2xl bg-gradient-to-br from-botkorp-orange to-botkorp-orange-dark p-10 shadow-xl">
-                <MapPin className="h-20 w-20 text-white" />
+              <div className="h-24 w-24 rounded-2xl bg-gradient-to-br from-[#FF6B35] to-[#E85A2A] flex items-center justify-center shadow-xl">
+                <MapPin className="h-12 w-12 text-white" />
               </div>
             </div>
             
             <div className="space-y-4 max-w-2xl">
-              <h3 className="text-2xl font-bold text-foreground">
+              <h3 className="text-2xl font-bold text-[#121212] dark:text-white">
                 Let's Start with Your Location
               </h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
+              <p className="text-[#4F5D75] dark:text-[#B0B3B8] text-sm leading-relaxed">
                 Before we can set up any services, we need to know where your property is located. 
                 This helps us ensure coverage and deploy the right bots for your area.
               </p>
@@ -594,41 +599,41 @@ export default function DashboardPage() {
             <Button
               size="lg"
               onClick={() => setShowLocationWizard(true)}
-              className="bg-gradient-to-r from-botkorp-orange to-botkorp-orange-dark hover:from-botkorp-orange-dark hover:to-botkorp-orange shadow-lg hover:shadow-xl transition-all duration-300 text-base px-8 py-6 rounded-xl"
+              className="bg-gradient-to-r from-[#FF6B35] to-[#E85A2A] hover:from-[#E85A2A] hover:to-[#FF6B35] shadow-lg hover:shadow-xl transition-all duration-300 text-base px-8 py-6 rounded-xl text-white font-bold"
             >
               <MapPin className="h-5 w-5 mr-2" />
               Add Your First Location
               <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
 
-            <div className="pt-12 border-t w-full max-w-4xl mt-8">
-              <h4 className="font-semibold text-sm mb-6 text-foreground">What happens next?</h4>
+            <div className="pt-12 border-t-2 border-[#E5E7EB] dark:border-[#2a2a2a] w-full max-w-4xl mt-8">
+              <h4 className="font-bold text-xs uppercase tracking-[0.1em] mb-6 text-[#121212] dark:text-white">What happens next?</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="flex flex-col items-center text-center gap-4 p-6 rounded-2xl bg-gradient-to-br from-botkorp-orange/10 to-botkorp-orange/5 hover:from-botkorp-orange/15 hover:to-botkorp-orange/10 transition-all duration-300 border border-botkorp-orange/20">
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-botkorp-orange to-botkorp-orange-dark flex items-center justify-center text-white font-bold text-base shadow-lg">
+                <div className="flex flex-col items-center text-center gap-4 p-6 rounded-xl bg-[#FAFAFA] dark:bg-[#1a1a1a] hover:bg-white dark:hover:bg-[#2a2a2a] transition-all duration-300 border-2 border-[#E5E7EB] dark:border-[#2a2a2a] shadow-sm hover:shadow-md">
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#FF6B35] to-[#E85A2A] flex items-center justify-center text-white font-bold text-lg shadow-md">
                     1
                   </div>
                   <div>
-                    <p className="font-semibold text-sm mb-1">Add Location</p>
-                    <p className="text-muted-foreground text-xs">Tell us where your property is</p>
+                    <p className="font-bold text-sm mb-1 text-[#121212] dark:text-white">Add Location</p>
+                    <p className="text-[#4F5D75] dark:text-[#B0B3B8] text-xs">Tell us where your property is</p>
                   </div>
                 </div>
-                <div className="flex flex-col items-center text-center gap-4 p-6 rounded-2xl bg-gradient-to-br from-botkorp-slate-blue/10 to-botkorp-slate-blue/5 hover:from-botkorp-slate-blue/15 hover:to-botkorp-slate-blue/10 transition-all duration-300 border border-botkorp-slate-blue/20">
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-botkorp-slate-blue to-botkorp-silver flex items-center justify-center text-white font-bold text-base shadow-lg">
+                <div className="flex flex-col items-center text-center gap-4 p-6 rounded-xl bg-[#FAFAFA] dark:bg-[#1a1a1a] hover:bg-white dark:hover:bg-[#2a2a2a] transition-all duration-300 border-2 border-[#E5E7EB] dark:border-[#2a2a2a] shadow-sm hover:shadow-md">
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#4F5D75] to-[#6B7A94] flex items-center justify-center text-white font-bold text-lg shadow-md">
                     2
                   </div>
                   <div>
-                    <p className="font-semibold text-sm mb-1">Choose Services</p>
-                    <p className="text-muted-foreground text-xs">Select lawn, pool, or security</p>
+                    <p className="font-bold text-sm mb-1 text-[#121212] dark:text-white">Choose Services</p>
+                    <p className="text-[#4F5D75] dark:text-[#B0B3B8] text-xs">Select lawn, pool, or security</p>
                   </div>
                 </div>
-                <div className="flex flex-col items-center text-center gap-4 p-6 rounded-2xl bg-gradient-to-br from-accent/10 to-accent/5 hover:from-accent/15 hover:to-accent/10 transition-all duration-300 border border-accent/20">
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-accent to-accent flex items-center justify-center text-white font-bold text-base shadow-lg">
+                <div className="flex flex-col items-center text-center gap-4 p-6 rounded-xl bg-[#FAFAFA] dark:bg-[#1a1a1a] hover:bg-white dark:hover:bg-[#2a2a2a] transition-all duration-300 border-2 border-[#E5E7EB] dark:border-[#2a2a2a] shadow-sm hover:shadow-md">
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#10B981] to-[#10B981] flex items-center justify-center text-white font-bold text-lg shadow-md">
                     3
                   </div>
                   <div>
-                    <p className="font-semibold text-sm mb-1">Relax</p>
-                    <p className="text-muted-foreground text-xs">Let the bots handle it!</p>
+                    <p className="font-bold text-sm mb-1 text-[#121212] dark:text-white">Relax</p>
+                    <p className="text-[#4F5D75] dark:text-[#B0B3B8] text-xs">Let the bots handle it!</p>
                   </div>
                 </div>
               </div>
@@ -755,27 +760,26 @@ export default function DashboardPage() {
   // Empty State - No Services, but has locations
   if (!loading && locations.length > 0 && analytics && analytics.total_services === 0) {
     return (
-      <div className="p-4 md:p-6 lg:p-8 space-y-8">
+      <div className="p-4 md:p-6 lg:p-8 space-y-8 bg-[#FAFAFA] dark:bg-[#121212] min-h-screen">
         <PageHeader
           title={`${getGreeting()}, ${getUserName()}! 👋`}
           subtitle="You have locations set up. Now let's add your first service to get started."
           icon={<Bot />}
         />
 
-        <Card className="border-2 shadow-xl">
+        <Card className="border-2 border-[#E5E7EB] dark:border-[#2a2a2a] shadow-lg bg-white dark:bg-[#1a1a1a]">
           <CardContent className="flex flex-col items-center justify-center py-20 text-center space-y-8">
             <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-accent/20 blur-2xl animate-pulse" />
-              <div className="relative rounded-2xl bg-gradient-to-br from-accent to-accent p-10 shadow-xl">
-                <Sprout className="h-20 w-20 text-white" />
+              <div className="h-24 w-24 rounded-2xl bg-gradient-to-br from-[#10B981] to-[#10B981] flex items-center justify-center shadow-xl">
+                <Sprout className="h-12 w-12 text-white" />
               </div>
             </div>
             
             <div className="space-y-4 max-w-2xl">
-              <h3 className="text-2xl font-bold text-foreground">
+              <h3 className="text-2xl font-bold text-[#121212] dark:text-white">
                 Let's Add Your First Service
               </h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
+              <p className="text-[#4F5D75] dark:text-[#B0B3B8] text-sm leading-relaxed">
                 Choose from lawn care, pool maintenance, or security services to start automating your property with Bot Korp.
               </p>
             </div>
@@ -783,36 +787,36 @@ export default function DashboardPage() {
             <Button
               size="lg"
               onClick={() => navigate('/portal/services/add')}
-              className="bg-gradient-to-r from-accent to-accent hover:from-accent/90 hover:to-accent/90 shadow-lg hover:shadow-xl transition-all duration-300 text-base px-8 py-6 rounded-xl"
+              className="bg-gradient-to-r from-[#FF6B35] to-[#E85A2A] hover:from-[#E85A2A] hover:to-[#FF6B35] shadow-lg hover:shadow-xl transition-all duration-300 text-base px-8 py-6 rounded-xl text-white font-bold"
             >
               <Plus className="h-5 w-5 mr-2" />
               Add Your First Service
               <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
 
-            <div className="pt-12 border-t w-full max-w-4xl mt-8">
-              <h4 className="font-semibold text-sm mb-6 text-foreground">Available Services</h4>
+            <div className="pt-12 border-t-2 border-[#E5E7EB] dark:border-[#2a2a2a] w-full max-w-4xl mt-8">
+              <h4 className="font-bold text-xs uppercase tracking-[0.1em] mb-6 text-[#121212] dark:text-white">Available Services</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="group p-6 rounded-2xl border-2 border-accent/30 dark:border-accent/50 bg-gradient-to-br from-accent/5 to-accent/10 dark:from-accent/10 dark:to-accent/20 hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer">
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-accent to-accent flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <div className="group p-6 rounded-xl border-2 border-[#E5E7EB] dark:border-[#2a2a2a] bg-[#FAFAFA] dark:bg-[#1a1a1a] hover:bg-white dark:hover:bg-[#2a2a2a] hover:shadow-lg hover:border-[#10B981]/30 transition-all duration-300 cursor-pointer">
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#10B981] to-[#10B981] flex items-center justify-center mx-auto mb-4 shadow-md group-hover:scale-110 transition-transform duration-300">
                     <Sprout className="h-6 w-6 text-white" />
                   </div>
-                  <p className="font-bold text-sm mb-2 text-foreground">Lawn Care</p>
-                  <p className="text-muted-foreground text-xs">Autonomous mowing bots for perfect lawns</p>
+                  <p className="font-bold text-sm mb-2 text-[#121212] dark:text-white">Lawn Care</p>
+                  <p className="text-[#4F5D75] dark:text-[#B0B3B8] text-xs">Autonomous mowing bots for perfect lawns</p>
                 </div>
-                <div className="group p-6 rounded-2xl border-2 border-botkorp-slate-blue/30 dark:border-botkorp-slate-blue/50 bg-gradient-to-br from-botkorp-slate-blue/5 to-botkorp-slate-blue/10 dark:from-botkorp-slate-blue/10 dark:to-botkorp-slate-blue/20 hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer">
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-botkorp-slate-blue to-botkorp-silver flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <div className="group p-6 rounded-xl border-2 border-[#E5E7EB] dark:border-[#2a2a2a] bg-[#FAFAFA] dark:bg-[#1a1a1a] hover:bg-white dark:hover:bg-[#2a2a2a] hover:shadow-lg hover:border-[#4F5D75]/30 transition-all duration-300 cursor-pointer">
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#4F5D75] to-[#6B7A94] flex items-center justify-center mx-auto mb-4 shadow-md group-hover:scale-110 transition-transform duration-300">
                     <Droplets className="h-6 w-6 text-white" />
                   </div>
-                  <p className="font-bold text-sm mb-2 text-foreground">Pool Cleaning</p>
-                  <p className="text-muted-foreground text-xs">Automated pool maintenance systems</p>
+                  <p className="font-bold text-sm mb-2 text-[#121212] dark:text-white">Pool Cleaning</p>
+                  <p className="text-[#4F5D75] dark:text-[#B0B3B8] text-xs">Automated pool maintenance systems</p>
                 </div>
-                <div className="group p-6 rounded-2xl border-2 border-botkorp-orange/30 dark:border-botkorp-orange/50 bg-gradient-to-br from-botkorp-orange/5 to-botkorp-orange/10 dark:from-botkorp-orange/10 dark:to-botkorp-orange/20 hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer">
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-botkorp-orange to-botkorp-orange-dark flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                    <AlertCircle className="h-6 w-6 text-white" />
+                <div className="group p-6 rounded-xl border-2 border-[#E5E7EB] dark:border-[#2a2a2a] bg-[#FAFAFA] dark:bg-[#1a1a1a] hover:bg-white dark:hover:bg-[#2a2a2a] hover:shadow-lg hover:border-[#FF6B35]/30 transition-all duration-300 cursor-pointer">
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#FF6B35] to-[#E85A2A] flex items-center justify-center mx-auto mb-4 shadow-md group-hover:scale-110 transition-transform duration-300">
+                    <Shield className="h-6 w-6 text-white" />
                   </div>
-                  <p className="font-bold text-sm mb-2 text-foreground">Security</p>
-                  <p className="text-muted-foreground text-xs">24/7 property monitoring & alerts</p>
+                  <p className="font-bold text-sm mb-2 text-[#121212] dark:text-white">Security</p>
+                  <p className="text-[#4F5D75] dark:text-[#B0B3B8] text-xs">24/7 property monitoring & alerts</p>
                 </div>
               </div>
             </div>
@@ -823,9 +827,10 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-3 md:p-5 space-y-5 min-h-screen">
-      <div className="space-y-5">
-        <div className="space-y-3 animate-in fade-in slide-in-from-top-3 duration-500">
+    <div className="p-6 space-y-6 max-w-[1600px] mx-auto min-h-screen">
+      <div className="space-y-6">
+        {/* Header Section - Soft UI Background */}
+        <div className="bg-gradient-to-br from-background via-background to-muted/20 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] animate-in fade-in slide-in-from-top-3 duration-500">
           <PageHeader
             title={`${getGreeting()}, ${getUserName()}! 👋`}
             subtitle={
@@ -838,40 +843,39 @@ export default function DashboardPage() {
             }
             icon={<Bot className="h-5 w-5 text-botkorp-orange" />}
           />
-
         </div>
 
         {/* Invitation Banner */}
         {!loadingInvitations && pendingInvitations.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {pendingInvitations.map((invitation, index) => (
-              <Card 
+              <div
                 key={invitation.id} 
-                className="border-t-4 border-t-botkorp-orange shadow-md hover:shadow-xl transition-all duration-300 relative overflow-hidden group animate-in fade-in slide-in-from-bottom-3"
+                className="bg-gradient-to-br from-background to-muted/20 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300 relative overflow-hidden group animate-in fade-in slide-in-from-bottom-3"
                 style={{ animationDelay: `${index * 100}ms`, animationDuration: '500ms' }}
               >
-                {/* Animated shine effect */}
-                <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
-                <CardContent className="p-4 relative">
+                {/* Top accent bar */}
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-botkorp-orange via-botkorp-orange/80 to-botkorp-orange/60 rounded-t-3xl" />
+                <div className="relative pt-2">
                   <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div className="flex items-start gap-3 flex-1 min-w-0">
-                      <div className="h-10 w-10 rounded-lg bg-botkorp-orange flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-300">
-                        <Mail className="h-5 w-5 text-white" />
+                      <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shrink-0 shadow-[0_4px_20px_rgb(255,107,53,0.15)] group-hover:shadow-[0_4px_20px_rgb(255,107,53,0.25)] transition-all duration-300">
+                        <Mail className="h-6 w-6 text-botkorp-orange" />
                       </div>
-                      <div className="space-y-1.5 flex-1 min-w-0">
+                      <div className="space-y-2 flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-bold text-sm text-foreground">
+                          <h3 className="font-bold text-sm uppercase tracking-wide">
                             Team Invitation
                           </h3>
-                          <Badge variant="secondary" className="h-5 px-2 text-[10px] font-semibold capitalize bg-botkorp-orange/10 text-botkorp-orange border-botkorp-orange/20">
+                          <Badge variant="secondary" className="h-5 px-2.5 text-[10px] font-bold capitalize bg-botkorp-orange/10 text-botkorp-orange border border-botkorp-orange/20">
                             {invitation.role}
                           </Badge>
                         </div>
-                        <p className="text-sm text-foreground">
+                        <p className="text-sm">
                           <strong>{invitation.inviter?.full_name || invitation.inviter?.first_name}</strong> invited you to join{' '}
                           <strong>{invitation.organization?.name}</strong>
                         </p>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <p className="text-xs text-muted-foreground/70 flex items-center gap-1.5">
                           <Clock className="h-3 w-3" />
                           Expires {format(new Date(invitation.expires_at), 'MMM d, yyyy')}
                         </p>
@@ -880,7 +884,7 @@ export default function DashboardPage() {
                     <div className="flex gap-2 shrink-0">
                       <Button
                         size="sm"
-                        className="h-8 text-xs bg-botkorp-orange hover:bg-botkorp-orange/90 text-white shadow-sm hover:shadow-md transition-all duration-300 active:scale-95 font-medium"
+                        className="h-9 text-xs bg-botkorp-orange hover:bg-botkorp-orange/90 text-white shadow-[0_4px_20px_rgb(255,107,53,0.25)] hover:shadow-[0_4px_20px_rgb(255,107,53,0.35)] transition-all duration-300 font-bold uppercase tracking-wide px-4 rounded-xl"
                         onClick={() => handleAcceptInvitation(invitation.id)}
                       >
                         <Check className="h-3.5 w-3.5 mr-1.5" />
@@ -889,7 +893,7 @@ export default function DashboardPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-8 text-xs border-2 hover:border-destructive hover:bg-destructive hover:text-white transition-all duration-300 active:scale-95"
+                        className="h-9 text-xs border-none bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] hover:bg-red-500 hover:text-white transition-all duration-300 font-bold uppercase tracking-wide px-4 rounded-xl"
                         onClick={() => handleDeclineInvitation(invitation.id)}
                       >
                         <X className="h-3.5 w-3.5 mr-1.5" />
@@ -897,8 +901,8 @@ export default function DashboardPage() {
                       </Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         )}
@@ -915,274 +919,303 @@ export default function DashboardPage() {
 
       {/* Setup in Progress - No Bots Yet */}
       {analytics?.total_bots === 0 && analytics?.total_gardens > 0 && (
-        <Card className="border-2 shadow-xl bg-gradient-to-br from-botkorp-orange/5 to-botkorp-orange-dark/5 dark:from-botkorp-orange/10 dark:to-botkorp-orange-dark/10">
-          <CardContent className="py-20">
+        <div className="bg-gradient-to-br from-background to-muted/20 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="py-20 px-6">
             <div className="max-w-4xl mx-auto text-center space-y-8">
               {/* Icon */}
-              <div className="relative inline-block">
-                <div className="absolute inset-0 bg-botkorp-orange/20 rounded-full blur-2xl animate-pulse" />
-                <div className="relative h-24 w-24 mx-auto rounded-2xl bg-gradient-to-br from-botkorp-orange to-botkorp-orange-dark flex items-center justify-center shadow-xl">
-                  <Bot className="h-12 w-12 text-white" />
-                </div>
+              <div className="inline-flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 shadow-[0_8px_30px_rgb(255,107,53,0.15)] animate-in zoom-in-50 duration-500 delay-100">
+                <Bot className="h-12 w-12 text-botkorp-orange animate-pulse" />
               </div>
 
               {/* Message */}
               <div className="space-y-4">
-                <h3 className="text-2xl font-bold text-foreground">
+                <h3 className="text-2xl font-bold animate-in fade-in slide-in-from-bottom-2 duration-500 delay-200">
                   We're Setting Things Up!
                 </h3>
-                <p className="text-sm text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                <p className="text-sm text-muted-foreground/70 max-w-2xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom-2 duration-500 delay-300">
                   Your services are configured and ready. Our team is preparing your bots for deployment.
                 </p>
               </div>
 
               {/* Status indicators */}
               <div className="flex flex-wrap items-center justify-center gap-4 pt-6">
-                <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-accent/10 dark:bg-accent/20 border-2 border-accent/30 dark:border-accent/50 shadow-sm">
-                  <div className="h-3 w-3 rounded-full bg-accent animate-pulse" />
-                  <span className="text-sm font-semibold text-foreground">Services Active</span>
+                <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all">
+                  <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_rgb(34,197,94,0.4)]" />
+                  <span className="text-sm font-bold uppercase tracking-wide">Services Active</span>
                 </div>
-                <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-botkorp-orange/10 dark:bg-botkorp-orange/20 border-2 border-botkorp-orange/30 dark:border-botkorp-orange/50 shadow-sm">
-                  <Loader2 className="h-4 w-4 text-botkorp-orange dark:text-botkorp-orange animate-spin" />
-                  <span className="text-sm font-semibold text-foreground">Bots Deploying</span>
+                <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all">
+                  <Loader2 className="h-4 w-4 text-botkorp-orange animate-spin" />
+                  <span className="text-sm font-bold uppercase tracking-wide">Bots Deploying</span>
                 </div>
-                <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-botkorp-slate-blue/10 dark:bg-botkorp-slate-blue/20 border-2 border-botkorp-slate-blue/30 dark:border-botkorp-slate-blue/50 shadow-sm">
-                  <div className="h-3 w-3 rounded-full bg-botkorp-slate-blue" />
-                  <span className="text-sm font-semibold text-foreground">Team Notified</span>
+                <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all">
+                  <div className="h-3 w-3 rounded-full bg-blue-500" />
+                  <span className="text-sm font-bold uppercase tracking-wide">Team Notified</span>
                 </div>
               </div>
 
               {/* Timeline */}
-              <div className="pt-12 border-t-2 max-w-3xl mx-auto">
-                <p className="text-sm font-bold text-foreground mb-8">What's happening:</p>
+              <div className="pt-12 border-t border-muted/20 max-w-3xl mx-auto">
+                <p className="text-xs font-bold uppercase tracking-[0.1em] mb-8">What's happening:</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="flex flex-col items-center text-center gap-4 p-6 rounded-2xl bg-card border-2 border-accent/30 shadow-md hover:shadow-xl transition-shadow duration-300">
-                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-accent to-accent flex items-center justify-center shadow-lg">
-                      <Check className="h-5 w-5 text-white" />
+                  <div className="flex flex-col items-center text-center gap-4 p-6 rounded-2xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all">
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500/15 to-green-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(34,197,94,0.15)]">
+                      <Check className="h-5 w-5 text-green-600" />
                     </div>
                     <div>
                       <p className="font-bold text-sm mb-1">Services Configured</p>
-                      <p className="text-xs text-muted-foreground">Your lawn areas are mapped</p>
+                      <p className="text-xs text-muted-foreground/60">Your lawn areas are mapped</p>
                     </div>
                   </div>
-                  <div className="flex flex-col items-center text-center gap-4 p-6 rounded-2xl bg-card border-2 border-botkorp-orange/30 shadow-md hover:shadow-xl transition-shadow duration-300">
-                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-botkorp-orange to-botkorp-orange-dark flex items-center justify-center shadow-lg">
-                      <Loader2 className="h-5 w-5 text-white animate-spin" />
+                  <div className="flex flex-col items-center text-center gap-4 p-6 rounded-2xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all">
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+                      <Loader2 className="h-5 w-5 text-botkorp-orange animate-spin" />
                     </div>
                     <div>
                       <p className="font-bold text-sm mb-1">Bot Assignment</p>
-                      <p className="text-xs text-muted-foreground">Matching bots to your property</p>
+                      <p className="text-xs text-muted-foreground/60">Matching bots to your property</p>
                     </div>
                   </div>
-                  <div className="flex flex-col items-center text-center gap-4 p-6 rounded-2xl bg-card border-2 border-botkorp-slate-blue/30 shadow-md hover:shadow-xl transition-shadow duration-300">
-                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-botkorp-slate-blue to-botkorp-silver flex items-center justify-center shadow-lg">
-                      <Calendar className="h-5 w-5 text-white" />
+                  <div className="flex flex-col items-center text-center gap-4 p-6 rounded-2xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all">
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(59,130,246,0.15)]">
+                      <Calendar className="h-5 w-5 text-blue-600" />
                     </div>
                     <div>
                       <p className="font-bold text-sm mb-1">Installation Soon</p>
-                      <p className="text-xs text-muted-foreground">We'll contact you within 24h</p>
+                      <p className="text-xs text-muted-foreground/60">We'll contact you within 24h</p>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Contact info */}
-              <Card className="max-w-2xl mx-auto bg-gradient-to-r from-botkorp-orange/10 to-botkorp-orange-dark/10 border-2 border-botkorp-orange/30 shadow-lg">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange to-botkorp-orange-dark flex items-center justify-center shrink-0">
-                      <AlertCircle className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-semibold text-foreground mb-1">Need immediate assistance?</p>
-                      <p className="text-sm text-muted-foreground">
-                        Contact us at{' '}
-                        <a href="tel:+27311234567" className="font-bold text-botkorp-orange hover:underline">
-                          +27 31 123 4567
-                        </a>
-                      </p>
-                    </div>
+              <div className="max-w-2xl mx-auto bg-gradient-to-br from-botkorp-orange/10 to-botkorp-orange/5 rounded-2xl p-6 shadow-[0_8px_30px_rgb(255,107,53,0.15)]">
+                <div className="flex items-start gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shrink-0 shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+                    <AlertCircle className="h-5 w-5 text-botkorp-orange" />
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="text-left">
+                    <p className="font-bold text-sm mb-1">Need immediate assistance?</p>
+                    <p className="text-sm text-muted-foreground/70">
+                      Contact us at{' '}
+                      <a href="tel:+27311234567" className="font-bold text-botkorp-orange hover:underline">
+                        +27 31 123 4567
+                      </a>
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
-      {/* Top Stats - Bento Grid Layout */}
+      {/* Top Stats - Soft UI Layout */}
       {analytics?.total_bots > 0 && (
         <>
           {/* Stats Overview Header */}
-          <div className="flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-500">
-            <div className="h-0.5 w-8 bg-botkorp-orange rounded-full" />
-            <h2 className="text-sm font-bold uppercase tracking-wide">
-              Overview
+          <div className="flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 duration-500">
+            <div className="h-1 w-1 bg-botkorp-orange rounded-full" />
+            <div className="h-1 w-8 bg-gradient-to-r from-botkorp-orange to-botkorp-orange/60 rounded-full" />
+            <h2 className="text-xs font-bold uppercase tracking-[0.15em]">
+              System Overview
             </h2>
+            <div className="flex-1 h-[1px] bg-gradient-to-r from-muted/30 to-transparent" />
           </div>
 
-          {/* Bento Grid Layout */}
-          <div className="grid gap-3 grid-cols-6 auto-rows-[140px] animate-in fade-in slide-in-from-bottom-3 duration-700">
+          {/* Featured Card - Active Bots Status */}
+          <div className="relative overflow-hidden group cursor-pointer rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-700 animate-in fade-in slide-in-from-bottom-3 duration-700">
+            {/* Base gradient - Soft colors */}
+            <div className="absolute inset-0 bg-gradient-to-br from-botkorp-orange via-botkorp-orange/90 to-botkorp-orange/80" />
             
-            {/* Large Featured Card - Active Bots (2x2) */}
-            <Card className="col-span-6 md:col-span-2 row-span-2 relative overflow-hidden group cursor-pointer hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border-0">
-              <div className="absolute inset-0 bg-gradient-to-br from-botkorp-orange via-botkorp-orange-dark to-orange-900 opacity-95 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30" />
-              
-              <CardContent className="relative h-full flex flex-col justify-between p-6">
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-500">
-                      <Bot className="h-6 w-6 text-white" />
+            {/* Animated grid pattern - subtle industrial feel */}
+            <div className="absolute inset-0 opacity-20 dark:opacity-30">
+              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSA0MCAwIEwgMCAwIDAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMC41Ii8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] animate-pulse" style={{ animationDuration: '4s' }} />
+            </div>
+            
+            {/* Floating particles - premium effect */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              <div className="absolute w-1 h-1 bg-white/40 rounded-full top-[20%] left-[15%] animate-float" style={{ animationDelay: '0s', animationDuration: '8s' }} />
+              <div className="absolute w-1.5 h-1.5 bg-white/30 rounded-full top-[60%] left-[25%] animate-float" style={{ animationDelay: '2s', animationDuration: '10s' }} />
+              <div className="absolute w-1 h-1 bg-white/40 rounded-full top-[40%] left-[80%] animate-float" style={{ animationDelay: '1s', animationDuration: '9s' }} />
+              <div className="absolute w-2 h-2 bg-white/20 rounded-full top-[75%] left-[70%] animate-float" style={{ animationDelay: '3s', animationDuration: '11s' }} />
+            </div>
+            
+            {/* Diagonal light sweep - premium shine effect */}
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-[2000ms] ease-in-out" style={{ transform: 'skewX(-15deg)' }} />
+            </div>
+            
+            {/* Content */}
+            <div className="relative p-8">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="h-20 w-20 rounded-2xl bg-white/25 dark:bg-white/15 backdrop-blur-md flex items-center justify-center shadow-xl border border-white/20 group-hover:scale-110 transition-all duration-500">
+                    <Bot className="h-10 w-10 text-white drop-shadow-lg" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-white/70 dark:text-white/60 font-bold uppercase tracking-[0.15em] block mb-1">System Status</span>
+                    <div className="text-6xl font-bold text-white tracking-tight drop-shadow-2xl leading-none">
+                      <NumberTicker value={analytics?.operational_bots ?? 0} />
                     </div>
-                    <span className="text-xs text-white/90 font-semibold uppercase tracking-wider">Active Bots</span>
+                    <p className="text-sm text-white/90 dark:text-white/80 font-semibold mt-2">
+                      of <span className="text-2xl font-bold">{analytics?.total_bots ?? 0}</span> bots operational
+                    </p>
                   </div>
-                  <div className="text-6xl font-bold text-white mb-2 tracking-tight">
-                    <NumberTicker value={analytics?.operational_bots ?? 0} />
-                  </div>
-                  <p className="text-sm text-white/80 font-medium">of {analytics?.total_bots ?? 0} total bots</p>
                 </div>
                 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shadow-lg shadow-emerald-400/50" />
-                    <span className="text-xs text-white/90 font-medium">All Operational</span>
-                  </div>
-                  <ArrowRight className="h-5 w-5 text-white/60 group-hover:text-white group-hover:translate-x-1 transition-all duration-300" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Area Coverage Card (2x1) */}
-            <Card className="col-span-6 md:col-span-2 row-span-1 border-l-4 border-l-accent hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 group">
-              <CardContent className="p-5 h-full flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground font-semibold mb-2 uppercase tracking-wider">Area Coverage</p>
-                  <div className="text-4xl font-bold mb-1">
-                    {Math.round((analytics?.total_area_managed_sqm || 0) / 100) / 10}k
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs text-muted-foreground">
-                      {Math.round(analytics?.total_area_managed_sqm || 0).toLocaleString()} m²
-                    </p>
-                    <div className="flex items-center gap-1 text-[10px] font-semibold text-emerald-600">
-                      <TrendingUp className="h-3 w-3" />
-                      +5%
+                {/* Progress and Status */}
+                <div className="space-y-4 min-w-[280px]">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-white/70 dark:text-white/60 font-medium uppercase tracking-wide">Operational Rate</span>
+                      <span className="text-white font-bold text-lg">
+                        {Math.round(((analytics?.operational_bots ?? 0) / (analytics?.total_bots || 1)) * 100)}%
+                      </span>
+                    </div>
+                    <div className="h-2.5 bg-white/20 dark:bg-white/10 rounded-full overflow-hidden backdrop-blur-sm">
+                      <div 
+                        className="h-full bg-white rounded-full shadow-lg transition-all duration-1000 ease-out"
+                        style={{ width: `${Math.round(((analytics?.operational_bots ?? 0) / (analytics?.total_bots || 1)) * 100)}%` }}
+                      />
                     </div>
                   </div>
-                </div>
-                <div className="h-20 w-20 rounded-2xl bg-accent/10 dark:bg-accent/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-accent transition-all duration-300 shadow-sm">
-                  <Sprout className="h-10 w-10 text-accent group-hover:text-white transition-colors duration-300" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Services Done Card (2x1) */}
-            <Card className="col-span-6 md:col-span-2 row-span-1 border-l-4 border-l-emerald-500 hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 group">
-              <CardContent className="p-5 h-full flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground font-semibold mb-2 uppercase tracking-wider">Services Done</p>
-                  <div className="text-4xl font-bold mb-1">
-                    <NumberTicker value={analytics?.services_completed_this_month ?? 0} />
-                  </div>
+                  
                   <div className="flex items-center gap-2">
-                    <p className="text-xs text-muted-foreground">This month</p>
-                    <div className="flex items-center gap-1 text-[10px] font-semibold text-emerald-600">
-                      <TrendingUp className="h-3 w-3" />
-                      +12%
+                    <div className="relative">
+                      <div className="h-3 w-3 rounded-full bg-emerald-400 animate-pulse" />
+                      <div className="absolute inset-0 h-3 w-3 rounded-full bg-emerald-400 animate-ping" style={{ animationDuration: '2s' }} />
                     </div>
+                    <span className="text-sm text-white/90 dark:text-white/80 font-semibold">All Systems Operational</span>
                   </div>
                 </div>
-                <div className="h-20 w-20 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-500 transition-all duration-300 shadow-sm">
-                  <CheckCircle className="h-10 w-10 text-emerald-500 group-hover:text-white transition-colors duration-300" />
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
+          </div>
 
-            {/* Quick Stats - Small Cards */}
-            {/* Runtime */}
-            <Card className="col-span-3 md:col-span-2 row-span-1 border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-300 group">
-              <CardContent className="p-4 h-full flex items-center gap-3">
-                <div className="h-14 w-14 rounded-xl bg-blue-500 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
-                  <Clock className="h-7 w-7 text-white" />
+          {/* Primary Stats Grid - 4 columns */}
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 animate-in fade-in slide-in-from-bottom-3 duration-700">
+            {/* Area Coverage Card */}
+            <div className="bg-gradient-to-br from-background to-muted/20 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 group">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">Coverage</span>
+                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-green-500/15 to-green-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(34,197,94,0.15)] group-hover:scale-110 transition-all duration-300">
+                  <Sprout className="h-4 w-4 text-green-600" />
                 </div>
-                <div className="flex-1">
-                  <div className="text-3xl font-bold">{Math.round(analytics?.total_runtime_hours ?? 0)}h</div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Runtime</p>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="text-3xl font-bold mb-1">
+                {Math.round((analytics?.total_area_managed_sqm || 0) / 100) / 10}k
+              </div>
+              <p className="text-xs text-muted-foreground/60">
+                {Math.round(analytics?.total_area_managed_sqm || 0).toLocaleString()} m²
+              </p>
+              <div className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-500/10 px-2 py-1 rounded-lg w-fit mt-2">
+                <TrendingUp className="h-3 w-3" />
+                +5%
+              </div>
+            </div>
 
-            {/* Active Alerts */}
-            <Card className="col-span-3 md:col-span-2 row-span-1 border-l-4 border-l-red-500 hover:shadow-lg transition-all duration-300 group">
-              <CardContent className="p-4 h-full flex items-center gap-3">
-                <div className="h-14 w-14 rounded-xl bg-red-500 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
-                  <AlertTriangle className="h-7 w-7 text-white" />
+            {/* Services Done Card */}
+            <div className="bg-gradient-to-br from-background to-muted/20 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 group">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">Services</span>
+                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)] group-hover:scale-110 transition-all duration-300">
+                  <CheckCircle className="h-4 w-4 text-botkorp-orange" />
                 </div>
-                <div className="flex-1">
-                  <div className="text-3xl font-bold">{(analytics?.offline_bots ?? 0) + (analytics?.error_bots ?? 0)}</div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Active Alerts</p>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="text-3xl font-bold mb-1">
+                <NumberTicker value={analytics?.services_completed_this_month ?? 0} />
+              </div>
+              <p className="text-xs text-muted-foreground/60">Completed this month</p>
+              <div className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-500/10 px-2 py-1 rounded-lg w-fit mt-2">
+                <TrendingUp className="h-3 w-3" />
+                +12%
+              </div>
+            </div>
 
-            {/* Command Center / Quick Actions */}
-            <Card className="col-span-6 md:col-span-2 row-span-1 bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-950 dark:to-gray-900 text-white border-0 hover:shadow-2xl transition-all duration-300 overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-r from-botkorp-orange/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <CardContent className="p-4 h-full relative">
-                <div className="flex items-center gap-2 mb-3">
-                  <Zap className="h-4 w-4 text-botkorp-orange" />
-                  <span className="text-xs font-bold uppercase tracking-wider">Quick Actions</span>
+            {/* Runtime Card */}
+            <div className="bg-gradient-to-br from-background to-muted/20 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 group">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">Runtime</span>
+                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(59,130,246,0.15)] group-hover:scale-110 transition-all duration-300">
+                  <Clock className="h-4 w-4 text-blue-600" />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button 
-                    size="sm"
-                    className="h-auto py-2 px-3 flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/20 border-0 text-white text-xs"
-                    onClick={() => navigate('/portal/services/add')}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Add
-                  </Button>
-                  <Button 
-                    size="sm"
-                    className="h-auto py-2 px-3 flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/20 border-0 text-white text-xs"
-                    onClick={() => navigate('/portal/bots')}
-                  >
-                    <Bot className="h-3.5 w-3.5" />
-                    Bots
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="text-3xl font-bold mb-1">{Math.round(analytics?.total_runtime_hours ?? 0)}h</div>
+              <p className="text-xs text-muted-foreground/60">Automated maintenance</p>
+            </div>
 
+            {/* Active Alerts Card */}
+            <div className="bg-gradient-to-br from-background to-muted/20 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 group">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">Alerts</span>
+                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-red-500/15 to-red-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(239,68,68,0.15)] group-hover:scale-110 transition-all duration-300">
+                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                </div>
+              </div>
+              <div className="text-3xl font-bold mb-1">{(analytics?.offline_bots ?? 0) + (analytics?.error_bots ?? 0)}</div>
+              <p className="text-xs text-muted-foreground/60">Requires attention</p>
+            </div>
+          </div>
+
+          {/* Secondary Stats Grid - 3 columns */}
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 animate-in fade-in slide-in-from-bottom-3 duration-700">
             {/* Gardens & Locations */}
-            <Card className="col-span-3 md:col-span-2 row-span-1 border-l-4 border-l-purple-500 hover:shadow-lg transition-all duration-300 group">
-              <CardContent className="p-4 h-full flex items-center gap-3">
-                <div className="h-14 w-14 rounded-xl bg-purple-500 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
-                  <Home className="h-7 w-7 text-white" />
+            <div className="bg-gradient-to-br from-background to-muted/20 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 group">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">Properties</span>
+                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-purple-500/15 to-purple-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(168,85,247,0.15)] group-hover:scale-110 transition-all duration-300">
+                  <Home className="h-4 w-4 text-purple-500" />
                 </div>
-                <div className="flex-1">
-                  <div className="text-3xl font-bold">{analytics?.total_gardens ?? 0}</div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">{analytics?.total_locations ?? 0} Locations</p>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="text-3xl font-bold mb-1">{analytics?.total_gardens ?? 0}</div>
+              <p className="text-xs text-muted-foreground/60">
+                {analytics?.total_gardens ?? 0} Garden{analytics?.total_gardens !== 1 ? 's' : ''} • {analytics?.total_locations ?? 0} Location{analytics?.total_locations !== 1 ? 's' : ''}
+              </p>
+            </div>
 
             {/* Next Service */}
-            <Card className="col-span-3 md:col-span-2 row-span-1 border-l-4 border-l-orange-500 hover:shadow-lg transition-all duration-300 group">
-              <CardContent className="p-4 h-full flex items-center gap-3">
-                <div className="h-14 w-14 rounded-xl bg-orange-500 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
-                  <Calendar className="h-7 w-7 text-white" />
+            <div className="bg-gradient-to-br from-background to-muted/20 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 group">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">Next Service</span>
+                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-amber-500/15 to-amber-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(245,158,11,0.15)] group-hover:scale-110 transition-all duration-300">
+                  <Calendar className="h-4 w-4 text-amber-500" />
                 </div>
-                <div className="flex-1">
-                  <div className="text-3xl font-bold">{analytics?.next_service_date ? format(new Date(analytics.next_service_date), 'MMM d') : 'None'}</div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">
-                    {analytics?.upcoming_services_count > 0 ? `${analytics.upcoming_services_count} Scheduled` : 'No Upcoming'}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="text-3xl font-bold mb-1">
+                {analytics?.next_service_date ? format(new Date(analytics.next_service_date), 'MMM d') : 'None'}
+              </div>
+              <p className="text-xs text-muted-foreground/60">
+                {analytics?.upcoming_services_count > 0 ? `${analytics.upcoming_services_count} scheduled` : 'No upcoming services'}
+              </p>
+            </div>
 
+            {/* Quick Actions */}
+            <div className="bg-gradient-to-br from-background to-muted/20 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-6 w-6 rounded-lg bg-botkorp-orange flex items-center justify-center">
+                  <Zap className="h-4 w-4 text-white" />
+                </div>
+                <span className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">Quick Actions</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button 
+                  size="sm"
+                  className="h-9 flex items-center justify-center gap-1.5 bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] hover:bg-botkorp-orange hover:text-white border-0 text-xs font-medium transition-all duration-300 rounded-xl"
+                  onClick={() => navigate('/portal/services/add')}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add
+                </Button>
+                <Button 
+                  size="sm"
+                  className="h-9 flex items-center justify-center gap-1.5 bg-botkorp-orange hover:bg-botkorp-orange/90 border-0 text-white text-xs font-medium transition-all duration-300 rounded-xl shadow-[0_4px_20px_rgb(255,107,53,0.25)] hover:shadow-[0_4px_20px_rgb(255,107,53,0.35)]"
+                  onClick={() => navigate('/portal/bots')}
+                >
+                  <Bot className="h-3.5 w-3.5" />
+                  Bots
+                </Button>
+              </div>
+            </div>
           </div>
 
           {/* Bot Status Widget - Real-time bot data */}
@@ -1190,100 +1223,98 @@ export default function DashboardPage() {
 
           {/* Alerts Section - Show immediately after stats */}
           {recentAlerts.length > 0 && (
-            <Card className="border-t-4 border-t-red-500 shadow-md animate-in fade-in slide-in-from-bottom-3 duration-500 delay-450">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
+            <div className="bg-gradient-to-br from-background to-muted/20 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all animate-in fade-in slide-in-from-bottom-3 duration-500 delay-450">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-red-500/15 to-red-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(239,68,68,0.15)]">
+                  <AlertTriangle className="h-5 w-5 text-red-500" />
+                </div>
+                <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <div className="h-0.5 w-8 bg-red-500 rounded-full" />
-                    <CardTitle className="text-sm font-bold uppercase tracking-wide flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-red-500" />
-                      Active Alerts
-                      <Badge variant="destructive" className="h-5 px-2 text-[10px] font-semibold">
-                        {recentAlerts.length}
-                      </Badge>
-                    </CardTitle>
+                    <h3 className="text-sm font-semibold">Active Alerts</h3>
+                    <Badge variant="destructive" className="h-5 px-2 text-[10px] font-bold bg-red-500 text-white">
+                      {recentAlerts.length}
+                    </Badge>
                   </div>
+                  <p className="text-xs text-muted-foreground/60 mt-0.5">
+                    Requires immediate attention
+                  </p>
                 </div>
-                <CardDescription className="text-xs mt-1">
-                  Requires immediate attention
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0 pb-3">
-                <div className="space-y-2">
-                  {recentAlerts.slice(0, 3).map((alert, index) => (
-                    <div
-                      key={alert.alert_id}
-                      className="flex items-start gap-2 p-3 rounded-lg border hover:border-red-300 hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-all duration-300 group animate-in fade-in slide-in-from-left-3"
-                      style={{ animationDelay: `${index * 50}ms`, animationDuration: '300ms' }}
-                    >
-                      <div className={`h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm ${
-                        alert.severity === 'critical' 
-                          ? 'bg-red-500' 
-                          : alert.severity === 'warning'
-                          ? 'bg-orange-500'
-                          : 'bg-blue-500'
-                      }`}>
-                        <AlertTriangle className="h-3.5 w-3.5 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <p className="font-semibold text-xs truncate">{alert.title}</p>
-                          <Badge 
-                            variant={getSeverityColor(alert.severity)} 
-                            className="text-[9px] capitalize font-bold px-1.5 py-0.5 h-4"
-                          >
-                            {alert.severity}
-                          </Badge>
-                        </div>
-                        <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 truncate">
-                          <Bot className="h-3 w-3 flex-shrink-0" />
-                          <span className="font-medium truncate">{alert.bot_name}</span>
-                          <span>•</span>
-                          <span className="truncate">{alert.location_name}</span>
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {recentAlerts.length > 3 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate('/portal/alerts')}
-                    className="w-full mt-3 text-xs h-8 hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-all duration-300"
+              </div>
+
+              <div className="space-y-2">
+                {recentAlerts.slice(0, 3).map((alert, index) => (
+                  <div
+                    key={alert.alert_id}
+                    className="flex items-start gap-3 p-3 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all duration-300 cursor-pointer group animate-in fade-in slide-in-from-left-3"
+                    style={{ animationDelay: `${index * 50}ms`, animationDuration: '300ms' }}
                   >
-                    View All {recentAlerts.length} Alerts
-                    <ArrowRight className="h-3 w-3 ml-1" />
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
+                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm ${
+                      alert.severity === 'critical' 
+                        ? 'bg-red-500' 
+                        : alert.severity === 'warning'
+                        ? 'bg-amber-500'
+                        : 'bg-blue-500'
+                    }`}>
+                      <AlertTriangle className="h-4 w-4 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-semibold text-xs truncate group-hover:text-botkorp-orange transition-colors">{alert.title}</p>
+                        <Badge 
+                          variant={getSeverityColor(alert.severity)} 
+                          className="text-[9px] uppercase font-bold px-2 py-0.5 h-4 capitalize"
+                        >
+                          {alert.severity}
+                        </Badge>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1.5 truncate">
+                        <Bot className="h-3 w-3 flex-shrink-0" />
+                        <span className="font-medium truncate">{alert.bot_name}</span>
+                        <span>•</span>
+                        <span className="truncate">{alert.location_name}</span>
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {recentAlerts.length > 3 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/portal/alerts')}
+                  className="w-full mt-3 text-xs h-9 border-none bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] hover:bg-red-500 hover:text-white transition-all duration-300 font-medium rounded-xl"
+                >
+                  View All {recentAlerts.length} Alerts
+                  <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                </Button>
+              )}
+            </div>
           )}
         </>
       )}
 
       {/* Empty State - No Services at all */}
       {!loading && analytics?.total_bots > 0 && analytics?.total_gardens === 0 && analytics?.total_pools === 0 ? (
-        <Card className="border-2 shadow-xl">
+        <Card className="border-2 border-[#E5E7EB] dark:border-[#2a2a2a] shadow-lg bg-white dark:bg-[#1a1a1a]">
           <CardContent className="flex flex-col items-center justify-center py-20 text-center space-y-8">
             <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-accent/20 blur-2xl animate-pulse" />
-              <div className="relative rounded-2xl bg-gradient-to-br from-accent to-accent p-10 shadow-xl">
-                <Sprout className="h-20 w-20 text-white" />
+              <div className="h-24 w-24 rounded-2xl bg-gradient-to-br from-[#10B981] to-[#10B981] flex items-center justify-center shadow-xl">
+                <Sprout className="h-12 w-12 text-white" />
               </div>
             </div>
             <div className="space-y-4 max-w-2xl">
-              <h3 className="text-2xl font-bold text-foreground">
+              <h3 className="text-2xl font-bold text-[#121212] dark:text-white">
                 Get Started with Your First Service
               </h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
+              <p className="text-[#4F5D75] dark:text-[#B0B3B8] text-sm leading-relaxed">
                 Add a garden, pool, or security service to start automating your property maintenance with Bot Korp.
               </p>
             </div>
             <Button
               size="lg"
               onClick={() => navigate('/portal/services/add')}
-              className="bg-gradient-to-r from-accent to-accent hover:from-accent/90 hover:to-accent/90 shadow-lg hover:shadow-xl transition-all duration-300 text-base px-8 py-6 rounded-xl"
+              className="bg-gradient-to-r from-[#FF6B35] to-[#E85A2A] hover:from-[#E85A2A] hover:to-[#FF6B35] shadow-lg hover:shadow-xl transition-all duration-300 text-base px-8 py-6 rounded-xl text-white font-bold"
             >
               <Plus className="h-5 w-5 mr-2" />
               Add Your First Service
@@ -1293,12 +1324,12 @@ export default function DashboardPage() {
       ) : !loading && analytics?.total_bots > 0 && (
         <>
           {/* Quick Action Buttons */}
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-3">
             <Button 
               variant="destructive" 
               size="sm" 
               onClick={handleEmergencyStopAll}
-              className="h-8 text-xs shadow-sm hover:shadow-md transition-all duration-300 active:scale-95 font-medium"
+              className="h-10 text-xs bg-red-500 hover:bg-red-600 text-white shadow-[0_4px_20px_rgb(239,68,68,0.25)] hover:shadow-[0_4px_20px_rgb(239,68,68,0.35)] transition-all duration-300 font-bold uppercase tracking-wide px-5 rounded-xl"
             >
               <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
               Emergency Stop
@@ -1306,7 +1337,7 @@ export default function DashboardPage() {
             <Button
               size="sm"
               onClick={() => navigate('/portal/services/add')}
-              className="h-8 text-xs bg-botkorp-orange hover:bg-botkorp-orange/90 text-white shadow-sm hover:shadow-md transition-all duration-300 active:scale-95 font-medium"
+              className="h-10 text-xs bg-botkorp-orange hover:bg-botkorp-orange/90 text-white shadow-[0_4px_20px_rgb(255,107,53,0.25)] hover:shadow-[0_4px_20px_rgb(255,107,53,0.35)] transition-all duration-300 font-bold uppercase tracking-wide px-5 rounded-xl"
             >
               <Plus className="h-3.5 w-3.5 mr-1.5" />
               Add Service
@@ -1314,31 +1345,31 @@ export default function DashboardPage() {
           </div>
 
         {/* Charts Section - Two Column Layout */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="h-0.5 w-8 bg-botkorp-orange rounded-full" />
-            <h2 className="text-sm font-bold uppercase tracking-wide">
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="h-1 w-1 bg-botkorp-orange rounded-full" />
+            <div className="h-1 w-8 bg-gradient-to-r from-botkorp-orange to-botkorp-orange/60 rounded-full" />
+            <h2 className="text-xs font-bold uppercase tracking-[0.15em]">
               Activity & Performance
             </h2>
+            <div className="flex-1 h-[1px] bg-gradient-to-r from-muted/30 to-transparent" />
           </div>
 
-          <div className="grid gap-3 grid-cols-1 lg:grid-cols-3">
-            {/* Mowing Activity Chart */}
+          <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+            {/* Mowing Activity Chart - Soft Design */}
             {mowingActivity.length > 0 && (
-              <Card className="lg:col-span-2 border-t-4 border-t-botkorp-orange shadow-md overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-500 delay-500">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-sm font-bold">Mowing Activity</CardTitle>
-                      <CardDescription className="text-xs mt-0.5">Area coverage over last 30 days</CardDescription>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-lg h-6">
-                      <TrendingUp className="h-3 w-3" />
-                      +3.2%
-                    </div>
+              <div className="lg:col-span-2 bg-gradient-to-br from-background to-muted/20 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all animate-in fade-in slide-in-from-bottom-3 duration-500 delay-500">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-sm font-semibold mb-0.5">Mowing Activity</h3>
+                    <p className="text-xs text-muted-foreground/60">Area coverage over last 30 days</p>
                   </div>
-                </CardHeader>
-              <CardContent className="pt-4 pb-3">
+                  <div className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-500/10 px-2 py-1 rounded-lg">
+                    <TrendingUp className="h-3 w-3" />
+                    +3.2%
+                  </div>
+                </div>
+              <div>
                 <ResponsiveContainer width="100%" height={240}>
                   <LineChart 
                     data={mowingActivity}
@@ -1378,49 +1409,49 @@ export default function DashboardPage() {
                   </LineChart>
                 </ResponsiveContainer>
                 
-                <div className="grid grid-cols-3 gap-3 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-muted/20">
                   <div>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">Total Area</p>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+                    <p className="text-[10px] text-muted-foreground/60 mb-0.5 font-medium uppercase tracking-wider">Total Area</p>
+                    <p className="text-sm font-bold">
                       {Math.round(mowingActivity.reduce((sum, item) => sum + (item.area_mowed || 0), 0))} m²
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">Sessions</p>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+                    <p className="text-[10px] text-muted-foreground/60 mb-0.5 font-medium uppercase tracking-wider">Sessions</p>
+                    <p className="text-sm font-bold">
                       {mowingActivity.reduce((sum, item) => sum + (item.sessions_count || 0), 0)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">Avg/Day</p>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+                    <p className="text-[10px] text-muted-foreground/60 mb-0.5 font-medium uppercase tracking-wider">Avg/Day</p>
+                    <p className="text-sm font-bold">
                       {Math.round(mowingActivity.reduce((sum, item) => sum + (item.area_mowed || 0), 0) / mowingActivity.length)} m²
                     </p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
 
-            {/* Bot Performance Metrics */}
-            <Card className="border-t-4 border-t-botkorp-orange shadow-md animate-in fade-in slide-in-from-bottom-3 duration-500 delay-550">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-bold">Performance</CardTitle>
-                <CardDescription className="text-xs mt-0.5">System metrics</CardDescription>
-              </CardHeader>
-            <CardContent className="pt-4">
+            {/* Bot Performance Metrics - Soft Design */}
+            <div className="bg-gradient-to-br from-background to-muted/20 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all animate-in fade-in slide-in-from-bottom-3 duration-500 delay-550">
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold mb-0.5">Performance</h3>
+                <p className="text-xs text-muted-foreground/60">System metrics</p>
+              </div>
+            <div>
               <div className="space-y-4">
                 {/* Operational */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Operational</span>
-                    <span className="text-xs font-bold text-gray-900 dark:text-white">
+                    <span className="text-xs font-medium text-muted-foreground/70">Operational</span>
+                    <span className="text-xs font-bold">
                       {Math.round(((analytics?.operational_bots ?? 0) / (analytics?.total_bots || 1)) * 100)}%
                     </span>
                   </div>
-                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-muted/30 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-emerald-500 rounded-full transition-all duration-1000"
+                      className="h-full bg-green-500 rounded-full transition-all duration-1000"
                       style={{ width: `${Math.round(((analytics?.operational_bots ?? 0) / (analytics?.total_bots || 1)) * 100)}%` }}
                     />
                   </div>
@@ -1429,10 +1460,10 @@ export default function DashboardPage() {
                 {/* Coverage */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Coverage Rate</span>
-                    <span className="text-xs font-bold text-gray-900 dark:text-white">92%</span>
+                    <span className="text-xs font-medium text-muted-foreground/70">Coverage Rate</span>
+                    <span className="text-xs font-bold">92%</span>
                   </div>
-                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-muted/30 rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-blue-500 rounded-full transition-all duration-1000" 
                       style={{ width: '92%' }}
@@ -1443,12 +1474,12 @@ export default function DashboardPage() {
                 {/* Efficiency */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Efficiency</span>
-                    <span className="text-xs font-bold text-gray-900 dark:text-white">87%</span>
+                    <span className="text-xs font-medium text-muted-foreground/70">Efficiency</span>
+                    <span className="text-xs font-bold">87%</span>
                   </div>
-                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-muted/30 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-orange-500 rounded-full transition-all duration-1000" 
+                      className="h-full bg-botkorp-orange rounded-full transition-all duration-1000" 
                       style={{ width: '87%' }}
                     />
                   </div>
@@ -1457,10 +1488,10 @@ export default function DashboardPage() {
                 {/* Battery Health */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Avg Battery</span>
-                    <span className="text-xs font-bold text-gray-900 dark:text-white">95%</span>
+                    <span className="text-xs font-medium text-muted-foreground/70">Avg Battery</span>
+                    <span className="text-xs font-bold">95%</span>
                   </div>
-                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-muted/30 rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-green-500 rounded-full transition-all duration-1000" 
                       style={{ width: '95%' }}
@@ -1471,10 +1502,10 @@ export default function DashboardPage() {
                 {/* Response Time */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Response Time</span>
-                    <span className="text-xs font-bold text-gray-900 dark:text-white">Fast</span>
+                    <span className="text-xs font-medium text-muted-foreground/70">Response Time</span>
+                    <span className="text-xs font-bold">Fast</span>
                   </div>
-                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-muted/30 rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-purple-500 rounded-full transition-all duration-1000" 
                       style={{ width: '78%' }}
@@ -1482,61 +1513,59 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
           </div>
         </div>
 
-          {/* Upcoming Services Section */}
+          {/* Upcoming Services Section - Soft Design */}
           {upcomingServices.length > 0 && (
-            <Card className="border-t-4 border-t-botkorp-orange shadow-md animate-in fade-in slide-in-from-bottom-3 duration-500 delay-600">
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="h-0.5 w-8 bg-botkorp-orange rounded-full" />
-                  <CardTitle className="text-sm font-bold uppercase tracking-wide flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-botkorp-orange" />
-                    Upcoming Services
-                  </CardTitle>
+            <div className="bg-gradient-to-br from-background to-muted/20 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all animate-in fade-in slide-in-from-bottom-3 duration-500 delay-600">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+                  <Calendar className="h-5 w-5 text-botkorp-orange" />
                 </div>
-                <CardDescription className="text-xs mt-1">
-                  Scheduled maintenance
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0 pb-3">
-                <div className="space-y-2">
-                  {upcomingServices.slice(0, 5).map((service, index) => (
-                    <div
-                      key={service.bot_id}
-                      className="flex items-center justify-between p-3 rounded-lg border hover:border-botkorp-orange/50 hover:bg-botkorp-orange/5 transition-all duration-300 group animate-in fade-in slide-in-from-left-3"
-                      style={{ animationDelay: `${index * 50}ms`, animationDuration: '300ms' }}
-                    >
-                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                        <div className="h-8 w-8 rounded-lg bg-botkorp-orange flex items-center justify-center text-white font-bold text-xs shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform duration-300">
-                          {service.bot_name.charAt(0)}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-xs truncate">{service.bot_name}</p>
-                          <p className="text-[10px] text-muted-foreground flex items-center gap-1 truncate">
-                            <MapPin className="h-3 w-3 flex-shrink-0" />
-                            <span className="truncate">{service.location_name}</span>
-                          </p>
-                        </div>
+                <div>
+                  <h3 className="text-sm font-semibold">Upcoming Services</h3>
+                  <p className="text-xs text-muted-foreground/60 mt-0.5">
+                    Scheduled maintenance
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {upcomingServices.slice(0, 5).map((service, index) => (
+                  <div
+                    key={service.bot_id}
+                    className="flex items-center justify-between p-3 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all duration-300 cursor-pointer group animate-in fade-in slide-in-from-left-3"
+                    style={{ animationDelay: `${index * 50}ms`, animationDuration: '300ms' }}
+                  >
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center text-blue-600 font-bold text-xs shadow-[0_2px_10px_rgb(59,130,246,0.1)] flex-shrink-0 group-hover:scale-105 transition-transform duration-300">
+                        {service.bot_name.charAt(0)}
                       </div>
-                      <div className="text-right ml-2 flex-shrink-0">
-                        <div className="px-2 py-1 rounded-lg bg-botkorp-orange text-white shadow-sm">
-                          <p className="text-[10px] font-bold whitespace-nowrap">
-                            {format(new Date(service.next_service_date), 'MMM d')}
-                          </p>
-                        </div>
-                        <p className="text-[9px] text-muted-foreground mt-1">
-                          {service.days_until_service}d away
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-xs truncate group-hover:text-botkorp-orange transition-colors">{service.bot_name}</p>
+                        <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1 truncate">
+                          <MapPin className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{service.location_name}</span>
                         </p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    <div className="text-right ml-2 flex-shrink-0">
+                      <div className="px-2 py-1 rounded-lg bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 text-botkorp-orange shadow-[0_2px_10px_rgb(255,107,53,0.1)]">
+                        <p className="text-[10px] font-bold whitespace-nowrap">
+                          {format(new Date(service.next_service_date), 'MMM d')}
+                        </p>
+                      </div>
+                      <p className="text-[9px] text-muted-foreground/60 mt-1 font-medium">
+                        {service.days_until_service}d away
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
           </>
         )}

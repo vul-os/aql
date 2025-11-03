@@ -299,64 +299,68 @@ export default function BillingPage() {
   const nextBillingDate = subscriptions[0]?.next_billing_date;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8">
-      <PageHeader
-        title="Billing & Payments"
-        subtitle="Manage subscriptions, payment methods, and billing details"
-        icon={<CreditCard className="h-6 w-6 text-primary" />}
-      />
+    <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
+      <div className="bg-gradient-to-br from-background via-background to-muted/20 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        <PageHeader
+          title="Billing & Payments"
+          subtitle="Manage subscriptions, payment methods, and billing details"
+          icon={<CreditCard />}
+        />
+      </div>
 
-      {/* Monthly Overview - Hero Card */}
-      <Card className="border-2 bg-gradient-to-br from-primary/5 via-background to-background">
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground uppercase tracking-wide">Your Monthly Bill</p>
-              <div className="flex items-baseline gap-3">
-                <span className="text-5xl font-bold">R{totalMonthly.toFixed(2)}</span>
-                <span className="text-lg text-muted-foreground">/month</span>
-              </div>
-              {nextBillingDate && (
-                <p className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
+      {/* Monthly Overview - Hero Card with Soft UI */}
+      <div className="bg-gradient-to-br from-botkorp-orange/5 via-background to-muted/10 rounded-3xl p-8 shadow-[0_8px_30px_rgb(255,107,53,0.08)]">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">Your Monthly Bill</p>
+            <div className="flex items-baseline gap-3">
+              <span className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-botkorp-orange to-botkorp-orange/70 bg-clip-text text-transparent">
+                R{totalMonthly.toFixed(2)}
+              </span>
+              <span className="text-xl text-muted-foreground/60">/month</span>
+            </div>
+            {nextBillingDate && (
+              <div className="inline-flex items-center gap-2 px-3 py-2 bg-background/60 backdrop-blur-sm rounded-xl shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                <Calendar className="h-4 w-4 text-botkorp-orange" />
+                <span className="text-sm font-medium">
                   Next billing: {new Date(nextBillingDate).toLocaleDateString('en-ZA', { 
                     year: 'numeric', 
                     month: 'long', 
                     day: 'numeric' 
                   })}
-                </p>
-              )}
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-green-500/10 rounded-xl">
+              <TrendingUp className="h-5 w-5 text-green-600" />
+              <span className="text-sm font-medium">Auto-billing enabled</span>
             </div>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <TrendingUp className="h-4 w-4 text-green-600" />
-                <span>Auto-billing enabled</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Check className="h-4 w-4 text-green-600" />
-                <span>{subscriptions.length} active subscription{subscriptions.length !== 1 ? 's' : ''}</span>
-              </div>
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-botkorp-orange/10 rounded-xl">
+              <Check className="h-5 w-5 text-botkorp-orange" />
+              <span className="text-sm font-medium">{subscriptions.length} active subscription{subscriptions.length !== 1 ? 's' : ''}</span>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Subscriptions Grouped by Location */}
+      {/* Subscriptions Grouped by Location - Soft UI */}
       {subscriptions.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-2xl">Active Subscriptions</CardTitle>
-                <CardDescription>
-                  Your current bot services grouped by location
-                  {Object.keys(subscriptionsByLocation).length > 1 && ` • ${Object.keys(subscriptionsByLocation).length} locations`}
-                </CardDescription>
-              </div>
-              <Receipt className="h-6 w-6 text-muted-foreground" />
+        <div className="bg-gradient-to-br from-background to-muted/20 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+              <Receipt className="h-5 w-5 text-botkorp-orange" />
             </div>
-          </CardHeader>
-          <CardContent>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold">Active Subscriptions</h3>
+              <p className="text-sm text-muted-foreground/70">
+                Your current bot services grouped by location
+                {Object.keys(subscriptionsByLocation).length > 1 && ` • ${Object.keys(subscriptionsByLocation).length} locations`}
+              </p>
+            </div>
+          </div>
+          <div>
             <div className="space-y-6">
               {Object.entries(subscriptionsByLocation).map(([locationId, locationData], locationIndex) => (
                 <div key={locationId} className={locationIndex > 0 ? 'pt-6 border-t' : ''}>
@@ -371,50 +375,49 @@ export default function BillingPage() {
                   {/* Bot Rentals */}
                   {locationData.agreements.map((sub, index) => (
                     <div key={sub.id}>
-                      <div className="flex items-center justify-between py-3 pl-4">
+                      <div className="flex items-center justify-between py-3.5 px-4 bg-background/40 rounded-xl">
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <BotIcon className="h-5 w-5 text-primary" />
+                          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.1)]">
+                            <BotIcon className="h-5 w-5 text-botkorp-orange" />
                           </div>
                           <div>
-                            <p className="font-medium">
+                            <p className="font-semibold text-sm">
                               {sub.bot?.name || 'Bot Rental'}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-muted-foreground/60">
                               R150/month per bot
                             </p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold">R{parseFloat(sub.bot_rental).toFixed(2)}</p>
+                          <p className="font-bold text-lg">R{parseFloat(sub.bot_rental).toFixed(2)}</p>
                         </div>
                       </div>
-                      {index < locationData.agreements.length - 1 && <Separator className="ml-4" />}
+                      {index < locationData.agreements.length - 1 && <div className="h-2" />}
                     </div>
                   ))}
 
                   {/* Service Fee (once per location) */}
                   {locationData.service_fee > 0 && (
-                    <>
-                      <Separator className="ml-4 my-2" />
-                      <div className="flex items-center justify-between py-3 pl-4 bg-accent/5 rounded-lg">
+                    <div className="mt-2">
+                      <div className="flex items-center justify-between py-3.5 px-4 bg-green-500/5 rounded-xl border border-green-500/10">
                         <div>
-                          <p className="font-medium">Monthly Service Fee</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="font-semibold text-sm">Monthly Service Fee</p>
+                          <p className="text-xs text-muted-foreground/60">
                             Per location - includes edge trimming, battery swaps, bot servicing
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold">R{locationData.service_fee.toFixed(2)}</p>
+                          <p className="font-bold text-lg">R{locationData.service_fee.toFixed(2)}</p>
                         </div>
                       </div>
-                    </>
+                    </div>
                   )}
 
                   {/* Location Subtotal */}
-                  <div className="mt-3 pt-3 border-t flex items-center justify-between pl-4">
-                    <p className="font-semibold">Location Subtotal</p>
-                    <p className="text-xl font-bold text-primary">
+                  <div className="mt-4 pt-4 border-t flex items-center justify-between px-2">
+                    <p className="font-bold">Location Subtotal</p>
+                    <p className="text-2xl font-bold text-botkorp-orange">
                       R{(locationData.bot_rental_total + locationData.service_fee).toFixed(2)}
                     </p>
                   </div>
@@ -422,88 +425,95 @@ export default function BillingPage() {
               ))}
               
               {/* Grand Total */}
-              <div className="pt-4 border-t-2">
+              <div className="mt-6 pt-6 border-t-2 bg-botkorp-orange/5 rounded-2xl p-5">
                 <div className="flex items-center justify-between">
-                  <p className="text-lg font-semibold">Total Monthly</p>
-                  <p className="text-3xl font-bold text-primary">R{totalMonthly.toFixed(2)}</p>
+                  <p className="text-lg font-bold">Total Monthly</p>
+                  <p className="text-4xl font-bold text-botkorp-orange">R{totalMonthly.toFixed(2)}</p>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-sm text-muted-foreground/70 mt-2">
                   {subscriptions.length} bot{subscriptions.length !== 1 ? 's' : ''} across {Object.keys(subscriptionsByLocation).length} location{Object.keys(subscriptionsByLocation).length !== 1 ? 's' : ''}
                 </p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
-      {/* Payment Methods Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-2xl">Payment Methods</CardTitle>
-              <CardDescription>
-                Manage your saved cards for automatic billing
-              </CardDescription>
+      {/* Payment Methods Section - Soft UI */}
+      <div className="bg-gradient-to-br from-background to-muted/20 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+              <CreditCard className="h-5 w-5 text-botkorp-orange" />
             </div>
-            <Button 
-              onClick={handleAddCard} 
-              disabled={processing}
-              size="lg"
-            >
-              {processing ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Card
-                </>
-              )}
-            </Button>
+            <div>
+              <h3 className="text-xl font-bold">Payment Methods</h3>
+              <p className="text-sm text-muted-foreground/70">
+                Manage your saved cards for automatic billing
+              </p>
+            </div>
           </div>
-        </CardHeader>
-        <CardContent>
+          <Button 
+            onClick={handleAddCard} 
+            disabled={processing}
+            className="h-11 px-6 font-medium bg-botkorp-orange hover:bg-botkorp-orange/90 text-white rounded-xl shadow-[0_8px_30px_rgb(255,107,53,0.25)] hover:shadow-[0_8px_30px_rgb(255,107,53,0.35)] hover:-translate-y-0.5 transition-all"
+          >
+            {processing ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Card
+              </>
+            )}
+          </Button>
+        </div>
+        <div>
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : authorizations.length === 0 ? (
             <div className="text-center py-16">
-              <div className="h-20 w-20 rounded-full bg-muted mx-auto mb-6 flex items-center justify-center">
-                <CreditCard className="h-10 w-10 text-muted-foreground" />
+              <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 mx-auto mb-6 flex items-center justify-center shadow-[0_8px_30px_rgb(255,107,53,0.15)]">
+                <CreditCard className="h-10 w-10 text-botkorp-orange" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">No payment methods</h3>
-              <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+              <h3 className="text-xl font-bold mb-2">No payment methods</h3>
+              <p className="text-muted-foreground/70 mb-6 max-w-sm mx-auto text-sm">
                 Add a card to enable automatic billing for your subscriptions
               </p>
-              <Button onClick={handleAddCard} disabled={processing} size="lg">
+              <Button 
+                onClick={handleAddCard} 
+                disabled={processing}
+                className="h-11 px-6 font-medium bg-botkorp-orange hover:bg-botkorp-orange/90 text-white rounded-xl shadow-[0_8px_30px_rgb(255,107,53,0.25)] hover:shadow-[0_8px_30px_rgb(255,107,53,0.35)] hover:-translate-y-0.5 transition-all"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Your First Card
               </Button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {authorizations.map((auth) => {
                 const expired = isCardExpired(auth.exp_month, auth.exp_year);
                 
                 return (
                   <div
                     key={auth.id}
-                    className={`group relative p-6 border-2 rounded-xl transition-all ${
+                    className={`group relative p-5 rounded-2xl transition-all ${
                       auth.is_default 
-                        ? 'border-primary bg-primary/5 shadow-sm' 
-                        : 'border-border hover:border-primary/50'
+                        ? 'bg-botkorp-orange/5 shadow-[0_4px_20px_rgb(255,107,53,0.12)]' 
+                        : 'bg-background/60 shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[0_4px_20px_rgb(0,0,0,0.08)]'
                     } ${expired ? 'opacity-60' : ''}`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-5">
+                    <div className="flex items-center justify-between flex-wrap gap-4">
+                      <div className="flex items-center gap-4">
                         {/* Card Visual */}
-                        <div className={`h-16 w-24 rounded-lg flex items-center justify-center ${
-                          auth.is_default ? 'bg-gradient-to-br from-primary to-primary/60' : 'bg-gradient-to-br from-gray-700 to-gray-900'
-                        } text-white shadow-lg`}>
+                        <div className={`h-16 w-24 rounded-xl flex items-center justify-center shadow-lg ${
+                          auth.is_default ? 'bg-gradient-to-br from-botkorp-orange to-botkorp-orange/70' : 'bg-gradient-to-br from-gray-700 to-gray-900'
+                        } text-white`}>
                           <CreditCard className="h-8 w-8" />
                         </div>
                         
@@ -513,13 +523,15 @@ export default function BillingPage() {
                               {formatCardNumber(auth.last4)}
                             </p>
                             {auth.is_default && (
-                              <Badge className="gap-1">
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-botkorp-orange/15 text-botkorp-orange text-xs font-semibold">
                                 <Star className="h-3 w-3 fill-current" />
                                 Default
-                              </Badge>
+                              </span>
                             )}
                             {expired && (
-                              <Badge variant="destructive">Expired</Badge>
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500/15 text-red-600 text-xs font-semibold">
+                                Expired
+                              </span>
                             )}
                           </div>
                           
@@ -546,6 +558,7 @@ export default function BillingPage() {
                             size="sm"
                             onClick={() => handleSetDefault(auth.id)}
                             disabled={settingDefaultId === auth.id}
+                            className="h-9 px-4 rounded-xl border-none bg-background/60 shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)]"
                           >
                             {settingDefaultId === auth.id ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -562,7 +575,7 @@ export default function BillingPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setDeletingId(auth.id)}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          className="h-9 w-9 p-0 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -570,12 +583,14 @@ export default function BillingPage() {
                     </div>
 
                     {expired && (
-                      <Alert className="mt-4" variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertDescription className="text-sm">
-                          This card has expired. Please add a new card and remove this one.
-                        </AlertDescription>
-                      </Alert>
+                      <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="h-4 w-4 text-red-600 mt-0.5" />
+                          <p className="text-sm text-red-600">
+                            This card has expired. Please add a new card and remove this one.
+                          </p>
+                        </div>
+                      </div>
                     )}
                   </div>
                 );
@@ -585,66 +600,66 @@ export default function BillingPage() {
 
           {/* Info Card */}
           {authorizations.length > 0 && (
-            <Alert className="mt-6 bg-accent/5 dark:bg-accent/10 border-accent/20 dark:border-accent/30">
-              <AlertCircle className="h-4 w-4 text-accent" />
-              <AlertDescription className="text-sm">
-                <strong>Card Verification:</strong> When adding a new card, we charge R1 to verify it. 
-                This may be refunded by your bank or appear as a pending transaction.
-              </AlertDescription>
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Transactions Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <Activity className="h-6 w-6" />
-                Transactions
-              </CardTitle>
-              <CardDescription>
-                Payment history and transaction details
-              </CardDescription>
+            <div className="mt-6 p-4 bg-blue-500/5 border border-blue-500/10 rounded-xl">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div className="text-sm text-muted-foreground/80">
+                  <strong className="text-foreground">Card Verification:</strong> When adding a new card, we charge R1 to verify it. 
+                  This may be refunded by your bank or appear as a pending transaction.
+                </div>
+              </div>
             </div>
+          )}
+        </div>
+      </div>
+
+      {/* Transactions Section - Soft UI */}
+      <div className="bg-gradient-to-br from-background to-muted/20 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+            <Activity className="h-5 w-5 text-botkorp-orange" />
           </div>
-        </CardHeader>
-        <CardContent>
+          <div>
+            <h3 className="text-xl font-bold">Transactions</h3>
+            <p className="text-sm text-muted-foreground/70">
+              Payment history and transaction details
+            </p>
+          </div>
+        </div>
+        <div>
           {loadingTransactions ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : transactions.length === 0 ? (
             <div className="text-center py-16">
-              <div className="h-20 w-20 rounded-full bg-muted mx-auto mb-6 flex items-center justify-center">
-                <Activity className="h-10 w-10 text-muted-foreground" />
+              <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 mx-auto mb-6 flex items-center justify-center shadow-[0_8px_30px_rgb(255,107,53,0.15)]">
+                <Activity className="h-10 w-10 text-botkorp-orange" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">No transactions yet</h3>
-              <p className="text-muted-foreground max-w-sm mx-auto">
+              <h3 className="text-xl font-bold mb-2">No transactions yet</h3>
+              <p className="text-muted-foreground/70 max-w-sm mx-auto text-sm">
                 Your payment transactions will appear here once they are processed
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {transactions.slice(0, 10).map((transaction) => (
                 <div 
                   key={transaction.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  className="flex items-center justify-between p-4 bg-background/60 backdrop-blur-sm rounded-2xl shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
+                    <div className="h-12 w-12 rounded-xl bg-muted/50 flex items-center justify-center">
                       {getTransactionIcon(transaction.status)}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold">
+                        <p className="font-semibold text-sm">
                           {transaction.invoice?.invoice_number || 'Payment Attempt'}
                         </p>
-                        <Badge className={getStatusColor(transaction.status)}>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium ${getStatusColor(transaction.status)}`}>
                           {transaction.status}
-                        </Badge>
+                        </span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                         <span>{new Date(transaction.created_at).toLocaleDateString('en-ZA', { 
@@ -690,49 +705,47 @@ export default function BillingPage() {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Invoices Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <Receipt className="h-6 w-6" />
-                Invoices
-              </CardTitle>
-              <CardDescription>
-                View and download your invoices
-              </CardDescription>
-            </div>
+      {/* Invoices Section - Soft UI */}
+      <div className="bg-gradient-to-br from-background to-muted/20 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+            <Receipt className="h-5 w-5 text-botkorp-orange" />
           </div>
-        </CardHeader>
-        <CardContent>
+          <div>
+            <h3 className="text-xl font-bold">Invoices</h3>
+            <p className="text-sm text-muted-foreground/70">
+              View and download your invoices
+            </p>
+          </div>
+        </div>
+        <div>
           {loadingInvoices ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : invoices.length === 0 ? (
             <div className="text-center py-16">
-              <div className="h-20 w-20 rounded-full bg-muted mx-auto mb-6 flex items-center justify-center">
-                <FileText className="h-10 w-10 text-muted-foreground" />
+              <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 mx-auto mb-6 flex items-center justify-center shadow-[0_8px_30px_rgb(255,107,53,0.15)]">
+                <FileText className="h-10 w-10 text-botkorp-orange" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">No invoices yet</h3>
-              <p className="text-muted-foreground max-w-sm mx-auto">
+              <h3 className="text-xl font-bold mb-2">No invoices yet</h3>
+              <p className="text-muted-foreground/70 max-w-sm mx-auto text-sm">
                 Your invoices will appear here once they are generated
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {invoices.map((invoice) => (
                 <div 
                   key={invoice.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  className="flex items-center justify-between p-4 bg-background/60 backdrop-blur-sm rounded-2xl shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <FileText className="h-6 w-6 text-primary" />
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.1)]">
+                      <FileText className="h-6 w-6 text-botkorp-orange" />
                     </div>
                     <div>
                       <p className="font-semibold">{invoice.invoice_number}</p>
@@ -743,22 +756,22 @@ export default function BillingPage() {
                           day: 'numeric' 
                         })}</span>
                         <span>•</span>
-                        <Badge className={getStatusColor(invoice.status)}>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium ${getStatusColor(invoice.status)}`}>
                           {invoice.status}
-                        </Badge>
+                        </span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 flex-wrap">
                     <div className="text-right">
                       <p className="text-lg font-bold">R{parseFloat(invoice.total_amount).toFixed(2)}</p>
                       {invoice.status === 'paid' && invoice.paid_date && (
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-green-600">
                           Paid {new Date(invoice.paid_date).toLocaleDateString()}
                         </p>
                       )}
                       {invoice.status !== 'paid' && invoice.due_date && (
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground/60">
                           Due {new Date(invoice.due_date).toLocaleDateString()}
                         </p>
                       )}
@@ -769,6 +782,7 @@ export default function BillingPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => setSelectedInvoicePdf({ url: invoice.invoice_pdf_url, number: invoice.invoice_number })}
+                          className="h-9 px-3 rounded-xl border-none bg-background/60 shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)]"
                         >
                           <Eye className="h-4 w-4 mr-1" />
                           View
@@ -782,6 +796,7 @@ export default function BillingPage() {
                             a.download = `${invoice.invoice_number}.pdf`;
                             a.click();
                           }}
+                          className="h-9 px-3 rounded-xl border-none bg-background/60 shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)]"
                         >
                           <Download className="h-4 w-4 mr-1" />
                           Download
@@ -789,22 +804,26 @@ export default function BillingPage() {
                       </div>
                     )}
                     {!invoice.invoice_pdf_url && (
-                      <Badge variant="outline">Generating PDF...</Badge>
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-muted/50 text-xs font-medium text-muted-foreground">
+                        Generating PDF...
+                      </span>
                     )}
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Invoice PDF Viewer Dialog */}
+      {/* Invoice PDF Viewer Dialog - Soft UI */}
       <Dialog open={!!selectedInvoicePdf} onOpenChange={() => setSelectedInvoicePdf(null)}>
-        <DialogContent className="max-w-5xl h-[90vh]">
+        <DialogContent className="max-w-5xl h-[90vh] rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
+            <DialogTitle className="flex items-center gap-3 text-xl">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+                <FileText className="h-5 w-5 text-botkorp-orange" />
+              </div>
               Invoice {selectedInvoicePdf?.number}
             </DialogTitle>
           </DialogHeader>
@@ -812,7 +831,7 @@ export default function BillingPage() {
             {selectedInvoicePdf?.url && (
               <iframe
                 src={selectedInvoicePdf.url}
-                className="w-full h-full rounded-lg border"
+                className="w-full h-full rounded-2xl border-2"
                 title="Invoice PDF"
               />
             )}
@@ -820,20 +839,20 @@ export default function BillingPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation Dialog - Soft UI */}
       <AlertDialog open={!!deletingId} onOpenChange={() => setDeletingId(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-3xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove Payment Method?</AlertDialogTitle>
+            <AlertDialogTitle className="text-xl">Remove Payment Method?</AlertDialogTitle>
             <AlertDialogDescription asChild>
-              <div className="space-y-2 text-sm text-muted-foreground">
+              <div className="space-y-3 text-sm text-muted-foreground/80">
                 <p>Are you sure you want to remove this card? This action cannot be undone.</p>
                 {authorizations.find(a => a.id === deletingId)?.is_default && (
-                  <div className="mt-3 p-3 bg-destructive/10 border border-destructive/20 rounded">
-                    <p className="font-semibold text-sm text-destructive">
+                  <div className="mt-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+                    <p className="font-semibold text-sm text-red-600">
                       ⚠️ Warning: This is your default payment method.
                     </p>
-                    <p className="text-sm mt-1">
+                    <p className="text-sm mt-2 text-red-600/80">
                       You'll need to set a new default card for automatic billing.
                     </p>
                   </div>
@@ -841,11 +860,13 @@ export default function BillingPage() {
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="rounded-xl border-none bg-background/60 shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)]">
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => handleDeleteCard(deletingId)}
-              className="bg-destructive hover:bg-destructive/90"
+              className="bg-destructive hover:bg-destructive/90 rounded-xl shadow-lg"
             >
               Remove Card
             </AlertDialogAction>

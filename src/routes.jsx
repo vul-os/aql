@@ -46,9 +46,7 @@ const ServicesPage = lazyImport(() => import('./pages/services/services-page'));
 const ServiceDetailPage = lazyImport(() => import('./pages/services/service-detail-page'));
 const AddServicePage = lazyImport(() => import('./pages/services/add-service-page'));
 const AddServicePublic = lazyImport(() => import('./pages/services/add-service-public'));
-const ServiceBotStatus = lazyImport(() => import('./pages/services/service-bot-status'));
-const LocationsPage = lazyImport(() => import('./pages/locations/locations-page'));
-const LocationBotStatusPage = lazyImport(() => import('./pages/locations/location-bot-status-page'));
+const LocationServicesStatusPage = lazyImport(() => import('./pages/locations/location-services-status-page'));
 const BotsPage = lazyImport(() => import('./pages/bots/bots-page'));
 const SettingsPage = lazyImport(() => import('./pages/settings/settings-page'));
 const BillingPage = lazyImport(() => import('./pages/settings/billing-page'));
@@ -130,11 +128,9 @@ const AppRoutes = () => {
           <Route path="services/add" element={<AddServicePage />} />
           <Route path="service/:id" element={<ServiceDetailPage />} />
           <Route path="service/:id/:tab" element={<ServiceDetailPage />} />
-          <Route path="service/:serviceId/bot-status" element={<ServiceBotStatus />} />
           
           {/* Locations */}
-          <Route path="locations" element={<LocationsPage />} />
-          <Route path="location/:locationId/bot-status" element={<LocationBotStatusPage />} />
+          <Route path="location/:locationId/bot-status" element={<LocationServicesStatusPage />} />
           
           {/* Settings - with optional tab sub-route */}
           <Route path="settings" element={<SettingsPage />} />

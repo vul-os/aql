@@ -56,15 +56,37 @@ export function NotificationCenter() {
     <div className="relative">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="group relative h-12 w-12 rounded-2xl bg-gradient-to-br from-white via-gray-50 to-white dark:from-botkorp-black-light dark:via-botkorp-slate-blue/10 dark:to-botkorp-black-light border border-gray-200/60 dark:border-botkorp-slate-blue/40 shadow-[0_4px_16px_rgba(0,0,0,0.08),inset_0_1px_2px_rgba(255,255,255,0.3)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.3),inset_0_1px_2px_rgba(255,107,53,0.08)] hover:shadow-[0_8px_24px_rgba(255,107,53,0.15),inset_0_2px_4px_rgba(255,255,255,0.4)] dark:hover:shadow-[0_8px_24px_rgba(255,107,53,0.25),inset_0_2px_4px_rgba(255,107,53,0.12)] hover:scale-105 active:scale-95 transition-all duration-300 overflow-hidden"
+          >
+            {/* Shimmer effect */}
+            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-botkorp-orange/20 to-transparent" />
+            
+            {/* Inner glow */}
+            <div className="absolute inset-2 rounded-xl bg-gradient-to-br from-botkorp-orange/0 to-botkorp-orange/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            
+            {/* Bell icon */}
+            <Bell className={`relative z-10 h-5 w-5 transition-all duration-300 ${unreadCount > 0 ? 'text-botkorp-orange animate-pulse' : 'text-gray-700 dark:text-white group-hover:text-botkorp-orange'}`} />
+            
+            {/* Unread badge with enhanced styling */}
             {unreadCount > 0 && (
-              <Badge 
-                variant="destructive" 
-                className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-              >
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </Badge>
+              <div className="absolute -top-1 -right-1 z-20">
+                <div className="relative">
+                  {/* Pulsing glow effect */}
+                  <div className="absolute inset-0 rounded-full bg-red-500 blur-md animate-pulse" />
+                  
+                  {/* Badge */}
+                  <Badge 
+                    variant="destructive" 
+                    className="relative h-6 w-6 flex items-center justify-center p-0 text-[10px] font-bold rounded-full bg-gradient-to-br from-red-500 to-red-600 text-white shadow-[0_4px_12px_rgba(239,68,68,0.5),inset_0_1px_2px_rgba(255,255,255,0.3)] ring-2 ring-white dark:ring-botkorp-black-light animate-bounce"
+                    style={{ animationDuration: '2s' }}
+                  >
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Badge>
+                </div>
+              </div>
             )}
           </Button>
         </DropdownMenuTrigger>

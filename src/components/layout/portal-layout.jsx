@@ -83,7 +83,6 @@ export default function PortalLayout() {
 
   const mainNavItems = [
     { icon: <LayoutDashboard className="h-5 w-5" />, label: 'Dashboard', path: '/portal' },
-    { icon: <MapPin className="h-5 w-5" />, label: 'Locations', path: '/portal/locations' },
     { icon: <Sprout className="h-5 w-5" />, label: 'Services', path: '/portal/services' },
     { icon: <Users className="h-5 w-5" />, label: 'Members', path: '/portal/members' },
     { icon: <CreditCard className="h-5 w-5" />, label: 'Billing', path: '/portal/billing' },
@@ -529,14 +528,46 @@ export default function PortalLayout() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Toolbar - Clean Professional Design */}
-        <header className="relative bg-white dark:bg-botkorp-black border-b border-gray-200 dark:border-botkorp-slate-blue/30 shadow-sm">
-          <div className="flex items-center justify-between px-4 py-2.5 gap-2">
-            {/* Mobile Menu Button */}
+        {/* Toolbar - Premium Soft UI Design with Neumorphic Elements */}
+        <header className="sticky top-0 z-50 backdrop-blur-3xl bg-gradient-to-br from-white/95 via-gray-50/90 to-white/95 dark:from-botkorp-black/95 dark:via-botkorp-black-light/90 dark:to-botkorp-black/95 border-b-2 border-gray-100/80 dark:border-botkorp-slate-blue/20 shadow-[0_8px_32px_rgba(0,0,0,0.04),0_2px_16px_rgba(0,0,0,0.02),0_1px_4px_rgba(0,0,0,0.01),inset_0_-1px_4px_rgba(255,255,255,0.15),inset_0_1px_2px_rgba(255,255,255,0.25)] dark:shadow-[0_12px_48px_rgba(0,0,0,0.5),0_4px_16px_rgba(255,107,53,0.08),inset_0_-1px_4px_rgba(255,107,53,0.08),inset_0_1px_2px_rgba(255,107,53,0.05)] relative overflow-hidden">
+          
+          {/* Background mesh pattern - subtle texture */}
+          <div className="absolute inset-0 opacity-[0.015] dark:opacity-[0.02] pointer-events-none">
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAyMCAwIEwgMCAwIDAgMjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIHN0cm9rZS13aWR0aD0iMC4zIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-50" />
+          </div>
+          
+          {/* Animated floating orbs - premium ambient effect */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute w-32 h-32 -top-16 -left-16 bg-botkorp-orange/10 dark:bg-botkorp-orange/5 rounded-full blur-3xl animate-float" style={{ animationDuration: '12s', animationDelay: '0s' }} />
+            <div className="absolute w-24 h-24 -top-12 right-1/4 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-3xl animate-float" style={{ animationDuration: '15s', animationDelay: '2s' }} />
+            <div className="absolute w-28 h-28 -top-14 -right-14 bg-purple-500/10 dark:bg-purple-500/5 rounded-full blur-3xl animate-float" style={{ animationDuration: '18s', animationDelay: '4s' }} />
+          </div>
+          
+          {/* Animated gradient wave - subtle motion */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-botkorp-orange/3 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
+          
+          {/* Top accent line with glow */}
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-botkorp-orange/60 to-transparent shadow-[0_2px_8px_rgba(255,107,53,0.3)]" />
+          
+          {/* Bottom inner shadow for depth */}
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gray-300/40 dark:via-botkorp-slate-blue/30 to-transparent" />
+          
+          <div className="relative flex items-center justify-between px-6 py-4 gap-4">
+            {/* Mobile Menu Button - Neumorphic Design */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild className="md:hidden">
-                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-gray-100 dark:hover:bg-botkorp-slate-blue/20">
-                  <Menu className="h-5 w-5 text-botkorp-black dark:text-white" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="group relative h-12 w-12 rounded-2xl bg-gradient-to-br from-white via-gray-50 to-white dark:from-botkorp-black-light dark:via-botkorp-slate-blue/20 dark:to-botkorp-black-light border border-gray-200/60 dark:border-botkorp-slate-blue/40 shadow-[0_4px_16px_rgba(0,0,0,0.08),inset_0_1px_2px_rgba(255,255,255,0.3)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.3),inset_0_1px_2px_rgba(255,107,53,0.1)] hover:shadow-[0_8px_24px_rgba(255,107,53,0.15),inset_0_2px_4px_rgba(255,255,255,0.4)] dark:hover:shadow-[0_8px_24px_rgba(255,107,53,0.25),inset_0_2px_4px_rgba(255,107,53,0.15)] hover:scale-105 active:scale-95 transition-all duration-300 overflow-hidden"
+                >
+                  {/* Shimmer effect */}
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-botkorp-orange/20 to-transparent" />
+                  
+                  {/* Inner glow */}
+                  <div className="absolute inset-2 rounded-xl bg-gradient-to-br from-botkorp-orange/0 to-botkorp-orange/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  
+                  <Menu className="relative z-10 h-5 w-5 text-gray-700 dark:text-white group-hover:text-botkorp-orange dark:group-hover:text-botkorp-orange transition-colors duration-300" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="p-0 w-80 border-0 bg-white dark:bg-transparent">
@@ -544,25 +575,32 @@ export default function PortalLayout() {
               </SheetContent>
             </Sheet>
 
-            {/* Location Dropdown - Clean Design */}
+            {/* Location Dropdown - Enhanced Soft UI Design */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
-                  className="gap-2 rounded-lg border-gray-200 dark:border-botkorp-slate-blue/30 bg-white dark:bg-botkorp-black-light hover:bg-gray-50 dark:hover:bg-botkorp-slate-blue/20 shadow-sm transition-all duration-200 h-9 px-2.5"
+                  className="group relative gap-3 rounded-2xl border-gray-200/60 dark:border-botkorp-slate-blue/40 bg-gradient-to-br from-white via-gray-50/80 to-white dark:from-botkorp-black-light dark:via-botkorp-slate-blue/10 dark:to-botkorp-black-light backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.06),inset_0_1px_3px_rgba(255,255,255,0.2)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_3px_rgba(255,107,53,0.08)] hover:shadow-[0_8px_28px_rgba(255,107,53,0.12),inset_0_2px_4px_rgba(255,255,255,0.3)] dark:hover:shadow-[0_8px_28px_rgba(255,107,53,0.2),inset_0_2px_4px_rgba(255,107,53,0.12)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 h-12 px-4 overflow-hidden"
                 >
-                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-md bg-botkorp-orange text-white text-xs font-bold shadow-sm" aria-hidden>
-                    {selectedLocation?.name?.[0]?.toUpperCase() || 'L'}
+                  {/* Animated background shimmer */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-botkorp-orange/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                  
+                  {/* Location icon with enhanced styling */}
+                  <span className="relative inline-flex items-center justify-center h-8 w-8 rounded-xl bg-gradient-to-br from-botkorp-orange via-orange-500 to-orange-600 text-white text-xs font-bold shadow-[0_4px_12px_rgba(255,107,53,0.35),inset_0_1px_2px_rgba(255,255,255,0.3)] group-hover:shadow-[0_6px_18px_rgba(255,107,53,0.45),inset_0_2px_4px_rgba(255,255,255,0.4)] group-hover:scale-110 transition-all duration-300 ring-2 ring-botkorp-orange/20 group-hover:ring-botkorp-orange/40" aria-hidden>
+                    <div className="absolute inset-1 rounded-lg bg-gradient-to-br from-white/20 to-transparent" />
+                    <span className="relative z-10">{selectedLocation?.name?.[0]?.toUpperCase() || 'L'}</span>
                   </span>
-                  <div className="hidden sm:flex flex-col items-start">
-                    <span className="text-[10px] text-botkorp-slate-blue dark:text-botkorp-silver font-medium leading-tight">
+                  
+                  <div className="hidden sm:flex flex-col items-start relative">
+                    <span className="text-[9px] text-gray-500 dark:text-botkorp-silver/70 font-bold leading-tight uppercase tracking-[0.1em]">
                       Location
                     </span>
-                    <span className="text-xs font-semibold text-botkorp-black dark:text-white max-w-[120px] truncate leading-tight">
+                    <span className="text-sm font-bold text-gray-900 dark:text-white max-w-[140px] truncate leading-tight mt-0.5 group-hover:text-botkorp-orange dark:group-hover:text-botkorp-orange transition-colors">
                       {selectedLocation?.name || 'Select location'}
                     </span>
                   </div>
-                  <ChevronDown className="h-3.5 w-3.5 text-botkorp-slate-blue dark:text-botkorp-silver" />
+                  
+                  <ChevronDown className="relative h-4 w-4 text-gray-500 dark:text-botkorp-silver group-hover:text-botkorp-orange dark:group-hover:text-botkorp-orange group-hover:rotate-180 transition-all duration-300" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-64">
@@ -607,28 +645,60 @@ export default function PortalLayout() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Search bar - Clean Design */}
-            <div className="hidden md:flex flex-1 mx-3">
-              <div className="relative w-full max-w-md">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-botkorp-slate-blue dark:text-botkorp-silver" />
-                <Input
-                  placeholder="Search services, bots, locations..."
-                  className="h-9 pl-8 pr-3 py-1.5 text-sm rounded-lg bg-gray-50 dark:bg-botkorp-black-light border-gray-200 dark:border-botkorp-slate-blue/30 focus:bg-white dark:focus:bg-botkorp-slate-blue/20 focus:ring-2 focus:ring-botkorp-orange/30 focus:border-botkorp-orange transition-all placeholder:text-botkorp-slate-blue/60 dark:placeholder:text-botkorp-silver/60 text-botkorp-black dark:text-white"
-                />
+            {/* Search bar - Enhanced Soft UI Design */}
+            <div className="hidden md:flex flex-1 mx-6">
+              <div className="relative w-full max-w-xl group">
+                {/* Search icon with glow effect */}
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
+                  <div className="relative">
+                    <div className="absolute inset-0 rounded-full bg-botkorp-orange/20 blur-md opacity-0 group-focus-within:opacity-100 transition-opacity duration-300" />
+                    <Search className="relative h-5 w-5 text-gray-500 dark:text-botkorp-silver/70 group-focus-within:text-botkorp-orange group-focus-within:scale-110 transition-all duration-300" />
+                  </div>
+                </div>
+                
+                {/* Input field with neumorphic design */}
+                <div className="relative">
+                  {/* Glow effect on focus */}
+                  <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-botkorp-orange/0 via-botkorp-orange/20 to-botkorp-orange/0 opacity-0 group-focus-within:opacity-100 blur-sm transition-all duration-300" />
+                  
+                  <Input
+                    placeholder="Search services, bots, locations..."
+                    className="relative h-12 pl-12 pr-4 py-3 text-sm rounded-2xl bg-gradient-to-br from-white via-gray-50/60 to-white dark:from-botkorp-black-light dark:via-botkorp-slate-blue/10 dark:to-botkorp-black-light backdrop-blur-xl border border-gray-200/60 dark:border-botkorp-slate-blue/40 shadow-[0_4px_20px_rgba(0,0,0,0.05),inset_0_1px_3px_rgba(255,255,255,0.2)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_3px_rgba(255,107,53,0.05)] focus:shadow-[0_8px_32px_rgba(255,107,53,0.15),inset_0_2px_4px_rgba(255,255,255,0.3)] dark:focus:shadow-[0_8px_32px_rgba(255,107,53,0.25),inset_0_2px_4px_rgba(255,107,53,0.12)] focus:border-botkorp-orange/60 focus:ring-2 focus:ring-botkorp-orange/20 transition-all duration-300 placeholder:text-gray-400 dark:placeholder:text-botkorp-silver/50 text-gray-900 dark:text-white font-medium"
+                  />
+                  
+                  {/* Search shortcut hint */}
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 hidden lg:flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-100/80 dark:bg-botkorp-slate-blue/20 border border-gray-200/60 dark:border-botkorp-slate-blue/30 shadow-sm">
+                    <span className="text-[10px] font-bold text-gray-500 dark:text-botkorp-silver/60">⌘K</span>
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Notifications & User Menu */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-3">
               <NotificationCenter />
               
+              {/* User Avatar - Enhanced Soft UI Design */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0">
-                    <Avatar className="h-8 w-8">
+                  <Button 
+                    variant="ghost" 
+                    className="group relative h-12 w-12 rounded-2xl p-0 bg-gradient-to-br from-white via-gray-50 to-white dark:from-botkorp-black-light dark:via-botkorp-slate-blue/10 dark:to-botkorp-black-light border-2 border-gray-200/60 dark:border-botkorp-slate-blue/40 shadow-[0_4px_16px_rgba(0,0,0,0.08),inset_0_1px_2px_rgba(255,255,255,0.3)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.3),inset_0_1px_2px_rgba(255,107,53,0.08)] hover:border-botkorp-orange/60 hover:shadow-[0_8px_24px_rgba(255,107,53,0.2),inset_0_2px_4px_rgba(255,255,255,0.4)] dark:hover:shadow-[0_8px_24px_rgba(255,107,53,0.3),inset_0_2px_4px_rgba(255,107,53,0.12)] hover:scale-105 active:scale-95 transition-all duration-300 overflow-hidden"
+                  >
+                    {/* Rotating gradient background on hover */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-botkorp-orange/0 via-botkorp-orange/10 to-orange-500/0 opacity-0 group-hover:opacity-100 group-hover:rotate-180 transition-all duration-700" />
+                    
+                    {/* Glow effect */}
+                    <div className="absolute -inset-1 bg-gradient-to-br from-botkorp-orange/20 to-orange-500/20 rounded-2xl blur-lg opacity-0 group-hover:opacity-60 transition-opacity duration-300" />
+                    
+                    {/* Avatar with enhanced ring */}
+                    <Avatar className="relative h-10 w-10 ring-2 ring-white/50 dark:ring-botkorp-black/50 group-hover:ring-botkorp-orange/30 transition-all duration-300">
                       <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email} />
-                      <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                      <AvatarFallback className="bg-gradient-to-br from-botkorp-orange via-orange-500 to-orange-600 text-white font-bold shadow-inner">{getUserInitials()}</AvatarFallback>
                     </Avatar>
+                    
+                    {/* Active status indicator */}
+                    <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-gradient-to-br from-green-400 to-green-500 border-2 border-white dark:border-botkorp-black-light shadow-lg shadow-green-500/50 animate-pulse" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-64">

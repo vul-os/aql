@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Thermometer, Droplets, CloudRain, Sprout, AlertTriangle } from 'lucide-react';
+import { Loader2, Thermometer, Droplets, CloudRain, Sprout, AlertTriangle, Activity } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -184,99 +184,111 @@ export default function ServiceEnvironmentalData({ gardenId }) {
   return (
     <div className="space-y-4">
       {/* Current Conditions with Radial Progress */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Temperature */}
-        <Card className="relative overflow-hidden border-t-4 border-t-orange-500 hover:shadow-lg transition-all duration-300">
-          <div className="absolute inset-0 bg-orange-500/5 pointer-events-none" />
-          <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-orange-700 dark:text-orange-500 uppercase tracking-wider">
-              <Thermometer className="h-3.5 w-3.5" />
-              Temperature
-            </CardTitle>
+        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
+          <CardHeader className="pb-2 pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                Temperature
+              </CardTitle>
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-orange-500/20 to-orange-500/10 dark:from-orange-500/30 dark:to-orange-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                <Thermometer className="h-4 w-4 text-orange-500" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="pb-3">
+          <CardContent className="pb-4">
             <RadialProgress 
               value={latestData.temperature_celsius || 0}
               maxValue={50}
               color="#f97316"
               unit="°C"
             />
-            <p className="text-[10px] text-center text-muted-foreground mt-2">
+            <p className="text-[10px] text-center text-muted-foreground mt-2 font-medium">
               Updated {formatDistanceToNow(new Date(latestData.recorded_at), { addSuffix: true })}
             </p>
           </CardContent>
         </Card>
 
         {/* Humidity */}
-        <Card className="relative overflow-hidden border-t-4 border-t-blue-500 hover:shadow-lg transition-all duration-300">
-          <div className="absolute inset-0 bg-blue-500/5 pointer-events-none" />
-          <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-blue-700 dark:text-blue-500 uppercase tracking-wider">
-              <Droplets className="h-3.5 w-3.5" />
-              Humidity
-            </CardTitle>
+        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
+          <CardHeader className="pb-2 pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                Humidity
+              </CardTitle>
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/10 dark:from-blue-500/30 dark:to-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                <Droplets className="h-4 w-4 text-blue-500" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="pb-3">
+          <CardContent className="pb-4">
             <RadialProgress 
               value={latestData.humidity_percentage || 0}
               maxValue={100}
               color="#3b82f6"
               unit="%"
             />
-            <p className="text-[10px] text-center text-muted-foreground mt-2">
+            <p className="text-[10px] text-center text-muted-foreground mt-2 font-medium">
               Air humidity level
             </p>
           </CardContent>
         </Card>
 
         {/* Soil Moisture */}
-        <Card className="relative overflow-hidden border-t-4 border-t-green-500 hover:shadow-lg transition-all duration-300">
-          <div className="absolute inset-0 bg-green-500/5 pointer-events-none" />
-          <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-green-700 dark:text-green-500 uppercase tracking-wider">
-              <Sprout className="h-3.5 w-3.5" />
-              Soil Moisture
-            </CardTitle>
+        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
+          <CardHeader className="pb-2 pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                Soil Moisture
+              </CardTitle>
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-green-500/20 to-green-500/10 dark:from-green-500/30 dark:to-green-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                <Sprout className="h-4 w-4 text-green-500" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="pb-3">
+          <CardContent className="pb-4">
             <RadialProgress 
               value={latestData.soil_moisture_percentage || 0}
               maxValue={100}
               color="#22c55e"
               unit="%"
             />
-            <p className="text-[10px] text-center text-muted-foreground mt-2">
+            <p className="text-[10px] text-center text-muted-foreground mt-2 font-medium">
               {latestData.soil_moisture_percentage > 60 ? 'Wet soil' : latestData.soil_moisture_percentage > 40 ? 'Optimal' : 'Dry soil'}
             </p>
           </CardContent>
         </Card>
 
         {/* Weather */}
-        <Card className="relative overflow-hidden border-t-4 border-t-slate-500 hover:shadow-lg transition-all duration-300">
-          <div className="absolute inset-0 bg-slate-500/5 pointer-events-none" />
-          <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-slate-700 dark:text-slate-400 uppercase tracking-wider">
-              <CloudRain className="h-3.5 w-3.5" />
-              Weather
-            </CardTitle>
+        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
+          <CardHeader className="pb-2 pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                Weather
+              </CardTitle>
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-slate-500/20 to-slate-500/10 dark:from-slate-500/30 dark:to-slate-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                <CloudRain className="h-4 w-4 text-slate-500" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="pb-3 pt-8">
+          <CardContent className="pb-4 pt-6">
             <div className="flex flex-col items-center gap-3">
               <CloudRain className={`h-12 w-12 ${latestData.is_raining ? 'text-blue-500' : 'text-slate-300'}`} />
               {latestData.is_raining ? (
                 <>
-                  <Badge variant="destructive" className="text-xs">Raining</Badge>
+                  <Badge className="text-xs border-0 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 font-semibold">Raining</Badge>
                   {latestData.rain_intensity && (
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-[10px] text-muted-foreground font-medium">
                       {latestData.rain_intensity}
                     </span>
                   )}
                 </>
               ) : (
-                <Badge variant="outline" className="text-xs border-botkorp-orange/30 bg-botkorp-orange/5">Clear</Badge>
+                <Badge className="text-xs border-0 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 font-semibold">Clear</Badge>
               )}
             </div>
-            <p className="text-[10px] text-center text-muted-foreground mt-3">
+            <p className="text-[10px] text-center text-muted-foreground mt-3 font-medium">
               Current conditions
             </p>
           </CardContent>
@@ -285,19 +297,24 @@ export default function ServiceEnvironmentalData({ gardenId }) {
 
       {/* Historical Chart with Area Gradients */}
       {historicalData.length > 0 && (
-        <Card className="border-t-4 border-t-botkorp-orange shadow-md hover:shadow-lg transition-all duration-300">
-          <CardHeader className="pb-3 pt-4 bg-gradient-to-r from-botkorp-orange/5 to-transparent">
+        <Card className="border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 rounded-3xl">
+          <CardHeader className="pb-3 pt-5">
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-sm font-bold">Environmental Trends (24h)</CardTitle>
-                <CardDescription className="text-[10px]">Temperature and humidity patterns over time</CardDescription>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange/20 to-botkorp-orange/10 dark:from-botkorp-orange/30 dark:to-botkorp-orange/20 flex items-center justify-center shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                  <Activity className="h-5 w-5 text-botkorp-orange" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-bold">Environmental Trends (24h)</CardTitle>
+                  <CardDescription className="text-[10px] font-medium">Temperature and humidity patterns over time</CardDescription>
+                </div>
               </div>
-              <Badge variant="outline" className="text-[10px] border-botkorp-orange/30 bg-botkorp-orange/5">
+              <Badge variant="outline" className="text-[10px] border-0 bg-botkorp-orange/10 text-botkorp-orange font-semibold px-3 rounded-full">
                 Live Data
               </Badge>
             </div>
           </CardHeader>
-          <CardContent className="pt-4">
+          <CardContent className="pt-4 pb-5">
             <ResponsiveContainer width="100%" height={350}>
               <AreaChart data={historicalData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <defs>

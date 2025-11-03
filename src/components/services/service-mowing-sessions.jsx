@@ -148,66 +148,78 @@ export default function ServiceMowingSessions({ gardenId }) {
   return (
     <div className="space-y-4">
       {/* Enhanced Statistics Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="relative overflow-hidden border-t-4 border-t-botkorp-orange hover:shadow-lg transition-all duration-300">
-          <div className="absolute inset-0 bg-botkorp-orange/5 pointer-events-none" />
-          <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-botkorp-orange uppercase tracking-wider">
-              <Activity className="h-3.5 w-3.5" />
-              Sessions
-            </CardTitle>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
+          <CardHeader className="pb-2 pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                Sessions
+              </CardTitle>
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-botkorp-orange/20 to-botkorp-orange/10 dark:from-botkorp-orange/30 dark:to-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                <Activity className="h-4 w-4 text-botkorp-orange" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="pb-3">
-            <div className="text-3xl font-bold tabular-nums">{sessions.length}</div>
-            <p className="text-[10px] text-muted-foreground mt-1">
+          <CardContent className="pb-4">
+            <div className="text-3xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{sessions.length}</div>
+            <p className="text-[10px] text-muted-foreground mt-1 font-medium">
               {completedSessions.length} completed successfully
             </p>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden border-t-4 border-t-blue-500 hover:shadow-lg transition-all duration-300">
-          <div className="absolute inset-0 bg-blue-500/5 pointer-events-none" />
-          <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-blue-700 dark:text-blue-500 uppercase tracking-wider">
-              <Ruler className="h-3.5 w-3.5" />
-              Coverage
-            </CardTitle>
+        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
+          <CardHeader className="pb-2 pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                Coverage
+              </CardTitle>
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/10 dark:from-blue-500/30 dark:to-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                <Ruler className="h-4 w-4 text-blue-500" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="pb-3">
-            <div className="text-3xl font-bold tabular-nums">{totalArea.toFixed(1)}</div>
-            <p className="text-[10px] text-muted-foreground mt-1">
+          <CardContent className="pb-4">
+            <div className="text-3xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{totalArea.toFixed(1)}</div>
+            <p className="text-[10px] text-muted-foreground mt-1 font-medium">
               m² total • Avg: {avgArea.toFixed(1)} m²
             </p>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden border-t-4 border-t-green-500 hover:shadow-lg transition-all duration-300">
-          <div className="absolute inset-0 bg-green-500/5 pointer-events-none" />
-          <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-green-700 dark:text-green-500 uppercase tracking-wider">
-              <MapPin className="h-3.5 w-3.5" />
-              Distance
-            </CardTitle>
+        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
+          <CardHeader className="pb-2 pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                Distance
+              </CardTitle>
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-green-500/20 to-green-500/10 dark:from-green-500/30 dark:to-green-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                <MapPin className="h-4 w-4 text-green-500" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="pb-3">
-            <div className="text-3xl font-bold tabular-nums">{(totalDistance / 1000).toFixed(2)}</div>
-            <p className="text-[10px] text-muted-foreground mt-1">
+          <CardContent className="pb-4">
+            <div className="text-3xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{(totalDistance / 1000).toFixed(2)}</div>
+            <p className="text-[10px] text-muted-foreground mt-1 font-medium">
               km total traveled
             </p>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden border-t-4 border-t-purple-500 hover:shadow-lg transition-all duration-300">
-          <div className="absolute inset-0 bg-purple-500/5 pointer-events-none" />
-          <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-purple-700 dark:text-purple-500 uppercase tracking-wider">
-              <Target className="h-3.5 w-3.5" />
-              Success Rate
-            </CardTitle>
+        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
+          <CardHeader className="pb-2 pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                Success Rate
+              </CardTitle>
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-500/10 dark:from-purple-500/30 dark:to-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                <Target className="h-4 w-4 text-purple-500" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="pb-3">
-            <div className="text-3xl font-bold tabular-nums">{successRate.toFixed(0)}%</div>
-            <p className="text-[10px] text-muted-foreground mt-1">
+          <CardContent className="pb-4">
+            <div className="text-3xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{successRate.toFixed(0)}%</div>
+            <p className="text-[10px] text-muted-foreground mt-1 font-medium">
               {completedSessions.length} of {sessions.length} completed
             </p>
           </CardContent>
@@ -216,19 +228,24 @@ export default function ServiceMowingSessions({ gardenId }) {
 
       {/* Performance Trends Chart */}
       {performanceData.length > 0 && (
-        <Card className="border-t-4 border-t-botkorp-orange shadow-md hover:shadow-lg transition-all duration-300">
-          <CardHeader className="pb-3 pt-4 bg-gradient-to-r from-botkorp-orange/5 to-transparent">
+        <Card className="border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 rounded-3xl">
+          <CardHeader className="pb-3 pt-5">
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-sm font-bold">Performance Trends</CardTitle>
-                <CardDescription className="text-[10px]">Coverage and efficiency over recent sessions</CardDescription>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange/20 to-botkorp-orange/10 dark:from-botkorp-orange/30 dark:to-botkorp-orange/20 flex items-center justify-center shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                  <TrendingUp className="h-5 w-5 text-botkorp-orange" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-bold">Performance Trends</CardTitle>
+                  <CardDescription className="text-[10px] font-medium">Coverage and efficiency over recent sessions</CardDescription>
+                </div>
               </div>
-              <Badge variant="outline" className="text-[10px] border-botkorp-orange/30 bg-botkorp-orange/5">
+              <Badge variant="outline" className="text-[10px] border-0 bg-botkorp-orange/10 text-botkorp-orange font-semibold px-3 rounded-full">
                 Last 10 Sessions
               </Badge>
             </div>
           </CardHeader>
-          <CardContent className="pt-4">
+          <CardContent className="pt-4 pb-5">
             <ResponsiveContainer width="100%" height={250}>
               <AreaChart data={performanceData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <defs>
@@ -268,31 +285,34 @@ export default function ServiceMowingSessions({ gardenId }) {
       )}
 
       {/* Sessions List */}
-      <Card className="border-t-4 border-t-botkorp-orange shadow-md hover:shadow-lg transition-all duration-300">
-        <CardHeader className="pb-3 pt-4 bg-gradient-to-r from-botkorp-orange/5 to-transparent">
+      <Card className="border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 rounded-3xl">
+        <CardHeader className="pb-3 pt-5">
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-sm font-bold">Recent Sessions</CardTitle>
-              <CardDescription className="text-[10px]">Detailed history of mowing activities</CardDescription>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange/20 to-botkorp-orange/10 dark:from-botkorp-orange/30 dark:to-botkorp-orange/20 flex items-center justify-center shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                <Scissors className="h-5 w-5 text-botkorp-orange" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-bold">Recent Sessions</CardTitle>
+                <CardDescription className="text-[10px] font-medium">Detailed history of mowing activities</CardDescription>
+              </div>
             </div>
-            <Badge variant="outline" className="text-[10px] border-botkorp-orange/30 bg-botkorp-orange/5">
+            <Badge variant="outline" className="text-[10px] border-0 bg-botkorp-orange/10 text-botkorp-orange font-semibold px-3 rounded-full">
               {sessions.length} Total
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="pt-4">
+        <CardContent className="pt-4 pb-5">
           <div className="space-y-2.5">
             {sessions.map((session, index) => (
               <div 
                 key={session.id}
-                className="relative flex items-start justify-between p-3 border-l-4 rounded-lg hover:shadow-md transition-all duration-300 cursor-pointer animate-in fade-in slide-in-from-bottom-2"
+                className="relative flex items-start justify-between p-4 rounded-2xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[0_4px_16px_rgb(0,0,0,0.08)] transition-all duration-300 cursor-pointer animate-in fade-in slide-in-from-bottom-2 border-0"
                 style={{ 
-                  animationDelay: `${index * 30}ms`,
-                  borderLeftColor: session.completion_status === 'completed' ? '#f97316' : '#94a3b8'
+                  animationDelay: `${index * 30}ms`
                 }}
                 onClick={() => setSelectedSession(session.id === selectedSession ? null : session.id)}
               >
-                <div className="absolute inset-0 bg-botkorp-orange/0 hover:bg-botkorp-orange/5 rounded-lg transition-all pointer-events-none" />
                 
                 <div className="space-y-2 flex-1 relative">
                   <div className="flex items-center gap-2 flex-wrap">

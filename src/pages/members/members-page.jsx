@@ -353,123 +353,111 @@ export default function MembersPage() {
   }
 
   return (
-    <div className="p-3 md:p-5 space-y-5">
-      {/* Header Section */}
-      <div className="space-y-3 animate-in fade-in slide-in-from-top-3 duration-500">
+    <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
+      {/* Soft UI Background Card for Header */}
+      <div className="bg-gradient-to-br from-background via-background to-muted/20 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <PageHeader
           title="Team Members"
-          subtitle={`Manage your ${members.length} team member${members.length !== 1 ? 's' : ''} and their permissions`}
-          icon={<Users className="h-5 w-5 text-botkorp-orange" />}
+          subtitle={`Manage your ${members.length} team member${members.length !== 1 ? 's' : ''} • Control roles and permissions`}
+          icon={<Users />}
         />
 
         {/* Action Bar */}
-        <div className="flex flex-col sm:flex-row gap-2.5 justify-between items-start sm:items-center">
-          <div className="relative flex-1 max-w-md w-full group">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-botkorp-orange transition-colors duration-300" />
+        <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center mt-4">
+          <div className="relative flex-1 max-w-md w-full">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
             <Input
               placeholder="Search members..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-8 text-sm focus:border-botkorp-orange focus:ring-2 focus:ring-botkorp-orange/20 transition-all duration-300"
+              className="pl-10 h-10 bg-background/60 backdrop-blur-sm border-none shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] focus:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06),0_0_0_3px_rgb(255,107,53,0.1)] transition-all rounded-xl"
             />
           </div>
           <Button 
             onClick={() => setDialogOpen(true)}
-            className="w-full sm:w-auto h-8 text-sm bg-botkorp-orange hover:bg-botkorp-orange/90 text-white hover:shadow-lg transition-all duration-300 active:scale-95 group"
+            className="h-10 px-5 font-medium bg-botkorp-orange hover:bg-botkorp-orange/90 text-white rounded-xl shadow-[0_8px_30px_rgb(255,107,53,0.25)] hover:shadow-[0_8px_30px_rgb(255,107,53,0.35)] hover:-translate-y-0.5 transition-all"
           >
-            <UserPlus className="h-3.5 w-3.5 mr-1.5 group-hover:rotate-12 transition-transform duration-300" />
+            <UserPlus className="h-4 w-4 mr-2" />
             Invite Member
           </Button>
         </div>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+      {/* Stats Overview - Soft UI Cards */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {/* Total Members Stat */}
-        <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 shadow-sm">
-          <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
-          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Total Members</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-botkorp-orange transition-all duration-300">
-              <Users className="h-3.5 w-3.5 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
+        <div className="bg-gradient-to-br from-background to-muted/20 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">Members</span>
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+              <Users className="h-4 w-4 text-botkorp-orange" />
             </div>
-          </CardHeader>
-          <CardContent className="relative">
-            <div className="text-2xl font-bold tabular-nums">{members.length}</div>
-            <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Active</p>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="text-3xl font-bold mb-1">{members.length}</div>
+          <p className="text-xs text-muted-foreground/60">Active in team</p>
+        </div>
 
         {/* Pending Invitations Stat */}
-        <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-75 shadow-sm">
-          <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
-          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Pending</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-botkorp-orange transition-all duration-300">
-              <Clock className="h-3.5 w-3.5 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
+        <div className="bg-gradient-to-br from-background to-muted/20 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">Pending</span>
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+              <Clock className="h-4 w-4 text-botkorp-orange" />
             </div>
-          </CardHeader>
-          <CardContent className="relative">
-            <div className="text-2xl font-bold tabular-nums">{invitations.length}</div>
-            <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Invitations</p>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="text-3xl font-bold mb-1">{invitations.length}</div>
+          <p className="text-xs text-muted-foreground/60">Invites sent</p>
+        </div>
 
         {/* Admins Count Stat */}
-        <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-150 shadow-sm">
-          <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
-          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Admins</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-botkorp-orange transition-all duration-300">
-              <Shield className="h-3.5 w-3.5 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
+        <div className="bg-gradient-to-br from-background to-muted/20 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">Admins</span>
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+              <Shield className="h-4 w-4 text-botkorp-orange" />
             </div>
-          </CardHeader>
-          <CardContent className="relative">
-            <div className="text-2xl font-bold tabular-nums">
-              {members.filter(m => m.role === 'admin' || m.role === 'owner').length}
-            </div>
-            <p className="text-[10px] text-muted-foreground font-medium mt-0.5">& Owners</p>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="text-3xl font-bold mb-1">
+            {members.filter(m => m.role === 'admin' || m.role === 'owner').length}
+          </div>
+          <p className="text-xs text-muted-foreground/60">& owners</p>
+        </div>
 
         {/* Organization Stat */}
-        <Card className="relative overflow-hidden border-l-4 border-l-botkorp-orange hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200 shadow-sm">
-          <div className="absolute inset-0 bg-botkorp-orange/0 group-hover:bg-botkorp-orange/5 transition-all duration-300" />
-          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Organization</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-botkorp-orange transition-all duration-300">
-              <Building className="h-3.5 w-3.5 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
+        <div className="bg-gradient-to-br from-background to-muted/20 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">Organization</span>
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+              <Building className="h-4 w-4 text-botkorp-orange" />
             </div>
-          </CardHeader>
-          <CardContent className="relative">
-            <div className="text-sm font-bold truncate">
-              {selectedOrg?.organization_name || 'N/A'}
-            </div>
-            <p className="text-[10px] text-muted-foreground font-medium mt-0.5 capitalize">
-              {selectedOrg?.member_role || 'Member'}
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="text-lg font-bold mb-1 truncate">
+            {selectedOrg?.organization_name || 'N/A'}
+          </div>
+          <p className="text-xs text-muted-foreground/60 capitalize">
+            {selectedOrg?.member_role || 'Member'}
+          </p>
+        </div>
       </div>
 
-      {/* Invite Member Dialog */}
+      {/* Invite Member Dialog - Soft UI */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg animate-in fade-in zoom-in-95 duration-300">
+        <DialogContent className="max-w-lg rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center">
-                <UserPlus className="h-4 w-4 text-botkorp-orange" />
+            <DialogTitle className="flex items-center gap-3 text-xl">
+              <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+                <UserPlus className="h-5 w-5 text-botkorp-orange" />
               </div>
               Invite Team Member
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm text-muted-foreground/70">
               Send an email invitation to join your organization. They can accept within 7 days.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleInviteMember} className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address *</Label>
+          <form onSubmit={handleInviteMember} className="space-y-5 mt-2">
+            <div className="space-y-2.5">
+              <Label htmlFor="email" className="text-sm font-medium">Email Address *</Label>
               <Input
                 id="email"
                 type="email"
@@ -477,61 +465,71 @@ export default function MembersPage() {
                 onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
                 placeholder="member@example.com"
                 required
+                className="h-11 bg-background/60 backdrop-blur-sm border-none shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] focus:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06),0_0_0_3px_rgb(255,107,53,0.1)] rounded-xl"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="role">Role *</Label>
+            <div className="space-y-2.5">
+              <Label htmlFor="role" className="text-sm font-medium">Role *</Label>
               <Select
                 value={inviteForm.role}
                 onValueChange={(value) => setInviteForm({ ...inviteForm, role: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11 bg-background/60 backdrop-blur-sm border-none shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">
-                    <div className="flex flex-col items-start">
+                <SelectContent className="rounded-2xl">
+                  <SelectItem value="admin" className="rounded-xl">
+                    <div className="flex flex-col items-start py-1">
                       <span className="font-semibold">Admin</span>
-                      <span className="text-xs text-muted-foreground">Full access to everything</span>
+                      <span className="text-xs text-muted-foreground/70">Full access to everything</span>
                     </div>
                   </SelectItem>
-                  <SelectItem value="manager">
-                    <div className="flex flex-col items-start">
+                  <SelectItem value="manager" className="rounded-xl">
+                    <div className="flex flex-col items-start py-1">
                       <span className="font-semibold">Manager</span>
-                      <span className="text-xs text-muted-foreground">Manage bots, locations, view billing</span>
+                      <span className="text-xs text-muted-foreground/70">Manage bots, locations, view billing</span>
                     </div>
                   </SelectItem>
-                  <SelectItem value="operator">
-                    <div className="flex flex-col items-start">
+                  <SelectItem value="operator" className="rounded-xl">
+                    <div className="flex flex-col items-start py-1">
                       <span className="font-semibold">Operator</span>
-                      <span className="text-xs text-muted-foreground">Control bots only</span>
+                      <span className="text-xs text-muted-foreground/70">Control bots only</span>
                     </div>
                   </SelectItem>
-                  <SelectItem value="viewer">
-                    <div className="flex flex-col items-start">
+                  <SelectItem value="viewer" className="rounded-xl">
+                    <div className="flex flex-col items-start py-1">
                       <span className="font-semibold">Viewer</span>
-                      <span className="text-xs text-muted-foreground">View-only access</span>
+                      <span className="text-xs text-muted-foreground/70">View-only access</span>
                     </div>
                   </SelectItem>
-                  <SelectItem value="member">
-                    <div className="flex flex-col items-start">
+                  <SelectItem value="member" className="rounded-xl">
+                    <div className="flex flex-col items-start py-1">
                       <span className="font-semibold">Member</span>
-                      <span className="text-xs text-muted-foreground">Basic access</span>
+                      <span className="text-xs text-muted-foreground/70">Basic access</span>
                     </div>
                   </SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground/60">
                 Permissions are automatically assigned based on role
               </p>
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} className="h-8">
+            <DialogFooter className="gap-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setDialogOpen(false)} 
+                className="h-10 px-5 rounded-xl border-none bg-background/60 shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)]"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={inviting} className="h-8 bg-botkorp-orange hover:bg-botkorp-orange/90 text-white">
+              <Button 
+                type="submit" 
+                disabled={inviting} 
+                className="h-10 px-5 bg-botkorp-orange hover:bg-botkorp-orange/90 text-white rounded-xl shadow-[0_8px_30px_rgb(255,107,53,0.25)] hover:shadow-[0_8px_30px_rgb(255,107,53,0.35)]"
+              >
                 {inviting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -549,218 +547,190 @@ export default function MembersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Pending Invitations */}
+      {/* Pending Invitations - Soft UI */}
       {invitations.length > 0 && (
-        <Card className="border-t-4 border-t-botkorp-orange shadow-md animate-in fade-in slide-in-from-bottom-3 duration-500">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-0.5 w-8 bg-botkorp-orange rounded-full" />
-                <CardTitle className="text-sm font-bold uppercase tracking-wide flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-botkorp-orange" />
-                  Pending Invitations
-                  <Badge variant="secondary" className="h-5 px-2 text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/20 font-semibold">
-                    {invitations.length}
-                  </Badge>
-                </CardTitle>
-              </div>
+        <div className="bg-gradient-to-br from-background to-muted/20 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500/15 to-amber-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(245,158,11,0.15)]">
+              <Clock className="h-5 w-5 text-amber-600" />
             </div>
-            <CardDescription className="text-xs mt-1">
-              Invitations waiting to be accepted
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {invitations.map((invitation, index) => (
-                <div 
-                  key={invitation.id} 
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-botkorp-orange/5 hover:border-botkorp-orange/30 transition-all duration-300 group animate-in fade-in slide-in-from-left-3"
-                  style={{ animationDelay: `${index * 50}ms`, animationDuration: '300ms' }}
-                >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="h-9 w-9 rounded-lg bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center flex-shrink-0 group-hover:bg-botkorp-orange transition-all duration-300">
-                      <Mail className="h-4 w-4 text-botkorp-orange group-hover:text-white transition-colors duration-300" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{invitation.email}</p>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <Badge variant="secondary" className="capitalize h-5 px-2 text-[10px] bg-botkorp-orange/10 text-botkorp-orange border-botkorp-orange/20">
-                          {invitation.role}
-                        </Badge>
-                        {invitation.inviter && (
-                          <>
-                            <span className="text-[10px] text-muted-foreground">
-                              by {invitation.inviter.full_name || invitation.inviter.first_name}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground">•</span>
-                          </>
-                        )}
-                        <span className="text-[10px] text-muted-foreground">
-                          {format(new Date(invitation.created_at), 'MMM d, yyyy')}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground">•</span>
-                        <span className="text-[10px] text-amber-600 font-medium">
-                          Expires {format(new Date(invitation.expires_at), 'MMM d')}
-                        </span>
-                      </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                Pending Invitations
+                <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-amber-500/15 text-amber-600 text-[10px] font-bold">
+                  {invitations.length}
+                </span>
+              </h3>
+              <p className="text-xs text-muted-foreground/70">Waiting for acceptance</p>
+            </div>
+          </div>
+          
+          <div className="space-y-2.5">
+            {invitations.map((invitation) => (
+              <div 
+                key={invitation.id} 
+                className="flex items-center justify-between p-4 bg-background/60 backdrop-blur-sm rounded-2xl shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all group"
+              >
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center flex-shrink-0 shadow-[0_4px_20px_rgb(255,107,53,0.1)]">
+                    <Mail className="h-4 w-4 text-botkorp-orange" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate">{invitation.email}</p>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-botkorp-orange/10 text-botkorp-orange text-[10px] font-medium capitalize">
+                        {invitation.role}
+                      </span>
+                      {invitation.inviter && (
+                        <>
+                          <span className="text-[10px] text-muted-foreground/60">
+                            by {invitation.inviter.full_name || invitation.inviter.first_name}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground/40">•</span>
+                        </>
+                      )}
+                      <span className="text-[10px] text-muted-foreground/60">
+                        {format(new Date(invitation.created_at), 'MMM d, yyyy')}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground/40">•</span>
+                      <span className="text-[10px] text-amber-600 font-medium">
+                        Expires {format(new Date(invitation.expires_at), 'MMM d')}
+                      </span>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleCancelInvitation(invitation.id)}
-                    className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive transition-all duration-300 flex-shrink-0"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleCancelInvitation(invitation.id)}
+                  className="h-9 w-9 p-0 rounded-xl hover:bg-destructive/10 hover:text-destructive transition-all flex-shrink-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Members List - Soft UI */}
+      <div className="bg-gradient-to-br from-background to-muted/20 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+            <Users className="h-5 w-5 text-botkorp-orange" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-bold flex items-center gap-2">
+              Active Members
+              <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-botkorp-orange/15 text-botkorp-orange text-[10px] font-bold">
+                {filteredMembers.length}
+              </span>
+            </h3>
+            <p className="text-xs text-muted-foreground/70">
+              {searchQuery 
+                ? `${filteredMembers.length} of ${members.length} members match your search`
+                : `Current members of ${selectedOrg?.organization_name}`
+              }
+            </p>
+          </div>
+        </div>
+        
+        <div>
+          {filteredMembers.length > 0 ? (
+            <div className="space-y-2.5">
+              {filteredMembers.map((member) => (
+                <div 
+                  key={member.id} 
+                  className="flex items-center justify-between p-4 bg-background/60 backdrop-blur-sm rounded-2xl shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all group"
+                >
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <Avatar className="h-11 w-11 shadow-[0_4px_20px_rgb(255,107,53,0.1)]">
+                      <AvatarImage src={member.user?.avatar_url} />
+                      <AvatarFallback className="bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 text-botkorp-orange font-bold text-sm">
+                        {getUserInitials(member)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">
+                        {member.user?.full_name || 'Unknown User'}
+                      </p>
+                      <p className="text-xs text-muted-foreground/60 truncate">
+                        {member.user?.email}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <Select
+                      value={member.role}
+                      onValueChange={(newRole) => handleUpdateMemberRole(member.id, newRole)}
+                      disabled={member.role === 'owner' || member.user_id === user?.id}
+                    >
+                      <SelectTrigger className="w-[130px] h-9 border-none bg-botkorp-orange/10 hover:bg-botkorp-orange/15 rounded-xl shadow-[0_2px_10px_rgb(255,107,53,0.08)]">
+                        <div className="flex items-center gap-1.5">
+                          {getRoleIcon(member.role)}
+                          <span className="capitalize text-xs font-medium text-botkorp-orange">{member.role}</span>
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="manager">Manager</SelectItem>
+                        <SelectItem value="operator">Operator</SelectItem>
+                        <SelectItem value="viewer">Viewer</SelectItem>
+                        <SelectItem value="member">Member</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-green-500/10 text-green-600 text-xs font-medium shadow-[0_2px_10px_rgb(34,197,94,0.08)]">
+                      <UserCheck className="h-3.5 w-3.5" />
+                      Active
+                    </span>
+                    
+                    <div className="text-xs text-muted-foreground/60 w-24 text-right hidden md:block">
+                      {member.joined_at
+                        ? format(new Date(member.joined_at), 'MMM d, yyyy')
+                        : 'N/A'}
+                    </div>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveMember(member.id)}
+                      disabled={member.role === 'owner' || member.user_id === user?.id}
+                      className="h-9 w-9 p-0 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Members List */}
-      <Card className="border-t-4 border-t-botkorp-orange shadow-md animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="h-0.5 w-8 bg-botkorp-orange rounded-full" />
-              <CardTitle className="text-sm font-bold uppercase tracking-wide flex items-center gap-2">
-                <Users className="h-4 w-4 text-botkorp-orange" />
-                Active Members
-                <Badge variant="secondary" className="h-5 px-2 text-[10px] bg-botkorp-orange/10 text-botkorp-orange border-botkorp-orange/20 font-semibold">
-                  {filteredMembers.length}
-                </Badge>
-              </CardTitle>
-            </div>
-          </div>
-          <CardDescription className="text-xs mt-1">
-            {searchQuery 
-              ? `${filteredMembers.length} of ${members.length} members match your search`
-              : `Current members of ${selectedOrg?.organization_name}`
-            }
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {filteredMembers.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="text-xs font-bold">Member</TableHead>
-                    <TableHead className="text-xs font-bold">Role</TableHead>
-                    <TableHead className="text-xs font-bold">Status</TableHead>
-                    <TableHead className="text-xs font-bold">Joined</TableHead>
-                    <TableHead className="text-right text-xs font-bold">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredMembers.map((member, index) => (
-                    <TableRow 
-                      key={member.id} 
-                      className="group hover:bg-botkorp-orange/5 transition-all duration-300 animate-in fade-in slide-in-from-left-3"
-                      style={{ animationDelay: `${index * 30}ms`, animationDuration: '300ms' }}
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9 border-2 border-botkorp-orange/20 group-hover:border-botkorp-orange transition-all duration-300">
-                            <AvatarImage src={member.user?.avatar_url} />
-                            <AvatarFallback className="bg-botkorp-orange/10 text-botkorp-orange font-semibold text-xs">
-                              {getUserInitials(member)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-semibold text-sm">
-                              {member.user?.full_name || 'Unknown User'}
-                            </p>
-                            <p className="text-[11px] text-muted-foreground">
-                              {member.user?.email}
-                            </p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={member.role}
-                          onValueChange={(newRole) => handleUpdateMemberRole(member.id, newRole)}
-                          disabled={member.role === 'owner' || member.user_id === user?.id}
-                        >
-                          <SelectTrigger className="w-[140px] h-8 border-botkorp-orange/20">
-                            <Badge variant={getRoleBadgeVariant(member.role)} className="gap-1 bg-botkorp-orange/10 text-botkorp-orange border-botkorp-orange/20 hover:bg-botkorp-orange hover:text-white transition-colors duration-300">
-                              {getRoleIcon(member.role)}
-                              <span className="capitalize text-[11px]">{member.role}</span>
-                            </Badge>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="manager">Manager</SelectItem>
-                            <SelectItem value="operator">Operator</SelectItem>
-                            <SelectItem value="viewer">Viewer</SelectItem>
-                            <SelectItem value="member">Member</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={member.status === 'active' ? 'default' : 'secondary'}
-                          className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px] h-5 px-2"
-                        >
-                          <UserCheck className="h-3 w-3 mr-1" />
-                          {member.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-xs text-muted-foreground">
-                          {member.joined_at
-                            ? format(new Date(member.joined_at), 'MMM d, yyyy')
-                            : 'N/A'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveMember(member.id)}
-                          disabled={member.role === 'owner' || member.user_id === user?.id}
-                          className="h-8 w-8 p-0 text-destructive hover:text-white hover:bg-destructive transition-all duration-300 active:scale-95"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
           ) : (
-            <Card className="border-2 border-dashed bg-muted/20 shadow-sm">
-              <CardContent className="pt-12 pb-12 text-center">
-                <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-botkorp-orange/10 dark:bg-botkorp-orange/20 mb-5 animate-in zoom-in-50 duration-500 delay-100 shadow-sm">
-                  <Users className="h-10 w-10 text-botkorp-orange animate-pulse" />
-                </div>
-                <h3 className="text-lg font-bold mb-2">
-                  {searchQuery ? 'No members found' : 'No members yet'}
-                </h3>
-                <p className="text-muted-foreground mb-8 max-w-sm mx-auto text-sm leading-relaxed">
-                  {searchQuery 
-                    ? 'Try adjusting your search terms to find the member you\'re looking for'
-                    : 'Invite team members to collaborate and manage your Bot Korp organization together'}
-                </p>
-                {!searchQuery && (
-                  <Button 
-                    onClick={() => setDialogOpen(true)}
-                    className="bg-botkorp-orange hover:bg-botkorp-orange/90 text-white hover:shadow-lg shadow-md transition-all duration-300 active:scale-95 h-10 px-6 font-medium"
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Invite Member
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
+            <div className="py-16 text-center">
+              <div className="inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 mb-5 shadow-[0_8px_30px_rgb(255,107,53,0.15)]">
+                <Users className="h-10 w-10 text-botkorp-orange" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">
+                {searchQuery ? 'No members found' : 'No members yet'}
+              </h3>
+              <p className="text-muted-foreground/70 mb-8 max-w-sm mx-auto text-sm leading-relaxed">
+                {searchQuery 
+                  ? 'Try adjusting your search terms to find the member you\'re looking for'
+                  : 'Invite team members to collaborate and manage your Bot Korp organization together'}
+              </p>
+              {!searchQuery && (
+                <Button 
+                  onClick={() => setDialogOpen(true)}
+                  className="h-11 px-6 font-medium bg-botkorp-orange hover:bg-botkorp-orange/90 text-white rounded-xl shadow-[0_8px_30px_rgb(255,107,53,0.25)] hover:shadow-[0_8px_30px_rgb(255,107,53,0.35)] hover:-translate-y-0.5 transition-all"
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Invite Member
+                </Button>
+              )}
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
