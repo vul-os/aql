@@ -525,11 +525,11 @@ export default function ServiceDetailPage() {
     }
     
     const statusMap = {
-      'pending_setup': { label: '⏳ Pending', className: 'bg-accent/10 text-accent dark:bg-accent/20' },
-      'pending_installation': { label: '⏳ Pending', className: 'bg-accent/10 text-accent dark:bg-accent/20' },
-      'installation_scheduled': { label: '📅 Scheduled', className: 'bg-secondary/10 text-secondary dark:bg-secondary/20' },
-      'installing': { label: '🔧 Installing', className: 'bg-secondary/10 text-secondary dark:bg-secondary/20' },
-      'active': { label: '✓ Active', className: 'bg-accent/10 text-accent dark:bg-accent/20' },
+      'pending_setup': { label: '⏳ Pending', className: 'bg-botkorp-orange/10 text-botkorp-orange dark:bg-botkorp-orange/20' },
+      'pending_installation': { label: '⏳ Pending', className: 'bg-botkorp-orange/10 text-botkorp-orange dark:bg-botkorp-orange/20' },
+      'installation_scheduled': { label: '📅 Scheduled', className: 'bg-[#4F5D75]/10 text-[#4F5D75] dark:bg-[#4F5D75]/20' },
+      'installing': { label: '🔧 Installing', className: 'bg-[#4F5D75]/10 text-[#4F5D75] dark:bg-[#4F5D75]/20' },
+      'active': { label: '✓ Active', className: 'bg-botkorp-orange/10 text-botkorp-orange dark:bg-botkorp-orange/20' },
       'cancelled': { label: '✗ Cancelled', className: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' }
     };
     
@@ -680,19 +680,14 @@ export default function ServiceDetailPage() {
               <div className="space-y-6">
                 {gardens.map((garden, index) => (
                   <div key={garden.id} className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${index * 100}ms` }}>
-                    {/* Premium Garden Header */}
-                    <div className="flex items-center gap-2">
-                      <div className="h-0.5 w-8 bg-botkorp-orange rounded-full" />
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-botkorp-orange flex items-center justify-center shadow-md">
-                          <Sprout className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                          <h2 className="text-lg font-bold">{garden.name}</h2>
-                          <p className="text-xs text-muted-foreground">
-                            {Math.round(garden.area_sqm)} m² coverage area
-                          </p>
-                        </div>
+                    {/* Garden Header */}
+                    <div className="flex items-center gap-3 mb-1">
+                      <Sprout className="h-5 w-5 text-botkorp-orange" />
+                      <div>
+                        <h2 className="text-lg font-bold">{garden.name}</h2>
+                        <p className="text-xs text-muted-foreground">
+                          {Math.round(garden.area_sqm)} m² coverage area
+                        </p>
                       </div>
                     </div>
 
@@ -782,14 +777,14 @@ export default function ServiceDetailPage() {
             {gardens.length > 0 ? (
               <>
                 {/* Section Header */}
-                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  <div className="h-0.5 w-8 bg-botkorp-orange rounded-full" />
-                  <h2 className="text-sm font-bold uppercase tracking-wide flex items-center gap-2">
-                    All Gardens
-                    <Badge variant="secondary" className="h-5 px-2 text-[10px] bg-botkorp-orange/10 text-botkorp-orange border-botkorp-orange/20 font-semibold">
-                      {gardens.length}
-                    </Badge>
-                  </h2>
+                <div className="flex items-center justify-between mb-1 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <div className="flex items-center gap-3">
+                    <Sprout className="h-5 w-5 text-botkorp-orange" />
+                    <h2 className="text-lg font-bold">All Gardens</h2>
+                  </div>
+                  <Badge variant="secondary" className="h-6 px-3 text-xs bg-botkorp-orange/10 text-botkorp-orange border-0 font-semibold rounded-full">
+                    {gardens.length} Total
+                  </Badge>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -879,14 +874,14 @@ export default function ServiceDetailPage() {
             {agreements.length > 0 ? (
               <>
                 {/* Section Header */}
-                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  <div className="h-0.5 w-8 bg-botkorp-orange rounded-full" />
-                  <h2 className="text-sm font-bold uppercase tracking-wide flex items-center gap-2">
-                    Rental Agreements
-                    <Badge variant="secondary" className="h-5 px-2 text-[10px] bg-botkorp-orange/10 text-botkorp-orange border-botkorp-orange/20 font-semibold">
-                      {agreements.length}
-                    </Badge>
-                  </h2>
+                <div className="flex items-center justify-between mb-1 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-5 w-5 text-botkorp-orange" />
+                    <h2 className="text-lg font-bold">Rental Agreements</h2>
+                  </div>
+                  <Badge variant="secondary" className="h-6 px-3 text-xs bg-botkorp-orange/10 text-botkorp-orange border-0 font-semibold rounded-full">
+                    {agreements.length} Total
+                  </Badge>
                 </div>
 
                 <div className="space-y-4">
@@ -979,9 +974,9 @@ export default function ServiceDetailPage() {
           {/* SETTINGS TAB */}
           <TabsContent value="settings" className="space-y-4">
             {/* Section Header */}
-            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <div className="h-0.5 w-8 bg-botkorp-orange rounded-full" />
-              <h2 className="text-sm font-bold uppercase tracking-wide">Service Configuration</h2>
+            <div className="flex items-center gap-3 mb-1 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <Settings className="h-5 w-5 text-botkorp-orange" />
+              <h2 className="text-lg font-bold">Service Configuration</h2>
             </div>
 
             {/* Edit Service Name - Soft UI */}
@@ -1089,7 +1084,7 @@ export default function ServiceDetailPage() {
                     {/* Edge Trimming Frequency */}
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
-                        <Scissors className="h-5 w-5 text-primary" />
+                        <Scissors className="h-5 w-5 text-botkorp-orange" />
                         <Label className="text-base font-semibold">Edge Trimming Frequency</Label>
                       </div>
                       <p className="text-sm text-muted-foreground">
@@ -1103,11 +1098,11 @@ export default function ServiceDetailPage() {
                             onClick={() => setScheduleData({...scheduleData, servicesPerMonth: visits, isValid: true})}
                             className={`p-6 rounded-lg border-2 text-center transition-all ${
                               (scheduleData.servicesPerMonth || 2) === visits
-                                ? 'border-primary bg-primary/10 shadow-md'
-                                : 'border-border hover:border-primary/50 hover:bg-muted'
+                                ? 'border-botkorp-orange bg-botkorp-orange/10 shadow-md'
+                                : 'border-border hover:border-botkorp-orange/50 hover:bg-muted'
                             }`}
                           >
-                            <div className="text-3xl font-bold mb-2 text-primary">{visits}</div>
+                            <div className="text-3xl font-bold mb-2 text-botkorp-orange">{visits}</div>
                             <div className="text-xs text-muted-foreground">
                               visit{visits > 1 ? 's' : ''}/month
                             </div>
@@ -1115,7 +1110,7 @@ export default function ServiceDetailPage() {
                               R{visits * 100}
                             </div>
                             {(scheduleData.servicesPerMonth || 2) === visits && (
-                              <CheckCircle className="h-5 w-5 text-primary mx-auto mt-2" />
+                              <CheckCircle className="h-5 w-5 text-botkorp-orange mx-auto mt-2" />
                             )}
                           </button>
                         ))}
@@ -1131,7 +1126,7 @@ export default function ServiceDetailPage() {
                     {/* Preferred Day of Week */}
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5 text-primary" />
+                        <Calendar className="h-5 w-5 text-botkorp-orange" />
                         <Label className="text-base font-semibold">Preferred Day of Week</Label>
                       </div>
                       <p className="text-sm text-muted-foreground">Choose your preferred day for service visits</p>
@@ -1151,8 +1146,8 @@ export default function ServiceDetailPage() {
                             onClick={() => setScheduleData({...scheduleData, dayOfWeek: day.value, isValid: true})}
                             className={`p-3 rounded-lg border-2 text-center transition-all ${
                               (scheduleData.dayOfWeek || 1) === day.value
-                                ? 'border-primary bg-primary text-primary-foreground shadow-md'
-                                : 'border-border hover:border-primary/50 hover:bg-muted'
+                                ? 'border-botkorp-orange bg-botkorp-orange text-white shadow-md'
+                                : 'border-border hover:border-botkorp-orange/50 hover:bg-muted'
                             }`}
                             title={day.full}
                           >
@@ -1170,7 +1165,7 @@ export default function ServiceDetailPage() {
                     {/* Preferred Time Window */}
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
-                        <Clock className="h-5 w-5 text-primary" />
+                        <Clock className="h-5 w-5 text-botkorp-orange" />
                         <Label className="text-base font-semibold">Preferred Time Window</Label>
                       </div>
                       <p className="text-sm text-muted-foreground">Select your preferred time range for service visits</p>
@@ -1231,8 +1226,8 @@ export default function ServiceDetailPage() {
                     
                     {/* Billing Impact Alert */}
                     {scheduleData.servicesPerMonth !== currentSchedule?.servicesPerMonth && (
-                      <Alert className={scheduleData.servicesPerMonth > (currentSchedule?.servicesPerMonth || 4) ? 'border-orange-200 bg-orange-50 dark:bg-orange-950/20' : 'border-accent/20 bg-accent/5 dark:bg-accent/10'}>
-                        <AlertCircle className={`h-4 w-4 ${scheduleData.servicesPerMonth > (currentSchedule?.servicesPerMonth || 4) ? 'text-orange-600' : 'text-accent'}`} />
+                      <Alert className={scheduleData.servicesPerMonth > (currentSchedule?.servicesPerMonth || 4) ? 'border-orange-200 bg-orange-50 dark:bg-orange-950/20' : 'border-botkorp-orange/20 bg-botkorp-orange/5 dark:bg-botkorp-orange/10'}>
+                        <AlertCircle className={`h-4 w-4 ${scheduleData.servicesPerMonth > (currentSchedule?.servicesPerMonth || 4) ? 'text-orange-600' : 'text-botkorp-orange'}`} />
                         <AlertDescription className={`text-sm ${scheduleData.servicesPerMonth > (currentSchedule?.servicesPerMonth || 4) ? 'text-orange-900 dark:text-orange-200' : 'text-foreground/90'}`}>
                           <p className="font-semibold mb-1">Billing Change</p>
                           <p className="text-xs">
@@ -1336,7 +1331,7 @@ export default function ServiceDetailPage() {
                         size="lg"
                         onClick={() => newGardenCount > 1 && setNewGardenCount(newGardenCount - 1)}
                         disabled={newGardenCount <= 1}
-                        className="h-14 w-14 md:h-16 md:w-16 rounded-full border-2 hover:border-orange-400 hover:bg-orange-50 disabled:opacity-20 transition-all"
+                        className="h-14 w-14 md:h-16 md:w-16 rounded-full border-2 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 disabled:opacity-20 transition-all"
                       >
                         <Minus className="h-5 w-5 md:h-6 md:w-6" />
                       </Button>
@@ -1356,7 +1351,7 @@ export default function ServiceDetailPage() {
                         variant="outline"
                         size="lg"
                         onClick={() => setNewGardenCount(newGardenCount + 1)}
-                        className="h-14 w-14 md:h-16 md:w-16 rounded-full border-2 hover:border-accent hover:bg-accent/5 transition-all"
+                        className="h-14 w-14 md:h-16 md:w-16 rounded-full border-2 hover:border-botkorp-orange hover:bg-botkorp-orange/5 transition-all"
                       >
                         <Plus className="h-5 w-5 md:h-6 md:w-6" />
                       </Button>
@@ -1477,7 +1472,7 @@ export default function ServiceDetailPage() {
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-xl">
-              <Play className="h-5 w-5 text-accent" />
+              <Play className="h-5 w-5 text-botkorp-orange" />
               Resume Service?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-base">
@@ -1486,7 +1481,7 @@ export default function ServiceDetailPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleResumeService} className="bg-accent hover:bg-accent/90">
+            <AlertDialogAction onClick={handleResumeService} className="bg-botkorp-orange hover:bg-botkorp-orange/90">
               Resume Service
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1505,8 +1500,8 @@ export default function ServiceDetailPage() {
         <AlertDialogContent className="max-w-2xl max-h-[90vh]">
           <AlertDialogHeader className="pb-4">
             <AlertDialogTitle className="text-2xl flex items-center gap-3">
-              <div className="h-12 w-12 rounded-xl bg-secondary/10 dark:bg-secondary/20 flex items-center justify-center">
-                <FileText className="h-6 w-6 text-secondary" />
+              <div className="h-12 w-12 rounded-xl bg-botkorp-orange/10 dark:bg-botkorp-orange/20 flex items-center justify-center">
+                <FileText className="h-6 w-6 text-botkorp-orange" />
               </div>
               Amendment Request
             </AlertDialogTitle>
@@ -1537,7 +1532,7 @@ export default function ServiceDetailPage() {
               </div>
               <div className="text-center">
                 <p className="text-xs text-muted-foreground mb-1">New</p>
-                <p className="text-3xl font-bold text-accent">{newGardenCount}</p>
+                <p className="text-3xl font-bold text-botkorp-orange">{newGardenCount}</p>
               </div>
             </div>
 
@@ -1548,15 +1543,15 @@ export default function ServiceDetailPage() {
                 {modifyAction === 'add' ? (
                   <>
                     <div className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
+                      <CheckCircle className="h-4 w-4 text-botkorp-orange mt-0.5 flex-shrink-0" />
                       <span>{newGardenCount - gardens.length} new bot{newGardenCount - gardens.length !== 1 ? 's' : ''} deployed</span>
                     </div>
                     <div className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
+                      <CheckCircle className="h-4 w-4 text-botkorp-orange mt-0.5 flex-shrink-0" />
                       <span>New agreements created</span>
                     </div>
                     <div className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
+                      <CheckCircle className="h-4 w-4 text-botkorp-orange mt-0.5 flex-shrink-0" />
                       <span>Installation scheduled (48hrs)</span>
                     </div>
                   </>
@@ -1639,7 +1634,7 @@ export default function ServiceDetailPage() {
                   setProcessing(false);
                 }
               }}
-              className="bg-accent hover:bg-accent/90"
+              className="bg-botkorp-orange hover:bg-botkorp-orange/90"
             >
               {processing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
               Submit Request

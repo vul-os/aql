@@ -10,6 +10,7 @@ import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import InteractivePreview from '@/components/ui/interactive-preview';
 import SimplePriceCalculator from '@/components/services/simple-price-calculator';
+import CoverageMap from '@/components/services/coverage-map';
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -302,15 +303,15 @@ export default function LandingPage() {
 
       {/* Hero Section - Fits in viewport */}
       <section className="relative mt-20 sm:mt-24 h-[calc(100vh-96px)] sm:h-[calc(100vh-104px)] flex items-center pb-8 sm:pb-12 overflow-hidden">
-        {/* Background Image with Solid Overlay */}
+        {/* Background Image with Transparent Overlay */}
         <div className="absolute inset-0">
           <img 
             src="/images/lawn.jpg" 
             alt="Automated lawn care" 
             className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover object-center"
           />
-          {/* Solid color overlay - no gradients */}
-          <div className="absolute inset-0 bg-botkorp-black/50 dark:bg-botkorp-black/70" />
+          {/* Soft transparent overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/30 to-white/50 dark:from-botkorp-black/50 dark:via-botkorp-black/40 dark:to-botkorp-black/60" />
         </div>
 
         {/* Content */}
@@ -318,34 +319,34 @@ export default function LandingPage() {
           
           {/* Headline - More compact */}
           <div className="text-center mb-6 lg:mb-8 animate-[fadeIn_1s_ease-out]">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight tracking-tight drop-shadow-2xl">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white leading-tight tracking-tight drop-shadow-lg">
               Property services managed
             </h1>
-            <h1 className="mt-1 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight drop-shadow-2xl">
-              <span className="text-botkorp-orange">
+            <h1 className="mt-1 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight drop-shadow-lg">
+              <span className="bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
                 automatically.
               </span>
             </h1>
-            <p className="mt-4 sm:mt-6 text-base sm:text-lg md:text-xl text-white/90 font-light max-w-2xl mx-auto drop-shadow-lg leading-relaxed">
+            <p className="mt-4 sm:mt-6 text-base sm:text-lg md:text-xl text-gray-800 dark:text-white/90 font-medium max-w-2xl mx-auto drop-shadow-md leading-relaxed">
               Professional lawn, pool, and security automation for homes and businesses across South Africa.
             </p>
           </div>
 
-          {/* Search Box - Professional Solid Design */}
+          {/* Search Box - Soft Glass-morphism Design */}
           <div className="w-full max-w-2xl mx-auto animate-[fadeInUp_0.7s_ease-out_0.3s_both]">
-            <div className="relative bg-white dark:bg-botkorp-black-light rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl border-2 border-gray-200 dark:border-botkorp-slate-blue/30">
-              <div className="flex items-center px-3 sm:px-4 py-2.5 sm:py-3">
-                <MapPin className="text-botkorp-orange mr-2 sm:mr-3 flex-shrink-0 h-5 w-5" />
+            <div className="relative bg-white/90 dark:bg-botkorp-black-light/90 backdrop-blur-xl rounded-2xl shadow-2xl transition-all duration-300 hover:shadow-3xl border border-gray-200/50 dark:border-botkorp-slate-blue/20">
+              <div className="flex items-center px-3 sm:px-4 py-3 sm:py-4">
+                <MapPin className="text-orange-500 mr-2 sm:mr-3 flex-shrink-0 h-5 w-5" />
                 <div className="flex-1 min-w-0">
                   <AddressSearch
                     onAddressSelect={handleAddressSelect}
                     placeholder="Enter your address"
                     storageKey="lastSearchedAddress"
-                    className="border-none shadow-none focus-visible:ring-0 py-1.5 sm:py-2 text-sm sm:text-base placeholder:text-gray-400 dark:placeholder:text-botkorp-silver px-0 h-auto outline-none dark:text-white"
+                    className="border-none shadow-none focus-visible:ring-0 py-1.5 sm:py-2 text-sm sm:text-base placeholder:text-gray-500 dark:placeholder:text-botkorp-silver px-0 h-auto outline-none dark:text-white bg-transparent"
                   />
                 </div>
                 <Button
-                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold bg-botkorp-orange hover:bg-botkorp-orange-dark text-white transition-all duration-200 shadow-sm hover:shadow-md h-10 rounded-lg px-4 sm:px-6 ml-2 sm:ml-3 text-sm"
+                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white transition-all duration-200 shadow-lg hover:shadow-xl h-11 rounded-xl px-4 sm:px-6 ml-2 sm:ml-3 text-sm"
                   disabled={searching}
                   onClick={() => {
                     // Trigger search if needed
@@ -363,39 +364,39 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Feature Cards - Compact */}
+            {/* Feature Cards - Soft Modern Design */}
             <div className="mt-5 flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-4 animate-[fadeIn_1s_ease-out_0.6s_both]">
-              <div className="flex items-center bg-botkorp-slate-blue rounded-lg px-4 py-2.5 border border-botkorp-silver/20 shadow-md hover:shadow-lg hover:bg-botkorp-slate-blue/90 transition-all w-full sm:w-auto">
-                <div className="bg-botkorp-orange rounded-full p-2 mr-3">
+              <div className="flex items-center bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-xl px-5 py-3 border border-gray-200/50 dark:border-gray-700/50 shadow-lg hover:shadow-xl hover:scale-105 transition-all w-full sm:w-auto">
+                <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg p-2 mr-3 shadow-md">
                   <Bot className="w-4 h-4 text-white" />
                 </div>
-                <div className="text-white">
+                <div className="text-gray-800 dark:text-white">
                   <p className="font-semibold text-xs">Automated lawn mowing</p>
                 </div>
               </div>
-              <div className="flex items-center bg-botkorp-slate-blue rounded-lg px-4 py-2.5 border border-botkorp-silver/20 shadow-md hover:shadow-lg hover:bg-botkorp-slate-blue/90 transition-all w-full sm:w-auto">
-                <div className="bg-botkorp-orange rounded-full p-2 mr-3">
+              <div className="flex items-center bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-xl px-5 py-3 border border-gray-200/50 dark:border-gray-700/50 shadow-lg hover:shadow-xl hover:scale-105 transition-all w-full sm:w-auto">
+                <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg p-2 mr-3 shadow-md">
                   <Sprout className="w-4 h-4 text-white" />
                 </div>
-                <div className="text-white">
+                <div className="text-gray-800 dark:text-white">
                   <p className="font-semibold text-xs">Professional results</p>
                 </div>
               </div>
             </div>
 
-            {/* Trust Indicators - Compact */}
-            <div className="mt-5 pt-4 border-t border-white/20 flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-6 text-white/90 animate-[fadeIn_1s_ease-out_0.9s_both]">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-botkorp-orange" />
-                <span className="text-xs font-medium">No Contracts</span>
+            {/* Trust Indicators - Modern Badges */}
+            <div className="mt-5 pt-4 flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4 animate-[fadeIn_1s_ease-out_0.9s_both]">
+              <div className="flex items-center gap-2 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-full px-4 py-2 shadow-md">
+                <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
+                <span className="text-xs font-semibold text-gray-800 dark:text-white">No Contracts</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Sprout className="w-4 h-4 text-botkorp-orange" />
-                <span className="text-xs font-medium">Eco-friendly</span>
+              <div className="flex items-center gap-2 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-full px-4 py-2 shadow-md">
+                <Sprout className="w-4 h-4 text-green-600 dark:text-green-400" />
+                <span className="text-xs font-semibold text-gray-800 dark:text-white">Eco-friendly</span>
               </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-botkorp-orange" />
-                <span className="text-xs font-medium">SA Based</span>
+              <div className="flex items-center gap-2 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-full px-4 py-2 shadow-md">
+                <MapPin className="w-4 h-4 text-orange-500" />
+                <span className="text-xs font-semibold text-gray-800 dark:text-white">SA Based</span>
               </div>
             </div>
           </div>
@@ -782,116 +783,156 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Coverage Areas Section */}
-      <section id="coverage-map" className="relative overflow-hidden bg-gray-50 dark:bg-botkorp-black-light py-16 md:py-20">
+      {/* Coverage Areas Section - Split Layout Design */}
+      <section id="coverage-map" className="relative overflow-hidden bg-gradient-to-b from-white via-gray-50 to-white dark:from-botkorp-black dark:via-botkorp-black-light dark:to-botkorp-black py-16 md:py-20">
+        {/* Soft Decorative Background */}
+        <div className="absolute inset-0 -z-10 opacity-30">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-orange-200/30 dark:bg-orange-500/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-200/30 dark:bg-blue-500/10 rounded-full blur-3xl"></div>
+        </div>
+
         <div className="container mx-auto px-4">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center gap-2 mb-4">
-                <div className="h-1 w-12 bg-botkorp-orange rounded-full"></div>
-                <MapPin className="h-5 w-5 text-botkorp-orange" />
-                <div className="h-1 w-12 bg-botkorp-orange rounded-full"></div>
-              </div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-3 text-botkorp-black dark:text-white">
-                Where We Serve
-              </h2>
-              <p className="text-base md:text-lg text-botkorp-slate-blue dark:text-botkorp-silver max-w-2xl mx-auto leading-relaxed">
-                Currently operating across key areas in South Africa, with expansion plans nationwide
-              </p>
-            </div>
-
             {loadingCoverageAreas ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-botkorp-orange" />
+              <div className="flex items-center justify-center py-20">
+                <div className="text-center">
+                  <Loader2 className="h-12 w-12 animate-spin text-orange-500 mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-gray-400">Loading coverage map...</p>
+                </div>
               </div>
             ) : coverageAreas.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {coverageAreas.map((area) => (
-                  <Card key={area.id} className="overflow-hidden group hover:shadow-xl transition-all duration-300 border-2 border-gray-200 dark:border-botkorp-slate-blue/30 hover:border-botkorp-orange">
-                    <CardHeader className="bg-botkorp-orange/10 dark:bg-botkorp-orange/20 pb-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg font-bold mb-1 text-botkorp-black dark:text-white">{area.area_name}</CardTitle>
-                          <CardDescription className="flex items-center gap-1.5 text-sm text-botkorp-slate-blue dark:text-botkorp-silver">
-                            <MapPin className="h-3.5 w-3.5" />
-                            {area.city}, {area.province}
-                          </CardDescription>
-                        </div>
-                        <CheckCircle2 className="h-6 w-6 text-botkorp-orange flex-shrink-0" />
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-4">
-                      {/* Service Types */}
-                      <div className="mb-4">
-                        <p className="text-xs font-semibold text-botkorp-slate-blue dark:text-botkorp-silver mb-2 uppercase">Available Services</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {area.service_types?.map((service, idx) => (
-                            <Badge 
-                              key={service} 
-                              variant="outline"
-                              className={`text-xs ${
-                                service === 'mow_bot' ? 'border-botkorp-orange bg-botkorp-orange/10 text-botkorp-orange' :
-                                service === 'pool_bot' ? 'border-blue-500 bg-blue-500/10 text-blue-600' :
-                                service === 'security_bot' ? 'border-botkorp-slate-blue bg-botkorp-slate-blue/10 text-botkorp-slate-blue' :
-                                'border-orange-500 bg-orange-500/10 text-orange-600'
-                              }`}
-                            >
-                              {service.replace('_', ' ').replace('bot', '').trim()}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
+              <>
+                {/* Split Section: Content Left, Map Right */}
+                <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center mb-12">
+                  
+                  {/* Left Column - Content */}
+                  <div className="space-y-6 lg:pr-8">
+                    <div className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-100 to-orange-50 dark:from-orange-900/30 dark:to-orange-800/20 rounded-full px-4 py-2 border border-orange-200/50 dark:border-orange-700/30">
+                      <MapPin className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                      <span className="text-xs font-semibold text-orange-700 dark:text-orange-300 uppercase tracking-wide">Service Coverage</span>
+                    </div>
+                    
+                    <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white leading-tight">
+                      Expanding across{' '}
+                      <span className="bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
+                        South Africa
+                      </span>
+                    </h2>
+                    
+                    <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
+                      We're proudly serving communities across South Africa with professional automated property care. Our service areas are growing rapidly to bring you the best in lawn, pool, and security automation.
+                    </p>
 
-                      {/* Postal Codes */}
-                      {area.postal_codes && area.postal_codes.length > 0 && (
-                        <div>
-                          <p className="text-xs font-semibold text-botkorp-slate-blue dark:text-botkorp-silver mb-2 uppercase">Postal Codes</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {area.postal_codes.slice(0, 4).map((code) => (
-                              <Badge key={code} className="text-xs font-mono bg-botkorp-slate-blue/20 text-botkorp-black dark:text-white border-0">
-                                {code}
-                              </Badge>
-                            ))}
-                            {area.postal_codes.length > 4 && (
-                              <Badge className="text-xs bg-botkorp-slate-blue/20 text-botkorp-black dark:text-white border-0">
-                                +{area.postal_codes.length - 4} more
-                              </Badge>
-                            )}
-                          </div>
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-2 gap-4 pt-4">
+                      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-lg hover:shadow-xl transition-all">
+                        <div className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent mb-1">
+                          {coverageAreas.length}
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                          Active Zones
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-lg hover:shadow-xl transition-all">
+                        <div className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent mb-1">
+                          {new Set(coverageAreas.map(a => a.city)).size}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                          Cities Covered
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* CTA Button */}
+                    <div className="pt-2">
+                      <Button 
+                        onClick={() => navigate('/auth/register')} 
+                        size="lg"
+                        className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-xl hover:shadow-2xl transition-all font-semibold group rounded-xl"
+                      >
+                        Check Your Area
+                        <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Right Column - Compact Map */}
+                  <div className="relative animate-[fadeIn_0.8s_ease-out]">
+                    <CoverageMap 
+                      coverageAreas={coverageAreas}
+                      apiKey={import.meta.env.VITE_MAPTILER_API_KEY || 'YOUR_MAPTILER_API_KEY'}
+                      height="500px"
+                      showLegend={false}
+                      onAreaClick={(area) => {
+                        console.log('Coverage area clicked:', area);
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Bottom CTA Card */}
+                <div className="text-center bg-gradient-to-br from-orange-50 via-white to-blue-50 dark:from-orange-900/10 dark:via-gray-800/50 dark:to-blue-900/10 rounded-3xl p-8 md:p-10 border border-gray-200/50 dark:border-gray-700/50 shadow-xl backdrop-blur-sm">
+                  <div className="max-w-2xl mx-auto space-y-4">
+                    <div className="inline-flex items-center gap-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full px-4 py-2 border border-gray-200/50 dark:border-gray-700/50 mb-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Expanding Daily</span>
+                    </div>
+                    
+                    <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+                      Don't see your area yet?
+                    </h3>
+                    
+                    <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
+                      We're expanding rapidly across South Africa. Join our waitlist and be the first to know when we launch in your neighborhood.
+                    </p>
+                    
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center items-center pt-4">
+                      <Button 
+                        onClick={() => navigate('/auth/register')} 
+                        size="lg"
+                        className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-xl hover:shadow-2xl transition-all font-semibold group rounded-xl"
+                      >
+                        Join Waitlist
+                        <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                      </Button>
+                      <Button 
+                        onClick={() => {
+                          const section = document.getElementById('services');
+                          section?.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                        variant="outline"
+                        size="lg"
+                        className="border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl"
+                      >
+                        Explore Services
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </>
             ) : (
-              <Card className="border-dashed border-2 border-gray-300 dark:border-botkorp-slate-blue/30">
-                <CardContent className="py-16 text-center">
-                  <MapPin className="h-16 w-16 text-botkorp-slate-blue dark:text-botkorp-silver mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-2 text-botkorp-black dark:text-white">Coverage Areas Coming Soon</h3>
-                  <p className="text-botkorp-slate-blue dark:text-botkorp-silver">
-                    We're currently setting up our service areas. Check back soon!
-                  </p>
+              <Card className="border-dashed border-2 border-gray-300 dark:border-botkorp-slate-blue/30 bg-white/50 dark:bg-botkorp-black-light/50">
+                <CardContent className="py-20 text-center">
+                  <div className="max-w-md mx-auto">
+                    <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-botkorp-orange/20 to-botkorp-orange/10 flex items-center justify-center mx-auto mb-6">
+                      <MapPin className="h-10 w-10 text-botkorp-orange" />
+                    </div>
+                    <h3 className="text-2xl font-bold mb-3 text-botkorp-black dark:text-white">
+                      Coverage Areas Coming Soon
+                    </h3>
+                    <p className="text-botkorp-slate-blue dark:text-botkorp-silver leading-relaxed mb-6">
+                      We're currently setting up our service areas across South Africa. Check back soon to see where we'll be serving!
+                    </p>
+                    <Button 
+                      onClick={() => navigate('/auth/register')}
+                      className="bg-botkorp-orange hover:bg-botkorp-orange-dark text-white"
+                    >
+                      Get Notified
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
-            )}
-
-            {/* CTA */}
-            {coverageAreas.length > 0 && (
-              <div className="mt-12 text-center">
-                <p className="text-botkorp-slate-blue dark:text-botkorp-silver mb-4">
-                  Don't see your area? We're expanding rapidly!
-                </p>
-                <Button 
-                  onClick={() => navigate('/auth/register')} 
-                  variant="outline"
-                  size="lg"
-                  className="group border-2 border-botkorp-orange text-botkorp-orange hover:bg-botkorp-orange hover:text-white"
-                >
-                  Join Waitlist
-                  <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </div>
             )}
           </div>
         </div>

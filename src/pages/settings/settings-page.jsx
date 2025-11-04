@@ -424,331 +424,382 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      <PageHeader
-        title="Settings"
-        subtitle="Manage your account settings and preferences"
-        icon={<Settings className="h-6 w-6 text-primary" />}
-      />
+    <div className="p-6 space-y-6 max-w-[1600px] mx-auto min-h-screen">
+      {/* Header Section - Soft UI Background */}
+      <div className="bg-gradient-to-br from-background via-background to-muted/20 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] animate-in fade-in slide-in-from-top-3 duration-500">
+        <PageHeader
+          title="Settings"
+          subtitle="Manage your account settings and preferences"
+          icon={<Settings className="h-5 w-5 text-botkorp-orange" />}
+        />
+      </div>
 
       {/* Settings Tabs */}
-      <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto">
-          <TabsTrigger value="profile">
-            <User className="h-4 w-4 mr-2" />
-            Profile
-          </TabsTrigger>
-          <TabsTrigger value="organization">
-            <Building className="h-4 w-4 mr-2" />
-            Organization
-          </TabsTrigger>
-          <TabsTrigger value="legal">
-            <Shield className="h-4 w-4 mr-2" />
-            Legal Profile
-          </TabsTrigger>
-          <TabsTrigger value="locations">
-            <MapPin className="h-4 w-4 mr-2" />
-            Locations
-          </TabsTrigger>
-          <TabsTrigger value="notifications">
-            <Bell className="h-4 w-4 mr-2" />
-            Notifications
-          </TabsTrigger>
-        </TabsList>
+      <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-6">
+        <div className="bg-gradient-to-br from-background to-muted/20 rounded-2xl p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 bg-transparent h-auto p-0">
+            <TabsTrigger 
+              value="profile" 
+              className="data-[state=active]:bg-botkorp-orange data-[state=active]:text-white data-[state=active]:shadow-[0_4px_20px_rgb(255,107,53,0.25)] h-10 rounded-xl transition-all bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)]"
+            >
+              <User className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Profile</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="organization"
+              className="data-[state=active]:bg-botkorp-orange data-[state=active]:text-white data-[state=active]:shadow-[0_4px_20px_rgb(255,107,53,0.25)] h-10 rounded-xl transition-all bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)]"
+            >
+              <Building className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Organization</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="legal"
+              className="data-[state=active]:bg-botkorp-orange data-[state=active]:text-white data-[state=active]:shadow-[0_4px_20px_rgb(255,107,53,0.25)] h-10 rounded-xl transition-all bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)]"
+            >
+              <Shield className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Legal</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="locations"
+              className="data-[state=active]:bg-botkorp-orange data-[state=active]:text-white data-[state=active]:shadow-[0_4px_20px_rgb(255,107,53,0.25)] h-10 rounded-xl transition-all bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)]"
+            >
+              <MapPin className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Locations</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="notifications"
+              className="data-[state=active]:bg-botkorp-orange data-[state=active]:text-white data-[state=active]:shadow-[0_4px_20px_rgb(255,107,53,0.25)] h-10 rounded-xl transition-all bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)]"
+            >
+              <Bell className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Notifications</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Profile Tab */}
-        <TabsContent value="profile" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile Information</CardTitle>
-              <CardDescription>
-                Update your personal information and contact details
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleProfileUpdate} className="space-y-6">
-                {/* Avatar Section (Read-only) */}
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-20 w-20">
-                    <AvatarImage src={profile.avatar_url} alt={profile.full_name} />
-                    <AvatarFallback className="text-lg">{getUserInitials()}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="font-medium">{profile.full_name || user?.email}</p>
-                    <p className="text-sm text-muted-foreground">{user?.email}</p>
-                  </div>
+        <TabsContent value="profile" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-gradient-to-br from-background to-muted/20 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+                <User className="h-6 w-6 text-botkorp-orange" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">Profile Information</h3>
+                <p className="text-sm text-muted-foreground/70">Update your personal information and contact details</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleProfileUpdate} className="space-y-6">
+              {/* Avatar Section */}
+              <div className="flex items-center gap-6 p-6 rounded-2xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                <Avatar className="h-24 w-24 ring-4 ring-botkorp-orange/10">
+                  <AvatarImage src={profile.avatar_url} alt={profile.full_name} />
+                  <AvatarFallback className="text-xl font-bold bg-gradient-to-br from-botkorp-orange/20 to-botkorp-orange/10 text-botkorp-orange">
+                    {getUserInitials()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <p className="text-lg font-bold mb-1">{profile.full_name || user?.email}</p>
+                  <p className="text-sm text-muted-foreground/70 flex items-center gap-2">
+                    <Mail className="h-3.5 w-3.5" />
+                    {user?.email}
+                  </p>
                 </div>
+              </div>
 
-                <Separator />
+              <Separator className="bg-border/50" />
 
-                {/* Full Name */}
-                <div className="space-y-2">
-                  <Label htmlFor="full_name">Full Name</Label>
-                  <Input
-                    id="full_name"
-                    type="text"
-                    value={profile.full_name}
-                    onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
-                    placeholder="John Doe"
-                  />
-                </div>
+              {/* Full Name */}
+              <div className="space-y-2">
+                <Label htmlFor="full_name" className="text-sm font-semibold">Full Name</Label>
+                <Input
+                  id="full_name"
+                  type="text"
+                  value={profile.full_name}
+                  onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
+                  placeholder="John Doe"
+                  className="h-11 bg-background/60 backdrop-blur-sm border-none shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] focus:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06),0_0_0_3px_rgb(255,107,53,0.1)] transition-all rounded-xl"
+                />
+              </div>
 
-                {/* Phone */}
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={profile.phone}
-                    onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                    placeholder="+27 123 456 789"
-                  />
-                </div>
+              {/* Phone */}
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="text-sm font-semibold">Phone Number</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={profile.phone}
+                  onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                  placeholder="+27 123 456 789"
+                  className="h-11 bg-background/60 backdrop-blur-sm border-none shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] focus:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06),0_0_0_3px_rgb(255,107,53,0.1)] transition-all rounded-xl"
+                />
+              </div>
 
-                <Button type="submit" disabled={loading}>
-                  <Save className="h-4 w-4 mr-2" />
-                  {loading ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+              <Button 
+                type="submit" 
+                disabled={loading}
+                className="h-11 px-6 font-medium bg-botkorp-orange hover:bg-botkorp-orange/90 text-white rounded-xl shadow-[0_8px_30px_rgb(255,107,53,0.25)] hover:shadow-[0_8px_30px_rgb(255,107,53,0.35)] hover:-translate-y-0.5 transition-all"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {loading ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </form>
+          </div>
         </TabsContent>
 
         {/* Organization Tab */}
-        <TabsContent value="organization" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building className="h-5 w-5" />
-                Organization Settings
-              </CardTitle>
-              <CardDescription>
-                Manage your organization details and settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleOrganizationUpdate} className="space-y-6">
-                {/* Current Organization Info */}
-                <div className="bg-muted/50 border rounded-lg p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Current Organization</p>
-                      <p className="font-semibold text-lg">{selectedOrg?.organization_name}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Your Role</p>
-                      <p className="font-medium capitalize">{selectedOrg?.member_role || 'Member'}</p>
-                    </div>
-                  </div>
+        <TabsContent value="organization" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-gradient-to-br from-background to-muted/20 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(59,130,246,0.15)]">
+                <Building className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">Organization Settings</h3>
+                <p className="text-sm text-muted-foreground/70">Manage your organization details and settings</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleOrganizationUpdate} className="space-y-6">
+              {/* Current Organization Info */}
+              <div className="grid gap-4 md:grid-cols-2 p-5 rounded-2xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                <div>
+                  <p className="text-xs text-muted-foreground/70 uppercase tracking-wider font-semibold mb-2">Current Organization</p>
+                  <p className="font-bold text-xl">{selectedOrg?.organization_name}</p>
                   {selectedOrg?.organization_slug && (
-                    <p className="text-xs text-muted-foreground">
-                      Organization ID: {selectedOrg.organization_slug}
+                    <p className="text-xs text-muted-foreground/60 mt-1">
+                      ID: {selectedOrg.organization_slug}
                     </p>
                   )}
                 </div>
-
-                <Separator />
-
-                {/* Organization Name Update */}
-                {(selectedOrg?.member_role === 'owner' || selectedOrg?.member_role === 'admin') ? (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="organization_name">Organization Name</Label>
-                      <Input
-                        id="organization_name"
-                        type="text"
-                        value={organizationName}
-                        onChange={(e) => setOrganizationName(e.target.value)}
-                        placeholder="My Organization"
-                        disabled={updatingOrg}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        This is the name that will appear across the platform for your organization.
-                      </p>
-                    </div>
-
-                    <Button type="submit" disabled={updatingOrg || organizationName === selectedOrg?.organization_name}>
-                      <Save className="h-4 w-4 mr-2" />
-                      {updatingOrg ? 'Updating...' : 'Update Organization'}
-                    </Button>
-                  </>
-                ) : (
-                  <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-                    <div className="flex gap-3">
-                      <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                      <div className="space-y-2 text-sm">
-                        <p className="font-semibold text-amber-900 dark:text-amber-100">
-                          Limited Permissions
-                        </p>
-                        <p className="text-amber-800 dark:text-amber-200">
-                          Only organization owners and admins can update organization settings. 
-                          Please contact your organization owner if you need to make changes.
-                        </p>
-                      </div>
-                    </div>
+                <div className="text-left md:text-right">
+                  <p className="text-xs text-muted-foreground/70 uppercase tracking-wider font-semibold mb-2">Your Role</p>
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 shadow-[0_2px_10px_rgb(255,107,53,0.1)]">
+                    <Shield className="h-4 w-4 text-botkorp-orange" />
+                    <span className="font-bold capitalize text-botkorp-orange">{selectedOrg?.member_role || 'Member'}</span>
                   </div>
-                )}
+                </div>
+              </div>
 
-                <Separator />
+              <Separator className="bg-border/50" />
 
-                {/* Additional Organization Info */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                    Organization Details
-                  </h3>
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground">Status</Label>
-                    <div className="p-3 bg-muted/50 rounded-md border">
-                      <p className="font-medium flex items-center gap-2">
-                        {selectedOrg?.is_active !== false ? (
-                          <>
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                            Active
-                          </>
-                        ) : (
-                          <>
-                            <AlertCircle className="h-4 w-4 text-red-600" />
-                            Inactive
-                          </>
-                        )}
+              {/* Organization Name Update */}
+              {(selectedOrg?.member_role === 'owner' || selectedOrg?.member_role === 'admin') ? (
+                <>
+                  <div className="space-y-3">
+                    <Label htmlFor="organization_name" className="text-sm font-semibold">Organization Name</Label>
+                    <Input
+                      id="organization_name"
+                      type="text"
+                      value={organizationName}
+                      onChange={(e) => setOrganizationName(e.target.value)}
+                      placeholder="My Organization"
+                      disabled={updatingOrg}
+                      className="h-11 bg-background/60 backdrop-blur-sm border-none shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] focus:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06),0_0_0_3px_rgb(255,107,53,0.1)] transition-all rounded-xl"
+                    />
+                    <p className="text-xs text-muted-foreground/60 leading-relaxed">
+                      This is the name that will appear across the platform for your organization.
+                    </p>
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    disabled={updatingOrg || organizationName === selectedOrg?.organization_name}
+                    className="h-11 px-6 font-medium bg-botkorp-orange hover:bg-botkorp-orange/90 text-white rounded-xl shadow-[0_8px_30px_rgb(255,107,53,0.25)] hover:shadow-[0_8px_30px_rgb(255,107,53,0.35)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {updatingOrg ? 'Updating...' : 'Update Organization'}
+                  </Button>
+                </>
+              ) : (
+                <div className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 border border-amber-500/20 rounded-2xl p-5 shadow-[0_4px_20px_rgb(245,158,11,0.1)]">
+                  <div className="flex gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+                      <AlertCircle className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div className="space-y-2 text-sm flex-1">
+                      <p className="font-bold text-amber-900 dark:text-amber-100">
+                        Limited Permissions
+                      </p>
+                      <p className="text-amber-800 dark:text-amber-200 leading-relaxed">
+                        Only organization owners and admins can update organization settings. 
+                        Please contact your organization owner if you need to make changes.
                       </p>
                     </div>
                   </div>
                 </div>
-              </form>
-            </CardContent>
-          </Card>
+              )}
+
+              <Separator className="bg-border/50" />
+
+              {/* Additional Organization Info */}
+              <div className="space-y-4">
+                <h3 className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">
+                  Organization Details
+                </h3>
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground/70">Status</Label>
+                  <div className="p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                    <p className="font-bold flex items-center gap-2">
+                      {selectedOrg?.is_active !== false ? (
+                        <>
+                          <div className="h-8 w-8 rounded-lg bg-green-500/15 flex items-center justify-center">
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          </div>
+                          <span>Active</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="h-8 w-8 rounded-lg bg-red-500/15 flex items-center justify-center">
+                            <AlertCircle className="h-4 w-4 text-red-600" />
+                          </div>
+                          <span>Inactive</span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
         </TabsContent>
 
         {/* Legal Profile Tab */}
-        <TabsContent value="legal" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-5 w-5" />
-                    Legal Profile Information
-                  </CardTitle>
-                  <CardDescription>
-                    Your legal information for service contracts (read-only)
-                  </CardDescription>
+        <TabsContent value="legal" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-gradient-to-br from-background to-muted/20 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all">
+            <div className="flex items-start justify-between gap-4 mb-6">
+              <div className="flex items-center gap-3 flex-1">
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-green-500/15 to-green-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(34,197,94,0.15)]">
+                  <Shield className="h-6 w-6 text-green-600" />
                 </div>
-                {legalProfile.legal_profile_completed ? (
-                  <div className="flex items-center gap-2 text-green-600">
-                    <CheckCircle className="h-5 w-5" />
-                    <span className="text-sm font-medium">Verified</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-amber-600">
-                    <AlertCircle className="h-5 w-5" />
-                    <span className="text-sm font-medium">Incomplete</span>
-                  </div>
-                )}
+                <div>
+                  <h3 className="text-lg font-bold">Legal Profile Information</h3>
+                  <p className="text-sm text-muted-foreground/70">Your legal information for service contracts (read-only)</p>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
+              {legalProfile.legal_profile_completed ? (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-br from-green-500/15 to-green-500/5 shadow-[0_2px_10px_rgb(34,197,94,0.15)]">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-bold text-green-600">Verified</span>
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-br from-amber-500/15 to-amber-500/5 shadow-[0_2px_10px_rgb(245,158,11,0.15)]">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <span className="text-sm font-bold text-amber-600">Incomplete</span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-6">
               {legalProfile.legal_profile_completed ? (
                 <>
                   {/* Personal Information */}
                   <div className="space-y-4">
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    <h3 className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">
                       Personal Information
                     </h3>
                     <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-1.5">
-                        <Label className="text-muted-foreground">Legal First Name</Label>
-                        <div className="p-3 bg-muted/50 rounded-md border">
-                          <p className="font-medium">{legalProfile.first_name || 'Not set'}</p>
+                      <div className="space-y-2">
+                        <Label className="text-sm text-muted-foreground/70">Legal First Name</Label>
+                        <div className="p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                          <p className="font-bold">{legalProfile.first_name || 'Not set'}</p>
                         </div>
                       </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-muted-foreground">Legal Surname</Label>
-                        <div className="p-3 bg-muted/50 rounded-md border">
-                          <p className="font-medium">{legalProfile.surname || 'Not set'}</p>
+                      <div className="space-y-2">
+                        <Label className="text-sm text-muted-foreground/70">Legal Surname</Label>
+                        <div className="p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                          <p className="font-bold">{legalProfile.surname || 'Not set'}</p>
                         </div>
                       </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-muted-foreground">ID Number</Label>
-                      <div className="p-3 bg-muted/50 rounded-md border">
-                        <p className="font-mono font-medium">{legalProfile.id_number || 'Not set'}</p>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-muted-foreground/70">ID Number</Label>
+                      <div className="p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                        <p className="font-mono font-bold text-lg">{legalProfile.id_number || 'Not set'}</p>
                       </div>
                     </div>
                   </div>
 
-                  <Separator />
+                  <Separator className="bg-border/50" />
 
                   {/* Contact Information */}
                   <div className="space-y-4">
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    <h3 className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">
                       Contact Information
                     </h3>
-                    <div className="space-y-1.5">
-                      <Label className="text-muted-foreground">Cell Phone</Label>
-                      <div className="p-3 bg-muted/50 rounded-md border">
-                        <p className="font-medium">{legalProfile.cell_phone || 'Not set'}</p>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-muted-foreground/70">Cell Phone</Label>
+                      <div className="p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                        <p className="font-bold flex items-center gap-2">
+                          <Smartphone className="h-4 w-4 text-muted-foreground/70" />
+                          {legalProfile.cell_phone || 'Not set'}
+                        </p>
                       </div>
                     </div>
                   </div>
 
-                  <Separator />
+                  <Separator className="bg-border/50" />
 
                   {/* Physical Address */}
                   <div className="space-y-4">
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    <h3 className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">
                       Physical Address
                     </h3>
-                    <div className="space-y-1.5">
-                      <Label className="text-muted-foreground">Street Address</Label>
-                      <div className="p-3 bg-muted/50 rounded-md border">
-                        <p className="font-medium">{legalProfile.physical_address || 'Not set'}</p>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-muted-foreground/70">Street Address</Label>
+                      <div className="p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                        <p className="font-bold flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground/70" />
+                          {legalProfile.physical_address || 'Not set'}
+                        </p>
                       </div>
                     </div>
                     <div className="grid gap-4 md:grid-cols-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-muted-foreground">City</Label>
-                        <div className="p-3 bg-muted/50 rounded-md border">
-                          <p className="font-medium">{legalProfile.physical_city || 'Not set'}</p>
+                      <div className="space-y-2">
+                        <Label className="text-sm text-muted-foreground/70">City</Label>
+                        <div className="p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                          <p className="font-bold">{legalProfile.physical_city || 'Not set'}</p>
                         </div>
                       </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-muted-foreground">Province</Label>
-                        <div className="p-3 bg-muted/50 rounded-md border">
-                          <p className="font-medium">{legalProfile.physical_province || 'Not set'}</p>
+                      <div className="space-y-2">
+                        <Label className="text-sm text-muted-foreground/70">Province</Label>
+                        <div className="p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                          <p className="font-bold">{legalProfile.physical_province || 'Not set'}</p>
                         </div>
                       </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-muted-foreground">Postal Code</Label>
-                        <div className="p-3 bg-muted/50 rounded-md border">
-                          <p className="font-medium">{legalProfile.physical_postal_code || 'Not set'}</p>
+                      <div className="space-y-2">
+                        <Label className="text-sm text-muted-foreground/70">Postal Code</Label>
+                        <div className="p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                          <p className="font-mono font-bold">{legalProfile.physical_postal_code || 'Not set'}</p>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <Separator />
+                  <Separator className="bg-border/50" />
 
                   {/* Information Notice */}
-                  <div className="bg-accent/5 dark:bg-accent/10 border border-accent/20 dark:border-accent/30 rounded-lg p-4">
+                  <div className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 rounded-2xl p-5 shadow-[0_4px_20px_rgb(59,130,246,0.1)]">
                     <div className="flex gap-3">
-                      <FileText className="h-5 w-5 text-accent shrink-0 mt-0.5" />
-                      <div className="space-y-2 text-sm">
-                        <p className="font-semibold text-foreground">
+                      <div className="h-10 w-10 rounded-xl bg-blue-500/15 flex items-center justify-center flex-shrink-0">
+                        <FileText className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div className="space-y-3 text-sm flex-1">
+                        <p className="font-bold text-foreground">
                           Why is this information read-only?
                         </p>
-                        <p className="text-foreground/80">
+                        <p className="text-foreground/80 leading-relaxed">
                           Your legal profile information is used for official service contracts and rental agreements. 
                           Once verified, it cannot be changed for legal and compliance reasons.
                         </p>
-                        <p className="text-foreground/80">
+                        <p className="text-foreground/80 leading-relaxed">
                           If you need to update this information, please contact support at{' '}
-                          <a href="mailto:support@botkorp.co.za" className="underline font-medium">
+                          <a href="mailto:support@botkorp.co.za" className="underline font-bold text-botkorp-orange hover:text-botkorp-orange/80 transition-colors">
                             support@botkorp.co.za
                           </a>
                         </p>
                         {legalProfile.updated_at && (
-                          <p className="text-xs text-muted-foreground pt-2 border-t border-border">
+                          <p className="text-xs text-muted-foreground/60 pt-3 border-t border-border/50">
                             Last updated: {new Date(legalProfile.updated_at).toLocaleDateString('en-ZA', {
                               year: 'numeric',
                               month: 'long',
@@ -761,129 +812,144 @@ export default function SettingsPage() {
                   </div>
                 </>
               ) : (
-                <div className="text-center py-12">
-                  <Shield className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                  <h3 className="text-lg font-semibold mb-2">Legal Profile Not Completed</h3>
-                  <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                <div className="text-center py-16">
+                  <div className="inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-green-500/15 to-green-500/5 mb-6 animate-in zoom-in-50 duration-500 shadow-[0_8px_30px_rgb(34,197,94,0.15)]">
+                    <Shield className="h-10 w-10 text-green-600 animate-pulse" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-3">Legal Profile Not Completed</h3>
+                  <p className="text-muted-foreground/70 mb-8 max-w-md mx-auto leading-relaxed">
                     You haven't completed your legal profile yet. This will be collected when you create your first service.
                   </p>
-                  <Button onClick={() => window.location.href = '/portal/services/add'}>
+                  <Button 
+                    onClick={() => window.location.href = '/portal/services/add'}
+                    className="h-11 px-6 font-medium bg-botkorp-orange hover:bg-botkorp-orange/90 text-white rounded-xl shadow-[0_8px_30px_rgb(255,107,53,0.25)] hover:shadow-[0_8px_30px_rgb(255,107,53,0.35)] hover:-translate-y-0.5 transition-all"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
                     Create Your First Service
                   </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
 
         {/* Locations Tab */}
-        <TabsContent value="locations" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5" />
-                    Manage Locations
-                  </CardTitle>
-                  <CardDescription>
-                    View and manage your property locations
-                  </CardDescription>
+        <TabsContent value="locations" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-gradient-to-br from-background to-muted/20 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all">
+            <div className="flex items-center justify-between gap-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-purple-500/15 to-purple-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(168,85,247,0.15)]">
+                  <MapPin className="h-6 w-6 text-purple-600" />
                 </div>
-                <Button onClick={() => setShowAddLocationDialog(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Location
-                </Button>
+                <div>
+                  <h3 className="text-lg font-bold">Manage Locations</h3>
+                  <p className="text-sm text-muted-foreground/70">View and manage your property locations</p>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              {locations.length > 0 ? (
-                <div className="space-y-4">
-                  {locations.map((location) => (
-                    <div
-                      key={location.id}
-                      className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <MapPin className="h-5 w-5 text-primary" />
-                        </div>
-                        <div className="space-y-1">
-                          <h4 className="font-semibold">{location.name}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {location.address}
-                            {location.city && `, ${location.city}`}
-                            {location.province && `, ${location.province}`}
-                          </p>
+              <Button 
+                onClick={() => setShowAddLocationDialog(true)}
+                className="h-10 px-5 font-medium bg-botkorp-orange hover:bg-botkorp-orange/90 text-white rounded-xl shadow-[0_8px_30px_rgb(255,107,53,0.25)] hover:shadow-[0_8px_30px_rgb(255,107,53,0.35)] hover:-translate-y-0.5 transition-all"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Location
+              </Button>
+            </div>
+
+            {locations.length > 0 ? (
+              <div className="space-y-4">
+                {locations.map((location, index) => (
+                  <div
+                    key={location.id}
+                    className="flex items-start justify-between p-5 rounded-2xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[0_4px_20px_rgb(0,0,0,0.08)] transition-all group animate-in fade-in slide-in-from-bottom-3"
+                    style={{ animationDelay: `${index * 50}ms`, animationDuration: '500ms' }}
+                  >
+                    <div className="flex items-start gap-4 flex-1">
+                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500/15 to-purple-500/5 flex items-center justify-center flex-shrink-0 shadow-[0_2px_10px_rgb(168,85,247,0.1)] group-hover:shadow-[0_4px_20px_rgb(168,85,247,0.2)] transition-all">
+                        <MapPin className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <div className="space-y-2 flex-1 min-w-0">
+                        <h4 className="font-bold text-base">{location.name}</h4>
+                        <p className="text-sm text-muted-foreground/70 leading-relaxed">
+                          {location.address}
+                          {location.city && `, ${location.city}`}
+                          {location.province && `, ${location.province}`}
+                        </p>
+                        <div className="flex flex-wrap gap-2 pt-1">
                           {location.postal_code && (
-                            <p className="text-xs text-muted-foreground">
-                              Postal Code: {location.postal_code}
-                            </p>
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-background/80 text-xs font-medium shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                              Postal: {location.postal_code}
+                            </span>
                           )}
                           {location.area_size && (
-                            <p className="text-xs text-muted-foreground">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-background/80 text-xs font-medium shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                               Area: {location.area_size} m²
-                            </p>
+                            </span>
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteLocation(location.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
                     </div>
-                  ))}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteLocation(location.id)}
+                      className="h-9 w-9 rounded-xl text-red-600 hover:text-red-700 hover:bg-red-500/10 transition-all flex-shrink-0"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <div className="inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-purple-500/15 to-purple-500/5 mb-6 animate-in zoom-in-50 duration-500 shadow-[0_8px_30px_rgb(168,85,247,0.15)]">
+                  <MapPin className="h-10 w-10 text-purple-600 animate-pulse" />
                 </div>
-              ) : (
-                <div className="text-center py-12">
-                  <MapPin className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                  <h3 className="text-lg font-semibold mb-2">No Locations Yet</h3>
-                  <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                    You haven't added any locations yet. Add your first location to get started.
-                  </p>
-                  <Button onClick={() => setShowAddLocationDialog(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Your First Location
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                <h3 className="text-xl font-bold mb-3">No Locations Yet</h3>
+                <p className="text-muted-foreground/70 mb-8 max-w-md mx-auto leading-relaxed">
+                  You haven't added any locations yet. Add your first location to get started.
+                </p>
+                <Button 
+                  onClick={() => setShowAddLocationDialog(true)}
+                  className="h-11 px-6 font-medium bg-botkorp-orange hover:bg-botkorp-orange/90 text-white rounded-xl shadow-[0_8px_30px_rgb(255,107,53,0.25)] hover:shadow-[0_8px_30px_rgb(255,107,53,0.35)] hover:-translate-y-0.5 transition-all"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Location
+                </Button>
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         {/* Notifications Tab */}
-        <TabsContent value="notifications" className="space-y-4">
+        <TabsContent value="notifications" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           {loadingNotifications ? (
             <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-botkorp-orange/20 border-t-botkorp-orange"></div>
             </div>
           ) : (
             <>
               {/* Global Settings */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Bell className="h-5 w-5" />
-                    Notification Channels
-                  </CardTitle>
-                  <CardDescription>
-                    Choose how you want to receive notifications
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
+              <div className="bg-gradient-to-br from-background to-muted/20 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-yellow-500/15 to-yellow-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(234,179,8,0.15)]">
+                    <Bell className="h-6 w-6 text-yellow-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold">Notification Channels</h3>
+                    <p className="text-sm text-muted-foreground/70">Choose how you want to receive notifications</p>
+                  </div>
+                </div>
+
+                <div className="space-y-5">
                   {/* Email Notifications */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Mail className="h-5 w-5 text-muted-foreground" />
+                  <div className="flex items-center justify-between p-5 rounded-2xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[0_2px_10px_rgb(59,130,246,0.1)]">
+                        <Mail className="h-5 w-5 text-blue-600" />
+                      </div>
                       <div>
-                        <Label htmlFor="email_enabled" className="text-base">Email Notifications</Label>
-                        <p className="text-sm text-muted-foreground">
+                        <Label htmlFor="email_enabled" className="text-base font-bold cursor-pointer">Email Notifications</Label>
+                        <p className="text-sm text-muted-foreground/70">
                           Receive notifications via email
                         </p>
                       </div>
@@ -896,12 +962,14 @@ export default function SettingsPage() {
                   </div>
 
                   {/* Push Notifications */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Smartphone className="h-5 w-5 text-muted-foreground" />
+                  <div className="flex items-center justify-between p-5 rounded-2xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500/15 to-purple-500/5 flex items-center justify-center shadow-[0_2px_10px_rgb(168,85,247,0.1)]">
+                        <Smartphone className="h-5 w-5 text-purple-600" />
+                      </div>
                       <div>
-                        <Label htmlFor="push_enabled" className="text-base">Push Notifications</Label>
-                        <p className="text-sm text-muted-foreground">
+                        <Label htmlFor="push_enabled" className="text-base font-bold cursor-pointer">Push Notifications</Label>
+                        <p className="text-sm text-muted-foreground/70">
                           Receive browser push notifications
                           {!isSupported && ' (Not supported in your browser)'}
                           {isSubscribed && ' ✓ Subscribed'}
@@ -915,25 +983,26 @@ export default function SettingsPage() {
                       disabled={!isSupported}
                     />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* Email Preferences */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Mail className="h-5 w-5" />
-                    Email Preferences
-                  </CardTitle>
-                  <CardDescription>
-                    Choose which types of notifications you want to receive via email
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
+              <div className="bg-gradient-to-br from-background to-muted/20 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(59,130,246,0.15)]">
+                    <Mail className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold">Email Preferences</h3>
+                    <p className="text-sm text-muted-foreground/70">Choose which types of notifications you want to receive via email</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                     <div>
-                      <Label htmlFor="email_bot_alerts">Bot Alerts</Label>
-                      <p className="text-sm text-muted-foreground">
+                      <Label htmlFor="email_bot_alerts" className="text-sm font-bold cursor-pointer">Bot Alerts</Label>
+                      <p className="text-sm text-muted-foreground/70">
                         Low battery, offline, errors, maintenance
                       </p>
                     </div>
@@ -945,10 +1014,10 @@ export default function SettingsPage() {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                     <div>
-                      <Label htmlFor="email_service_reminders">Service Reminders</Label>
-                      <p className="text-sm text-muted-foreground">
+                      <Label htmlFor="email_service_reminders" className="text-sm font-bold cursor-pointer">Service Reminders</Label>
+                      <p className="text-sm text-muted-foreground/70">
                         Upcoming services, appointments, completions
                       </p>
                     </div>
@@ -960,10 +1029,10 @@ export default function SettingsPage() {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                     <div>
-                      <Label htmlFor="email_billing">Billing & Payments</Label>
-                      <p className="text-sm text-muted-foreground">
+                      <Label htmlFor="email_billing" className="text-sm font-bold cursor-pointer">Billing & Payments</Label>
+                      <p className="text-sm text-muted-foreground/70">
                         Invoices, payment confirmations, failures
                       </p>
                     </div>
@@ -975,10 +1044,10 @@ export default function SettingsPage() {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                     <div>
-                      <Label htmlFor="email_organization">Organization Updates</Label>
-                      <p className="text-sm text-muted-foreground">
+                      <Label htmlFor="email_organization" className="text-sm font-bold cursor-pointer">Organization Updates</Label>
+                      <p className="text-sm text-muted-foreground/70">
                         New members, role changes, team updates
                       </p>
                     </div>
@@ -990,10 +1059,10 @@ export default function SettingsPage() {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                     <div>
-                      <Label htmlFor="email_system">System Notifications</Label>
-                      <p className="text-sm text-muted-foreground">
+                      <Label htmlFor="email_system" className="text-sm font-bold cursor-pointer">System Notifications</Label>
+                      <p className="text-sm text-muted-foreground/70">
                         Important system updates and announcements
                       </p>
                     </div>
@@ -1004,25 +1073,26 @@ export default function SettingsPage() {
                       disabled={!notificationPreferences?.email_enabled}
                     />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* Push Preferences */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Smartphone className="h-5 w-5" />
-                    Push Notification Preferences
-                  </CardTitle>
-                  <CardDescription>
-                    Choose which types of notifications you want to receive as push notifications
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
+              <div className="bg-gradient-to-br from-background to-muted/20 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-purple-500/15 to-purple-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(168,85,247,0.15)]">
+                    <Smartphone className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold">Push Notification Preferences</h3>
+                    <p className="text-sm text-muted-foreground/70">Choose which types of notifications you want to receive as push notifications</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                     <div>
-                      <Label htmlFor="push_bot_alerts">Bot Alerts</Label>
-                      <p className="text-sm text-muted-foreground">
+                      <Label htmlFor="push_bot_alerts" className="text-sm font-bold cursor-pointer">Bot Alerts</Label>
+                      <p className="text-sm text-muted-foreground/70">
                         Low battery, offline, errors, maintenance
                       </p>
                     </div>
@@ -1034,10 +1104,10 @@ export default function SettingsPage() {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                     <div>
-                      <Label htmlFor="push_service_reminders">Service Reminders</Label>
-                      <p className="text-sm text-muted-foreground">
+                      <Label htmlFor="push_service_reminders" className="text-sm font-bold cursor-pointer">Service Reminders</Label>
+                      <p className="text-sm text-muted-foreground/70">
                         Upcoming services, appointments, completions
                       </p>
                     </div>
@@ -1049,10 +1119,10 @@ export default function SettingsPage() {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                     <div>
-                      <Label htmlFor="push_billing">Billing & Payments</Label>
-                      <p className="text-sm text-muted-foreground">
+                      <Label htmlFor="push_billing" className="text-sm font-bold cursor-pointer">Billing & Payments</Label>
+                      <p className="text-sm text-muted-foreground/70">
                         Payment failures and urgent billing issues
                       </p>
                     </div>
@@ -1064,10 +1134,10 @@ export default function SettingsPage() {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                     <div>
-                      <Label htmlFor="push_organization">Organization Updates</Label>
-                      <p className="text-sm text-muted-foreground">
+                      <Label htmlFor="push_organization" className="text-sm font-bold cursor-pointer">Organization Updates</Label>
+                      <p className="text-sm text-muted-foreground/70">
                         Important team and organization changes
                       </p>
                     </div>
@@ -1079,10 +1149,10 @@ export default function SettingsPage() {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                     <div>
-                      <Label htmlFor="push_system">System Notifications</Label>
-                      <p className="text-sm text-muted-foreground">
+                      <Label htmlFor="push_system" className="text-sm font-bold cursor-pointer">System Notifications</Label>
+                      <p className="text-sm text-muted-foreground/70">
                         Critical system alerts and announcements
                       </p>
                     </div>
@@ -1093,8 +1163,8 @@ export default function SettingsPage() {
                       disabled={!notificationPreferences?.push_enabled || !isSubscribed}
                     />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* Push Subscription Devices */}
               {isSubscribed && (
@@ -1107,13 +1177,16 @@ export default function SettingsPage() {
                   variant="outline"
                   onClick={loadNotificationPreferences}
                   disabled={savingNotifications}
+                  className="h-11 px-6 font-medium border-none bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] hover:bg-muted transition-all rounded-xl"
                 >
                   Reset
                 </Button>
                 <Button
                   onClick={saveNotificationPreferences}
                   disabled={savingNotifications}
+                  className="h-11 px-6 font-medium bg-botkorp-orange hover:bg-botkorp-orange/90 text-white rounded-xl shadow-[0_8px_30px_rgb(255,107,53,0.25)] hover:shadow-[0_8px_30px_rgb(255,107,53,0.35)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 >
+                  <Save className="h-4 w-4 mr-2" />
                   {savingNotifications ? 'Saving...' : 'Save Preferences'}
                 </Button>
               </div>

@@ -64,6 +64,9 @@ export default function ApprovalsPage() {
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Stats calculations
+  const totalPending = newServices.length + amendments.length + agreements.length;
+
   useEffect(() => {
     loadAgreements();
     loadAmendments();
@@ -261,10 +264,26 @@ export default function ApprovalsPage() {
 
   const getStatusBadge = (status) => {
     const configs = {
-      draft: { label: 'Pending', color: 'bg-yellow-100 text-yellow-700 border-yellow-300', icon: Clock },
-      active: { label: 'Active', color: 'bg-green-100 text-green-700 border-green-300', icon: CheckCircle2 },
-      paused: { label: 'Paused', color: 'bg-amber-100 text-amber-700 border-amber-300', icon: AlertCircle },
-      cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-700 border-red-300', icon: XCircle },
+      draft: { 
+        label: 'Pending', 
+        color: 'bg-[#FF6B35]/10 text-[#FF6B35] border-[#FF6B35]/30 shadow-sm', 
+        icon: Clock 
+      },
+      active: { 
+        label: 'Active', 
+        color: 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/30 shadow-sm', 
+        icon: CheckCircle2 
+      },
+      paused: { 
+        label: 'Paused', 
+        color: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/30 shadow-sm', 
+        icon: AlertCircle 
+      },
+      cancelled: { 
+        label: 'Cancelled', 
+        color: 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/30 shadow-sm', 
+        icon: XCircle 
+      },
     };
     
     const config = configs[status] || configs.draft;
@@ -283,35 +302,44 @@ export default function ApprovalsPage() {
 
     return (
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-2xl">
-              <FileCheck className="h-6 w-6" />
-              Rental Agreement Details
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto bg-gradient-to-br from-background to-muted/20 border-0 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
+          <DialogHeader className="space-y-3 pb-4">
+            <DialogTitle className="flex items-center gap-3 text-xl">
+              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+                <FileCheck className="h-6 w-6 text-botkorp-orange" />
+              </div>
+              <span className="font-bold">
+                Rental Agreement Details
+              </span>
             </DialogTitle>
-            <DialogDescription>
-              Agreement #{agreement.agreement_number}
+            <DialogDescription className="text-sm ml-14 flex items-center gap-2">
+              <span className="px-3 py-1 rounded-lg bg-botkorp-orange/10 text-botkorp-orange font-mono font-semibold border-0">
+                #{agreement.agreement_number}
+              </span>
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6">
+          <div className="space-y-4 pt-2">
             {/* Status */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
               {getStatusBadge(agreement.status)}
-              <span className="text-sm text-muted-foreground">
-                Created {format(new Date(agreement.created_at), 'MMM d, yyyy')}
-              </span>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Calendar className="h-4 w-4" />
+                <span>Created {format(new Date(agreement.created_at), 'MMM d, yyyy')}</span>
+              </div>
             </div>
 
             {/* Customer Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Customer Information
+            <Card className="border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+              <CardHeader className="pb-3 pt-4">
+                <CardTitle className="flex items-center gap-2.5 text-sm font-bold">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[0_2px_10px_rgb(59,130,246,0.1)]">
+                    <User className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <span>Customer Information</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4">
+              <CardContent className="grid grid-cols-2 gap-4 pt-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Name</p>
                   <p className="font-medium">{agreement.signer_first_name} {agreement.signer_surname}</p>
@@ -336,30 +364,34 @@ export default function ApprovalsPage() {
             </Card>
 
             {/* Location Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  Service Location
+            <Card className="border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+              <CardHeader className="pb-3 pt-4">
+                <CardTitle className="flex items-center gap-2.5 text-sm font-bold">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_2px_10px_rgb(255,107,53,0.1)]">
+                    <MapPin className="h-4 w-4 text-botkorp-orange" />
+                  </div>
+                  <span>Service Location</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="font-medium">{agreement.location?.name}</p>
-                <p className="text-sm text-muted-foreground">
+              <CardContent className="pt-4">
+                <p className="font-semibold text-[#121212]">{agreement.location?.name}</p>
+                <p className="text-sm text-[#4F5D75] mt-1">
                   {agreement.location?.city}, {agreement.location?.province}
                 </p>
               </CardContent>
             </Card>
 
             {/* Service Details */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bot className="h-5 w-5" />
-                  Service Details
+            <Card className="border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+              <CardHeader className="pb-3 pt-4">
+                <CardTitle className="flex items-center gap-2.5 text-sm font-bold">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[0_2px_10px_rgb(59,130,246,0.1)]">
+                    <Bot className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <span>Service Details</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 pt-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Bot Type</p>
@@ -382,47 +414,51 @@ export default function ApprovalsPage() {
             </Card>
 
             {/* Pricing */}
-            <Card className="border-2 border-primary/20 bg-primary/5">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
-                  Pricing Breakdown
+            <Card className="border-0 bg-gradient-to-br from-green-500/5 to-background rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+              <CardHeader className="pb-3 pt-4">
+                <CardTitle className="flex items-center gap-2.5 text-sm font-bold">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-green-500/15 to-green-500/5 flex items-center justify-center shadow-[0_2px_10px_rgb(34,197,94,0.1)]">
+                    <DollarSign className="h-4 w-4 text-green-600" />
+                  </div>
+                  <span>Pricing Breakdown</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span>Bot Rental</span>
-                  <span className="font-medium">R {parseFloat(agreement.bot_rental_total).toFixed(2)}</span>
+              <CardContent className="space-y-3 pt-4">
+                <div className="flex justify-between p-3 rounded-lg bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                  <span className="text-muted-foreground">Bot Rental</span>
+                  <span className="font-semibold">R {parseFloat(agreement.bot_rental_total).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Service Fee</span>
-                  <span className="font-medium">R {parseFloat(agreement.service_total).toFixed(2)}</span>
+                <div className="flex justify-between p-3 rounded-lg bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                  <span className="text-muted-foreground">Service Fee</span>
+                  <span className="font-semibold">R {parseFloat(agreement.service_total).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between border-t pt-3">
-                  <span className="font-bold">Monthly Total</span>
-                  <span className="font-bold text-lg">R {parseFloat(agreement.monthly_total).toFixed(2)}</span>
+                <div className="flex justify-between p-4 rounded-xl bg-green-500/10 border-0">
+                  <span className="font-bold text-green-600">Monthly Total</span>
+                  <span className="font-bold text-xl text-green-600">R {parseFloat(agreement.monthly_total).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between border-t pt-3">
-                  <span className="font-bold">Setup Fee (One-time)</span>
-                  <span className="font-bold text-lg">R {parseFloat(agreement.setup_fee).toFixed(2)}</span>
+                <div className="flex justify-between p-4 rounded-xl bg-botkorp-orange/10 border-0">
+                  <span className="font-bold text-botkorp-orange">Setup Fee (One-time)</span>
+                  <span className="font-bold text-xl text-botkorp-orange">R {parseFloat(agreement.setup_fee).toFixed(2)}</span>
                 </div>
               </CardContent>
             </Card>
 
             {/* Documents */}
             {(agreement.agreement_pdf_url || agreement.signature_image_url) && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Documents
+              <Card className="border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                <CardHeader className="pb-3 pt-4">
+                  <CardTitle className="flex items-center gap-2.5 text-sm font-bold">
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[0_2px_10px_rgb(59,130,246,0.1)]">
+                      <FileText className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <span>Documents</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent className="space-y-3 pt-4">
                   {agreement.agreement_pdf_url && (
                     <Button
                       variant="outline"
-                      className="w-full justify-start"
+                      className="w-full justify-start h-11 text-xs font-semibold rounded-xl border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95"
                       onClick={() => window.open(agreement.agreement_pdf_url, '_blank')}
                     >
                       <Download className="h-4 w-4 mr-2" />
@@ -430,14 +466,17 @@ export default function ApprovalsPage() {
                     </Button>
                   )}
                   {agreement.signature_image_url && (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-2">Customer Signature</p>
-                      <img 
-                        src={agreement.signature_image_url} 
-                        alt="Signature" 
-                        className="border rounded-lg max-w-xs"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold">Customer Signature</p>
+                      <div className="p-4 bg-background/60 backdrop-blur-sm rounded-xl shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                        <img 
+                          src={agreement.signature_image_url} 
+                          alt="Signature" 
+                          className="max-w-xs mx-auto"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <Calendar className="h-3 w-3" />
                         Signed on {format(new Date(agreement.signed_at), 'MMM d, yyyy HH:mm')}
                       </p>
                     </div>
@@ -447,28 +486,42 @@ export default function ApprovalsPage() {
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 pt-4">
             {agreement.status === 'draft' && (
               <>
                 <Button
-                  variant="destructive"
+                  variant="outline"
                   onClick={() => handleReject(agreement.id, 'Rejected after review')}
                   disabled={actionLoading}
+                  className="h-10 text-xs font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 border-0 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 active:scale-95"
                 >
-                  <XCircle className="h-4 w-4 mr-2" />
+                  {actionLoading ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <XCircle className="h-3.5 w-3.5 mr-1.5" />
+                  )}
                   Reject
                 </Button>
                 <Button
                   onClick={() => handleApprove(agreement.id)}
                   disabled={actionLoading}
+                  className="h-10 text-xs font-semibold bg-gradient-to-br from-botkorp-orange to-botkorp-orange/90 shadow-[4px_4px_12px_rgba(0,0,0,0.2),-2px_-2px_8px_rgba(255,255,255,0.1)] hover:shadow-[6px_6px_16px_rgba(0,0,0,0.25),-3px_-3px_10px_rgba(255,255,255,0.15)] active:scale-95 transition-all duration-300 rounded-xl border-0 text-white"
                 >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  {actionLoading ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                  )}
                   Approve & Activate
                 </Button>
               </>
             )}
             {agreement.status !== 'draft' && (
-              <Button variant="outline" onClick={() => setShowDetailsDialog(false)}>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowDetailsDialog(false)}
+                className="h-10 text-xs font-semibold rounded-xl border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95"
+              >
                 Close
               </Button>
             )}
@@ -584,281 +637,424 @@ export default function ApprovalsPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <PageHeader
-        title="Approvals Dashboard"
-        subtitle="Review agreements, installations, and service modifications"
-        icon={<FileCheck className="h-6 w-6" />}
-      />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100/50 to-gray-100/40 p-3 md:p-6 space-y-5 md:space-y-6">
+      {/* Enhanced Header with Stats */}
+      <div className="space-y-4 animate-in fade-in slide-in-from-top-3 duration-500">
+        <PageHeader
+          title="Approvals Dashboard"
+          subtitle="Review agreements, installations, and service modifications"
+          icon={<FileCheck className="h-6 w-6" />}
+        />
+        
+        {/* Stats Cards - Soft UI */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
+          {/* Pending Installations Stat */}
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Pending Installations</p>
+                  <p className="text-4xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{newServices.length}</p>
+                  <p className="text-[11px] text-muted-foreground font-semibold mt-1">Services awaiting setup</p>
+                </div>
+                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-botkorp-orange/20 to-botkorp-orange/10 dark:from-botkorp-orange/30 dark:to-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                  <Bot className="h-7 w-7 text-botkorp-orange transition-all duration-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Pending Installations Section */}
-      <Card>
-        <CardHeader>
+          {/* Pending Amendments Stat */}
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Service Amendments</p>
+                  <p className="text-4xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{amendments.length}</p>
+                  <p className="text-[11px] text-muted-foreground font-semibold mt-1">Modification requests</p>
+                </div>
+                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-500/10 dark:from-blue-500/30 dark:to-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                  <Settings className="h-7 w-7 text-blue-600 dark:text-blue-400 transition-all duration-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Pending Agreements Stat */}
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Rental Agreements</p>
+                  <p className="text-4xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{agreements.length}</p>
+                  <p className="text-[11px] text-muted-foreground font-semibold mt-1">Awaiting approval</p>
+                </div>
+                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-green-500/20 to-green-500/10 dark:from-green-500/30 dark:to-green-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                  <FileCheck className="h-7 w-7 text-green-600 dark:text-green-400 transition-all duration-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Pending Installations Section - Soft UI */}
+      <Card className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200 border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+        <CardHeader className="pb-3 pt-5">
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Bot className="h-5 w-5 text-blue-600" />
-                Pending Installations
-              </CardTitle>
-              <CardDescription>
-                New services awaiting bot installation
-              </CardDescription>
+            <div className="flex items-center gap-3 flex-1">
+              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+                <Bot className="h-5 w-5 text-botkorp-orange" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-bold">Pending Installations</CardTitle>
+                <CardDescription className="text-[11px] font-medium">New services awaiting bot installation</CardDescription>
+              </div>
             </div>
-            <Badge variant="secondary" className="h-7 px-3">
+            <Badge variant="outline" className="text-[10px] h-6 border-none bg-botkorp-orange/10 text-botkorp-orange font-semibold px-3 rounded-full">
               {newServices.length} Pending
             </Badge>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4 pb-5">
           {loadingServices ? (
-            <div className="py-8 text-center">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+            <div className="py-16 text-center">
+              <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 mb-5 animate-pulse shadow-[0_8px_30px_rgb(255,107,53,0.15)]">
+                <Loader2 className="h-10 w-10 animate-spin text-botkorp-orange" />
+              </div>
+              <p className="text-sm text-muted-foreground font-medium">Loading installations...</p>
             </div>
           ) : newServices.length === 0 ? (
-            <div className="py-12 text-center text-muted-foreground">
-              <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-green-500" />
-              <p className="font-medium">All caught up!</p>
-              <p className="text-sm">No pending installations at this time.</p>
+            <div className="py-16 text-center">
+              <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500/15 to-green-500/5 mb-5 shadow-[0_8px_30px_rgb(34,197,94,0.15)]">
+                <CheckCircle2 className="h-10 w-10 text-green-600" />
+              </div>
+              <p className="text-lg font-bold mb-2">All caught up!</p>
+              <p className="text-sm text-muted-foreground">No pending installations at this time.</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Service</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Details</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {newServices.map((service) => (
-                  <TableRow key={service.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-semibold">{service.name}</p>
-                        <p className="text-xs text-muted-foreground">{service.organization?.name}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{service.location?.name}</p>
-                        <p className="text-xs text-muted-foreground">{service.location?.city || service.location?.address}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize">{service.service_type}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Sprout className="h-3.5 w-3.5 text-emerald-600" />
-                          <span>{service.garden_count} garden{service.garden_count !== 1 ? 's' : ''}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <Bot className="h-3.5 w-3.5 text-blue-600" />
-                          <span>{service.garden_count} bot{service.garden_count !== 1 ? 's' : ''} to install</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <FileText className="h-3.5 w-3.5 text-purple-600" />
-                          <span>{service.agreement_count} agreement{service.agreement_count !== 1 ? 's' : ''}</span>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {format(new Date(service.created_at), 'MMM d, yyyy')}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setSelectedService(service);
-                          setShowInstallDialog(true);
-                        }}
-                        className="bg-blue-600 hover:bg-blue-700"
-                      >
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Mark Installed
-                      </Button>
-                    </TableCell>
+            <div className="rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30 hover:bg-muted/50 border-b border-border/50">
+                    <TableHead className="font-bold text-xs uppercase tracking-wider">Service</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider">Location</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider">Type</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider">Details</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider">Created</TableHead>
+                    <TableHead className="text-right font-bold text-xs uppercase tracking-wider">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {newServices.map((service, idx) => (
+                    <TableRow 
+                      key={service.id} 
+                      className={`hover:bg-muted/30 transition-all duration-300 border-b border-border/30 ${
+                        idx % 2 === 0 ? 'bg-background' : 'bg-muted/10'
+                      }`}
+                    >
+                      <TableCell>
+                        <div className="space-y-1">
+                          <p className="font-semibold text-[#121212]">{service.name}</p>
+                          <p className="text-xs text-[#4F5D75] font-medium">{service.organization?.name}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <p className="font-medium text-[#121212]">{service.location?.name}</p>
+                          <p className="text-xs text-[#4F5D75]">{service.location?.city || service.location?.address}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize bg-slate-50 text-[#4F5D75] border-[#D0D2D5] shadow-sm">
+                          {service.service_type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2 text-sm">
+                            <div className="h-6 w-6 rounded-lg bg-[#10B981]/10 flex items-center justify-center">
+                              <Sprout className="h-3.5 w-3.5 text-[#10B981]" />
+                            </div>
+                            <span className="text-[#121212]">{service.garden_count} garden{service.garden_count !== 1 ? 's' : ''}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <div className="h-6 w-6 rounded-lg bg-[#FF6B35]/10 flex items-center justify-center">
+                              <Bot className="h-3.5 w-3.5 text-[#FF6B35]" />
+                            </div>
+                            <span className="text-[#121212]">{service.garden_count} bot{service.garden_count !== 1 ? 's' : ''} to install</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <div className="h-6 w-6 rounded-lg bg-[#4F5D75]/10 flex items-center justify-center">
+                              <FileText className="h-3.5 w-3.5 text-[#4F5D75]" />
+                            </div>
+                            <span className="text-[#121212]">{service.agreement_count} agreement{service.agreement_count !== 1 ? 's' : ''}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-[#4F5D75]">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-[#B0B3B8]" />
+                          {format(new Date(service.created_at), 'MMM d, yyyy')}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setSelectedService(service);
+                            setShowInstallDialog(true);
+                          }}
+                          className="h-9 text-xs font-semibold bg-gradient-to-br from-botkorp-orange to-botkorp-orange/90 shadow-[4px_4px_12px_rgba(0,0,0,0.2),-2px_-2px_8px_rgba(255,255,255,0.1)] hover:shadow-[6px_6px_16px_rgba(0,0,0,0.25),-3px_-3px_10px_rgba(255,255,255,0.15)] active:scale-95 transition-all duration-300 rounded-xl border-0 text-white"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                          Mark Installed
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Amendment Requests Section */}
-      <Card>
-        <CardHeader>
+      {/* Amendment Requests Section - Soft UI */}
+      <Card className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-300 border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+        <CardHeader className="pb-3 pt-5">
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Service Modification Requests
-              </CardTitle>
-              <CardDescription>
-                Customer requests to change bot counts and service plans
-              </CardDescription>
+            <div className="flex items-center gap-3 flex-1">
+              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(59,130,246,0.15)]">
+                <Settings className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-bold">Service Modification Requests</CardTitle>
+                <CardDescription className="text-[11px] font-medium">Customer requests to change bot counts and service plans</CardDescription>
+              </div>
             </div>
-            <Badge variant="secondary">{amendments.length} pending</Badge>
+            <Badge variant="outline" className="text-[10px] h-6 border-none bg-blue-500/10 text-blue-600 font-semibold px-3 rounded-full">
+              {amendments.length} pending
+            </Badge>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4 pb-5">
           {loadingAmendments ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="py-16 text-center">
+              <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500/15 to-blue-500/5 mb-5 animate-pulse shadow-[0_8px_30px_rgb(59,130,246,0.15)]">
+                <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+              </div>
+              <p className="text-sm text-muted-foreground font-medium">Loading amendments...</p>
             </div>
           ) : amendments.length === 0 ? (
-            <div className="text-center py-12">
-              <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">All Caught Up!</h3>
-              <p className="text-muted-foreground">
+            <div className="py-16 text-center">
+              <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500/15 to-green-500/5 mb-5 shadow-[0_8px_30px_rgb(34,197,94,0.15)]">
+                <CheckCircle2 className="h-10 w-10 text-green-600" />
+              </div>
+              <p className="text-lg font-bold mb-2">All Caught Up!</p>
+              <p className="text-sm text-muted-foreground">
                 No pending amendment requests at this time.
               </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Change</TableHead>
-                  <TableHead>Impact</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {amendments.map((amendment) => (
-                  <TableRow key={amendment.id}>
-                    <TableCell className="font-mono text-sm">
-                      {amendment.id.substring(0, 8)}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">
-                          {amendment.user?.full_name || amendment.user?.first_name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {amendment.user?.email}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={amendment.amendment_type === 'add_gardens' ? 'default' : 'secondary'} className="capitalize">
-                        {amendment.amendment_type.replace('_', ' ')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold">
-                          {amendment.current_garden_count} → {amendment.new_garden_count} gardens
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {amendment.service?.name}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <p className={`text-sm font-bold ${amendment.new_garden_count > amendment.current_garden_count ? 'text-green-600' : 'text-orange-600'}`}>
-                          {amendment.new_garden_count > amendment.current_garden_count ? '+' : ''}{amendment.new_garden_count - amendment.current_garden_count} garden{Math.abs(amendment.new_garden_count - amendment.current_garden_count) !== 1 ? 's' : ''}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {amendment.current_garden_count} → {amendment.new_garden_count} bots
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {format(new Date(amendment.created_at), 'MMM d, yyyy')}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedAmendment(amendment);
-                          setShowAmendmentDialog(true);
-                        }}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        Review
-                      </Button>
-                    </TableCell>
+            <div className="rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30 hover:bg-muted/50 border-b border-border/50">
+                    <TableHead className="font-bold text-xs uppercase tracking-wider">ID</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider">Customer</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider">Type</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider">Change</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider">Impact</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider">Date</TableHead>
+                    <TableHead className="text-right font-bold text-xs uppercase tracking-wider">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {amendments.map((amendment, idx) => (
+                    <TableRow 
+                      key={amendment.id}
+                      className={`hover:bg-muted/30 transition-all duration-300 border-b border-border/30 ${
+                        idx % 2 === 0 ? 'bg-background' : 'bg-muted/10'
+                      }`}
+                    >
+                      <TableCell className="font-mono text-sm">
+                        <div className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 text-[#4F5D75] border border-[#D0D2D5]">
+                          {amendment.id.substring(0, 8)}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <p className="font-semibold text-[#121212]">
+                            {amendment.user?.full_name || amendment.user?.first_name}
+                          </p>
+                          <p className="text-xs text-[#4F5D75] font-medium">
+                            {amendment.user?.email}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant="outline" 
+                          className={`capitalize shadow-sm ${
+                            amendment.amendment_type === 'add_gardens' 
+                              ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/30' 
+                              : 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/30'
+                          }`}
+                        >
+                          {amendment.amendment_type === 'add_gardens' ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+                          {amendment.amendment_type.replace('_', ' ')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-[#121212]">
+                            {amendment.current_garden_count} → {amendment.new_garden_count} gardens
+                          </p>
+                          <p className="text-xs text-[#4F5D75] font-medium">
+                            {amendment.service?.name}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-sm shadow-sm ${
+                            amendment.new_garden_count > amendment.current_garden_count 
+                              ? 'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40' 
+                              : 'bg-[#F59E0B]/20 text-[#F59E0B] border border-[#F59E0B]/40'
+                          }`}>
+                            {amendment.new_garden_count > amendment.current_garden_count ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                            {amendment.new_garden_count > amendment.current_garden_count ? '+' : ''}{amendment.new_garden_count - amendment.current_garden_count} garden{Math.abs(amendment.new_garden_count - amendment.current_garden_count) !== 1 ? 's' : ''}
+                          </div>
+                          <p className="text-xs text-[#4F5D75] mt-1">
+                            {amendment.current_garden_count} → {amendment.new_garden_count} bots
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-[#4F5D75]">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-[#B0B3B8]" />
+                          {format(new Date(amendment.created_at), 'MMM d, yyyy')}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedAmendment(amendment);
+                            setShowAmendmentDialog(true);
+                          }}
+                          className="h-9 text-xs font-semibold rounded-xl border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95"
+                        >
+                          <Eye className="h-3.5 w-3.5 mr-1.5" />
+                          Review
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Rental Agreements Section */}
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>New Rental Agreements</CardTitle>
-            <CardDescription>
-              All rental agreements across all customers
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {agreements.length === 0 ? (
-              <div className="text-center py-12">
-                <FileCheck className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Agreements Found</h3>
-                <p className="text-muted-foreground">
-                  There are no rental agreements to review at this time.
-                </p>
+      {/* Rental Agreements Section - Soft UI */}
+      <Card className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-400 border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+        <CardHeader className="pb-3 pt-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 flex-1">
+              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-green-500/15 to-green-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(34,197,94,0.15)]">
+                <FileCheck className="h-5 w-5 text-green-600" />
               </div>
-            ) : (
+              <div>
+                <CardTitle className="text-base font-bold">New Rental Agreements</CardTitle>
+                <CardDescription className="text-[11px] font-medium">All rental agreements across all customers</CardDescription>
+              </div>
+            </div>
+            <Badge variant="outline" className="text-[10px] h-6 border-none bg-green-500/10 text-green-600 font-semibold px-3 rounded-full">
+              {agreements.length} pending
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-4 pb-5">
+          {loading ? (
+            <div className="py-16 text-center">
+              <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500/15 to-green-500/5 mb-5 animate-pulse shadow-[0_8px_30px_rgb(34,197,94,0.15)]">
+                <Loader2 className="h-10 w-10 animate-spin text-green-600" />
+              </div>
+              <p className="text-sm text-muted-foreground font-medium">Loading agreements...</p>
+            </div>
+          ) : agreements.length === 0 ? (
+            <div className="py-16 text-center">
+              <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500/15 to-green-500/5 mb-5 shadow-[0_8px_30px_rgb(34,197,94,0.15)]">
+                <FileCheck className="h-10 w-10 text-green-600" />
+              </div>
+              <p className="text-lg font-bold mb-2">No Agreements Found</p>
+              <p className="text-sm text-muted-foreground">
+                There are no rental agreements to review at this time.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] overflow-hidden">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Agreement #</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Organization</TableHead>
-                    <TableHead>Bot Type</TableHead>
-                    <TableHead>Monthly Total</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                  <TableRow className="bg-muted/30 hover:bg-muted/50 border-b border-border/50">
+                    <TableHead className="font-bold text-xs uppercase tracking-wider">Agreement #</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider">Customer</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider">Organization</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider">Bot Type</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider">Monthly Total</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider">Status</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider">Date</TableHead>
+                    <TableHead className="text-right font-bold text-xs uppercase tracking-wider">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {agreements.map((agreement) => (
-                    <TableRow key={agreement.id}>
+                  {agreements.map((agreement, idx) => (
+                    <TableRow 
+                      key={agreement.id}
+                      className={`hover:bg-muted/30 transition-all duration-300 border-b border-border/30 ${
+                        idx % 2 === 0 ? 'bg-background' : 'bg-muted/10'
+                      }`}
+                    >
                       <TableCell className="font-mono text-sm">
-                        {agreement.agreement_number}
+                        <div className="inline-flex items-center px-2.5 py-1 rounded-lg bg-[#FF6B35]/10 text-[#FF6B35] border border-[#FF6B35]/30 font-semibold">
+                          {agreement.agreement_number}
+                        </div>
                       </TableCell>
                       <TableCell>
-                        <div>
-                          <p className="font-medium">
+                        <div className="space-y-1">
+                          <p className="font-semibold text-[#121212]">
                             {agreement.signer_first_name} {agreement.signer_surname}
                           </p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-[#4F5D75] font-medium">
                             {agreement.signer_email}
                           </p>
                         </div>
                       </TableCell>
-                      <TableCell>{agreement.organization?.name}</TableCell>
-                      <TableCell className="capitalize">
-                        {agreement.bot_type.replace('_', ' ')}
+                      <TableCell>
+                        <span className="font-medium text-[#121212]">{agreement.organization?.name}</span>
                       </TableCell>
-                      <TableCell className="font-bold">
-                        R {parseFloat(agreement.monthly_total).toFixed(2)}
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize bg-slate-50 text-[#4F5D75] border-[#D0D2D5] shadow-sm">
+                          <Bot className="h-3 w-3 mr-1" />
+                          {agreement.bot_type.replace('_', ' ')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#10B981]/20 border border-[#10B981]/40 shadow-sm">
+                          <DollarSign className="h-3.5 w-3.5 text-[#10B981]" />
+                          <span className="font-bold text-[#10B981]">R {parseFloat(agreement.monthly_total).toFixed(2)}</span>
+                        </div>
                       </TableCell>
                       <TableCell>{getStatusBadge(agreement.status)}</TableCell>
-                      <TableCell>
-                        {format(new Date(agreement.created_at), 'MMM d, yyyy')}
+                      <TableCell className="text-sm text-[#4F5D75]">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-[#B0B3B8]" />
+                          {format(new Date(agreement.created_at), 'MMM d, yyyy')}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
@@ -868,8 +1064,9 @@ export default function ApprovalsPage() {
                             setSelectedAgreement(agreement);
                             setShowDetailsDialog(true);
                           }}
+                          className="h-9 text-xs font-semibold rounded-xl border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95"
                         >
-                          <Eye className="h-4 w-4 mr-1" />
+                          <Eye className="h-3.5 w-3.5 mr-1.5" />
                           View
                         </Button>
                       </TableCell>
@@ -877,10 +1074,10 @@ export default function ApprovalsPage() {
                   ))}
                 </TableBody>
               </Table>
-            )}
-          </CardContent>
-        </Card>
-      )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {selectedAgreement && (
         <AgreementDetailsDialog agreement={selectedAgreement} />
@@ -889,24 +1086,38 @@ export default function ApprovalsPage() {
       {/* Amendment Review Dialog */}
       {selectedAmendment && (
         <Dialog open={showAmendmentDialog} onOpenChange={setShowAmendmentDialog}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Review Service Amendment
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-background to-muted/20 border-0 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
+            <DialogHeader className="space-y-3 pb-4">
+              <DialogTitle className="flex items-center gap-3 text-xl">
+                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(59,130,246,0.15)]">
+                  <Settings className="h-6 w-6 text-blue-600" />
+                </div>
+                <span className="font-bold">
+                  Review Service Amendment
+                </span>
               </DialogTitle>
-              <DialogDescription>
-                {selectedAmendment.amendment_type === 'add_gardens' ? 'Add Gardens' : 'Remove Gardens'} Request
+              <DialogDescription className="text-base ml-14">
+                <Badge className={`${selectedAmendment.amendment_type === 'add_gardens' 
+                  ? 'bg-gradient-to-r from-[#10B981] to-[#10B981]/80 hover:from-[#10B981]/90 hover:to-[#10B981]' 
+                  : 'bg-gradient-to-r from-[#F59E0B] to-[#F59E0B]/80 hover:from-[#F59E0B]/90 hover:to-[#F59E0B]'} shadow-md text-white border-0`}>
+                  {selectedAmendment.amendment_type === 'add_gardens' ? <TrendingUp className="h-3.5 w-3.5 mr-1.5" /> : <TrendingDown className="h-3.5 w-3.5 mr-1.5" />}
+                  {selectedAmendment.amendment_type === 'add_gardens' ? 'Add Gardens' : 'Remove Gardens'} Request
+                </Badge>
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4">
+            <div className="space-y-4 pt-2">
               {/* Customer Info */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Customer Information</CardTitle>
+              <Card className="border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                <CardHeader className="pb-3 pt-4">
+                  <CardTitle className="flex items-center gap-2.5 text-sm font-bold">
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[0_2px_10px_rgb(59,130,246,0.1)]">
+                      <User className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <span>Customer Information</span>
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 text-sm">
+                <CardContent className="space-y-3 text-sm pt-4">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Name:</span>
                     <span className="font-semibold">
@@ -926,26 +1137,59 @@ export default function ApprovalsPage() {
               </Card>
 
               {/* Change Details */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Requested Changes</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-muted/50 rounded-lg">
-                      <p className="text-xs text-muted-foreground mb-2">Current Gardens</p>
-                      <p className="text-2xl font-bold">{selectedAmendment.current_garden_count}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{selectedAmendment.current_garden_count} bot{selectedAmendment.current_garden_count !== 1 ? 's' : ''}</p>
+              <Card className="border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                <CardHeader className="pb-3 pt-4">
+                  <CardTitle className="flex items-center gap-2.5 text-sm font-bold">
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_2px_10px_rgb(255,107,53,0.1)]">
+                      <Settings className="h-4 w-4 text-botkorp-orange" />
                     </div>
-                    <div className="p-4 bg-primary/10 rounded-lg border-2 border-primary/30">
-                      <p className="text-xs text-muted-foreground mb-2">Requested Gardens</p>
-                      <p className="text-2xl font-bold text-primary">{selectedAmendment.new_garden_count}</p>
-                      <p className="text-sm text-primary mt-1">{selectedAmendment.new_garden_count} bot{selectedAmendment.new_garden_count !== 1 ? 's' : ''}</p>
+                    <span>Requested Changes</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                      <p className="text-xs font-semibold text-muted-foreground mb-2">Current Gardens</p>
+                      <p className="text-3xl font-bold">{selectedAmendment.current_garden_count}</p>
+                      <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1.5">
+                        <Bot className="h-3.5 w-3.5" />
+                        {selectedAmendment.current_garden_count} bot{selectedAmendment.current_garden_count !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    <div className={`p-4 rounded-xl border-0 ${
+                      selectedAmendment.amendment_type === 'add_gardens'
+                        ? 'bg-green-500/10'
+                        : 'bg-orange-500/10'
+                    }`}>
+                      <p className={`text-xs font-semibold mb-2 ${
+                        selectedAmendment.amendment_type === 'add_gardens' ? 'text-green-600' : 'text-orange-600'
+                      }`}>Requested Gardens</p>
+                      <p className={`text-3xl font-bold ${
+                        selectedAmendment.amendment_type === 'add_gardens' ? 'text-green-600' : 'text-orange-600'
+                      }`}>{selectedAmendment.new_garden_count}</p>
+                      <p className={`text-sm mt-2 flex items-center gap-1.5 ${
+                        selectedAmendment.amendment_type === 'add_gardens' ? 'text-green-600' : 'text-orange-600'
+                      }`}>
+                        <Bot className="h-3.5 w-3.5" />
+                        {selectedAmendment.new_garden_count} bot{selectedAmendment.new_garden_count !== 1 ? 's' : ''}
+                      </p>
                     </div>
                   </div>
 
-                  <Alert className={selectedAmendment.amendment_type === 'add_gardens' ? 'border-green-200 bg-green-50 dark:bg-green-900/20' : 'border-orange-200 bg-orange-50 dark:bg-orange-900/20'}>
-                    <Info className="h-4 w-4" />
+                  <Alert className={`border-0 rounded-xl ${
+                    selectedAmendment.amendment_type === 'add_gardens' 
+                      ? 'bg-green-500/10' 
+                      : 'bg-orange-500/10'
+                  }`}>
+                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                      selectedAmendment.amendment_type === 'add_gardens'
+                        ? 'bg-green-500/20'
+                        : 'bg-orange-500/20'
+                    }`}>
+                      <Info className={`h-4 w-4 ${
+                        selectedAmendment.amendment_type === 'add_gardens' ? 'text-green-600' : 'text-orange-600'
+                      }`} />
+                    </div>
                     <AlertDescription>
                       <p className="font-semibold">
                         {selectedAmendment.amendment_type === 'add_gardens' ? 'Adding' : 'Removing'} {Math.abs(selectedAmendment.new_garden_count - selectedAmendment.current_garden_count)} Garden{Math.abs(selectedAmendment.new_garden_count - selectedAmendment.current_garden_count) !== 1 ? 's' : ''}
@@ -961,9 +1205,9 @@ export default function ApprovalsPage() {
 
                   {/* Signature */}
                   {selectedAmendment.signature_url && (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <p className="text-sm font-semibold">Customer Signature:</p>
-                      <div className="border-2 rounded-lg p-4 bg-white">
+                      <div className="p-4 bg-background/60 backdrop-blur-sm rounded-xl shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                         <img 
                           src={selectedAmendment.signature_url} 
                           alt="Customer Signature" 
@@ -971,16 +1215,19 @@ export default function ApprovalsPage() {
                         />
                       </div>
                       {selectedAmendment.signed_at && (
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                          <Calendar className="h-3 w-3" />
                           Signed: {format(new Date(selectedAmendment.signed_at), 'MMM d, yyyy h:mm a')}
                         </p>
                       )}
                     </div>
                   )}
 
-                  <Alert>
-                    <Calendar className="h-4 w-4" />
-                    <AlertDescription className="text-xs">
+                  <Alert className="border-0 bg-blue-500/10 rounded-xl">
+                    <div className="h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                      <Calendar className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <AlertDescription className="text-sm font-medium">
                       Requested: {format(new Date(selectedAmendment.created_at), 'MMMM d, yyyy h:mm a')}
                     </AlertDescription>
                   </Alert>
@@ -988,35 +1235,37 @@ export default function ApprovalsPage() {
               </Card>
             </div>
 
-            <DialogFooter className="gap-2">
+            <DialogFooter className="gap-2 pt-4">
               <Button
                 variant="outline"
                 onClick={() => setShowAmendmentDialog(false)}
                 disabled={actionLoading}
+                className="h-10 text-xs font-semibold rounded-xl border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95"
               >
                 Close
               </Button>
               <Button
-                variant="destructive"
+                variant="outline"
                 onClick={() => handleRejectAmendment(selectedAmendment.id)}
                 disabled={actionLoading}
+                className="h-10 text-xs font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 border-0 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 active:scale-95"
               >
                 {actionLoading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                 ) : (
-                  <XCircle className="h-4 w-4 mr-2" />
+                  <XCircle className="h-3.5 w-3.5 mr-1.5" />
                 )}
                 Reject
               </Button>
               <Button
                 onClick={() => handleApproveAmendment(selectedAmendment.id)}
                 disabled={actionLoading}
-                className="bg-green-600 hover:bg-green-700"
+                className="h-10 text-xs font-semibold bg-gradient-to-br from-botkorp-orange to-botkorp-orange/90 shadow-[4px_4px_12px_rgba(0,0,0,0.2),-2px_-2px_8px_rgba(255,255,255,0.1)] hover:shadow-[6px_6px_16px_rgba(0,0,0,0.25),-3px_-3px_10px_rgba(255,255,255,0.15)] active:scale-95 transition-all duration-300 rounded-xl border-0 text-white"
               >
                 {actionLoading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                 ) : (
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
                 )}
                 Approve
               </Button>
@@ -1028,81 +1277,119 @@ export default function ApprovalsPage() {
       {/* Mark Installed Dialog */}
       {selectedService && (
         <Dialog open={showInstallDialog} onOpenChange={setShowInstallDialog}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Bot className="h-5 w-5 text-blue-600" />
-                Mark Service as Installed
+          <DialogContent className="max-w-2xl bg-gradient-to-br from-background to-muted/20 border-0 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
+            <DialogHeader className="space-y-3 pb-4">
+              <DialogTitle className="flex items-center gap-3 text-xl">
+                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+                  <Bot className="h-6 w-6 text-botkorp-orange" />
+                </div>
+                <span className="font-bold">
+                  Mark Service as Installed
+                </span>
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-sm ml-14 text-muted-foreground">
                 Confirm that bots have been physically installed for this service
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4">
+            <div className="space-y-4 pt-2">
               {/* Service Info */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Service Information</CardTitle>
+              <Card className="border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                <CardHeader className="pb-3 pt-4">
+                  <CardTitle className="flex items-center gap-2.5 text-sm font-bold">
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[0_2px_10px_rgb(59,130,246,0.1)]">
+                      <Settings className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <span>Service Information</span>
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="flex justify-between">
+                <CardContent className="space-y-3 text-sm pt-4">
+                  <div className="flex justify-between p-2.5 rounded-lg bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                     <span className="text-muted-foreground">Service Name:</span>
                     <span className="font-semibold">{selectedService.name}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between p-2.5 rounded-lg bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                     <span className="text-muted-foreground">Service Type:</span>
-                    <Badge variant="outline" className="capitalize">{selectedService.service_type}</Badge>
+                    <Badge variant="outline" className="capitalize border-0 bg-blue-500/10 text-blue-600">
+                      {selectedService.service_type}
+                    </Badge>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between p-2.5 rounded-lg bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                     <span className="text-muted-foreground">Location:</span>
                     <span className="font-medium">{selectedService.location?.name}, {selectedService.location?.city}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between p-2.5 rounded-lg bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                     <span className="text-muted-foreground">Gardens:</span>
-                    <span className="font-medium">{selectedService.garden_count} garden{selectedService.garden_count !== 1 ? 's' : ''}</span>
+                    <span className="font-medium text-green-600 flex items-center gap-1.5">
+                      <Sprout className="h-3.5 w-3.5" />
+                      {selectedService.garden_count} garden{selectedService.garden_count !== 1 ? 's' : ''}
+                    </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Bots to Deploy:</span>
-                    <Badge className="bg-blue-100 text-blue-800">{selectedService.garden_count} bot{selectedService.garden_count !== 1 ? 's' : ''}</Badge>
+                  <div className="flex justify-between p-2.5 rounded-lg bg-botkorp-orange/10 border-0">
+                    <span className="font-semibold text-botkorp-orange">Bots to Deploy:</span>
+                    <Badge className="bg-botkorp-orange hover:bg-botkorp-orange/90 text-white border-0">
+                      <Bot className="h-3 w-3 mr-1" />
+                      {selectedService.garden_count} bot{selectedService.garden_count !== 1 ? 's' : ''}
+                    </Badge>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between p-2.5 rounded-lg bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                     <span className="text-muted-foreground">Created:</span>
-                    <span>{format(new Date(selectedService.created_at), 'MMM d, yyyy h:mm a')}</span>
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5" />
+                      {format(new Date(selectedService.created_at), 'MMM d, yyyy h:mm a')}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
 
-              <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
-                <Info className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-sm text-blue-900 dark:text-blue-200">
-                  <p className="font-semibold mb-1">Before marking as installed:</p>
-                  <ul className="text-xs space-y-1 mt-2">
-                    <li>✓ All {selectedService.garden_count} bots physically deployed</li>
-                    <li>✓ Bots tested and operational</li>
-                    <li>✓ Customer informed of installation completion</li>
+              <Alert className="border-0 bg-botkorp-orange/10 rounded-xl">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+                  <Info className="h-5 w-5 text-botkorp-orange" />
+                </div>
+                <AlertDescription className="text-sm">
+                  <p className="font-bold mb-2 text-base">Before marking as installed:</p>
+                  <ul className="space-y-2 mt-3">
+                    <li className="flex items-center gap-2">
+                      <div className="h-5 w-5 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
+                        <CheckCircle2 className="h-3 w-3 text-white" />
+                      </div>
+                      <span>All {selectedService.garden_count} bots physically deployed</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="h-5 w-5 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
+                        <CheckCircle2 className="h-3 w-3 text-white" />
+                      </div>
+                      <span>Bots tested and operational</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="h-5 w-5 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
+                        <CheckCircle2 className="h-3 w-3 text-white" />
+                      </div>
+                      <span>Customer informed of installation completion</span>
+                    </li>
                   </ul>
                 </AlertDescription>
               </Alert>
             </div>
 
-            <DialogFooter className="gap-2">
+            <DialogFooter className="gap-2 pt-4">
               <Button
                 variant="outline"
                 onClick={() => setShowInstallDialog(false)}
                 disabled={actionLoading}
+                className="h-10 text-xs font-semibold rounded-xl border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95"
               >
                 Cancel
               </Button>
               <Button
                 onClick={() => handleMarkInstalled(selectedService.id)}
                 disabled={actionLoading}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="h-10 text-xs font-semibold bg-gradient-to-br from-botkorp-orange to-botkorp-orange/90 shadow-[4px_4px_12px_rgba(0,0,0,0.2),-2px_-2px_8px_rgba(255,255,255,0.1)] hover:shadow-[6px_6px_16px_rgba(0,0,0,0.25),-3px_-3px_10px_rgba(255,255,255,0.15)] active:scale-95 transition-all duration-300 rounded-xl border-0 text-white"
               >
                 {actionLoading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                 ) : (
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
                 )}
                 Confirm Installation
               </Button>
