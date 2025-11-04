@@ -213,39 +213,39 @@ export default function PortalLayout() {
   };
 
   const Sidebar = ({ mobile = false }) => (
-    <div className="flex flex-col h-full bg-white dark:bg-gradient-to-b dark:from-botkorp-black dark:via-botkorp-black-light dark:to-botkorp-slate-blue text-gray-900 dark:text-white border-r border-gray-200 dark:border-botkorp-slate-blue/30 relative shadow-2xl">
-      {/* Subtle mesh gradient overlay */}
+    <div className="flex flex-col h-full bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-botkorp-black dark:via-botkorp-black-light/50 dark:to-botkorp-black text-gray-900 dark:text-white border-r border-gray-200/60 dark:border-botkorp-slate-blue/20 relative shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)]">
+      {/* Subtle ambient glow overlay */}
       <div 
-        className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.04] opacity-0" 
+        className="pointer-events-none absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" 
         style={{ 
           backgroundImage: `
-            radial-gradient(circle at 20% 50%, rgba(255,107,53,0.2) 0%, transparent 50%),
-            radial-gradient(circle at 80% 80%, rgba(79,93,117,0.2) 0%, transparent 50%),
-            radial-gradient(circle at 1px 1px, rgba(255,255,255,0.08) 1px, transparent 0)
+            radial-gradient(circle at 20% 30%, rgba(255,107,53,0.15) 0%, transparent 50%),
+            radial-gradient(circle at 80% 70%, rgba(79,93,117,0.1) 0%, transparent 50%)
           `,
-          backgroundSize: '100% 100%, 100% 100%, 32px 32px' 
+          backgroundSize: '100% 100%, 100% 100%' 
         }} 
       />
 
-      {/* Logo Section - Professional header */}
+      {/* Logo Section - Soft UI header */}
       <div 
-        className="relative p-4 border-b border-gray-200 dark:border-botkorp-slate-blue/30 flex items-center gap-2.5 cursor-pointer group overflow-hidden bg-gray-50 dark:bg-botkorp-black-light/50 flex-shrink-0"
+        className="relative p-4 border-b border-gray-200/60 dark:border-botkorp-slate-blue/20 flex items-center gap-2.5 cursor-pointer group overflow-hidden bg-gradient-to-br from-white via-gray-50/50 to-white dark:from-botkorp-black-light/30 dark:via-botkorp-black-light/10 dark:to-transparent flex-shrink-0"
         onClick={() => {
           navigate('/');
           if (mobile) setMobileMenuOpen(false);
         }}
       >
         {/* Hover shimmer effect */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-botkorp-orange/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-botkorp-orange/8 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
         
-        <div className="relative flex items-center justify-center h-10 w-10 rounded-lg bg-botkorp-orange shadow-lg shadow-botkorp-orange/30 ring-2 ring-botkorp-orange/20 group-hover:scale-105 group-hover:shadow-botkorp-orange/50 group-hover:ring-botkorp-orange/30 transition-all duration-300">
-          <Bot className="h-5 w-5 text-white" />
+        <div className="relative flex items-center justify-center h-9 w-9 rounded-xl bg-gradient-to-br from-botkorp-orange via-orange-500 to-orange-600 shadow-[0_4px_16px_rgb(255,107,53,0.3)] group-hover:shadow-[0_6px_20px_rgb(255,107,53,0.4)] group-hover:scale-105 transition-all duration-300">
+          <div className="absolute inset-0.5 rounded-lg bg-gradient-to-br from-white/20 to-transparent" />
+          <Bot className="relative h-4 w-4 text-white" />
         </div>
         <div className="relative flex-1">
-          <h1 className="text-base font-bold tracking-tight text-gray-900 dark:text-white drop-shadow-sm">
+          <h1 className="text-sm font-bold tracking-tight text-gray-900 dark:text-white">
             Bot Korp
           </h1>
-          <p className="text-[9px] text-gray-600 dark:text-botkorp-silver uppercase tracking-widest font-semibold">
+          <p className="text-[8px] text-gray-600/80 dark:text-botkorp-silver/70 uppercase tracking-widest font-semibold">
             Control Center
           </p>
         </div>
@@ -253,42 +253,42 @@ export default function PortalLayout() {
 
       {/* Scrollable Content Area - Single unified scroll */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
-      {/* Main Navigation - Professional design with better hierarchy */}
-      <nav className="px-3 py-4 space-y-1">
-        <div className="px-3 mb-2">
-          <p className="text-[9px] font-bold text-gray-500 dark:text-botkorp-silver/60 uppercase tracking-widest">
+      {/* Main Navigation - Soft UI design */}
+      <nav className="px-3 py-4 space-y-1.5">
+        <div className="px-2 mb-2">
+          <p className="text-[9px] font-bold text-gray-500/70 dark:text-botkorp-silver/60 uppercase tracking-widest">
             Main Menu
           </p>
         </div>
-        <div className="space-y-0.5">
+        <div className="space-y-1">
           {mainNavItems.map((item) => (
             <button
               key={item.path}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-300 group relative overflow-hidden ${
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all duration-300 group relative overflow-hidden ${
                 isActivePath(item.path)
-                  ? 'bg-botkorp-orange text-white shadow-lg shadow-botkorp-orange/30 scale-[1.01]'
-                  : 'text-gray-700 dark:text-botkorp-silver hover:bg-gray-100 dark:hover:bg-botkorp-slate-blue/30 hover:text-gray-900 dark:hover:text-white hover:scale-[1.01]'
+                  ? 'bg-gradient-to-br from-botkorp-orange via-orange-500 to-orange-600 text-white shadow-[0_4px_16px_rgb(255,107,53,0.3)] hover:shadow-[0_6px_20px_rgb(255,107,53,0.4)] scale-[1.01]'
+                  : 'text-gray-700 dark:text-botkorp-silver bg-white/60 dark:bg-botkorp-black-light/30 shadow-[0_2px_6px_rgb(0,0,0,0.04)] dark:shadow-[0_2px_6px_rgb(0,0,0,0.1)] hover:shadow-[0_4px_10px_rgb(0,0,0,0.08)] dark:hover:shadow-[0_4px_10px_rgb(255,107,53,0.15)] hover:bg-white dark:hover:bg-botkorp-slate-blue/20 hover:text-gray-900 dark:hover:text-white hover:scale-[1.01]'
               }`}
               onClick={() => {
                 navigate(item.path);
                 if (mobile) setMobileMenuOpen(false);
               }}
             >
+              {/* Inner glow for active state */}
+              {isActivePath(item.path) && (
+                <div className="absolute inset-0.5 rounded-xl bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
+              )}
+              
               {/* Subtle shine effect on hover for inactive items */}
               {!isActivePath(item.path) && (
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-botkorp-orange/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
               )}
               
-              {/* Active indicator bar - sleeker design */}
-              {isActivePath(item.path) && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-white rounded-r-full shadow-md" />
-              )}
-              
-              {/* Icon container with backdrop */}
-              <span className={`relative flex-shrink-0 flex items-center justify-center h-7 w-7 rounded-lg transition-all duration-300 ${
+              {/* Icon container with soft background */}
+              <span className={`relative flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-lg transition-all duration-300 ${
                 isActivePath(item.path) 
-                  ? 'bg-white/20 text-white scale-105' 
-                  : 'bg-gray-200 dark:bg-botkorp-slate-blue/20 text-gray-700 dark:text-botkorp-silver group-hover:bg-botkorp-orange/20 group-hover:text-botkorp-orange dark:group-hover:text-white group-hover:scale-105'
+                  ? 'bg-white/20 text-white scale-105 shadow-[0_2px_6px_rgba(255,255,255,0.2)]' 
+                  : 'bg-gradient-to-br from-gray-100 to-gray-200 dark:from-botkorp-slate-blue/20 dark:to-botkorp-slate-blue/10 text-gray-700 dark:text-botkorp-silver group-hover:from-botkorp-orange/20 group-hover:to-botkorp-orange/10 group-hover:text-botkorp-orange dark:group-hover:text-white group-hover:scale-105 shadow-[inset_0_1px_2px_rgba(255,255,255,0.5)] dark:shadow-none'
               }`}>
                 {React.cloneElement(item.icon, { className: 'h-4 w-4' })}
               </span>
@@ -300,10 +300,10 @@ export default function PortalLayout() {
                 {item.label}
               </span>
 
-              {/* Refined chevron indicator */}
+              {/* Refined dot indicator for active */}
               {isActivePath(item.path) && (
-                <div className="flex items-center justify-center h-5 w-5 rounded-md bg-white/20">
-                  <ChevronDown className="h-3 w-3 text-white rotate-[-90deg]" />
+                <div className="flex items-center justify-center h-5 w-5 rounded-lg bg-white/20">
+                  <div className="h-1.5 w-1.5 rounded-full bg-white shadow-[0_2px_6px_rgba(255,255,255,0.5)]" />
                 </div>
               )}
             </button>
@@ -311,48 +311,48 @@ export default function PortalLayout() {
         </div>
       </nav>
 
-      {/* Admin Section & Bottom Navigation - Professional design */}
-      <div className="bg-gradient-to-t from-gray-100 dark:from-botkorp-black via-gray-50 dark:via-botkorp-black-light/60 to-transparent backdrop-blur-sm">
+      {/* Admin Section & Bottom Navigation - Soft UI design */}
+      <div className="mt-auto pt-2">
         {/* Admin Navigation (only visible to admins) */}
         {isAdmin && (
-          <div className="px-3 pb-2 pt-3">
-            <div className="border-b border-gray-200 dark:border-botkorp-slate-blue/30 pb-3">
-              <div className="flex items-center gap-2 px-3 mb-2">
-                <div className="h-6 w-6 rounded-lg bg-botkorp-slate-blue flex items-center justify-center shadow-md shadow-botkorp-slate-blue/30">
+          <div className="px-3 pb-3 pt-2">
+            <div className="border-t border-gray-200/60 dark:border-botkorp-slate-blue/20 pt-3 pb-2">
+              <div className="flex items-center gap-2 px-2 mb-2">
+                <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-botkorp-slate-blue via-blue-600 to-blue-700 flex items-center justify-center shadow-[0_4px_12px_rgb(79,93,117,0.25)]">
                   <Shield className="h-3.5 w-3.5 text-white" />
                 </div>
-                <p className="text-[9px] font-bold text-gray-500 dark:text-botkorp-silver/60 uppercase tracking-widest">
+                <p className="text-[9px] font-bold text-gray-500/70 dark:text-botkorp-silver/60 uppercase tracking-widest">
                   Admin Tools
                 </p>
               </div>
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {adminNavItems.map((item) => (
                   <button
                     key={item.path}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-300 group relative overflow-hidden ${
+                    className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all duration-300 group relative overflow-hidden ${
                       isActivePath(item.path)
-                        ? 'bg-botkorp-slate-blue text-white shadow-lg shadow-botkorp-slate-blue/30 scale-[1.01]'
-                        : 'text-gray-700 dark:text-botkorp-silver hover:bg-gray-100 dark:hover:bg-botkorp-slate-blue/20 hover:text-gray-900 dark:hover:text-white hover:scale-[1.01]'
+                        ? 'bg-gradient-to-br from-botkorp-slate-blue via-blue-600 to-blue-700 text-white shadow-[0_4px_16px_rgb(79,93,117,0.3)] hover:shadow-[0_6px_20px_rgb(79,93,117,0.4)] scale-[1.01]'
+                        : 'text-gray-700 dark:text-botkorp-silver bg-white/60 dark:bg-botkorp-black-light/30 shadow-[0_2px_6px_rgb(0,0,0,0.04)] dark:shadow-[0_2px_6px_rgb(0,0,0,0.1)] hover:shadow-[0_4px_10px_rgb(0,0,0,0.08)] dark:hover:shadow-[0_4px_10px_rgb(79,93,117,0.15)] hover:bg-white dark:hover:bg-botkorp-slate-blue/20 hover:text-gray-900 dark:hover:text-white hover:scale-[1.01]'
                     }`}
                     onClick={() => {
                       navigate(item.path);
                       if (mobile) setMobileMenuOpen(false);
                     }}
                   >
+                    {/* Inner glow for active state */}
+                    {isActivePath(item.path) && (
+                      <div className="absolute inset-0.5 rounded-xl bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
+                    )}
+                    
                     {/* Subtle shine effect on hover for inactive items */}
                     {!isActivePath(item.path) && (
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-botkorp-slate-blue/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                     )}
                     
-                    {/* Active indicator */}
-                    {isActivePath(item.path) && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-white rounded-r-full shadow-md" />
-                    )}
-                    
-                    <span className={`relative flex-shrink-0 flex items-center justify-center h-7 w-7 rounded-lg transition-all duration-300 ${
+                    <span className={`relative flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-lg transition-all duration-300 ${
                       isActivePath(item.path) 
-                        ? 'bg-white/20 text-white scale-105' 
-                        : 'bg-gray-200 dark:bg-botkorp-slate-blue/20 text-gray-700 dark:text-botkorp-silver group-hover:bg-botkorp-slate-blue/30 group-hover:text-botkorp-slate-blue dark:group-hover:text-white group-hover:scale-105'
+                        ? 'bg-white/20 text-white scale-105 shadow-[0_2px_6px_rgba(255,255,255,0.2)]' 
+                        : 'bg-gradient-to-br from-gray-100 to-gray-200 dark:from-botkorp-slate-blue/20 dark:to-botkorp-slate-blue/10 text-gray-700 dark:text-botkorp-silver group-hover:from-botkorp-slate-blue/20 group-hover:to-botkorp-slate-blue/10 group-hover:text-botkorp-slate-blue dark:group-hover:text-white group-hover:scale-105 shadow-[inset_0_1px_2px_rgba(255,255,255,0.5)] dark:shadow-none'
                     }`}>
                       {React.cloneElement(item.icon, { className: 'h-4 w-4' })}
                     </span>
@@ -362,8 +362,8 @@ export default function PortalLayout() {
                       {item.label}
                     </span>
                     {isActivePath(item.path) && (
-                      <div className="flex items-center justify-center h-5 w-5 rounded-md bg-white/20">
-                        <ChevronDown className="h-3 w-3 text-white rotate-[-90deg]" />
+                      <div className="flex items-center justify-center h-5 w-5 rounded-lg bg-white/20">
+                        <div className="h-1.5 w-1.5 rounded-full bg-white shadow-[0_2px_6px_rgba(255,255,255,0.5)]" />
                       </div>
                     )}
                   </button>
@@ -374,33 +374,35 @@ export default function PortalLayout() {
         )}
 
         {/* Bottom Navigation - Settings & Organizations */}
-        <div className="p-3 border-t border-gray-200 dark:border-botkorp-slate-blue/30 space-y-2">
+        <div className="px-3 pb-3 border-t border-gray-200/60 dark:border-botkorp-slate-blue/20 pt-3 space-y-2">
         {/* Settings Button */}
         {bottomNavItems.map((item) => (
           <button
             key={item.path}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-300 group relative overflow-hidden ${
+            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all duration-300 group relative overflow-hidden ${
               isActivePath(item.path)
-                ? 'bg-botkorp-slate-blue text-white shadow-lg shadow-botkorp-slate-blue/30 scale-[1.01]'
-                : 'text-gray-700 dark:text-botkorp-silver hover:bg-gray-100 dark:hover:bg-botkorp-slate-blue/20 hover:text-gray-900 dark:hover:text-white hover:scale-[1.01]'
+                ? 'bg-gradient-to-br from-botkorp-slate-blue via-blue-600 to-blue-700 text-white shadow-[0_4px_16px_rgb(79,93,117,0.3)] hover:shadow-[0_6px_20px_rgb(79,93,117,0.4)] scale-[1.01]'
+                : 'text-gray-700 dark:text-botkorp-silver bg-white/60 dark:bg-botkorp-black-light/30 shadow-[0_2px_6px_rgb(0,0,0,0.04)] dark:shadow-[0_2px_6px_rgb(0,0,0,0.1)] hover:shadow-[0_4px_10px_rgb(0,0,0,0.08)] dark:hover:shadow-[0_4px_10px_rgb(79,93,117,0.15)] hover:bg-white dark:hover:bg-botkorp-slate-blue/20 hover:text-gray-900 dark:hover:text-white hover:scale-[1.01]'
             }`}
             onClick={() => {
               navigate(item.path);
               if (mobile) setMobileMenuOpen(false);
             }}
           >
+            {/* Inner glow for active state */}
+            {isActivePath(item.path) && (
+              <div className="absolute inset-0.5 rounded-xl bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
+            )}
+            
             {/* Subtle shine effect on hover for inactive items */}
             {!isActivePath(item.path) && (
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-botkorp-slate-blue/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
             )}
             
-            {isActivePath(item.path) && (
-              <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-white rounded-r-full shadow-md" />
-            )}
-            <span className={`relative flex-shrink-0 flex items-center justify-center h-7 w-7 rounded-lg transition-all duration-300 ${
+            <span className={`relative flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-lg transition-all duration-300 ${
               isActivePath(item.path) 
-                ? 'bg-white/20 text-white scale-105' 
-                : 'bg-gray-200 dark:bg-botkorp-slate-blue/20 text-gray-700 dark:text-botkorp-silver group-hover:bg-botkorp-slate-blue/30 group-hover:text-botkorp-slate-blue dark:group-hover:text-white group-hover:scale-105'
+                ? 'bg-white/20 text-white scale-105 shadow-[0_2px_6px_rgba(255,255,255,0.2)]' 
+                : 'bg-gradient-to-br from-gray-100 to-gray-200 dark:from-botkorp-slate-blue/20 dark:to-botkorp-slate-blue/10 text-gray-700 dark:text-botkorp-silver group-hover:from-botkorp-slate-blue/20 group-hover:to-botkorp-slate-blue/10 group-hover:text-botkorp-slate-blue dark:group-hover:text-white group-hover:scale-105 shadow-[inset_0_1px_2px_rgba(255,255,255,0.5)] dark:shadow-none'
             }`}>
               {React.cloneElement(item.icon, { className: 'h-4 w-4' })}
             </span>
@@ -409,29 +411,34 @@ export default function PortalLayout() {
             }`}>
               {item.label}
             </span>
+            {isActivePath(item.path) && (
+              <div className="flex items-center justify-center h-5 w-5 rounded-lg bg-white/20">
+                <div className="h-1.5 w-1.5 rounded-full bg-white shadow-[0_2px_6px_rgba(255,255,255,0.5)]" />
+              </div>
+            )}
           </button>
         ))}
 
-        {/* Organization Selector - Professional design */}
-        <div className="pt-2 border-t border-gray-200 dark:border-botkorp-slate-blue/30">
-          <div className="flex items-center gap-2 px-3 mb-2">
-            <div className="h-5 w-5 rounded-md bg-botkorp-orange flex items-center justify-center shadow-sm shadow-botkorp-orange/30">
-              <Building className="h-3 w-3 text-white" />
+        {/* Organization Selector - Soft UI design */}
+        <div className="pt-2 border-t border-gray-200/60 dark:border-botkorp-slate-blue/20">
+          <div className="flex items-center gap-2 px-2 mb-2">
+            <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-botkorp-orange via-orange-500 to-orange-600 flex items-center justify-center shadow-[0_4px_12px_rgb(255,107,53,0.25)]">
+              <Building className="h-3.5 w-3.5 text-white" />
             </div>
-            <p className="text-[9px] font-bold text-gray-500 dark:text-botkorp-silver/60 uppercase tracking-widest">
+            <p className="text-[9px] font-bold text-gray-500/70 dark:text-botkorp-silver/60 uppercase tracking-widest">
               Organizations
             </p>
           </div>
           
           {/* Current Organization Display */}
-          <div className="space-y-0.5 pr-1">
+          <div className="space-y-1.5">
             {organizations.map((org) => (
               <button
                 key={org.organization_id}
-                className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-300 group relative overflow-hidden ${
+                className={`w-full text-left px-3 py-2.5 rounded-xl transition-all duration-300 group relative overflow-hidden ${
                   selectedOrg?.organization_id === org.organization_id
-                    ? 'bg-botkorp-orange/20 border border-botkorp-orange/50 shadow-lg shadow-botkorp-orange/20 scale-[1.01]'
-                    : 'text-gray-700 dark:text-botkorp-silver hover:bg-gray-100 dark:hover:bg-botkorp-slate-blue/20 border border-transparent hover:border-gray-300 dark:hover:border-botkorp-slate-blue/30 hover:scale-[1.01]'
+                    ? 'bg-gradient-to-br from-botkorp-orange/15 via-botkorp-orange/10 to-botkorp-orange/5 border border-botkorp-orange/40 shadow-[0_4px_12px_rgb(255,107,53,0.15)] scale-[1.01]'
+                    : 'text-gray-700 dark:text-botkorp-silver bg-white/60 dark:bg-botkorp-black-light/30 shadow-[0_2px_6px_rgb(0,0,0,0.04)] dark:shadow-[0_2px_6px_rgb(0,0,0,0.1)] hover:shadow-[0_4px_10px_rgb(0,0,0,0.08)] dark:hover:shadow-[0_4px_10px_rgb(255,107,53,0.15)] hover:bg-white dark:hover:bg-botkorp-slate-blue/20 border border-transparent hover:scale-[1.01]'
                 }`}
                 onClick={() => {
                   handleOrgChange(org);
@@ -440,14 +447,14 @@ export default function PortalLayout() {
               >
                 {/* Shine effect on selected */}
                 {selectedOrg?.organization_id === org.organization_id && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-botkorp-orange/10 to-transparent animate-shimmer" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-botkorp-orange/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                 )}
                 
-                <div className="flex items-center gap-2 relative">
-                  <div className={`h-7 w-7 rounded-lg flex items-center justify-center text-xs font-bold shadow-sm transition-all duration-300 ${
+                <div className="flex items-center gap-2.5 relative">
+                  <div className={`h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold shadow-sm transition-all duration-300 ${
                     selectedOrg?.organization_id === org.organization_id
-                      ? 'bg-botkorp-orange text-white scale-105 ring-2 ring-botkorp-orange/30'
-                      : 'bg-gray-200 dark:bg-botkorp-slate-blue/30 text-gray-700 dark:text-botkorp-silver group-hover:bg-botkorp-orange/30 group-hover:scale-105'
+                      ? 'bg-gradient-to-br from-botkorp-orange via-orange-500 to-orange-600 text-white scale-105 shadow-[0_4px_10px_rgb(255,107,53,0.25)]'
+                      : 'bg-gradient-to-br from-gray-100 to-gray-200 dark:from-botkorp-slate-blue/20 dark:to-botkorp-slate-blue/10 text-gray-700 dark:text-botkorp-silver group-hover:from-botkorp-orange/20 group-hover:to-botkorp-orange/10 group-hover:text-botkorp-orange group-hover:scale-105 shadow-[inset_0_1px_2px_rgba(255,255,255,0.5)] dark:shadow-none'
                   }`}>
                     {org.organization_name.charAt(0).toUpperCase()}
                   </div>
@@ -461,15 +468,15 @@ export default function PortalLayout() {
                     </p>
                     <p className={`text-[9px] capitalize tracking-wider font-medium ${
                       selectedOrg?.organization_id === org.organization_id
-                        ? 'text-gray-600 dark:text-botkorp-silver'
-                        : 'text-gray-500 dark:text-botkorp-silver/60'
+                        ? 'text-gray-600/80 dark:text-botkorp-silver/80'
+                        : 'text-gray-500/70 dark:text-botkorp-silver/60'
                     }`}>
                       {org.member_role}
                     </p>
                   </div>
                   {selectedOrg?.organization_id === org.organization_id && (
-                    <div className="flex items-center justify-center h-5 w-5">
-                      <div className="h-2 w-2 rounded-full bg-botkorp-orange shadow-sm shadow-botkorp-orange/50 animate-pulse" />
+                    <div className="flex items-center justify-center h-5 w-5 rounded-lg bg-botkorp-orange/20">
+                      <div className="h-1.5 w-1.5 rounded-full bg-botkorp-orange shadow-[0_2px_6px_rgba(255,107,53,0.5)] animate-pulse" />
                     </div>
                   )}
                 </div>
@@ -478,10 +485,10 @@ export default function PortalLayout() {
             
             {/* Create Organization Button */}
             <button
-              className="w-full text-left px-3 py-2 rounded-lg transition-all duration-300 text-gray-700 dark:text-botkorp-silver hover:bg-botkorp-orange/10 hover:text-gray-900 dark:hover:text-white border border-dashed border-gray-300 dark:border-botkorp-slate-blue/30 hover:border-botkorp-orange hover:scale-[1.01] flex items-center gap-2 group relative overflow-hidden"
+              className="w-full text-left px-3 py-2.5 rounded-xl transition-all duration-300 text-gray-700 dark:text-botkorp-silver bg-white/40 dark:bg-botkorp-black-light/20 shadow-[0_2px_6px_rgb(0,0,0,0.04)] dark:shadow-[0_2px_6px_rgb(0,0,0,0.1)] hover:shadow-[0_4px_10px_rgb(0,0,0,0.08)] dark:hover:shadow-[0_4px_10px_rgb(255,107,53,0.15)] hover:bg-botkorp-orange/10 hover:text-gray-900 dark:hover:text-white border border-dashed border-gray-300/60 dark:border-botkorp-slate-blue/30 hover:border-botkorp-orange hover:scale-[1.01] flex items-center gap-2.5 group relative overflow-hidden"
               onClick={() => setShowCreateOrgDialog(true)}
             >
-              <div className="h-7 w-7 rounded-lg bg-gray-200 dark:bg-botkorp-slate-blue/20 flex items-center justify-center group-hover:bg-botkorp-orange group-hover:text-white transition-all duration-300 shadow-sm group-hover:shadow-md group-hover:shadow-botkorp-orange/30 group-hover:scale-105">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 dark:from-botkorp-slate-blue/20 dark:to-botkorp-slate-blue/10 flex items-center justify-center group-hover:from-botkorp-orange group-hover:to-orange-600 group-hover:text-white transition-all duration-300 shadow-[inset_0_1px_2px_rgba(255,255,255,0.5)] dark:shadow-none group-hover:shadow-[0_4px_10px_rgb(255,107,53,0.25)] group-hover:scale-105">
                 <Plus className="h-3.5 w-3.5" />
               </div>
               <span className="text-xs font-semibold group-hover:text-botkorp-orange transition-colors tracking-wide">
@@ -493,11 +500,11 @@ export default function PortalLayout() {
 
         {/* Organization Info (mobile only) */}
         {mobile && selectedOrg && (
-          <div className="pt-2 border-t border-gray-200 dark:border-botkorp-slate-blue/30">
-            <div className="bg-gray-100 dark:bg-botkorp-slate-blue/20 rounded-lg p-2.5 border border-botkorp-orange/30">
-              <p className="text-[10px] text-gray-600 dark:text-botkorp-silver mb-1">Current Organization</p>
-              <p className="font-semibold text-gray-900 dark:text-white text-xs">{selectedOrg.organization_name}</p>
-              <p className="text-[10px] text-gray-500 dark:text-botkorp-silver/80 capitalize mt-0.5">{selectedOrg.member_role}</p>
+          <div className="pt-2 border-t border-gray-200/60 dark:border-botkorp-slate-blue/20">
+            <div className="bg-gradient-to-br from-botkorp-orange/10 via-botkorp-orange/5 to-transparent rounded-xl p-3 border border-botkorp-orange/30 shadow-[0_4px_12px_rgb(255,107,53,0.12)]">
+              <p className="text-[9px] text-gray-600/80 dark:text-botkorp-silver/80 mb-1 font-semibold uppercase tracking-wider">Current Organization</p>
+              <p className="font-bold text-gray-900 dark:text-white text-xs">{selectedOrg.organization_name}</p>
+              <p className="text-[10px] text-gray-500/80 dark:text-botkorp-silver/70 capitalize mt-0.5">{selectedOrg.member_role}</p>
             </div>
           </div>
         )}
@@ -521,86 +528,58 @@ export default function PortalLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Desktop Sidebar - Enhanced width */}
-      <aside className="hidden md:block w-80 flex-shrink-0">
+      {/* Desktop Sidebar - Elegant compact width */}
+      <aside className="hidden md:block w-64 flex-shrink-0">
         <Sidebar />
       </aside>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Toolbar - Premium Soft UI Design with Neumorphic Elements */}
-        <header className="sticky top-0 z-50 backdrop-blur-3xl bg-gradient-to-br from-white/95 via-gray-50/90 to-white/95 dark:from-botkorp-black/95 dark:via-botkorp-black-light/90 dark:to-botkorp-black/95 border-b-2 border-gray-100/80 dark:border-botkorp-slate-blue/20 shadow-[0_8px_32px_rgba(0,0,0,0.04),0_2px_16px_rgba(0,0,0,0.02),0_1px_4px_rgba(0,0,0,0.01),inset_0_-1px_4px_rgba(255,255,255,0.15),inset_0_1px_2px_rgba(255,255,255,0.25)] dark:shadow-[0_12px_48px_rgba(0,0,0,0.5),0_4px_16px_rgba(255,107,53,0.08),inset_0_-1px_4px_rgba(255,107,53,0.08),inset_0_1px_2px_rgba(255,107,53,0.05)] relative overflow-hidden">
+        {/* Toolbar - Modern Soft UI Design */}
+        <header className="sticky top-0 z-50 backdrop-blur-xl bg-gradient-to-br from-background via-background to-muted/20 border-b border-border/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] relative overflow-hidden">
           
-          {/* Background mesh pattern - subtle texture */}
-          <div className="absolute inset-0 opacity-[0.015] dark:opacity-[0.02] pointer-events-none">
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAyMCAwIEwgMCAwIDAgMjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIHN0cm9rZS13aWR0aD0iMC4zIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-50" />
-          </div>
+          {/* Subtle ambient background glow */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-botkorp-orange/5 to-transparent pointer-events-none" />
           
-          {/* Animated floating orbs - premium ambient effect */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute w-32 h-32 -top-16 -left-16 bg-botkorp-orange/10 dark:bg-botkorp-orange/5 rounded-full blur-3xl animate-float" style={{ animationDuration: '12s', animationDelay: '0s' }} />
-            <div className="absolute w-24 h-24 -top-12 right-1/4 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-3xl animate-float" style={{ animationDuration: '15s', animationDelay: '2s' }} />
-            <div className="absolute w-28 h-28 -top-14 -right-14 bg-purple-500/10 dark:bg-purple-500/5 rounded-full blur-3xl animate-float" style={{ animationDuration: '18s', animationDelay: '4s' }} />
-          </div>
-          
-          {/* Animated gradient wave - subtle motion */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-botkorp-orange/3 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
-          
-          {/* Top accent line with glow */}
-          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-botkorp-orange/60 to-transparent shadow-[0_2px_8px_rgba(255,107,53,0.3)]" />
-          
-          {/* Bottom inner shadow for depth */}
-          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gray-300/40 dark:via-botkorp-slate-blue/30 to-transparent" />
-          
-          <div className="relative flex items-center justify-between px-6 py-4 gap-4">
-            {/* Mobile Menu Button - Neumorphic Design */}
+          <div className="relative flex items-center justify-between px-6 py-3.5 gap-4">
+            {/* Mobile Menu Button - Soft UI Design */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild className="md:hidden">
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="group relative h-12 w-12 rounded-2xl bg-gradient-to-br from-white via-gray-50 to-white dark:from-botkorp-black-light dark:via-botkorp-slate-blue/20 dark:to-botkorp-black-light border border-gray-200/60 dark:border-botkorp-slate-blue/40 shadow-[0_4px_16px_rgba(0,0,0,0.08),inset_0_1px_2px_rgba(255,255,255,0.3)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.3),inset_0_1px_2px_rgba(255,107,53,0.1)] hover:shadow-[0_8px_24px_rgba(255,107,53,0.15),inset_0_2px_4px_rgba(255,255,255,0.4)] dark:hover:shadow-[0_8px_24px_rgba(255,107,53,0.25),inset_0_2px_4px_rgba(255,107,53,0.15)] hover:scale-105 active:scale-95 transition-all duration-300 overflow-hidden"
+                  className="group relative h-11 w-11 rounded-xl bg-background/60 backdrop-blur-sm border-none shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] hover:bg-botkorp-orange hover:text-white transition-all duration-300"
                 >
-                  {/* Shimmer effect */}
-                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-botkorp-orange/20 to-transparent" />
-                  
-                  {/* Inner glow */}
-                  <div className="absolute inset-2 rounded-xl bg-gradient-to-br from-botkorp-orange/0 to-botkorp-orange/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  
-                  <Menu className="relative z-10 h-5 w-5 text-gray-700 dark:text-white group-hover:text-botkorp-orange dark:group-hover:text-botkorp-orange transition-colors duration-300" />
+                  <Menu className="h-5 w-5 transition-colors duration-300" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-80 border-0 bg-white dark:bg-transparent">
+              <SheetContent side="left" className="p-0 w-64 border-0 bg-white dark:bg-transparent">
                 <Sidebar mobile />
               </SheetContent>
             </Sheet>
 
-            {/* Location Dropdown - Enhanced Soft UI Design */}
+            {/* Location Dropdown - Soft UI Design */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
-                  className="group relative gap-3 rounded-2xl border-gray-200/60 dark:border-botkorp-slate-blue/40 bg-gradient-to-br from-white via-gray-50/80 to-white dark:from-botkorp-black-light dark:via-botkorp-slate-blue/10 dark:to-botkorp-black-light backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.06),inset_0_1px_3px_rgba(255,255,255,0.2)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_3px_rgba(255,107,53,0.08)] hover:shadow-[0_8px_28px_rgba(255,107,53,0.12),inset_0_2px_4px_rgba(255,255,255,0.3)] dark:hover:shadow-[0_8px_28px_rgba(255,107,53,0.2),inset_0_2px_4px_rgba(255,107,53,0.12)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 h-12 px-4 overflow-hidden"
+                  className="group relative gap-3 rounded-xl border-none bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06),0_0_0_3px_rgb(255,107,53,0.1)] transition-all h-11 px-4"
                 >
-                  {/* Animated background shimmer */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-botkorp-orange/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                  
-                  {/* Location icon with enhanced styling */}
-                  <span className="relative inline-flex items-center justify-center h-8 w-8 rounded-xl bg-gradient-to-br from-botkorp-orange via-orange-500 to-orange-600 text-white text-xs font-bold shadow-[0_4px_12px_rgba(255,107,53,0.35),inset_0_1px_2px_rgba(255,255,255,0.3)] group-hover:shadow-[0_6px_18px_rgba(255,107,53,0.45),inset_0_2px_4px_rgba(255,255,255,0.4)] group-hover:scale-110 transition-all duration-300 ring-2 ring-botkorp-orange/20 group-hover:ring-botkorp-orange/40" aria-hidden>
-                    <div className="absolute inset-1 rounded-lg bg-gradient-to-br from-white/20 to-transparent" />
-                    <span className="relative z-10">{selectedLocation?.name?.[0]?.toUpperCase() || 'L'}</span>
+                  {/* Location icon */}
+                  <span className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-to-br from-botkorp-orange via-orange-500 to-orange-600 text-white text-xs font-bold shadow-[0_4px_12px_rgba(255,107,53,0.25)] group-hover:shadow-[0_4px_16px_rgba(255,107,53,0.35)] transition-all duration-300" aria-hidden>
+                    {selectedLocation?.name?.[0]?.toUpperCase() || 'L'}
                   </span>
                   
-                  <div className="hidden sm:flex flex-col items-start relative">
-                    <span className="text-[9px] text-gray-500 dark:text-botkorp-silver/70 font-bold leading-tight uppercase tracking-[0.1em]">
+                  <div className="hidden sm:flex flex-col items-start">
+                    <span className="text-[9px] text-muted-foreground/70 font-semibold leading-tight uppercase tracking-wider">
                       Location
                     </span>
-                    <span className="text-sm font-bold text-gray-900 dark:text-white max-w-[140px] truncate leading-tight mt-0.5 group-hover:text-botkorp-orange dark:group-hover:text-botkorp-orange transition-colors">
+                    <span className="text-sm font-bold text-foreground max-w-[140px] truncate leading-tight mt-0.5 group-hover:text-botkorp-orange transition-colors">
                       {selectedLocation?.name || 'Select location'}
                     </span>
                   </div>
                   
-                  <ChevronDown className="relative h-4 w-4 text-gray-500 dark:text-botkorp-silver group-hover:text-botkorp-orange dark:group-hover:text-botkorp-orange group-hover:rotate-180 transition-all duration-300" />
+                  <ChevronDown className="h-4 w-4 text-muted-foreground group-hover:text-botkorp-orange transition-all duration-300" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-64">
@@ -645,31 +624,17 @@ export default function PortalLayout() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Search bar - Enhanced Soft UI Design */}
+            {/* Search bar - Soft UI Design */}
             <div className="hidden md:flex flex-1 mx-6">
-              <div className="relative w-full max-w-xl group">
-                {/* Search icon with glow effect */}
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
-                  <div className="relative">
-                    <div className="absolute inset-0 rounded-full bg-botkorp-orange/20 blur-md opacity-0 group-focus-within:opacity-100 transition-opacity duration-300" />
-                    <Search className="relative h-5 w-5 text-gray-500 dark:text-botkorp-silver/70 group-focus-within:text-botkorp-orange group-focus-within:scale-110 transition-all duration-300" />
-                  </div>
-                </div>
-                
-                {/* Input field with neumorphic design */}
-                <div className="relative">
-                  {/* Glow effect on focus */}
-                  <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-botkorp-orange/0 via-botkorp-orange/20 to-botkorp-orange/0 opacity-0 group-focus-within:opacity-100 blur-sm transition-all duration-300" />
-                  
-                  <Input
-                    placeholder="Search services, bots, locations..."
-                    className="relative h-12 pl-12 pr-4 py-3 text-sm rounded-2xl bg-gradient-to-br from-white via-gray-50/60 to-white dark:from-botkorp-black-light dark:via-botkorp-slate-blue/10 dark:to-botkorp-black-light backdrop-blur-xl border border-gray-200/60 dark:border-botkorp-slate-blue/40 shadow-[0_4px_20px_rgba(0,0,0,0.05),inset_0_1px_3px_rgba(255,255,255,0.2)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_3px_rgba(255,107,53,0.05)] focus:shadow-[0_8px_32px_rgba(255,107,53,0.15),inset_0_2px_4px_rgba(255,255,255,0.3)] dark:focus:shadow-[0_8px_32px_rgba(255,107,53,0.25),inset_0_2px_4px_rgba(255,107,53,0.12)] focus:border-botkorp-orange/60 focus:ring-2 focus:ring-botkorp-orange/20 transition-all duration-300 placeholder:text-gray-400 dark:placeholder:text-botkorp-silver/50 text-gray-900 dark:text-white font-medium"
-                  />
-                  
-                  {/* Search shortcut hint */}
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 hidden lg:flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-100/80 dark:bg-botkorp-slate-blue/20 border border-gray-200/60 dark:border-botkorp-slate-blue/30 shadow-sm">
-                    <span className="text-[10px] font-bold text-gray-500 dark:text-botkorp-silver/60">⌘K</span>
-                  </div>
+              <div className="relative w-full max-w-xl">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                <Input
+                  placeholder="Search services, bots, locations..."
+                  className="h-11 pl-10 pr-16 bg-background/60 backdrop-blur-sm border-none shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] focus:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06),0_0_0_3px_rgb(255,107,53,0.1)] transition-all rounded-xl"
+                />
+                {/* Search shortcut hint */}
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden lg:flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/50 border border-border/40 shadow-sm">
+                  <span className="text-[10px] font-semibold text-muted-foreground">⌘K</span>
                 </div>
               </div>
             </div>
@@ -678,27 +643,21 @@ export default function PortalLayout() {
             <div className="flex items-center gap-3">
               <NotificationCenter />
               
-              {/* User Avatar - Enhanced Soft UI Design */}
+              {/* User Avatar - Soft UI Design */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button 
                     variant="ghost" 
-                    className="group relative h-12 w-12 rounded-2xl p-0 bg-gradient-to-br from-white via-gray-50 to-white dark:from-botkorp-black-light dark:via-botkorp-slate-blue/10 dark:to-botkorp-black-light border-2 border-gray-200/60 dark:border-botkorp-slate-blue/40 shadow-[0_4px_16px_rgba(0,0,0,0.08),inset_0_1px_2px_rgba(255,255,255,0.3)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.3),inset_0_1px_2px_rgba(255,107,53,0.08)] hover:border-botkorp-orange/60 hover:shadow-[0_8px_24px_rgba(255,107,53,0.2),inset_0_2px_4px_rgba(255,255,255,0.4)] dark:hover:shadow-[0_8px_24px_rgba(255,107,53,0.3),inset_0_2px_4px_rgba(255,107,53,0.12)] hover:scale-105 active:scale-95 transition-all duration-300 overflow-hidden"
+                    className="group relative h-11 w-11 rounded-xl p-0 bg-background/60 backdrop-blur-sm border-none shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06),0_0_0_3px_rgb(255,107,53,0.1)] transition-all duration-300"
                   >
-                    {/* Rotating gradient background on hover */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-botkorp-orange/0 via-botkorp-orange/10 to-orange-500/0 opacity-0 group-hover:opacity-100 group-hover:rotate-180 transition-all duration-700" />
-                    
-                    {/* Glow effect */}
-                    <div className="absolute -inset-1 bg-gradient-to-br from-botkorp-orange/20 to-orange-500/20 rounded-2xl blur-lg opacity-0 group-hover:opacity-60 transition-opacity duration-300" />
-                    
-                    {/* Avatar with enhanced ring */}
-                    <Avatar className="relative h-10 w-10 ring-2 ring-white/50 dark:ring-botkorp-black/50 group-hover:ring-botkorp-orange/30 transition-all duration-300">
+                    {/* Avatar */}
+                    <Avatar className="h-9 w-9">
                       <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email} />
-                      <AvatarFallback className="bg-gradient-to-br from-botkorp-orange via-orange-500 to-orange-600 text-white font-bold shadow-inner">{getUserInitials()}</AvatarFallback>
+                      <AvatarFallback className="bg-gradient-to-br from-botkorp-orange via-orange-500 to-orange-600 text-white font-bold text-sm">{getUserInitials()}</AvatarFallback>
                     </Avatar>
                     
                     {/* Active status indicator */}
-                    <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-gradient-to-br from-green-400 to-green-500 border-2 border-white dark:border-botkorp-black-light shadow-lg shadow-green-500/50 animate-pulse" />
+                    <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background shadow-[0_2px_8px_rgba(34,197,94,0.4)]" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-64">
