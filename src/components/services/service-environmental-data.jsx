@@ -192,8 +192,8 @@ export default function ServiceEnvironmentalData({ gardenId }) {
               <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 Temperature
               </CardTitle>
-              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-orange-500/20 to-orange-500/10 dark:from-orange-500/30 dark:to-orange-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-                <Thermometer className="h-4 w-4 text-orange-500" />
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-[#FF6B35]/20 to-[#FF6B35]/10 dark:from-[#FF6B35]/30 dark:to-[#FF6B35]/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                <Thermometer className="h-4 w-4 text-[#FF6B35]" />
               </div>
             </div>
           </CardHeader>
@@ -201,7 +201,7 @@ export default function ServiceEnvironmentalData({ gardenId }) {
             <RadialProgress 
               value={latestData.temperature_celsius || 0}
               maxValue={50}
-              color="#f97316"
+              color="#FF6B35"
               unit="°C"
             />
             <p className="text-[10px] text-center text-muted-foreground mt-2 font-medium">
@@ -217,8 +217,8 @@ export default function ServiceEnvironmentalData({ gardenId }) {
               <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 Humidity
               </CardTitle>
-              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/10 dark:from-blue-500/30 dark:to-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-                <Droplets className="h-4 w-4 text-blue-500" />
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-[#4F5D75]/20 to-[#4F5D75]/10 dark:from-[#4F5D75]/30 dark:to-[#4F5D75]/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                <Droplets className="h-4 w-4 text-[#4F5D75]" />
               </div>
             </div>
           </CardHeader>
@@ -226,7 +226,7 @@ export default function ServiceEnvironmentalData({ gardenId }) {
             <RadialProgress 
               value={latestData.humidity_percentage || 0}
               maxValue={100}
-              color="#3b82f6"
+              color="#4F5D75"
               unit="%"
             />
             <p className="text-[10px] text-center text-muted-foreground mt-2 font-medium">
@@ -242,8 +242,8 @@ export default function ServiceEnvironmentalData({ gardenId }) {
               <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 Soil Moisture
               </CardTitle>
-              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-green-500/20 to-green-500/10 dark:from-green-500/30 dark:to-green-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-                <Sprout className="h-4 w-4 text-green-500" />
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-[#10B981]/20 to-[#10B981]/10 dark:from-[#10B981]/30 dark:to-[#10B981]/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                <Sprout className="h-4 w-4 text-[#10B981]" />
               </div>
             </div>
           </CardHeader>
@@ -251,7 +251,7 @@ export default function ServiceEnvironmentalData({ gardenId }) {
             <RadialProgress 
               value={latestData.soil_moisture_percentage || 0}
               maxValue={100}
-              color="#22c55e"
+              color="#10B981"
               unit="%"
             />
             <p className="text-[10px] text-center text-muted-foreground mt-2 font-medium">
@@ -267,14 +267,14 @@ export default function ServiceEnvironmentalData({ gardenId }) {
               <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 Weather
               </CardTitle>
-              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-slate-500/20 to-slate-500/10 dark:from-slate-500/30 dark:to-slate-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-                <CloudRain className="h-4 w-4 text-slate-500" />
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-[#4F5D75]/20 to-[#4F5D75]/10 dark:from-[#4F5D75]/30 dark:to-[#4F5D75]/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                <CloudRain className="h-4 w-4 text-[#4F5D75]" />
               </div>
             </div>
           </CardHeader>
           <CardContent className="pb-4 pt-6">
             <div className="flex flex-col items-center gap-3">
-              <CloudRain className={`h-12 w-12 ${latestData.is_raining ? 'text-blue-500' : 'text-slate-300'}`} />
+              <CloudRain className={`h-12 w-12 ${latestData.is_raining ? 'text-[#4F5D75]' : 'text-[#B0B3B8]'}`} />
               {latestData.is_raining ? (
                 <>
                   <Badge className="text-xs border-0 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 font-semibold">Raining</Badge>
@@ -319,16 +319,16 @@ export default function ServiceEnvironmentalData({ gardenId }) {
               <AreaChart data={historicalData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#f97316" stopOpacity={0.1}/>
+                    <stop offset="5%" stopColor="#FF6B35" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#FF6B35" stopOpacity={0.1}/>
                   </linearGradient>
                   <linearGradient id="colorHumidity" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                    <stop offset="5%" stopColor="#4F5D75" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#4F5D75" stopOpacity={0.1}/>
                   </linearGradient>
                   <linearGradient id="colorSoil" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0.1}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
@@ -353,7 +353,7 @@ export default function ServiceEnvironmentalData({ gardenId }) {
                   yAxisId="left"
                   type="monotone" 
                   dataKey="temperature_celsius" 
-                  stroke="#f97316" 
+                  stroke="#FF6B35" 
                   strokeWidth={2}
                   fill="url(#colorTemp)"
                   name="Temperature (°C)"
@@ -362,7 +362,7 @@ export default function ServiceEnvironmentalData({ gardenId }) {
                   yAxisId="left"
                   type="monotone" 
                   dataKey="humidity_percentage" 
-                  stroke="#3b82f6" 
+                  stroke="#4F5D75" 
                   strokeWidth={2}
                   fill="url(#colorHumidity)"
                   name="Humidity (%)"
@@ -372,7 +372,7 @@ export default function ServiceEnvironmentalData({ gardenId }) {
                     yAxisId="left"
                     type="monotone" 
                     dataKey="soil_moisture_percentage" 
-                    stroke="#22c55e" 
+                    stroke="#10B981" 
                     strokeWidth={2}
                     fill="url(#colorSoil)"
                     name="Soil Moisture (%)"

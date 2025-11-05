@@ -180,3 +180,4 @@ ORDER BY priority DESC, city, area_name;
 -- 5. GeoJSON: Use simplified polygons for better performance
 -- 6. Notes: Add internal notes about expansion plans, etc.
 
+

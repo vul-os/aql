@@ -290,8 +290,8 @@ export default function ApprovalsPage() {
     const Icon = config.icon;
     
     return (
-      <Badge variant="outline" className={`gap-1.5 ${config.color}`}>
-        <Icon className="h-3 w-3" />
+      <Badge variant="outline" className={`gap-1 text-[9px] h-5 px-2 ${config.color}`}>
+        <Icon className="h-2.5 w-2.5" />
         {config.label}
       </Badge>
     );
@@ -302,18 +302,18 @@ export default function ApprovalsPage() {
 
     return (
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto bg-gradient-to-br from-background to-muted/20 border-0 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
-          <DialogHeader className="space-y-3 pb-4">
-            <DialogTitle className="flex items-center gap-3 text-xl">
-              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
-                <FileCheck className="h-6 w-6 text-botkorp-orange" />
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-gradient-to-br from-background to-muted/20 border-0 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
+          <DialogHeader className="space-y-2 pb-3">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+                <FileCheck className="h-4 w-4 text-botkorp-orange" />
               </div>
               <span className="font-bold">
                 Rental Agreement Details
               </span>
             </DialogTitle>
-            <DialogDescription className="text-sm ml-14 flex items-center gap-2">
-              <span className="px-3 py-1 rounded-lg bg-botkorp-orange/10 text-botkorp-orange font-mono font-semibold border-0">
+            <DialogDescription className="text-xs ml-10 flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-md bg-botkorp-orange/10 text-botkorp-orange font-mono font-semibold text-[10px] border-0">
                 #{agreement.agreement_number}
               </span>
             </DialogDescription>
@@ -333,8 +333,8 @@ export default function ApprovalsPage() {
             <Card className="border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
               <CardHeader className="pb-3 pt-4">
                 <CardTitle className="flex items-center gap-2.5 text-sm font-bold">
-                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[0_2px_10px_rgb(59,130,246,0.1)]">
-                    <User className="h-4 w-4 text-blue-600" />
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[#4F5D75]/15 to-[#4F5D75]/5 flex items-center justify-center shadow-[0_2px_10px_rgba(79,93,117,0.1)]">
+                    <User className="h-4 w-4 text-[#4F5D75]" />
                   </div>
                   <span>Customer Information</span>
                 </CardTitle>
@@ -385,8 +385,8 @@ export default function ApprovalsPage() {
             <Card className="border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
               <CardHeader className="pb-3 pt-4">
                 <CardTitle className="flex items-center gap-2.5 text-sm font-bold">
-                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[0_2px_10px_rgb(59,130,246,0.1)]">
-                    <Bot className="h-4 w-4 text-blue-600" />
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[#4F5D75]/15 to-[#4F5D75]/5 flex items-center justify-center shadow-[0_2px_10px_rgba(79,93,117,0.1)]">
+                    <Bot className="h-4 w-4 text-[#4F5D75]" />
                   </div>
                   <span>Service Details</span>
                 </CardTitle>
@@ -448,8 +448,8 @@ export default function ApprovalsPage() {
               <Card className="border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
                 <CardHeader className="pb-3 pt-4">
                   <CardTitle className="flex items-center gap-2.5 text-sm font-bold">
-                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[0_2px_10px_rgb(59,130,246,0.1)]">
-                      <FileText className="h-4 w-4 text-blue-600" />
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[#4F5D75]/15 to-[#4F5D75]/5 flex items-center justify-center shadow-[0_2px_10px_rgba(79,93,117,0.1)]">
+                      <FileText className="h-4 w-4 text-[#4F5D75]" />
                     </div>
                     <span>Documents</span>
                   </CardTitle>
@@ -486,31 +486,31 @@ export default function ApprovalsPage() {
             )}
           </div>
 
-          <DialogFooter className="gap-2 pt-4">
+          <DialogFooter className="gap-2 pt-3">
             {agreement.status === 'draft' && (
               <>
                 <Button
                   variant="outline"
                   onClick={() => handleReject(agreement.id, 'Rejected after review')}
                   disabled={actionLoading}
-                  className="h-10 text-xs font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 border-0 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 active:scale-95"
+                  className="h-8 text-[10px] font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 border-0 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 active:scale-95 px-3"
                 >
                   {actionLoading ? (
-                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                   ) : (
-                    <XCircle className="h-3.5 w-3.5 mr-1.5" />
+                    <XCircle className="h-3 w-3 mr-1" />
                   )}
                   Reject
                 </Button>
                 <Button
                   onClick={() => handleApprove(agreement.id)}
                   disabled={actionLoading}
-                  className="h-10 text-xs font-semibold bg-gradient-to-br from-botkorp-orange to-botkorp-orange/90 shadow-[4px_4px_12px_rgba(0,0,0,0.2),-2px_-2px_8px_rgba(255,255,255,0.1)] hover:shadow-[6px_6px_16px_rgba(0,0,0,0.25),-3px_-3px_10px_rgba(255,255,255,0.15)] active:scale-95 transition-all duration-300 rounded-xl border-0 text-white"
+                  className="h-8 text-[10px] font-semibold bg-gradient-to-br from-botkorp-orange to-botkorp-orange/90 shadow-[4px_4px_12px_rgba(0,0,0,0.2),-2px_-2px_8px_rgba(255,255,255,0.1)] hover:shadow-[6px_6px_16px_rgba(0,0,0,0.25),-3px_-3px_10px_rgba(255,255,255,0.15)] active:scale-95 transition-all duration-300 rounded-lg border-0 text-white px-3"
                 >
                   {actionLoading ? (
-                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                   ) : (
-                    <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
                   )}
                   Approve & Activate
                 </Button>
@@ -520,7 +520,7 @@ export default function ApprovalsPage() {
               <Button 
                 variant="outline" 
                 onClick={() => setShowDetailsDialog(false)}
-                className="h-10 text-xs font-semibold rounded-xl border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95"
+                className="h-8 text-[10px] font-semibold rounded-lg border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95 px-3"
               >
                 Close
               </Button>
@@ -637,60 +637,60 @@ export default function ApprovalsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100/50 to-gray-100/40 p-3 md:p-6 space-y-5 md:space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100/50 to-gray-100/40 p-3 md:p-4 space-y-3 md:space-y-4">
       {/* Enhanced Header with Stats */}
-      <div className="space-y-4 animate-in fade-in slide-in-from-top-3 duration-500">
+      <div className="space-y-3 animate-in fade-in slide-in-from-top-3 duration-500">
         <PageHeader
           title="Approvals Dashboard"
           subtitle="Review agreements, installations, and service modifications"
-          icon={<FileCheck className="h-6 w-6" />}
+          icon={<FileCheck className="h-5 w-5" />}
         />
         
-        {/* Stats Cards - Soft UI */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
+        {/* Stats Cards - Compact & Elegant */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
           {/* Pending Installations Stat */}
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
-            <CardContent className="p-6">
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-2xl">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Pending Installations</p>
-                  <p className="text-4xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{newServices.length}</p>
-                  <p className="text-[11px] text-muted-foreground font-semibold mt-1">Services awaiting setup</p>
+                <div className="space-y-0.5">
+                  <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Pending Installations</p>
+                  <p className="text-2xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{newServices.length}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium">Services awaiting setup</p>
                 </div>
-                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-botkorp-orange/20 to-botkorp-orange/10 dark:from-botkorp-orange/30 dark:to-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-                  <Bot className="h-7 w-7 text-botkorp-orange transition-all duration-500" />
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange/20 to-botkorp-orange/10 dark:from-botkorp-orange/30 dark:to-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                  <Bot className="h-5 w-5 text-botkorp-orange transition-all duration-500" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Pending Amendments Stat */}
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
-            <CardContent className="p-6">
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-2xl">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Service Amendments</p>
-                  <p className="text-4xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{amendments.length}</p>
-                  <p className="text-[11px] text-muted-foreground font-semibold mt-1">Modification requests</p>
+                <div className="space-y-0.5">
+                  <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Service Amendments</p>
+                  <p className="text-2xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{amendments.length}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium">Modification requests</p>
                 </div>
-                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-500/10 dark:from-blue-500/30 dark:to-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-                  <Settings className="h-7 w-7 text-blue-600 dark:text-blue-400 transition-all duration-500" />
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#4F5D75]/20 to-[#4F5D75]/10 dark:from-[#4F5D75]/30 dark:to-[#4F5D75]/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                  <Settings className="h-5 w-5 text-[#4F5D75] dark:text-[#6B7A94] transition-all duration-500" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Pending Agreements Stat */}
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
-            <CardContent className="p-6">
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-2xl">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Rental Agreements</p>
-                  <p className="text-4xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{agreements.length}</p>
-                  <p className="text-[11px] text-muted-foreground font-semibold mt-1">Awaiting approval</p>
+                <div className="space-y-0.5">
+                  <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Rental Agreements</p>
+                  <p className="text-2xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{agreements.length}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium">Awaiting approval</p>
                 </div>
-                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-green-500/20 to-green-500/10 dark:from-green-500/30 dark:to-green-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-                  <FileCheck className="h-7 w-7 text-green-600 dark:text-green-400 transition-all duration-500" />
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500/20 to-green-500/10 dark:from-green-500/30 dark:to-green-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                  <FileCheck className="h-5 w-5 text-green-600 dark:text-green-400 transition-all duration-500" />
                 </div>
               </div>
             </CardContent>
@@ -698,51 +698,51 @@ export default function ApprovalsPage() {
         </div>
       </div>
 
-      {/* Pending Installations Section - Soft UI */}
-      <Card className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200 border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
-        <CardHeader className="pb-3 pt-5">
+      {/* Pending Installations Section - Compact */}
+      <Card className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200 border-0 bg-gradient-to-br from-background to-muted/20 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+        <CardHeader className="pb-2 pt-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-1">
-              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
-                <Bot className="h-5 w-5 text-botkorp-orange" />
+            <div className="flex items-center gap-2 flex-1">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+                <Bot className="h-4 w-4 text-botkorp-orange" />
               </div>
               <div>
-                <CardTitle className="text-base font-bold">Pending Installations</CardTitle>
-                <CardDescription className="text-[11px] font-medium">New services awaiting bot installation</CardDescription>
+                <CardTitle className="text-sm font-bold">Pending Installations</CardTitle>
+                <CardDescription className="text-[10px] font-medium">New services awaiting bot installation</CardDescription>
               </div>
             </div>
-            <Badge variant="outline" className="text-[10px] h-6 border-none bg-botkorp-orange/10 text-botkorp-orange font-semibold px-3 rounded-full">
+            <Badge variant="outline" className="text-[9px] h-5 border-none bg-botkorp-orange/10 text-botkorp-orange font-semibold px-2.5 rounded-full">
               {newServices.length} Pending
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="pt-4 pb-5">
+        <CardContent className="pt-2 pb-3">
           {loadingServices ? (
-            <div className="py-16 text-center">
-              <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 mb-5 animate-pulse shadow-[0_8px_30px_rgb(255,107,53,0.15)]">
-                <Loader2 className="h-10 w-10 animate-spin text-botkorp-orange" />
+            <div className="py-12 text-center">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 mb-3 animate-pulse shadow-[0_8px_30px_rgb(255,107,53,0.15)]">
+                <Loader2 className="h-6 w-6 animate-spin text-botkorp-orange" />
               </div>
-              <p className="text-sm text-muted-foreground font-medium">Loading installations...</p>
+              <p className="text-xs text-muted-foreground font-medium">Loading installations...</p>
             </div>
           ) : newServices.length === 0 ? (
-            <div className="py-16 text-center">
-              <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500/15 to-green-500/5 mb-5 shadow-[0_8px_30px_rgb(34,197,94,0.15)]">
-                <CheckCircle2 className="h-10 w-10 text-green-600" />
+            <div className="py-12 text-center">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500/15 to-green-500/5 mb-3 shadow-[0_8px_30px_rgb(34,197,94,0.15)]">
+                <CheckCircle2 className="h-6 w-6 text-green-600" />
               </div>
-              <p className="text-lg font-bold mb-2">All caught up!</p>
-              <p className="text-sm text-muted-foreground">No pending installations at this time.</p>
+              <p className="text-sm font-bold mb-1">All caught up!</p>
+              <p className="text-xs text-muted-foreground">No pending installations at this time.</p>
             </div>
           ) : (
-            <div className="rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] overflow-hidden">
+            <div className="rounded-lg bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/30 hover:bg-muted/50 border-b border-border/50">
-                    <TableHead className="font-bold text-xs uppercase tracking-wider">Service</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider">Location</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider">Type</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider">Details</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider">Created</TableHead>
-                    <TableHead className="text-right font-bold text-xs uppercase tracking-wider">Actions</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Service</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Location</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Type</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Details</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Created</TableHead>
+                    <TableHead className="text-right font-bold text-[10px] uppercase tracking-wider py-2">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -753,61 +753,61 @@ export default function ApprovalsPage() {
                         idx % 2 === 0 ? 'bg-background' : 'bg-muted/10'
                       }`}
                     >
-                      <TableCell>
-                        <div className="space-y-1">
-                          <p className="font-semibold text-[#121212]">{service.name}</p>
-                          <p className="text-xs text-[#4F5D75] font-medium">{service.organization?.name}</p>
+                      <TableCell className="py-2">
+                        <div className="space-y-0.5">
+                          <p className="font-semibold text-xs text-[#121212]">{service.name}</p>
+                          <p className="text-[10px] text-[#4F5D75] font-medium">{service.organization?.name}</p>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <p className="font-medium text-[#121212]">{service.location?.name}</p>
-                          <p className="text-xs text-[#4F5D75]">{service.location?.city || service.location?.address}</p>
+                      <TableCell className="py-2">
+                        <div className="space-y-0.5">
+                          <p className="font-medium text-xs text-[#121212]">{service.location?.name}</p>
+                          <p className="text-[10px] text-[#4F5D75]">{service.location?.city || service.location?.address}</p>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize bg-slate-50 text-[#4F5D75] border-[#D0D2D5] shadow-sm">
+                      <TableCell className="py-2">
+                        <Badge variant="outline" className="capitalize text-[9px] bg-slate-50 text-[#4F5D75] border-[#D0D2D5] shadow-sm h-5 px-2">
                           {service.service_type}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-2 text-sm">
-                            <div className="h-6 w-6 rounded-lg bg-[#10B981]/10 flex items-center justify-center">
-                              <Sprout className="h-3.5 w-3.5 text-[#10B981]" />
+                      <TableCell className="py-2">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <div className="h-5 w-5 rounded-md bg-[#10B981]/10 flex items-center justify-center">
+                              <Sprout className="h-3 w-3 text-[#10B981]" />
                             </div>
                             <span className="text-[#121212]">{service.garden_count} garden{service.garden_count !== 1 ? 's' : ''}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <div className="h-6 w-6 rounded-lg bg-[#FF6B35]/10 flex items-center justify-center">
-                              <Bot className="h-3.5 w-3.5 text-[#FF6B35]" />
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <div className="h-5 w-5 rounded-md bg-[#FF6B35]/10 flex items-center justify-center">
+                              <Bot className="h-3 w-3 text-[#FF6B35]" />
                             </div>
                             <span className="text-[#121212]">{service.garden_count} bot{service.garden_count !== 1 ? 's' : ''} to install</span>
                           </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <div className="h-6 w-6 rounded-lg bg-[#4F5D75]/10 flex items-center justify-center">
-                              <FileText className="h-3.5 w-3.5 text-[#4F5D75]" />
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <div className="h-5 w-5 rounded-md bg-[#4F5D75]/10 flex items-center justify-center">
+                              <FileText className="h-3 w-3 text-[#4F5D75]" />
                             </div>
                             <span className="text-[#121212]">{service.agreement_count} agreement{service.agreement_count !== 1 ? 's' : ''}</span>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-[#4F5D75]">
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5 text-[#B0B3B8]" />
+                      <TableCell className="text-xs text-[#4F5D75] py-2">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3 text-[#B0B3B8]" />
                           {format(new Date(service.created_at), 'MMM d, yyyy')}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right py-2">
                         <Button
                           size="sm"
                           onClick={() => {
                             setSelectedService(service);
                             setShowInstallDialog(true);
                           }}
-                          className="h-9 text-xs font-semibold bg-gradient-to-br from-botkorp-orange to-botkorp-orange/90 shadow-[4px_4px_12px_rgba(0,0,0,0.2),-2px_-2px_8px_rgba(255,255,255,0.1)] hover:shadow-[6px_6px_16px_rgba(0,0,0,0.25),-3px_-3px_10px_rgba(255,255,255,0.15)] active:scale-95 transition-all duration-300 rounded-xl border-0 text-white"
+                          className="h-7 text-[10px] font-semibold bg-gradient-to-br from-botkorp-orange to-botkorp-orange/90 shadow-[4px_4px_12px_rgba(0,0,0,0.2),-2px_-2px_8px_rgba(255,255,255,0.1)] hover:shadow-[6px_6px_16px_rgba(0,0,0,0.25),-3px_-3px_10px_rgba(255,255,255,0.15)] active:scale-95 transition-all duration-300 rounded-lg border-0 text-white px-2"
                         >
-                          <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
                           Mark Installed
                         </Button>
                       </TableCell>
@@ -820,54 +820,54 @@ export default function ApprovalsPage() {
         </CardContent>
       </Card>
 
-      {/* Amendment Requests Section - Soft UI */}
-      <Card className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-300 border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
-        <CardHeader className="pb-3 pt-5">
+      {/* Amendment Requests Section - Compact */}
+      <Card className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-300 border-0 bg-gradient-to-br from-background to-muted/20 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+        <CardHeader className="pb-2 pt-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-1">
-              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(59,130,246,0.15)]">
-                <Settings className="h-5 w-5 text-blue-600" />
+            <div className="flex items-center gap-2 flex-1">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[#4F5D75]/15 to-[#4F5D75]/5 flex items-center justify-center shadow-[0_4px_20px_rgba(79,93,117,0.15)]">
+                <Settings className="h-4 w-4 text-[#4F5D75]" />
               </div>
               <div>
-                <CardTitle className="text-base font-bold">Service Modification Requests</CardTitle>
-                <CardDescription className="text-[11px] font-medium">Customer requests to change bot counts and service plans</CardDescription>
+                <CardTitle className="text-sm font-bold">Service Modification Requests</CardTitle>
+                <CardDescription className="text-[10px] font-medium">Customer requests to change bot counts and service plans</CardDescription>
               </div>
             </div>
-            <Badge variant="outline" className="text-[10px] h-6 border-none bg-blue-500/10 text-blue-600 font-semibold px-3 rounded-full">
+            <Badge variant="outline" className="text-[9px] h-5 border-none bg-[#4F5D75]/10 text-[#4F5D75] font-semibold px-2.5 rounded-full">
               {amendments.length} pending
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="pt-4 pb-5">
+        <CardContent className="pt-2 pb-3">
           {loadingAmendments ? (
-            <div className="py-16 text-center">
-              <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500/15 to-blue-500/5 mb-5 animate-pulse shadow-[0_8px_30px_rgb(59,130,246,0.15)]">
-                <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+            <div className="py-12 text-center">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#4F5D75]/15 to-[#4F5D75]/5 mb-3 animate-pulse shadow-[0_8px_30px_rgba(79,93,117,0.15)]">
+                <Loader2 className="h-6 w-6 animate-spin text-[#4F5D75]" />
               </div>
-              <p className="text-sm text-muted-foreground font-medium">Loading amendments...</p>
+              <p className="text-xs text-muted-foreground font-medium">Loading amendments...</p>
             </div>
           ) : amendments.length === 0 ? (
-            <div className="py-16 text-center">
-              <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500/15 to-green-500/5 mb-5 shadow-[0_8px_30px_rgb(34,197,94,0.15)]">
-                <CheckCircle2 className="h-10 w-10 text-green-600" />
+            <div className="py-12 text-center">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500/15 to-green-500/5 mb-3 shadow-[0_8px_30px_rgb(34,197,94,0.15)]">
+                <CheckCircle2 className="h-6 w-6 text-green-600" />
               </div>
-              <p className="text-lg font-bold mb-2">All Caught Up!</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm font-bold mb-1">All Caught Up!</p>
+              <p className="text-xs text-muted-foreground">
                 No pending amendment requests at this time.
               </p>
             </div>
           ) : (
-            <div className="rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] overflow-hidden">
+            <div className="rounded-lg bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/30 hover:bg-muted/50 border-b border-border/50">
-                    <TableHead className="font-bold text-xs uppercase tracking-wider">ID</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider">Customer</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider">Type</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider">Change</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider">Impact</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider">Date</TableHead>
-                    <TableHead className="text-right font-bold text-xs uppercase tracking-wider">Actions</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">ID</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Customer</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Type</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Change</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Impact</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Date</TableHead>
+                    <TableHead className="text-right font-bold text-[10px] uppercase tracking-wider py-2">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -878,66 +878,66 @@ export default function ApprovalsPage() {
                         idx % 2 === 0 ? 'bg-background' : 'bg-muted/10'
                       }`}
                     >
-                      <TableCell className="font-mono text-sm">
-                        <div className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 text-[#4F5D75] border border-[#D0D2D5]">
+                      <TableCell className="font-mono text-[10px] py-2">
+                        <div className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-[#4F5D75] border border-[#D0D2D5]">
                           {amendment.id.substring(0, 8)}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <p className="font-semibold text-[#121212]">
+                      <TableCell className="py-2">
+                        <div className="space-y-0.5">
+                          <p className="font-semibold text-xs text-[#121212]">
                             {amendment.user?.full_name || amendment.user?.first_name}
                           </p>
-                          <p className="text-xs text-[#4F5D75] font-medium">
+                          <p className="text-[10px] text-[#4F5D75] font-medium">
                             {amendment.user?.email}
                           </p>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Badge 
                           variant="outline" 
-                          className={`capitalize shadow-sm ${
+                          className={`capitalize text-[9px] shadow-sm h-5 px-2 ${
                             amendment.amendment_type === 'add_gardens' 
                               ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/30' 
                               : 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/30'
                           }`}
                         >
-                          {amendment.amendment_type === 'add_gardens' ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+                          {amendment.amendment_type === 'add_gardens' ? <TrendingUp className="h-2.5 w-2.5 mr-0.5" /> : <TrendingDown className="h-2.5 w-2.5 mr-0.5" />}
                           {amendment.amendment_type.replace('_', ' ')}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <p className="text-sm font-semibold text-[#121212]">
+                      <TableCell className="py-2">
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-semibold text-[#121212]">
                             {amendment.current_garden_count} → {amendment.new_garden_count} gardens
                           </p>
-                          <p className="text-xs text-[#4F5D75] font-medium">
+                          <p className="text-[10px] text-[#4F5D75] font-medium">
                             {amendment.service?.name}
                           </p>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-sm shadow-sm ${
+                      <TableCell className="py-2">
+                        <div className="space-y-0.5">
+                          <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-[10px] shadow-sm ${
                             amendment.new_garden_count > amendment.current_garden_count 
                               ? 'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40' 
                               : 'bg-[#F59E0B]/20 text-[#F59E0B] border border-[#F59E0B]/40'
                           }`}>
-                            {amendment.new_garden_count > amendment.current_garden_count ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                            {amendment.new_garden_count > amendment.current_garden_count ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
                             {amendment.new_garden_count > amendment.current_garden_count ? '+' : ''}{amendment.new_garden_count - amendment.current_garden_count} garden{Math.abs(amendment.new_garden_count - amendment.current_garden_count) !== 1 ? 's' : ''}
                           </div>
-                          <p className="text-xs text-[#4F5D75] mt-1">
+                          <p className="text-[10px] text-[#4F5D75]">
                             {amendment.current_garden_count} → {amendment.new_garden_count} bots
                           </p>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-[#4F5D75]">
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5 text-[#B0B3B8]" />
+                      <TableCell className="text-xs text-[#4F5D75] py-2">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3 text-[#B0B3B8]" />
                           {format(new Date(amendment.created_at), 'MMM d, yyyy')}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right py-2">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -945,9 +945,9 @@ export default function ApprovalsPage() {
                             setSelectedAmendment(amendment);
                             setShowAmendmentDialog(true);
                           }}
-                          className="h-9 text-xs font-semibold rounded-xl border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95"
+                          className="h-7 text-[10px] font-semibold rounded-lg border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95 px-2"
                         >
-                          <Eye className="h-3.5 w-3.5 mr-1.5" />
+                          <Eye className="h-3 w-3 mr-1" />
                           Review
                         </Button>
                       </TableCell>
@@ -960,55 +960,55 @@ export default function ApprovalsPage() {
         </CardContent>
       </Card>
 
-      {/* Rental Agreements Section - Soft UI */}
-      <Card className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-400 border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
-        <CardHeader className="pb-3 pt-5">
+      {/* Rental Agreements Section - Compact */}
+      <Card className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-400 border-0 bg-gradient-to-br from-background to-muted/20 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+        <CardHeader className="pb-2 pt-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-1">
-              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-green-500/15 to-green-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(34,197,94,0.15)]">
-                <FileCheck className="h-5 w-5 text-green-600" />
+            <div className="flex items-center gap-2 flex-1">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-green-500/15 to-green-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(34,197,94,0.15)]">
+                <FileCheck className="h-4 w-4 text-green-600" />
               </div>
               <div>
-                <CardTitle className="text-base font-bold">New Rental Agreements</CardTitle>
-                <CardDescription className="text-[11px] font-medium">All rental agreements across all customers</CardDescription>
+                <CardTitle className="text-sm font-bold">New Rental Agreements</CardTitle>
+                <CardDescription className="text-[10px] font-medium">All rental agreements across all customers</CardDescription>
               </div>
             </div>
-            <Badge variant="outline" className="text-[10px] h-6 border-none bg-green-500/10 text-green-600 font-semibold px-3 rounded-full">
+            <Badge variant="outline" className="text-[9px] h-5 border-none bg-green-500/10 text-green-600 font-semibold px-2.5 rounded-full">
               {agreements.length} pending
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="pt-4 pb-5">
+        <CardContent className="pt-2 pb-3">
           {loading ? (
-            <div className="py-16 text-center">
-              <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500/15 to-green-500/5 mb-5 animate-pulse shadow-[0_8px_30px_rgb(34,197,94,0.15)]">
-                <Loader2 className="h-10 w-10 animate-spin text-green-600" />
+            <div className="py-12 text-center">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500/15 to-green-500/5 mb-3 animate-pulse shadow-[0_8px_30px_rgb(34,197,94,0.15)]">
+                <Loader2 className="h-6 w-6 animate-spin text-green-600" />
               </div>
-              <p className="text-sm text-muted-foreground font-medium">Loading agreements...</p>
+              <p className="text-xs text-muted-foreground font-medium">Loading agreements...</p>
             </div>
           ) : agreements.length === 0 ? (
-            <div className="py-16 text-center">
-              <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500/15 to-green-500/5 mb-5 shadow-[0_8px_30px_rgb(34,197,94,0.15)]">
-                <FileCheck className="h-10 w-10 text-green-600" />
+            <div className="py-12 text-center">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500/15 to-green-500/5 mb-3 shadow-[0_8px_30px_rgb(34,197,94,0.15)]">
+                <FileCheck className="h-6 w-6 text-green-600" />
               </div>
-              <p className="text-lg font-bold mb-2">No Agreements Found</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm font-bold mb-1">No Agreements Found</p>
+              <p className="text-xs text-muted-foreground">
                 There are no rental agreements to review at this time.
               </p>
             </div>
           ) : (
-            <div className="rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] overflow-hidden">
+            <div className="rounded-lg bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/30 hover:bg-muted/50 border-b border-border/50">
-                    <TableHead className="font-bold text-xs uppercase tracking-wider">Agreement #</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider">Customer</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider">Organization</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider">Bot Type</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider">Monthly Total</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider">Status</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider">Date</TableHead>
-                    <TableHead className="text-right font-bold text-xs uppercase tracking-wider">Actions</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Agreement #</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Customer</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Organization</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Bot Type</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Monthly Total</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Status</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Date</TableHead>
+                    <TableHead className="text-right font-bold text-[10px] uppercase tracking-wider py-2">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1019,44 +1019,44 @@ export default function ApprovalsPage() {
                         idx % 2 === 0 ? 'bg-background' : 'bg-muted/10'
                       }`}
                     >
-                      <TableCell className="font-mono text-sm">
-                        <div className="inline-flex items-center px-2.5 py-1 rounded-lg bg-[#FF6B35]/10 text-[#FF6B35] border border-[#FF6B35]/30 font-semibold">
+                      <TableCell className="font-mono text-[10px] py-2">
+                        <div className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#FF6B35]/10 text-[#FF6B35] border border-[#FF6B35]/30 font-semibold">
                           {agreement.agreement_number}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <p className="font-semibold text-[#121212]">
+                      <TableCell className="py-2">
+                        <div className="space-y-0.5">
+                          <p className="font-semibold text-xs text-[#121212]">
                             {agreement.signer_first_name} {agreement.signer_surname}
                           </p>
-                          <p className="text-xs text-[#4F5D75] font-medium">
+                          <p className="text-[10px] text-[#4F5D75] font-medium">
                             {agreement.signer_email}
                           </p>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <span className="font-medium text-[#121212]">{agreement.organization?.name}</span>
+                      <TableCell className="py-2">
+                        <span className="font-medium text-xs text-[#121212]">{agreement.organization?.name}</span>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize bg-slate-50 text-[#4F5D75] border-[#D0D2D5] shadow-sm">
-                          <Bot className="h-3 w-3 mr-1" />
+                      <TableCell className="py-2">
+                        <Badge variant="outline" className="capitalize text-[9px] bg-slate-50 text-[#4F5D75] border-[#D0D2D5] shadow-sm h-5 px-2">
+                          <Bot className="h-2.5 w-2.5 mr-0.5" />
                           {agreement.bot_type.replace('_', ' ')}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#10B981]/20 border border-[#10B981]/40 shadow-sm">
-                          <DollarSign className="h-3.5 w-3.5 text-[#10B981]" />
-                          <span className="font-bold text-[#10B981]">R {parseFloat(agreement.monthly_total).toFixed(2)}</span>
+                      <TableCell className="py-2">
+                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#10B981]/20 border border-[#10B981]/40 shadow-sm">
+                          <DollarSign className="h-3 w-3 text-[#10B981]" />
+                          <span className="font-bold text-[10px] text-[#10B981]">R {parseFloat(agreement.monthly_total).toFixed(2)}</span>
                         </div>
                       </TableCell>
-                      <TableCell>{getStatusBadge(agreement.status)}</TableCell>
-                      <TableCell className="text-sm text-[#4F5D75]">
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5 text-[#B0B3B8]" />
+                      <TableCell className="py-2">{getStatusBadge(agreement.status)}</TableCell>
+                      <TableCell className="text-xs text-[#4F5D75] py-2">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3 text-[#B0B3B8]" />
                           {format(new Date(agreement.created_at), 'MMM d, yyyy')}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right py-2">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1064,9 +1064,9 @@ export default function ApprovalsPage() {
                             setSelectedAgreement(agreement);
                             setShowDetailsDialog(true);
                           }}
-                          className="h-9 text-xs font-semibold rounded-xl border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95"
+                          className="h-7 text-[10px] font-semibold rounded-lg border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95 px-2"
                         >
-                          <Eye className="h-3.5 w-3.5 mr-1.5" />
+                          <Eye className="h-3 w-3 mr-1" />
                           View
                         </Button>
                       </TableCell>
@@ -1086,21 +1086,21 @@ export default function ApprovalsPage() {
       {/* Amendment Review Dialog */}
       {selectedAmendment && (
         <Dialog open={showAmendmentDialog} onOpenChange={setShowAmendmentDialog}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-background to-muted/20 border-0 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
-            <DialogHeader className="space-y-3 pb-4">
-              <DialogTitle className="flex items-center gap-3 text-xl">
-                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[0_4px_20px_rgb(59,130,246,0.15)]">
-                  <Settings className="h-6 w-6 text-blue-600" />
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-background to-muted/20 border-0 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
+            <DialogHeader className="space-y-2 pb-3">
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[#4F5D75]/15 to-[#4F5D75]/5 flex items-center justify-center shadow-[0_4px_20px_rgba(79,93,117,0.15)]">
+                  <Settings className="h-4 w-4 text-[#4F5D75]" />
                 </div>
                 <span className="font-bold">
                   Review Service Amendment
                 </span>
               </DialogTitle>
-              <DialogDescription className="text-base ml-14">
+              <DialogDescription className="text-xs ml-10">
                 <Badge className={`${selectedAmendment.amendment_type === 'add_gardens' 
                   ? 'bg-gradient-to-r from-[#10B981] to-[#10B981]/80 hover:from-[#10B981]/90 hover:to-[#10B981]' 
-                  : 'bg-gradient-to-r from-[#F59E0B] to-[#F59E0B]/80 hover:from-[#F59E0B]/90 hover:to-[#F59E0B]'} shadow-md text-white border-0`}>
-                  {selectedAmendment.amendment_type === 'add_gardens' ? <TrendingUp className="h-3.5 w-3.5 mr-1.5" /> : <TrendingDown className="h-3.5 w-3.5 mr-1.5" />}
+                  : 'bg-gradient-to-r from-[#F59E0B] to-[#F59E0B]/80 hover:from-[#F59E0B]/90 hover:to-[#F59E0B]'} shadow-md text-white border-0 text-[9px] h-5 px-2`}>
+                  {selectedAmendment.amendment_type === 'add_gardens' ? <TrendingUp className="h-2.5 w-2.5 mr-1" /> : <TrendingDown className="h-2.5 w-2.5 mr-1" />}
                   {selectedAmendment.amendment_type === 'add_gardens' ? 'Add Gardens' : 'Remove Gardens'} Request
                 </Badge>
               </DialogDescription>
@@ -1111,8 +1111,8 @@ export default function ApprovalsPage() {
               <Card className="border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
                 <CardHeader className="pb-3 pt-4">
                   <CardTitle className="flex items-center gap-2.5 text-sm font-bold">
-                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[0_2px_10px_rgb(59,130,246,0.1)]">
-                      <User className="h-4 w-4 text-blue-600" />
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[#4F5D75]/15 to-[#4F5D75]/5 flex items-center justify-center shadow-[0_2px_10px_rgba(79,93,117,0.1)]">
+                      <User className="h-4 w-4 text-[#4F5D75]" />
                     </div>
                     <span>Customer Information</span>
                   </CardTitle>
@@ -1223,9 +1223,9 @@ export default function ApprovalsPage() {
                     </div>
                   )}
 
-                  <Alert className="border-0 bg-blue-500/10 rounded-xl">
-                    <div className="h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                      <Calendar className="h-4 w-4 text-blue-600" />
+                  <Alert className="border-0 bg-[#4F5D75]/10 rounded-xl">
+                    <div className="h-8 w-8 rounded-lg bg-[#4F5D75]/20 flex items-center justify-center">
+                      <Calendar className="h-4 w-4 text-[#4F5D75]" />
                     </div>
                     <AlertDescription className="text-sm font-medium">
                       Requested: {format(new Date(selectedAmendment.created_at), 'MMMM d, yyyy h:mm a')}
@@ -1235,12 +1235,12 @@ export default function ApprovalsPage() {
               </Card>
             </div>
 
-            <DialogFooter className="gap-2 pt-4">
+            <DialogFooter className="gap-2 pt-3">
               <Button
                 variant="outline"
                 onClick={() => setShowAmendmentDialog(false)}
                 disabled={actionLoading}
-                className="h-10 text-xs font-semibold rounded-xl border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95"
+                className="h-8 text-[10px] font-semibold rounded-lg border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95 px-3"
               >
                 Close
               </Button>
@@ -1248,24 +1248,24 @@ export default function ApprovalsPage() {
                 variant="outline"
                 onClick={() => handleRejectAmendment(selectedAmendment.id)}
                 disabled={actionLoading}
-                className="h-10 text-xs font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 border-0 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 active:scale-95"
+                className="h-8 text-[10px] font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 border-0 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 active:scale-95 px-3"
               >
                 {actionLoading ? (
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                 ) : (
-                  <XCircle className="h-3.5 w-3.5 mr-1.5" />
+                  <XCircle className="h-3 w-3 mr-1" />
                 )}
                 Reject
               </Button>
               <Button
                 onClick={() => handleApproveAmendment(selectedAmendment.id)}
                 disabled={actionLoading}
-                className="h-10 text-xs font-semibold bg-gradient-to-br from-botkorp-orange to-botkorp-orange/90 shadow-[4px_4px_12px_rgba(0,0,0,0.2),-2px_-2px_8px_rgba(255,255,255,0.1)] hover:shadow-[6px_6px_16px_rgba(0,0,0,0.25),-3px_-3px_10px_rgba(255,255,255,0.15)] active:scale-95 transition-all duration-300 rounded-xl border-0 text-white"
+                className="h-8 text-[10px] font-semibold bg-gradient-to-br from-botkorp-orange to-botkorp-orange/90 shadow-[4px_4px_12px_rgba(0,0,0,0.2),-2px_-2px_8px_rgba(255,255,255,0.1)] hover:shadow-[6px_6px_16px_rgba(0,0,0,0.25),-3px_-3px_10px_rgba(255,255,255,0.15)] active:scale-95 transition-all duration-300 rounded-lg border-0 text-white px-3"
               >
                 {actionLoading ? (
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                 ) : (
-                  <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
                 )}
                 Approve
               </Button>
@@ -1277,17 +1277,17 @@ export default function ApprovalsPage() {
       {/* Mark Installed Dialog */}
       {selectedService && (
         <Dialog open={showInstallDialog} onOpenChange={setShowInstallDialog}>
-          <DialogContent className="max-w-2xl bg-gradient-to-br from-background to-muted/20 border-0 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
-            <DialogHeader className="space-y-3 pb-4">
-              <DialogTitle className="flex items-center gap-3 text-xl">
-                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
-                  <Bot className="h-6 w-6 text-botkorp-orange" />
+          <DialogContent className="max-w-xl bg-gradient-to-br from-background to-muted/20 border-0 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
+            <DialogHeader className="space-y-2 pb-3">
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+                  <Bot className="h-4 w-4 text-botkorp-orange" />
                 </div>
                 <span className="font-bold">
                   Mark Service as Installed
                 </span>
               </DialogTitle>
-              <DialogDescription className="text-sm ml-14 text-muted-foreground">
+              <DialogDescription className="text-xs ml-10 text-muted-foreground">
                 Confirm that bots have been physically installed for this service
               </DialogDescription>
             </DialogHeader>
@@ -1297,8 +1297,8 @@ export default function ApprovalsPage() {
               <Card className="border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
                 <CardHeader className="pb-3 pt-4">
                   <CardTitle className="flex items-center gap-2.5 text-sm font-bold">
-                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[0_2px_10px_rgb(59,130,246,0.1)]">
-                      <Settings className="h-4 w-4 text-blue-600" />
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[#4F5D75]/15 to-[#4F5D75]/5 flex items-center justify-center shadow-[0_2px_10px_rgba(79,93,117,0.1)]">
+                      <Settings className="h-4 w-4 text-[#4F5D75]" />
                     </div>
                     <span>Service Information</span>
                   </CardTitle>
@@ -1310,7 +1310,7 @@ export default function ApprovalsPage() {
                   </div>
                   <div className="flex justify-between p-2.5 rounded-lg bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                     <span className="text-muted-foreground">Service Type:</span>
-                    <Badge variant="outline" className="capitalize border-0 bg-blue-500/10 text-blue-600">
+                    <Badge variant="outline" className="capitalize border-0 bg-[#4F5D75]/10 text-[#4F5D75]">
                       {selectedService.service_type}
                     </Badge>
                   </div>
@@ -1372,24 +1372,24 @@ export default function ApprovalsPage() {
               </Alert>
             </div>
 
-            <DialogFooter className="gap-2 pt-4">
+            <DialogFooter className="gap-2 pt-3">
               <Button
                 variant="outline"
                 onClick={() => setShowInstallDialog(false)}
                 disabled={actionLoading}
-                className="h-10 text-xs font-semibold rounded-xl border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95"
+                className="h-8 text-[10px] font-semibold rounded-lg border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95 px-3"
               >
                 Cancel
               </Button>
               <Button
                 onClick={() => handleMarkInstalled(selectedService.id)}
                 disabled={actionLoading}
-                className="h-10 text-xs font-semibold bg-gradient-to-br from-botkorp-orange to-botkorp-orange/90 shadow-[4px_4px_12px_rgba(0,0,0,0.2),-2px_-2px_8px_rgba(255,255,255,0.1)] hover:shadow-[6px_6px_16px_rgba(0,0,0,0.25),-3px_-3px_10px_rgba(255,255,255,0.15)] active:scale-95 transition-all duration-300 rounded-xl border-0 text-white"
+                className="h-8 text-[10px] font-semibold bg-gradient-to-br from-botkorp-orange to-botkorp-orange/90 shadow-[4px_4px_12px_rgba(0,0,0,0.2),-2px_-2px_8px_rgba(255,255,255,0.1)] hover:shadow-[6px_6px_16px_rgba(0,0,0,0.25),-3px_-3px_10px_rgba(255,255,255,0.15)] active:scale-95 transition-all duration-300 rounded-lg border-0 text-white px-3"
               >
                 {actionLoading ? (
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                 ) : (
-                  <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
                 )}
                 Confirm Installation
               </Button>

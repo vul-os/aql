@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Download, FileText, Eye, Loader2 } from 'lucide-react';
+import { useTheme } from '@/components/theme-provider';
+import { cn } from '@/lib/utils';
+import { Download, FileText, Eye, Loader2, Scale } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/auth-context';
 
 export default function BotRentalTerms() {
+  const { theme } = useTheme();
   const { user } = useAuth();
   const [agreement, setAgreement] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -58,48 +61,96 @@ export default function BotRentalTerms() {
   };
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="max-w-4xl space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
       {/* Header with Download */}
-      <Card className="border-2 border-primary/20">
-        <CardContent className="p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <FileText className="h-6 w-6 text-primary" />
-                <h1 className="text-2xl md:text-3xl font-bold">Bot Rental Terms of Service</h1>
+      <Card className={cn(
+        "relative overflow-hidden border-2 transition-all duration-500",
+        theme === 'dark'
+          ? "bg-gradient-to-br from-[#1a1a1a] via-[#2a2a2a] to-[#1a1a1a] border-[#4F5D75]/30"
+          : "bg-gradient-to-br from-white via-[#FAFAFA] to-white border-[#4F5D75]/30",
+        "shadow-2xl shadow-[#4F5D75]/10"
+      )}>
+        <div className="absolute inset-0 bg-gradient-to-br from-[#4F5D75]/5 via-transparent to-[#FF6B35]/5" />
+        
+        <CardContent className="p-8 relative z-10">
+          <div className="flex flex-col lg:flex-row items-start justify-between gap-6">
+            <div className="flex-1 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-2xl bg-gradient-to-br from-[#4F5D75] to-[#6B7A94] shadow-lg">
+                  <Scale className="h-6 w-6 text-white" />
+                </div>
+                <h1 className={cn(
+                  "text-3xl md:text-4xl font-bold",
+                  "bg-gradient-to-r from-[#4F5D75] via-[#FF6B35] to-[#E85A2A] bg-clip-text text-transparent"
+                )}>Bot Rental Terms of Service</h1>
               </div>
-              <p className="text-muted-foreground">
-                Complete terms and conditions for BotKorp bot rental services
+              <p className={cn(
+                "text-lg",
+                theme === 'dark' ? "text-[#B0B3B8]" : "text-[#4F5D75]"
+              )}>
+                Complete terms and conditions for Bot Korp bot rental services
               </p>
-              <p className="text-sm text-muted-foreground mt-2">
+              <Badge className={cn(
+                "px-3 py-1 rounded-full font-medium",
+                theme === 'dark' 
+                  ? "bg-white/10 text-[#B0B3B8]"
+                  : "bg-[#4F5D75]/10 text-[#4F5D75]"
+              )}>
                 Last updated: October 17, 2025
-              </p>
+              </Badge>
             </div>
-            {loading ? (
-              <Button disabled className="gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading...
-              </Button>
-            ) : agreement?.agreement_pdf_url ? (
-              <div className="flex gap-2">
-                <Button onClick={handleView} variant="outline" className="gap-2">
-                  <Eye className="h-4 w-4" />
-                  View My Agreement
+            <div className="flex flex-col gap-3">
+              {loading ? (
+                <Button disabled className={cn(
+                  "gap-3 h-11 px-5 rounded-xl font-medium shadow-lg",
+                  "bg-gradient-to-r from-[#4F5D75] to-[#6B7A94]"
+                )}>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading...
                 </Button>
-                <Button onClick={handleDownload} className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Download PDF
-                </Button>
-              </div>
-            ) : user ? (
-              <Badge variant="outline" className="px-4 py-2">
-                No active agreement
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="px-4 py-2">
-                Sign in to view your agreement
-              </Badge>
-            )}
+              ) : agreement?.agreement_pdf_url ? (
+                <>
+                  <Button 
+                    onClick={handleView} 
+                    variant="outline" 
+                    className={cn(
+                      "gap-3 h-11 px-5 rounded-xl font-medium transition-all duration-300 hover:scale-105",
+                      theme === 'dark'
+                        ? "bg-white/5 border-white/10 text-white hover:bg-white/10"
+                        : "bg-[#4F5D75]/5 border-[#4F5D75]/20 hover:bg-[#4F5D75]/10",
+                      "shadow-lg"
+                    )}
+                  >
+                    <Eye className="h-4 w-4" />
+                    View Agreement
+                  </Button>
+                  <Button 
+                    onClick={handleDownload}
+                    className={cn(
+                      "gap-3 h-11 px-5 rounded-xl font-medium shadow-xl transition-all duration-300 hover:scale-105",
+                      "bg-gradient-to-r from-[#FF6B35] to-[#E85A2A] hover:from-[#E85A2A] hover:to-[#FF6B35]"
+                    )}
+                  >
+                    <Download className="h-4 w-4" />
+                    Download PDF
+                  </Button>
+                </>
+              ) : user ? (
+                <Badge className={cn(
+                  "px-4 py-2 rounded-xl",
+                  theme === 'dark' ? "bg-white/10" : "bg-[#4F5D75]/10"
+                )}>
+                  No active agreement
+                </Badge>
+              ) : (
+                <Badge className={cn(
+                  "px-4 py-2 rounded-xl",
+                  theme === 'dark' ? "bg-white/10" : "bg-[#4F5D75]/10"
+                )}>
+                  Sign in to view your agreement
+                </Badge>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

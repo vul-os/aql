@@ -8,9 +8,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Mail } from 'lucide-react';
+import { useTheme } from '@/components/theme-provider';
+import { cn } from '@/lib/utils';
+import { Mail, HelpCircle, Sparkles } from 'lucide-react';
 
 export default function FAQPage() {
+  const { theme } = useTheme();
   const faqs = [
     {
       category: 'General',
@@ -132,34 +135,88 @@ export default function FAQPage() {
   ];
 
   return (
-    <div className="max-w-3xl space-y-8">
+    <div className="max-w-4xl space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
       {/* Header */}
-      <div className="space-y-4">
-        <Badge variant="secondary">Help Center</Badge>
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-          Frequently Asked Questions
-        </h1>
-        <p className="text-xl text-muted-foreground">
-          Find answers to common questions about Bot Korp.
-        </p>
+      <div className={cn(
+        "relative space-y-6 pb-8 overflow-hidden rounded-3xl p-10",
+        theme === 'dark'
+          ? "bg-gradient-to-br from-[#1a1a1a] via-[#2a2a2a] to-[#1a1a1a] border border-white/5"
+          : "bg-gradient-to-br from-white via-[#FAFAFA] to-white border border-[#E5E7EB]",
+        "shadow-2xl shadow-[#4F5D75]/5"
+      )}>
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#4F5D75]/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#FF6B35]/10 rounded-full blur-3xl" />
+        
+        <div className="relative z-10">
+          <Badge 
+            className={cn(
+              "mb-4 px-4 py-1.5 rounded-full font-semibold shadow-lg",
+              "bg-gradient-to-r from-[#4F5D75] to-[#6B7A94] text-white",
+              "border-none"
+            )}
+          >
+            <HelpCircle className="h-3 w-3 mr-1.5 inline" />
+            Help Center
+          </Badge>
+          <h1 className={cn(
+            "text-5xl md:text-6xl font-bold tracking-tight mb-4",
+            "bg-gradient-to-r from-[#4F5D75] via-[#FF6B35] to-[#E85A2A] bg-clip-text text-transparent"
+          )}>
+            Frequently Asked Questions
+          </h1>
+          <p className={cn(
+            "text-xl leading-relaxed",
+            theme === 'dark' ? "text-[#B0B3B8]" : "text-[#4F5D75]"
+          )}>
+            Find answers to common questions about Bot Korp.
+          </p>
+        </div>
       </div>
 
       {/* FAQ Sections */}
-      <div className="space-y-8">
-        {faqs.map((category) => (
-          <div key={category.category}>
-            <h2 className="text-2xl font-bold mb-4">{category.category}</h2>
-            <Accordion type="single" collapsible className="space-y-2">
+      <div className="space-y-10">
+        {faqs.map((category, catIdx) => (
+          <div key={category.category} className="space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="h-1 w-12 bg-gradient-to-r from-[#FF6B35] to-transparent rounded-full" />
+              <h2 className={cn(
+                "text-3xl font-bold",
+                theme === 'dark' ? "text-white" : "text-[#121212]"
+              )}>{category.category}</h2>
+            </div>
+            <Accordion 
+              type="single" 
+              collapsible 
+              className="space-y-3"
+            >
               {category.questions.map((faq, index) => (
                 <AccordionItem
                   key={index}
                   value={`${category.category}-${index}`}
-                  className="border rounded-lg px-4"
+                  className={cn(
+                    "border rounded-2xl px-5 overflow-hidden transition-all duration-300",
+                    theme === 'dark'
+                      ? "bg-gradient-to-br from-[#1a1a1a] to-[#2a2a2a] border-white/10 hover:border-[#FF6B35]/50"
+                      : "bg-gradient-to-br from-white to-[#FAFAFA] border-[#E5E7EB] hover:border-[#FF6B35]/50",
+                    "shadow-lg hover:shadow-xl hover:shadow-[#FF6B35]/5",
+                    "animate-in fade-in slide-in-from-bottom-4 duration-500",
+                    `delay-${index * 100}`
+                  )}
                 >
-                  <AccordionTrigger className="text-left hover:no-underline">
-                    <span className="font-medium">{faq.q}</span>
+                  <AccordionTrigger className={cn(
+                    "text-left hover:no-underline py-5 transition-all",
+                    theme === 'dark' ? "hover:text-[#FF6B35]" : "hover:text-[#FF6B35]"
+                  )}>
+                    <span className={cn(
+                      "font-bold text-base pr-4",
+                      theme === 'dark' ? "text-white" : "text-[#121212]"
+                    )}>{faq.q}</span>
                   </AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground">
+                  <AccordionContent className={cn(
+                    "text-base leading-relaxed pb-5",
+                    theme === 'dark' ? "text-[#B0B3B8]" : "text-[#4F5D75]"
+                  )}>
                     {faq.a}
                   </AccordionContent>
                 </AccordionItem>
@@ -170,15 +227,44 @@ export default function FAQPage() {
       </div>
 
       {/* Contact Card */}
-      <Card className="p-6 bg-muted/50">
-        <h3 className="text-xl font-semibold mb-2">Still have questions?</h3>
-        <p className="text-muted-foreground mb-4">
-          Can't find the answer you're looking for? Our support team is here to help.
-        </p>
-        <Button onClick={() => window.location.href = 'mailto:support@botkorp.com'}>
-          <Mail className="mr-2 h-4 w-4" />
-          Contact Support
-        </Button>
+      <Card className={cn(
+        "relative overflow-hidden border-2 p-8 transition-all duration-500",
+        theme === 'dark'
+          ? "bg-gradient-to-br from-[#1a1a1a] via-[#2a2a2a] to-[#1a1a1a] border-[#4F5D75]/30"
+          : "bg-gradient-to-br from-white via-[#FAFAFA] to-white border-[#4F5D75]/30",
+        "shadow-2xl shadow-[#4F5D75]/10"
+      )}>
+        {/* Decorative background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#4F5D75]/5 via-transparent to-[#FF6B35]/5" />
+        
+        <div className="relative z-10 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-[#4F5D75] to-[#6B7A94] shadow-lg">
+              <HelpCircle className="h-6 w-6 text-white" />
+            </div>
+            <h3 className={cn(
+              "text-2xl font-bold",
+              theme === 'dark' ? "text-white" : "text-[#121212]"
+            )}>Still have questions?</h3>
+          </div>
+          <p className={cn(
+            "text-lg",
+            theme === 'dark' ? "text-[#B0B3B8]" : "text-[#4F5D75]"
+          )}>
+            Can't find the answer you're looking for? Our support team is here to help.
+          </p>
+          <Button 
+            onClick={() => window.location.href = 'mailto:support@botkorp.com'}
+            className={cn(
+              "gap-3 h-12 px-6 rounded-xl font-bold shadow-xl transition-all duration-300",
+              "bg-gradient-to-r from-[#4F5D75] to-[#6B7A94] hover:from-[#6B7A94] hover:to-[#4F5D75]",
+              "hover:scale-105"
+            )}
+          >
+            <Mail className="h-5 w-5" />
+            Contact Support
+          </Button>
+        </div>
       </Card>
     </div>
   );

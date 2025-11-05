@@ -367,25 +367,6 @@ export default function CoverageMap({
         </div>
       )}
 
-      {/* Soft Stats Badge - Only show when legend is hidden */}
-      {!showLegend && coverageAreas.length > 0 && !loading && (
-        <div className="absolute top-6 right-6 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl shadow-lg px-5 py-3 border border-gray-200/60 dark:border-gray-700/60 z-20">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center shadow-md">
-                <MapPin className="h-6 w-6 text-white" />
-              </div>
-              <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-green-500 border-2 border-white dark:border-gray-900 shadow-sm"></div>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">Active</p>
-              <p className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
-                {coverageAreas.length}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

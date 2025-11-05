@@ -176,3 +176,4 @@ For most use cases, MapTiler's free tier is perfect!
 
 **Need Help?** Open an issue or contact the development team.
 
+

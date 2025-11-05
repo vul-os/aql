@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Loader2, Scissors, Clock, Ruler, Battery, MapPin, AlertTriangle, TrendingUp, Target, Activity } from 'lucide-react';
+import { Loader2, Scissors, Clock, Ruler, Battery, MapPin, AlertTriangle, TrendingUp, Target, Activity, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { format, formatDuration, intervalToDuration } from 'date-fns';
 import {
@@ -56,6 +56,8 @@ export default function ServiceMowingSessions({ gardenId }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedSession, setSelectedSession] = useState(null);
+  const [showAll, setShowAll] = useState(false);
+  const INITIAL_DISPLAY_COUNT = 5;
 
   useEffect(() => {
     if (gardenId) {
@@ -174,8 +176,8 @@ export default function ServiceMowingSessions({ gardenId }) {
               <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 Coverage
               </CardTitle>
-              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/10 dark:from-blue-500/30 dark:to-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-                <Ruler className="h-4 w-4 text-blue-500" />
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-[#4F5D75]/20 to-[#4F5D75]/10 dark:from-[#4F5D75]/30 dark:to-[#4F5D75]/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                <Ruler className="h-4 w-4 text-[#4F5D75]" />
               </div>
             </div>
           </CardHeader>
@@ -193,8 +195,8 @@ export default function ServiceMowingSessions({ gardenId }) {
               <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 Distance
               </CardTitle>
-              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-green-500/20 to-green-500/10 dark:from-green-500/30 dark:to-green-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-                <MapPin className="h-4 w-4 text-green-500" />
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-[#10B981]/20 to-[#10B981]/10 dark:from-[#10B981]/30 dark:to-[#10B981]/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                <MapPin className="h-4 w-4 text-[#10B981]" />
               </div>
             </div>
           </CardHeader>
@@ -212,8 +214,8 @@ export default function ServiceMowingSessions({ gardenId }) {
               <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 Success Rate
               </CardTitle>
-              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-500/10 dark:from-purple-500/30 dark:to-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-                <Target className="h-4 w-4 text-purple-500" />
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-[#FF6B35]/20 to-[#FF6B35]/10 dark:from-[#FF6B35]/30 dark:to-[#FF6B35]/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
+                <Target className="h-4 w-4 text-[#FF6B35]" />
               </div>
             </div>
           </CardHeader>
@@ -250,8 +252,8 @@ export default function ServiceMowingSessions({ gardenId }) {
               <AreaChart data={performanceData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#f97316" stopOpacity={0.1}/>
+                    <stop offset="5%" stopColor="#FF6B35" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#FF6B35" stopOpacity={0.1}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
@@ -273,7 +275,7 @@ export default function ServiceMowingSessions({ gardenId }) {
                 <Area 
                   type="monotone" 
                   dataKey="area" 
-                  stroke="#f97316" 
+                  stroke="#FF6B35" 
                   strokeWidth={2}
                   fill="url(#colorArea)"
                   name="Area Covered (m²)"
@@ -304,7 +306,8 @@ export default function ServiceMowingSessions({ gardenId }) {
         </CardHeader>
         <CardContent className="pt-4 pb-5">
           <div className="space-y-2.5">
-            {sessions.map((session, index) => (
+            {/* Sessions List - Show limited initially */}
+            {(showAll ? sessions : sessions.slice(0, INITIAL_DISPLAY_COUNT)).map((session, index) => (
               <div 
                 key={session.id}
                 className="relative flex items-start justify-between p-4 rounded-2xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[0_4px_16px_rgb(0,0,0,0.08)] transition-all duration-300 cursor-pointer animate-in fade-in slide-in-from-bottom-2 border-0"
@@ -316,7 +319,7 @@ export default function ServiceMowingSessions({ gardenId }) {
                 
                 <div className="space-y-2 flex-1 relative">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Scissors className="h-3.5 w-3.5 text-botkorp-orange" />
+                    <Scissors className="h-3.5 w-3.5 text-[#FF6B35]" />
                     <span className="text-xs font-semibold">
                       {format(new Date(session.session_start), 'MMM d, yyyy h:mm a')}
                     </span>
@@ -365,6 +368,35 @@ export default function ServiceMowingSessions({ gardenId }) {
               </div>
             ))}
           </div>
+
+          {/* See More / Show Less Button */}
+          {sessions.length > INITIAL_DISPLAY_COUNT && (
+            <div className="mt-4 pt-4 border-t border-border/50">
+              <Button
+                variant="ghost"
+                onClick={() => setShowAll(!showAll)}
+                className="w-full h-11 text-xs font-semibold rounded-2xl border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95 hover:bg-botkorp-orange/5 group"
+              >
+                <div className="flex items-center justify-center gap-2">
+                  {showAll ? (
+                    <>
+                      <ChevronUp className="h-4 w-4 text-[#FF6B35] group-hover:scale-110 transition-transform" />
+                      <span className="group-hover:text-[#FF6B35] transition-colors">
+                        Show Less
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-4 w-4 text-[#FF6B35] group-hover:scale-110 transition-transform" />
+                      <span className="group-hover:text-[#FF6B35] transition-colors">
+                        See More ({sessions.length - INITIAL_DISPLAY_COUNT} more session{sessions.length - INITIAL_DISPLAY_COUNT !== 1 ? 's' : ''})
+                      </span>
+                    </>
+                  )}
+                </div>
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

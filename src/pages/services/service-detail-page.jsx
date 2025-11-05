@@ -111,12 +111,20 @@ export default function ServiceDetailPage() {
   const [currentSchedule, setCurrentSchedule] = useState(null);
   const [showBillingConfirm, setShowBillingConfirm] = useState(false);
   const [newPricing, setNewPricing] = useState(null);
+  const [selectedGardenId, setSelectedGardenId] = useState(null);
 
   useEffect(() => {
     if (id) {
       loadServiceDetails();
     }
   }, [id]);
+
+  // Auto-select first garden when gardens load
+  useEffect(() => {
+    if (gardens.length > 0 && !selectedGardenId) {
+      setSelectedGardenId(gardens[0].id);
+    }
+  }, [gardens, selectedGardenId]);
 
   const loadServiceDetails = async () => {
     try {
@@ -677,63 +685,148 @@ export default function ServiceDetailPage() {
           {/* SERVICE DATA TAB */}
           <TabsContent value="service-data" className="space-y-5">
             {gardens.length > 0 ? (
-              <div className="space-y-6">
-                {gardens.map((garden, index) => (
-                  <div key={garden.id} className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${index * 100}ms` }}>
-                    {/* Garden Header */}
-                    <div className="flex items-center gap-3 mb-1">
-                      <Sprout className="h-5 w-5 text-botkorp-orange" />
-                      <div>
-                        <h2 className="text-lg font-bold">{garden.name}</h2>
-                        <p className="text-xs text-muted-foreground">
-                          {Math.round(garden.area_sqm)} m² coverage area
-                        </p>
+              <div className="space-y-5">
+                {/* Elegant Garden Filter - Soft UI */}
+                <Card className="bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 border-0 animate-in fade-in slide-in-from-top-3 duration-500">
+                  <CardHeader className="pb-3 pt-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+                          <LayoutGrid className="w-5 h-5 text-botkorp-orange" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base font-bold">Select Garden</CardTitle>
+                          <CardDescription className="text-[11px] font-medium">Choose a garden to view its data</CardDescription>
+                        </div>
                       </div>
+                      <Badge variant="secondary" className="h-6 px-3 text-xs bg-botkorp-orange/10 text-botkorp-orange border-0 font-semibold rounded-full w-fit">
+                        {gardens.length} Garden{gardens.length !== 1 ? 's' : ''}
+                      </Badge>
                     </div>
+                  </CardHeader>
+                  <CardContent className="pt-2 pb-5">
+                    {/* Garden Selector Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                      {gardens.map((garden, index) => {
+                        const isSelected = selectedGardenId === garden.id;
+                        return (
+                          <button
+                            key={garden.id}
+                            onClick={() => setSelectedGardenId(garden.id)}
+                            className={`group relative p-4 rounded-xl transition-all duration-300 text-left animate-in fade-in slide-in-from-bottom-2 ${
+                              isSelected
+                                ? 'bg-gradient-to-br from-botkorp-orange to-botkorp-orange/90 text-white shadow-[4px_4px_12px_rgba(0,0,0,0.2),-2px_-2px_8px_rgba(255,255,255,0.1)] scale-105'
+                                : 'bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[0_4px_20px_rgb(255,107,53,0.15)] hover:scale-102 active:scale-98'
+                            }`}
+                            style={{ animationDelay: `${index * 50}ms`, animationDuration: '400ms' }}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
+                                isSelected
+                                  ? 'bg-white/20 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.2)]'
+                                  : 'bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 group-hover:from-botkorp-orange/25 group-hover:to-botkorp-orange/10'
+                              }`}>
+                                <Sprout className={`h-5 w-5 transition-colors duration-300 ${
+                                  isSelected ? 'text-white' : 'text-botkorp-orange'
+                                }`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm font-bold truncate mb-1 transition-colors duration-300 ${
+                                  isSelected ? 'text-white' : 'text-foreground group-hover:text-botkorp-orange'
+                                }`}>
+                                  {garden.name}
+                                </p>
+                                <div className="flex items-center gap-1.5">
+                                  <Ruler className={`h-3 w-3 flex-shrink-0 ${
+                                    isSelected ? 'text-white/80' : 'text-muted-foreground'
+                                  }`} />
+                                  <p className={`text-xs font-medium ${
+                                    isSelected ? 'text-white/80' : 'text-muted-foreground'
+                                  }`}>
+                                    {Math.round(garden.area_sqm)} m²
+                                  </p>
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <CheckCircle className="h-5 w-5 text-white flex-shrink-0 animate-in zoom-in-50 duration-300" />
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
 
-                    {/* Environmental Data Card - Soft UI */}
-                    <Card className="bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 border-0">
-                      <CardHeader className="pb-3 pt-5">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
-                              <Thermometer className="w-5 h-5 text-botkorp-orange" />
-                            </div>
-                            <div>
-                              <CardTitle className="text-base font-bold">Environmental Conditions</CardTitle>
-                              <CardDescription className="text-[11px] font-medium">Real-time weather & soil data</CardDescription>
-                            </div>
-                          </div>
-                          <Badge variant="outline" className="text-[10px] border-none bg-botkorp-orange/10 text-botkorp-orange font-semibold px-3 py-1 rounded-full">Live</Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-4 pb-5">
-                        <ServiceEnvironmentalData gardenId={garden.id} />
-                      </CardContent>
-                    </Card>
+                {/* Selected Garden Data */}
+                {selectedGardenId && (() => {
+                  const selectedGarden = gardens.find(g => g.id === selectedGardenId);
+                  if (!selectedGarden) return null;
 
-                    {/* Service History Card - Soft UI */}
-                    <Card className="bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 border-0">
-                      <CardHeader className="pb-3 pt-5">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
-                              <Activity className="w-5 h-5 text-botkorp-orange" />
-                            </div>
-                            <div>
-                              <CardTitle className="text-base font-bold">Service History</CardTitle>
-                              <CardDescription className="text-[11px] font-medium">Performance & mowing sessions</CardDescription>
-                            </div>
+                  return (
+                    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      {/* Garden Header */}
+                      <div className="flex items-center justify-between gap-3 px-1">
+                        <div className="flex items-center gap-3">
+                          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+                            <Sprout className="h-6 w-6 text-botkorp-orange" />
                           </div>
-                          <Badge variant="outline" className="text-[10px] border-none bg-botkorp-orange/10 text-botkorp-orange font-semibold px-3 py-1 rounded-full">Recent</Badge>
+                          <div>
+                            <h2 className="text-xl font-bold">{selectedGarden.name}</h2>
+                            <p className="text-xs text-muted-foreground font-medium">
+                              {Math.round(selectedGarden.area_sqm)} m² coverage area
+                            </p>
+                          </div>
                         </div>
-                      </CardHeader>
-                      <CardContent className="pt-4 pb-5">
-                        <ServiceMowingSessions gardenId={garden.id} />
-                      </CardContent>
-                    </Card>
-                  </div>
-                ))}
+                        <Badge variant="outline" className="text-[10px] h-6 border-none bg-green-500/10 text-green-600 font-semibold px-3 rounded-full">
+                          Active
+                        </Badge>
+                      </div>
+
+                      {/* Environmental Data Card - Soft UI */}
+                      <Card className="bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 border-0 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
+                        <CardHeader className="pb-3 pt-5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+                                <Thermometer className="w-5 h-5 text-botkorp-orange" />
+                              </div>
+                              <div>
+                                <CardTitle className="text-base font-bold">Environmental Conditions</CardTitle>
+                                <CardDescription className="text-[11px] font-medium">Real-time weather & soil data</CardDescription>
+                              </div>
+                            </div>
+                            <Badge variant="outline" className="text-[10px] border-none bg-botkorp-orange/10 text-botkorp-orange font-semibold px-3 py-1 rounded-full">Live</Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="pt-4 pb-5">
+                          <ServiceEnvironmentalData gardenId={selectedGarden.id} />
+                        </CardContent>
+                      </Card>
+
+                      {/* Service History Card - Soft UI */}
+                      <Card className="bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 border-0 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200">
+                        <CardHeader className="pb-3 pt-5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+                                <Activity className="w-5 h-5 text-botkorp-orange" />
+                              </div>
+                              <div>
+                                <CardTitle className="text-base font-bold">Service History</CardTitle>
+                                <CardDescription className="text-[11px] font-medium">Performance & mowing sessions</CardDescription>
+                              </div>
+                            </div>
+                            <Badge variant="outline" className="text-[10px] border-none bg-botkorp-orange/10 text-botkorp-orange font-semibold px-3 py-1 rounded-full">Recent</Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="pt-4 pb-5">
+                          <ServiceMowingSessions gardenId={selectedGarden.id} />
+                        </CardContent>
+                      </Card>
+                    </div>
+                  );
+                })()}
               </div>
             ) : (
               <Card className="bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] animate-in fade-in slide-in-from-bottom-4 duration-500 border-0">

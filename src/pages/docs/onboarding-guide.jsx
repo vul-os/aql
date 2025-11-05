@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useTheme } from '@/components/theme-provider';
+import { cn } from '@/lib/utils';
 import {
   MapPin,
   Sprout,
@@ -18,10 +20,12 @@ import {
   Bot,
   Clock,
   DollarSign,
-  Shield
+  Shield,
+  Sparkles
 } from 'lucide-react';
 
 export default function OnboardingGuide() {
+  const { theme } = useTheme();
   const [checkedSteps, setCheckedSteps] = useState({});
 
   const toggleStep = (step) => {
@@ -39,62 +43,129 @@ export default function OnboardingGuide() {
     { id: 'complete', label: 'Service activated!' }
   ];
 
+  const progress = Object.values(checkedSteps).filter(Boolean).length;
+  const progressPercent = (progress / onboardingSteps.length) * 100;
+
   return (
-    <div className="max-w-5xl space-y-12">
+    <div className="max-w-5xl space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
       {/* Hero */}
-      <div className="space-y-4">
-        <Badge variant="secondary" className="mb-2">Complete Guide</Badge>
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-          Getting Started with BotKorp
-        </h1>
-        <p className="text-xl text-muted-foreground max-w-3xl">
-          Follow this step-by-step guide to set up your automated bot service. We'll walk you through every step from creating your account to activating your first service.
-        </p>
+      <div className={cn(
+        "relative space-y-6 pb-8 overflow-hidden rounded-3xl p-10",
+        theme === 'dark'
+          ? "bg-gradient-to-br from-[#1a1a1a] via-[#2a2a2a] to-[#1a1a1a] border border-white/5"
+          : "bg-gradient-to-br from-white via-[#FAFAFA] to-white border border-[#E5E7EB]",
+        "shadow-2xl shadow-[#FF6B35]/5"
+      )}>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#FF6B35]/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#4F5D75]/10 rounded-full blur-3xl" />
+        
+        <div className="relative z-10">
+          <Badge 
+            className={cn(
+              "mb-4 px-4 py-1.5 rounded-full font-semibold shadow-lg",
+              "bg-gradient-to-r from-[#FF6B35] to-[#E85A2A] text-white border-none"
+            )}
+          >
+            <Sparkles className="h-3 w-3 mr-1.5 inline" />
+            Complete Guide
+          </Badge>
+          <h1 className={cn(
+            "text-5xl md:text-6xl font-bold tracking-tight mb-4",
+            "bg-gradient-to-r from-[#FF6B35] via-[#E85A2A] to-[#4F5D75] bg-clip-text text-transparent"
+          )}>
+            Getting Started with Bot Korp
+          </h1>
+          <p className={cn(
+            "text-xl leading-relaxed",
+            theme === 'dark' ? "text-[#B0B3B8]" : "text-[#4F5D75]"
+          )}>
+            Follow this step-by-step guide to set up your automated bot service. We'll walk you through every step from creating your account to activating your first service.
+          </p>
+        </div>
       </div>
 
       {/* Quick Setup Checklist */}
-      <Card className="border-2 border-primary/20 bg-primary/5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCircle className="h-6 w-6 text-primary" />
-            Setup Checklist
-          </CardTitle>
-          <CardDescription>
-            Track your progress as you set up your BotKorp service
+      <Card className={cn(
+        "relative overflow-hidden border-2 transition-all duration-500",
+        theme === 'dark'
+          ? "bg-gradient-to-br from-[#1a1a1a] via-[#2a2a2a] to-[#1a1a1a] border-[#FF6B35]/30"
+          : "bg-gradient-to-br from-white via-[#FAFAFA] to-white border-[#FF6B35]/30",
+        "shadow-2xl shadow-[#FF6B35]/10"
+      )}>
+        <div className="absolute inset-0 bg-gradient-to-br from-[#FF6B35]/5 via-transparent to-[#4F5D75]/5" />
+        
+        <CardHeader className="relative z-10">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-[#FF6B35] to-[#E85A2A] shadow-lg shadow-[#FF6B35]/25">
+              <CheckCircle className="h-6 w-6 text-white" />
+            </div>
+            <CardTitle className={cn(
+              "text-2xl font-bold",
+              theme === 'dark' ? "text-white" : "text-[#121212]"
+            )}>Setup Checklist</CardTitle>
+          </div>
+          <CardDescription className={cn(
+            "text-base",
+            theme === 'dark' ? "text-[#B0B3B8]" : "text-[#4F5D75]"
+          )}>
+            Track your progress as you set up your Bot Korp service
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {onboardingSteps.map((step) => (
+        <CardContent className="relative z-10">
+          <div className="space-y-2.5">
+            {onboardingSteps.map((step, idx) => (
               <div
                 key={step.id}
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                className={cn(
+                  "flex items-center gap-3 p-4 rounded-xl transition-all duration-300",
+                  theme === 'dark'
+                    ? "hover:bg-white/5"
+                    : "hover:bg-[#4F5D75]/5",
+                  "animate-in fade-in slide-in-from-left-4 duration-500",
+                  `delay-${idx * 50}`
+                )}
               >
                 <Checkbox
                   id={step.id}
                   checked={checkedSteps[step.id] || false}
                   onCheckedChange={() => toggleStep(step.id)}
+                  className="data-[state=checked]:bg-[#FF6B35] data-[state=checked]:border-[#FF6B35]"
                 />
                 <label
                   htmlFor={step.id}
-                  className={`flex-1 cursor-pointer ${
-                    checkedSteps[step.id] ? 'line-through text-muted-foreground' : ''
-                  }`}
+                  className={cn(
+                    "flex-1 cursor-pointer font-medium transition-all",
+                    checkedSteps[step.id] 
+                      ? theme === 'dark' ? 'line-through text-[#B0B3B8]' : 'line-through text-[#4F5D75]'
+                      : theme === 'dark' ? 'text-white' : 'text-[#121212]'
+                  )}
                 >
                   {step.label}
                 </label>
                 {checkedSteps[step.id] && (
-                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <CheckCircle className="h-5 w-5 text-[#10B981] animate-in zoom-in duration-300" />
                 )}
               </div>
             ))}
           </div>
-          <div className="mt-4 pt-4 border-t">
+          <div className={cn(
+            "mt-6 pt-6 border-t space-y-3",
+            theme === 'dark' ? "border-white/10" : "border-[#E5E7EB]"
+          )}>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Progress</span>
-              <span className="font-semibold">
-                {Object.values(checkedSteps).filter(Boolean).length} / {onboardingSteps.length}
+              <span className={theme === 'dark' ? "text-[#B0B3B8]" : "text-[#4F5D75]"}>Progress</span>
+              <span className={cn(
+                "font-bold text-lg",
+                theme === 'dark' ? "text-white" : "text-[#121212]"
+              )}>
+                {progress} / {onboardingSteps.length}
               </span>
+            </div>
+            <div className="relative h-3 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+              <div 
+                className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#FF6B35] to-[#E85A2A] rounded-full transition-all duration-500 shadow-lg"
+                style={{ width: `${progressPercent}%` }}
+              />
             </div>
           </div>
         </CardContent>
