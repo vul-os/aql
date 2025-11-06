@@ -417,9 +417,9 @@ export default function ServicesPage() {
   }
 
   return (
-    <div className="p-3 md:p-5 space-y-5 max-w-[1800px] mx-auto min-h-screen">
+    <div className="p-3 md:p-4 space-y-3 max-w-[1800px] mx-auto">
       {/* Header Section - Soft UI */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-in fade-in slide-in-from-top-3 duration-500">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 animate-in fade-in slide-in-from-top-3 duration-500">
         <div>
           <h1 className="text-2xl font-bold bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">Services</h1>
           <p className="text-xs text-muted-foreground mt-1 font-medium">
@@ -446,13 +446,13 @@ export default function ServicesPage() {
       </div>
 
       {/* Enhanced Stats - Soft UI */}
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
+      <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
-          <CardContent className="p-5">
+          <CardContent className="p-4">
             <div className="flex items-start justify-between">
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Services</p>
-                <p className="text-3xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{services.length}</p>
+                <p className="text-2xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{services.length}</p>
                 <div className="flex items-center gap-1 text-xs">
                   <TrendingUp className="h-3 w-3 text-green-600" />
                   <span className="text-green-600 font-medium">{recentServices}</span>
@@ -467,11 +467,11 @@ export default function ServicesPage() {
         </Card>
 
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
-          <CardContent className="p-5">
+          <CardContent className="p-4">
             <div className="flex items-start justify-between">
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Active Now</p>
-                <p className="text-3xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{activeCount}</p>
+                <p className="text-2xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{activeCount}</p>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Zap className="h-3 w-3" />
                   <span>{Math.round((activeCount / (services.length || 1)) * 100)}% operational</span>
@@ -485,11 +485,11 @@ export default function ServicesPage() {
         </Card>
 
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
-          <CardContent className="p-5">
+          <CardContent className="p-4">
             <div className="flex items-start justify-between">
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Bots Deployed</p>
-                <p className="text-3xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{totalBots}</p>
+                <p className="text-2xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{totalBots}</p>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Bot className="h-3 w-3" />
                   <span>Automated units</span>
@@ -503,11 +503,11 @@ export default function ServicesPage() {
         </Card>
 
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
-          <CardContent className="p-5">
+          <CardContent className="p-4">
             <div className="flex items-start justify-between">
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Coverage</p>
-                <p className="text-3xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{(totalArea / 1000).toFixed(1)}k</p>
+                <p className="text-2xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{(totalArea / 1000).toFixed(1)}k</p>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Ruler className="h-3 w-3" />
                   <span>{Math.round(totalArea).toLocaleString()} m²</span>
@@ -522,11 +522,11 @@ export default function ServicesPage() {
       </div>
 
       {/* Main Content with Tabs and Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200">
         {/* Left: Services List (2/3 width) */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-3">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
               <TabsList className="grid w-full sm:w-auto grid-cols-4 h-11 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 p-1.5 rounded-2xl shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] border-0">
                 <TabsTrigger 
                   value="all" 
@@ -586,7 +586,7 @@ export default function ServicesPage() {
             </div>
 
             {/* Filters and Search - Soft UI */}
-            <div className="flex flex-wrap items-center gap-2 mb-4">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
               {/* Search */}
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -730,8 +730,8 @@ export default function ServicesPage() {
             <TabsContent value={activeTab} className="mt-0">
               {filteredServices.length > 0 ? (
                 <div className={viewMode === 'grid' 
-                  ? "grid gap-4 grid-cols-1 md:grid-cols-2" 
-                  : "space-y-3"
+                  ? "grid gap-3 grid-cols-1 md:grid-cols-2" 
+                  : "space-y-2"
                 }>
                   {filteredServices.map((service, index) => {
                     const Icon = getServiceIcon(service.service_type);
@@ -745,12 +745,12 @@ export default function ServicesPage() {
                         className="relative overflow-hidden border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300 cursor-pointer group hover:-translate-y-1"
                         onClick={() => navigate(`/portal/service/${service.id}`)}
                       >
-                        <CardContent className="p-4">
+                        <CardContent className="p-3">
                           {/* Header */}
-                          <div className="flex items-start justify-between gap-3 mb-3">
-                            <div className="flex items-start gap-3 flex-1 min-w-0">
-                              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-all duration-300 shadow-[0_4px_20px_rgb(255,107,53,0.15)] group-hover:shadow-[0_4px_20px_rgb(255,107,53,0.25)]">
-                                <Icon className="h-6 w-6 text-botkorp-orange" />
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="flex items-start gap-2 flex-1 min-w-0">
+                              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-all duration-300 shadow-[0_4px_20px_rgb(255,107,53,0.15)] group-hover:shadow-[0_4px_20px_rgb(255,107,53,0.25)]">
+                                <Icon className="h-5 w-5 text-botkorp-orange" />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <h4 className="text-sm font-bold truncate group-hover:text-botkorp-orange transition-colors">
@@ -779,20 +779,20 @@ export default function ServicesPage() {
                           </div>
 
                           {/* Stats */}
-                          <div className="grid grid-cols-3 gap-2 mb-3">
-                            <div className="text-center p-3 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all duration-300">
-                              <Sprout className="h-4 w-4 text-green-600 mx-auto mb-1" />
-                              <div className="text-lg font-bold tabular-nums">{service.garden_count}</div>
+                          <div className="grid grid-cols-3 gap-2 mb-2">
+                            <div className="text-center p-2 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all duration-300">
+                              <Sprout className="h-3.5 w-3.5 text-green-600 mx-auto mb-1" />
+                              <div className="text-base font-bold tabular-nums">{service.garden_count}</div>
                               <p className="text-[10px] text-muted-foreground font-medium">Gardens</p>
                             </div>
-                            <div className="text-center p-3 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all duration-300">
-                              <Bot className="h-4 w-4 text-botkorp-orange mx-auto mb-1" />
-                              <div className="text-lg font-bold tabular-nums">{service.bot_count}</div>
+                            <div className="text-center p-2 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all duration-300">
+                              <Bot className="h-3.5 w-3.5 text-botkorp-orange mx-auto mb-1" />
+                              <div className="text-base font-bold tabular-nums">{service.bot_count}</div>
                               <p className="text-[10px] text-muted-foreground font-medium">Bots</p>
                             </div>
-                            <div className="text-center p-3 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all duration-300">
-                              <Ruler className="h-4 w-4 text-blue-600 mx-auto mb-1" />
-                              <div className="text-lg font-bold tabular-nums">{Math.round(service.total_area)}</div>
+                            <div className="text-center p-2 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all duration-300">
+                              <Ruler className="h-3.5 w-3.5 text-blue-600 mx-auto mb-1" />
+                              <div className="text-base font-bold tabular-nums">{Math.round(service.total_area)}</div>
                               <p className="text-[10px] text-muted-foreground font-medium">m²</p>
                             </div>
                           </div>
@@ -814,7 +814,7 @@ export default function ServicesPage() {
                           )}
 
                           {service.status === 'pending_setup' && (
-                            <div className="flex items-start gap-2 p-3 rounded-xl bg-botkorp-orange/10 border-0">
+                            <div className="flex items-start gap-2 p-2 rounded-xl bg-botkorp-orange/10 border-0">
                               <Info className="h-4 w-4 text-botkorp-orange flex-shrink-0 mt-0.5" />
                               <p className="text-xs">
                                 Installation pending - we'll reach out within 24-48 hours
@@ -830,7 +830,7 @@ export default function ServicesPage() {
                         className="relative overflow-hidden border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 cursor-pointer group"
                         onClick={() => navigate(`/portal/service/${service.id}`)}
                       >
-                        <CardContent className="p-4">
+                        <CardContent className="p-3">
                           <div className="flex items-center justify-between gap-4">
                             <div className="flex items-center gap-4 flex-1 min-w-0">
                               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-all duration-300 shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
@@ -922,8 +922,8 @@ export default function ServicesPage() {
 
         {/* Right: Activity Timeline (1/3 width) - Soft UI */}
         <div className="lg:col-span-1">
-          <Card className="border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 sticky top-6">
-            <CardHeader className="pb-3 pt-5">
+          <Card className="border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 sticky top-4">
+            <CardHeader className="pb-2 pt-3">
               <div className="flex items-center gap-3 mb-1">
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
                   <Activity className="h-5 w-5 text-botkorp-orange" />
@@ -938,16 +938,16 @@ export default function ServicesPage() {
               {recentActivity.length > 0 ? (
                 <div className="divide-y divide-border/50">
                   {recentActivity.map((activity, index) => (
-                    <div key={index} className="px-5 py-3 hover:bg-botkorp-orange/5 transition-colors duration-300 cursor-pointer">
-                      <div className="flex gap-3">
+                    <div key={index} className="px-3 py-2 hover:bg-botkorp-orange/5 transition-colors duration-300 cursor-pointer">
+                      <div className="flex gap-2">
                         <div className="flex-shrink-0">
                           {activity.type === 'activated' ? (
-                            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-green-500/15 to-green-500/5 flex items-center justify-center shadow-[inset_2px_2px_5px_rgba(0,0,0,0.05)]">
-                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-green-500/15 to-green-500/5 flex items-center justify-center shadow-[inset_2px_2px_5px_rgba(0,0,0,0.05)]">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
                             </div>
                           ) : (
-                            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[inset_2px_2px_5px_rgba(0,0,0,0.05)]">
-                              <Plus className="h-4 w-4 text-blue-600" />
+                            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[inset_2px_2px_5px_rgba(0,0,0,0.05)]">
+                              <Plus className="h-3.5 w-3.5 text-blue-600" />
                             </div>
                           )}
                         </div>
@@ -982,22 +982,22 @@ export default function ServicesPage() {
             </CardContent>
 
             {/* Quick Stats in Sidebar */}
-            <CardContent className="pt-4 pb-5 border-t border-border/50">
-              <h4 className="text-xs font-bold mb-3">Quick Stats</h4>
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+            <CardContent className="pt-3 pb-3 border-t border-border/50">
+              <h4 className="text-xs font-bold mb-2">Quick Stats</h4>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs p-1.5 rounded-lg bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                   <span className="text-muted-foreground font-medium">Total Services</span>
                   <span className="font-bold tabular-nums">{services.length}</span>
                 </div>
-                <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                <div className="flex items-center justify-between text-xs p-1.5 rounded-lg bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                   <span className="text-muted-foreground font-medium">Active</span>
                   <span className="font-bold text-green-600 tabular-nums">{activeCount}</span>
                 </div>
-                <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                <div className="flex items-center justify-between text-xs p-1.5 rounded-lg bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                   <span className="text-muted-foreground font-medium">Pending</span>
                   <span className="font-bold text-orange-600 tabular-nums">{pendingCount}</span>
                 </div>
-                <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
+                <div className="flex items-center justify-between text-xs p-1.5 rounded-lg bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)]">
                   <span className="text-muted-foreground font-medium">Paused</span>
                   <span className="font-bold text-amber-600 tabular-nums">{pausedCount}</span>
                 </div>

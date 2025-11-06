@@ -22,38 +22,37 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { 
-  CreditCard, 
-  Plus, 
-  Trash2, 
-  Check, 
-  AlertCircle, 
-  Loader2,
-  Star,
-  Calendar,
-  DollarSign,
-  Bot as BotIcon,
-  Receipt,
-  TrendingUp,
-  Download,
-  Eye,
-  FileText,
-  ArrowDown,
-  ArrowUp,
-  Activity,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Wallet,
-  BarChart3,
-  PieChart,
-  Zap,
-  Shield,
-  TrendingDown,
-  Filter,
-  Search,
-  MoreVertical,
-  RefreshCw
-} from 'lucide-react';
+  FiCreditCard,
+  FiPlus,
+  FiTrash2,
+  FiCheck,
+  FiAlertCircle,
+  FiLoader,
+  FiStar,
+  FiCalendar,
+  FiDollarSign,
+  FiTrendingUp,
+  FiDownload,
+  FiEye,
+  FiFileText,
+  FiArrowDown,
+  FiArrowUp,
+  FiActivity,
+  FiCheckCircle,
+  FiXCircle,
+  FiClock,
+  FiBarChart2,
+  FiPieChart,
+  FiZap,
+  FiShield,
+  FiTrendingDown,
+  FiFilter,
+  FiSearch,
+  FiMoreVertical,
+  FiRefreshCw
+} from 'react-icons/fi';
+import { MdReceipt, MdAccountBalanceWallet, MdSmartToy } from 'react-icons/md';
+import { FaCcVisa, FaCcMastercard, FaCreditCard } from 'react-icons/fa';
 import { supabase } from '@/lib/supabase';
 import { usePaymentAuthorizations, usePaystack, formatCardNumber, formatExpiryDate, getCardIcon, isCardExpired } from '@/hooks/use-paystack';
 import { useAuth } from '@/context/auth-context';
@@ -291,13 +290,13 @@ export default function BillingPage() {
   const getTransactionIcon = (status) => {
     switch (status) {
       case 'success':
-        return <CheckCircle className="h-5 w-5 text-[#10B981]" />;
+        return <FiCheckCircle className="h-5 w-5 text-[#10B981]" />;
       case 'failed':
-        return <XCircle className="h-5 w-5 text-[#EF4444]" />;
+        return <FiXCircle className="h-5 w-5 text-[#EF4444]" />;
       case 'pending':
-        return <Clock className="h-5 w-5 text-[#F59E0B]" />;
+        return <FiClock className="h-5 w-5 text-[#F59E0B]" />;
       default:
-        return <Activity className="h-5 w-5 text-[#B0B3B8]" />;
+        return <FiActivity className="h-5 w-5 text-[#B0B3B8]" />;
     }
   };
 
@@ -388,7 +387,7 @@ export default function BillingPage() {
         <PageHeader
           title="Billing & Payments"
           subtitle="Comprehensive financial overview & management"
-          icon={<Wallet className="h-5 w-5 text-botkorp-orange" />}
+          icon={<MdAccountBalanceWallet className="h-5 w-5 text-botkorp-orange" />}
           action={
             <Button 
               variant="outline" 
@@ -400,7 +399,7 @@ export default function BillingPage() {
               }}
               className="h-9 px-4 rounded-xl border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95"
             >
-              <RefreshCw className="h-4 w-4 mr-2" />
+              <FiRefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
           }
@@ -415,14 +414,14 @@ export default function BillingPage() {
             <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2 pt-5">
               <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Monthly Bill</CardTitle>
               <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-botkorp-orange/20 to-botkorp-orange/10 dark:from-botkorp-orange/30 dark:to-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-                <DollarSign className="h-4 w-4 text-botkorp-orange transition-all duration-500" />
+                <FiDollarSign className="h-4 w-4 text-botkorp-orange transition-all duration-500" />
               </div>
             </CardHeader>
             <CardContent className="relative pb-5">
               <div className="text-3xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">R{totalMonthly.toFixed(2)}</div>
               {nextBillingDate && (
                 <p className="text-[11px] text-muted-foreground font-semibold mt-1 flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
+                  <FiCalendar className="h-3 w-3" />
                   Next: {new Date(nextBillingDate).toLocaleDateString('en-ZA', { month: 'short', day: 'numeric' })}
                 </p>
               )}
@@ -434,7 +433,7 @@ export default function BillingPage() {
             <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2 pt-5">
               <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Spent</CardTitle>
               <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-[#4F5D75]/20 to-[#4F5D75]/10 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-                <BarChart3 className="h-4 w-4 text-[#4F5D75] transition-all duration-500" />
+                <FiBarChart2 className="h-4 w-4 text-[#4F5D75] transition-all duration-500" />
               </div>
             </CardHeader>
             <CardContent className="relative pb-5">
@@ -448,7 +447,7 @@ export default function BillingPage() {
             <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2 pt-5">
               <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Success Rate</CardTitle>
               <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-[#10B981]/20 to-[#10B981]/10 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-                <Zap className="h-4 w-4 text-[#10B981] transition-all duration-500" />
+                <FiZap className="h-4 w-4 text-[#10B981] transition-all duration-500" />
               </div>
             </CardHeader>
             <CardContent className="relative pb-5">
@@ -465,9 +464,9 @@ export default function BillingPage() {
               <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Monthly Trend</CardTitle>
               <div className={`h-10 w-10 rounded-2xl bg-gradient-to-br ${analytics.spendingChange >= 0 ? 'from-[#F59E0B]/20 to-[#F59E0B]/10' : 'from-[#10B981]/20 to-[#10B981]/10'} flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]`}>
                 {analytics.spendingChange >= 0 ? (
-                  <TrendingUp className="h-4 w-4 text-[#F59E0B] transition-all duration-500" />
+                  <FiTrendingUp className="h-4 w-4 text-[#F59E0B] transition-all duration-500" />
                 ) : (
-                  <TrendingDown className="h-4 w-4 text-[#10B981] transition-all duration-500" />
+                  <FiTrendingDown className="h-4 w-4 text-[#10B981] transition-all duration-500" />
                 )}
               </div>
             </CardHeader>
@@ -490,14 +489,14 @@ export default function BillingPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#10B981]/15 to-[#10B981]/5 flex items-center justify-center shadow-[0_4px_20px_rgb(16,185,129,0.15)]">
-                      <Shield className="h-5 w-5 text-[#10B981]" />
+                      <FiShield className="h-5 w-5 text-[#10B981]" />
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground font-medium">Auto-billing</p>
                       <p className="text-sm font-bold">Active</p>
                     </div>
                   </div>
-                  <CheckCircle className="h-5 w-5 text-[#10B981]" />
+                  <FiCheckCircle className="h-5 w-5 text-[#10B981]" />
                 </div>
               </CardContent>
             </Card>
@@ -509,7 +508,7 @@ export default function BillingPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
-                      <BotIcon className="h-5 w-5 text-botkorp-orange" />
+                      <MdSmartToy className="h-5 w-5 text-botkorp-orange" />
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground font-medium">Active Bots</p>
@@ -527,7 +526,7 @@ export default function BillingPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#4F5D75]/15 to-[#4F5D75]/5 flex items-center justify-center shadow-[0_4px_20px_rgb(79,93,117,0.15)]">
-                      <CreditCard className="h-5 w-5 text-[#4F5D75]" />
+                      <FiCreditCard className="h-5 w-5 text-[#4F5D75]" />
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground font-medium">Payment Methods</p>
@@ -548,28 +547,28 @@ export default function BillingPage() {
             value="overview" 
             className="rounded-2xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-botkorp-orange data-[state=active]:to-botkorp-orange/90 data-[state=active]:text-white data-[state=active]:shadow-[4px_4px_12px_rgba(0,0,0,0.2),-2px_-2px_8px_rgba(255,255,255,0.1)] transition-all duration-300 text-xs font-bold hover:bg-botkorp-orange/5"
           >
-            <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+            <FiBarChart2 className="h-3.5 w-3.5 mr-1.5" />
             Overview
           </TabsTrigger>
           <TabsTrigger 
             value="subscriptions" 
             className="rounded-2xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-botkorp-orange data-[state=active]:to-botkorp-orange/90 data-[state=active]:text-white data-[state=active]:shadow-[4px_4px_12px_rgba(0,0,0,0.2),-2px_-2px_8px_rgba(255,255,255,0.1)] transition-all duration-300 text-xs font-bold hover:bg-botkorp-orange/5"
           >
-            <Receipt className="h-3.5 w-3.5 mr-1.5" />
+            <MdReceipt className="h-3.5 w-3.5 mr-1.5" />
             Subscriptions
           </TabsTrigger>
           <TabsTrigger 
             value="payments" 
             className="rounded-2xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-botkorp-orange data-[state=active]:to-botkorp-orange/90 data-[state=active]:text-white data-[state=active]:shadow-[4px_4px_12px_rgba(0,0,0,0.2),-2px_-2px_8px_rgba(255,255,255,0.1)] transition-all duration-300 text-xs font-bold hover:bg-botkorp-orange/5"
           >
-            <CreditCard className="h-3.5 w-3.5 mr-1.5" />
+            <FiCreditCard className="h-3.5 w-3.5 mr-1.5" />
             Payment Methods
           </TabsTrigger>
           <TabsTrigger 
             value="history" 
             className="rounded-2xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-botkorp-orange data-[state=active]:to-botkorp-orange/90 data-[state=active]:text-white data-[state=active]:shadow-[4px_4px_12px_rgba(0,0,0,0.2),-2px_-2px_8px_rgba(255,255,255,0.1)] transition-all duration-300 text-xs font-bold hover:bg-botkorp-orange/5"
           >
-            <Activity className="h-3.5 w-3.5 mr-1.5" />
+            <FiActivity className="h-3.5 w-3.5 mr-1.5" />
             History
           </TabsTrigger>
         </TabsList>
@@ -583,7 +582,7 @@ export default function BillingPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
-                      <Receipt className="h-5 w-5 text-botkorp-orange" />
+                      <MdReceipt className="h-5 w-5 text-botkorp-orange" />
                     </div>
                     <div>
                       <CardTitle className="text-base font-bold">Current Billing</CardTitle>
@@ -627,7 +626,7 @@ export default function BillingPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#4F5D75]/15 to-[#4F5D75]/5 flex items-center justify-center shadow-[0_4px_20px_rgb(79,93,117,0.15)]">
-                      <PieChart className="h-5 w-5 text-[#4F5D75]" />
+                      <FiPieChart className="h-5 w-5 text-[#4F5D75]" />
                     </div>
                     <div>
                       <CardTitle className="text-base font-bold">Spending Insights</CardTitle>
@@ -684,7 +683,7 @@ export default function BillingPage() {
             <Card className="bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] animate-in fade-in slide-in-from-bottom-4 duration-500 border-0">
               <CardContent className="text-center py-16">
                 <div className="h-24 w-24 rounded-3xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 mx-auto mb-6 flex items-center justify-center shadow-[0_8px_30px_rgb(255,107,53,0.15)] animate-in zoom-in-50 duration-500 delay-100">
-                  <Wallet className="h-12 w-12 text-botkorp-orange" />
+                  <MdAccountBalanceWallet className="h-12 w-12 text-botkorp-orange" />
                 </div>
                 <h3 className="text-2xl font-bold mb-3 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-200">Welcome to Billing</h3>
                 <p className="text-muted-foreground max-w-md mx-auto mb-6 text-sm leading-relaxed animate-in fade-in slide-in-from-bottom-2 duration-500 delay-300">
@@ -697,12 +696,12 @@ export default function BillingPage() {
                 >
                   {processing ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <FiLoader className="h-4 w-4 mr-2 animate-spin" />
                       Processing...
                     </>
                   ) : (
                     <>
-                      <Plus className="h-4 w-4 mr-2" />
+                      <FiPlus className="h-4 w-4 mr-2" />
                       Add Payment Method
                     </>
                   )}
@@ -720,7 +719,7 @@ export default function BillingPage() {
                   <CardHeader className="pb-3 pt-5">
                     <div className="flex items-center gap-3">
                       <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#4F5D75]/15 to-[#4F5D75]/5 flex items-center justify-center shadow-[0_4px_20px_rgb(79,93,117,0.15)]">
-                        <Activity className="h-5 w-5 text-[#4F5D75]" />
+                        <FiActivity className="h-5 w-5 text-[#4F5D75]" />
                       </div>
                       <CardTitle className="text-base font-bold">Recent Transactions</CardTitle>
                     </div>
@@ -752,7 +751,7 @@ export default function BillingPage() {
                   <CardHeader className="pb-3 pt-5">
                     <div className="flex items-center gap-3">
                       <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
-                        <Calendar className="h-5 w-5 text-botkorp-orange" />
+                        <FiCalendar className="h-5 w-5 text-botkorp-orange" />
                       </div>
                       <CardTitle className="text-base font-bold">Upcoming Payments</CardTitle>
                     </div>
@@ -807,7 +806,7 @@ export default function BillingPage() {
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div className="flex items-center gap-3">
                     <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
-                      <Receipt className="h-5 w-5 text-botkorp-orange" />
+                      <MdReceipt className="h-5 w-5 text-botkorp-orange" />
                     </div>
                     <div>
                       <CardTitle className="text-base font-bold">Active Subscriptions</CardTitle>
@@ -840,7 +839,7 @@ export default function BillingPage() {
                       <div className="flex items-center justify-between py-2.5 px-3 bg-background/40 rounded-lg">
                         <div className="flex items-center gap-2.5">
                           <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.1)]">
-                            <BotIcon className="h-4 w-4 text-botkorp-orange" />
+                            <MdSmartToy className="h-4 w-4 text-botkorp-orange" />
                           </div>
                           <div>
                             <p className="font-semibold text-xs">
@@ -904,7 +903,7 @@ export default function BillingPage() {
             <Card className="bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] animate-in fade-in slide-in-from-bottom-4 duration-500 border-0">
               <CardContent className="text-center py-16">
                 <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 mx-auto mb-6 flex items-center justify-center shadow-[0_8px_30px_rgb(255,107,53,0.15)] animate-in zoom-in-50 duration-500 delay-100">
-                  <Receipt className="h-10 w-10 text-botkorp-orange animate-pulse" />
+                  <MdReceipt className="h-10 w-10 text-botkorp-orange animate-pulse" />
                 </div>
                 <h3 className="text-xl font-bold mb-2 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-200">No active subscriptions</h3>
                 <p className="text-muted-foreground max-w-sm mx-auto text-sm leading-relaxed animate-in fade-in slide-in-from-bottom-2 duration-500 delay-300">
@@ -936,12 +935,12 @@ export default function BillingPage() {
                 >
                   {processing ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <FiLoader className="h-4 w-4 mr-2 animate-spin" />
                       Processing...
                     </>
                   ) : (
                     <>
-                      <Plus className="h-4 w-4 mr-2" />
+                      <FiPlus className="h-4 w-4 mr-2" />
                       Add Card
                     </>
                   )}
@@ -952,12 +951,12 @@ export default function BillingPage() {
               <div>
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <FiLoader className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : authorizations.length === 0 ? (
             <div className="text-center py-16">
               <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 mx-auto mb-6 flex items-center justify-center shadow-[0_8px_30px_rgb(255,107,53,0.15)] animate-in zoom-in-50 duration-500 delay-100">
-                <CreditCard className="h-10 w-10 text-botkorp-orange" />
+                <FiCreditCard className="h-10 w-10 text-botkorp-orange" />
               </div>
               <h3 className="text-xl font-bold mb-2 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-200">No payment methods</h3>
               <p className="text-muted-foreground/70 mb-6 max-w-sm mx-auto text-sm leading-relaxed animate-in fade-in slide-in-from-bottom-2 duration-500 delay-300">
@@ -968,7 +967,7 @@ export default function BillingPage() {
                 disabled={processing}
                 className="h-11 px-6 font-semibold bg-gradient-to-br from-botkorp-orange to-botkorp-orange/90 shadow-[4px_4px_12px_rgba(0,0,0,0.2),-2px_-2px_8px_rgba(255,255,255,0.1)] hover:shadow-[6px_6px_16px_rgba(0,0,0,0.25),-3px_-3px_10px_rgba(255,255,255,0.15)] active:scale-95 transition-all duration-300 rounded-2xl border-0 text-white animate-in fade-in zoom-in-50 duration-500 delay-400"
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <FiPlus className="h-4 w-4 mr-2" />
                 Add Your First Card
               </Button>
             </div>
@@ -992,7 +991,7 @@ export default function BillingPage() {
                         <div className={`h-12 w-20 rounded-lg flex items-center justify-center shadow-lg ${
                           auth.is_default ? 'bg-gradient-to-br from-botkorp-orange to-botkorp-orange/70' : 'bg-gradient-to-br from-gray-700 to-gray-900'
                         } text-white`}>
-                          <CreditCard className="h-6 w-6" />
+                          <FiCreditCard className="h-6 w-6" />
                         </div>
                         
                         <div>
@@ -1002,7 +1001,7 @@ export default function BillingPage() {
                             </p>
                             {auth.is_default && (
                               <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-botkorp-orange/15 text-botkorp-orange text-[9px] font-semibold">
-                                <Star className="h-2.5 w-2.5 fill-current" />
+                                <FiStar className="h-2.5 w-2.5 fill-current" />
                                 Default
                               </span>
                             )}
@@ -1016,7 +1015,7 @@ export default function BillingPage() {
                           <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
                             <span>{getCardIcon(auth.card_type)}</span>
                             <span className="flex items-center gap-0.5">
-                              <Calendar className="h-2.5 w-2.5" />
+                              <FiCalendar className="h-2.5 w-2.5" />
                               {formatExpiryDate(auth.exp_month, auth.exp_year)}
                             </span>
                             {auth.bank && <span>• {auth.bank}</span>}
@@ -1039,10 +1038,10 @@ export default function BillingPage() {
                             className="h-8 px-3 text-xs rounded-xl border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95"
                           >
                             {settingDefaultId === auth.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              <FiLoader className="h-3.5 w-3.5 animate-spin" />
                             ) : (
                               <>
-                                <Star className="h-3.5 w-3.5 mr-1" />
+                                <FiStar className="h-3.5 w-3.5 mr-1" />
                                 Set Default
                               </>
                             )}
@@ -1055,7 +1054,7 @@ export default function BillingPage() {
                           onClick={() => setDeletingId(auth.id)}
                           className="h-8 w-8 p-0 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all active:scale-95"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <FiTrash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </div>
@@ -1063,7 +1062,7 @@ export default function BillingPage() {
                     {expired && (
                       <div className="mt-4 p-3 bg-[#EF4444]/10 border border-[#EF4444]/20 rounded-xl">
                         <div className="flex items-start gap-2">
-                          <AlertCircle className="h-4 w-4 text-[#EF4444] mt-0.5" />
+                          <FiAlertCircle className="h-4 w-4 text-[#EF4444] mt-0.5" />
                           <p className="text-sm text-[#EF4444]">
                             This card has expired. Please add a new card and remove this one.
                           </p>
@@ -1079,7 +1078,7 @@ export default function BillingPage() {
                 {/* Info Card */}
                 {authorizations.length > 0 && (
                   <Alert className="mt-6 border-[#4F5D75]/20 bg-[#4F5D75]/5">
-                    <AlertCircle className="h-4 w-4 text-[#4F5D75]" />
+                    <FiAlertCircle className="h-4 w-4 text-[#4F5D75]" />
                     <AlertDescription className="text-sm">
                       <strong className="font-semibold">Card Verification:</strong> When adding a new card, we charge R1 to verify it. 
                       This may be refunded by your bank or appear as a pending transaction.
@@ -1099,7 +1098,7 @@ export default function BillingPage() {
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
                   <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#4F5D75]/15 to-[#4F5D75]/5 flex items-center justify-center shadow-[0_4px_20px_rgb(79,93,117,0.15)]">
-                    <Activity className="h-5 w-5 text-[#4F5D75]" />
+                    <FiActivity className="h-5 w-5 text-[#4F5D75]" />
                   </div>
                   <div>
                     <CardTitle className="text-base font-bold">Transaction History</CardTitle>
@@ -1124,12 +1123,12 @@ export default function BillingPage() {
               <div>
           {loadingTransactions ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <FiLoader className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : filteredTransactions.length === 0 ? (
             <div className="text-center py-16">
               <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 mx-auto mb-6 flex items-center justify-center shadow-[0_8px_30px_rgb(255,107,53,0.15)] animate-in zoom-in-50 duration-500 delay-100">
-                <Activity className="h-10 w-10 text-botkorp-orange animate-pulse" />
+                <FiActivity className="h-10 w-10 text-botkorp-orange animate-pulse" />
               </div>
               <h3 className="text-xl font-bold mb-2 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-200">
                 {transactionFilter === 'all' ? 'No transactions yet' : `No ${transactionFilter} transactions`}
@@ -1162,7 +1161,7 @@ export default function BillingPage() {
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                        <Calendar className="h-3 w-3" />
+                        <FiCalendar className="h-3 w-3" />
                         <span>{new Date(transaction.created_at).toLocaleDateString('en-ZA', { 
                           year: 'numeric', 
                           month: 'short', 
@@ -1186,7 +1185,7 @@ export default function BillingPage() {
                       )}
                       {transaction.attempt_number > 1 && (
                         <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                          <RefreshCw className="h-3 w-3" />
+                          <FiRefreshCw className="h-3 w-3" />
                           Attempt #{transaction.attempt_number}
                         </p>
                       )}
@@ -1196,13 +1195,13 @@ export default function BillingPage() {
                     <p className="text-xl font-bold">R{parseFloat(transaction.amount).toFixed(2)}</p>
                     {transaction.status === 'success' && transaction.processed_at && (
                       <p className="text-xs text-[#10B981] flex items-center gap-1 justify-end mt-1">
-                        <CheckCircle className="h-3 w-3" />
+                        <FiCheckCircle className="h-3 w-3" />
                         Processed {new Date(transaction.processed_at).toLocaleDateString()}
                       </p>
                     )}
                     {transaction.status === 'pending' && transaction.next_retry_at && (
                       <p className="text-xs text-[#F59E0B] flex items-center gap-1 justify-end mt-1">
-                        <Clock className="h-3 w-3" />
+                        <FiClock className="h-3 w-3" />
                         Retry: {new Date(transaction.next_retry_at).toLocaleDateString()}
                       </p>
                     )}
@@ -1221,7 +1220,7 @@ export default function BillingPage() {
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
                   <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
-                    <FileText className="h-5 w-5 text-botkorp-orange" />
+                    <FiFileText className="h-5 w-5 text-botkorp-orange" />
                   </div>
                   <div>
                     <CardTitle className="text-base font-bold">Invoices</CardTitle>
@@ -1239,12 +1238,12 @@ export default function BillingPage() {
               <div>
           {loadingInvoices ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <FiLoader className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : invoices.length === 0 ? (
             <div className="text-center py-16">
               <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 mx-auto mb-6 flex items-center justify-center shadow-[0_8px_30px_rgb(255,107,53,0.15)] animate-in zoom-in-50 duration-500 delay-100">
-                <FileText className="h-10 w-10 text-botkorp-orange animate-pulse" />
+                <FiFileText className="h-10 w-10 text-botkorp-orange animate-pulse" />
               </div>
               <h3 className="text-xl font-bold mb-2 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-200">No invoices yet</h3>
               <p className="text-muted-foreground/70 max-w-sm mx-auto text-sm leading-relaxed animate-in fade-in slide-in-from-bottom-2 duration-500 delay-300">
@@ -1261,7 +1260,7 @@ export default function BillingPage() {
                 >
                   <div className="flex items-center gap-4">
                     <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center border border-botkorp-orange/20">
-                      <Receipt className="h-6 w-6 text-botkorp-orange" />
+                      <MdReceipt className="h-6 w-6 text-botkorp-orange" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
@@ -1271,7 +1270,7 @@ export default function BillingPage() {
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                        <Calendar className="h-3 w-3" />
+                        <FiCalendar className="h-3 w-3" />
                         <span>{new Date(invoice.issue_date).toLocaleDateString('en-ZA', { 
                           year: 'numeric', 
                           month: 'short', 
@@ -1285,13 +1284,13 @@ export default function BillingPage() {
                       <p className="text-xl font-bold">R{parseFloat(invoice.total_amount).toFixed(2)}</p>
                       {invoice.status === 'paid' && invoice.paid_date && (
                         <p className="text-xs text-[#10B981] flex items-center gap-1 justify-end mt-1">
-                          <CheckCircle className="h-3 w-3" />
+                          <FiCheckCircle className="h-3 w-3" />
                           Paid {new Date(invoice.paid_date).toLocaleDateString()}
                         </p>
                       )}
                       {invoice.status !== 'paid' && invoice.due_date && (
                         <p className="text-xs text-[#F59E0B] flex items-center gap-1 justify-end mt-1">
-                          <Clock className="h-3 w-3" />
+                          <FiClock className="h-3 w-3" />
                           Due {new Date(invoice.due_date).toLocaleDateString()}
                         </p>
                       )}
@@ -1304,7 +1303,7 @@ export default function BillingPage() {
                           onClick={() => setSelectedInvoicePdf({ url: invoice.invoice_pdf_url, number: invoice.invoice_number })}
                           className="h-9 px-3 rounded-xl border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95"
                         >
-                          <Eye className="h-4 w-4 mr-2" />
+                          <FiEye className="h-4 w-4 mr-2" />
                           View
                         </Button>
                         <Button
@@ -1318,13 +1317,13 @@ export default function BillingPage() {
                           }}
                           className="h-9 px-3 rounded-xl border-0 bg-gradient-to-br from-botkorp-orange to-botkorp-orange/90 shadow-[4px_4px_12px_rgba(0,0,0,0.2),-2px_-2px_8px_rgba(255,255,255,0.1)] hover:shadow-[6px_6px_16px_rgba(0,0,0,0.25),-3px_-3px_10px_rgba(255,255,255,0.15)] active:scale-95 transition-all duration-300 text-white"
                         >
-                          <Download className="h-4 w-4 mr-2" />
+                          <FiDownload className="h-4 w-4 mr-2" />
                           Download
                         </Button>
                       </div>
                     ) : (
                       <Badge variant="secondary" className="text-xs">
-                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        <FiLoader className="h-3 w-3 mr-1 animate-spin" />
                         Generating PDF...
                       </Badge>
                     )}
@@ -1345,7 +1344,7 @@ export default function BillingPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-xl font-bold">
               <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
-                <FileText className="h-5 w-5 text-botkorp-orange" />
+                <FiFileText className="h-5 w-5 text-botkorp-orange" />
               </div>
               Invoice {selectedInvoicePdf?.number}
             </DialogTitle>
