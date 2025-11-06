@@ -323,7 +323,7 @@ export default function PortalLayout() {
           <div className="px-3 pb-3 pt-2">
             <div className="border-t border-gray-200/60 dark:border-botkorp-slate-blue/20 pt-3 pb-2">
               <div className="flex items-center gap-2 px-2 mb-2">
-                <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-botkorp-slate-blue via-blue-600 to-blue-700 flex items-center justify-center shadow-[0_4px_12px_rgb(79,93,117,0.25)]">
+                <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-botkorp-slate-blue via-botkorp-slate-blue to-botkorp-slate-blue-light flex items-center justify-center shadow-[0_4px_12px_rgb(79,93,117,0.25)]">
                   <Shield className="h-3.5 w-3.5 text-white" />
                 </div>
                 <p className="text-[9px] font-bold text-gray-500/70 dark:text-botkorp-silver/60 uppercase tracking-widest">
@@ -336,7 +336,7 @@ export default function PortalLayout() {
                     key={item.path}
                     className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all duration-300 group relative overflow-hidden ${
                       isActivePath(item.path)
-                        ? 'bg-gradient-to-br from-botkorp-slate-blue via-blue-600 to-blue-700 text-white shadow-[0_4px_16px_rgb(79,93,117,0.3)] hover:shadow-[0_6px_20px_rgb(79,93,117,0.4)] scale-[1.01]'
+                        ? 'bg-gradient-to-br from-botkorp-slate-blue via-botkorp-slate-blue to-botkorp-slate-blue-light text-white shadow-[0_4px_16px_rgb(79,93,117,0.3)] hover:shadow-[0_6px_20px_rgb(79,93,117,0.4)] scale-[1.01]'
                         : 'text-gray-700 dark:text-botkorp-silver bg-white/60 dark:bg-botkorp-black-light/30 shadow-[0_2px_6px_rgb(0,0,0,0.04)] dark:shadow-[0_2px_6px_rgb(0,0,0,0.1)] hover:shadow-[0_4px_10px_rgb(0,0,0,0.08)] dark:hover:shadow-[0_4px_10px_rgb(79,93,117,0.15)] hover:bg-white dark:hover:bg-botkorp-slate-blue/20 hover:text-gray-900 dark:hover:text-white hover:scale-[1.01]'
                     }`}
                     onClick={() => {
@@ -427,7 +427,7 @@ export default function PortalLayout() {
         {/* Organization Selector - Soft UI design */}
         <div className="pt-2 border-t border-gray-200/60 dark:border-botkorp-slate-blue/20">
           <div className="flex items-center gap-2 px-2 mb-2">
-            <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-botkorp-orange via-orange-500 to-orange-600 flex items-center justify-center shadow-[0_4px_12px_rgb(255,107,53,0.25)]">
+            <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-purple-500 via-purple-600 to-violet-600 flex items-center justify-center shadow-[0_4px_12px_rgb(139,92,246,0.25)]">
               <Building className="h-3.5 w-3.5 text-white" />
             </div>
             <p className="text-[9px] font-bold text-gray-500/70 dark:text-botkorp-silver/60 uppercase tracking-widest">
@@ -442,8 +442,8 @@ export default function PortalLayout() {
                 key={org.organization_id}
                 className={`w-full text-left px-3 py-2.5 rounded-xl transition-all duration-300 group relative overflow-hidden ${
                   selectedOrg?.organization_id === org.organization_id
-                    ? 'bg-gradient-to-br from-botkorp-orange/15 via-botkorp-orange/10 to-botkorp-orange/5 border border-botkorp-orange/40 shadow-[0_4px_12px_rgb(255,107,53,0.15)] scale-[1.01]'
-                    : 'text-gray-700 dark:text-botkorp-silver bg-white/60 dark:bg-botkorp-black-light/30 shadow-[0_2px_6px_rgb(0,0,0,0.04)] dark:shadow-[0_2px_6px_rgb(0,0,0,0.1)] hover:shadow-[0_4px_10px_rgb(0,0,0,0.08)] dark:hover:shadow-[0_4px_10px_rgb(255,107,53,0.15)] hover:bg-white dark:hover:bg-botkorp-slate-blue/20 border border-transparent hover:scale-[1.01]'
+                    ? 'bg-gradient-to-br from-purple-500/15 via-purple-500/10 to-purple-500/5 border border-purple-500/40 shadow-[0_4px_12px_rgb(139,92,246,0.15)] scale-[1.01]'
+                    : 'text-gray-700 dark:text-botkorp-silver bg-white/60 dark:bg-botkorp-black-light/30 shadow-[0_2px_6px_rgb(0,0,0,0.04)] dark:shadow-[0_2px_6px_rgb(0,0,0,0.1)] hover:shadow-[0_4px_10px_rgb(0,0,0,0.08)] dark:hover:shadow-[0_4px_10px_rgb(139,92,246,0.15)] hover:bg-white dark:hover:bg-purple-500/20 border border-transparent hover:scale-[1.01]'
                 }`}
                 onClick={() => {
                   handleOrgChange(org);
@@ -452,14 +452,14 @@ export default function PortalLayout() {
               >
                 {/* Shine effect on selected */}
                 {selectedOrg?.organization_id === org.organization_id && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-botkorp-orange/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-500/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                 )}
                 
                 <div className="flex items-center gap-2.5 relative">
                   <div className={`h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold shadow-sm transition-all duration-300 ${
                     selectedOrg?.organization_id === org.organization_id
-                      ? 'bg-gradient-to-br from-botkorp-orange via-orange-500 to-orange-600 text-white scale-105 shadow-[0_4px_10px_rgb(255,107,53,0.25)]'
-                      : 'bg-gradient-to-br from-gray-100 to-gray-200 dark:from-botkorp-slate-blue/20 dark:to-botkorp-slate-blue/10 text-gray-700 dark:text-botkorp-silver group-hover:from-botkorp-orange/20 group-hover:to-botkorp-orange/10 group-hover:text-botkorp-orange group-hover:scale-105 shadow-[inset_0_1px_2px_rgba(255,255,255,0.5)] dark:shadow-none'
+                      ? 'bg-gradient-to-br from-purple-500 via-purple-600 to-violet-600 text-white scale-105 shadow-[0_4px_10px_rgb(139,92,246,0.25)]'
+                      : 'bg-gradient-to-br from-gray-100 to-gray-200 dark:from-botkorp-slate-blue/20 dark:to-botkorp-slate-blue/10 text-gray-700 dark:text-botkorp-silver group-hover:from-purple-500/20 group-hover:to-purple-500/10 group-hover:text-purple-600 dark:group-hover:text-purple-400 group-hover:scale-105 shadow-[inset_0_1px_2px_rgba(255,255,255,0.5)] dark:shadow-none'
                   }`}>
                     {org.organization_name.charAt(0).toUpperCase()}
                   </div>
@@ -480,8 +480,8 @@ export default function PortalLayout() {
                     </p>
                   </div>
                   {selectedOrg?.organization_id === org.organization_id && (
-                    <div className="flex items-center justify-center h-5 w-5 rounded-lg bg-botkorp-orange/20">
-                      <div className="h-1.5 w-1.5 rounded-full bg-botkorp-orange shadow-[0_2px_6px_rgba(255,107,53,0.5)] animate-pulse" />
+                    <div className="flex items-center justify-center h-5 w-5 rounded-lg bg-purple-500/20">
+                      <div className="h-1.5 w-1.5 rounded-full bg-purple-500 shadow-[0_2px_6px_rgba(139,92,246,0.5)] animate-pulse" />
                     </div>
                   )}
                 </div>
@@ -490,13 +490,13 @@ export default function PortalLayout() {
             
             {/* Create Organization Button */}
             <button
-              className="w-full text-left px-3 py-2.5 rounded-xl transition-all duration-300 text-gray-700 dark:text-botkorp-silver bg-white/40 dark:bg-botkorp-black-light/20 shadow-[0_2px_6px_rgb(0,0,0,0.04)] dark:shadow-[0_2px_6px_rgb(0,0,0,0.1)] hover:shadow-[0_4px_10px_rgb(0,0,0,0.08)] dark:hover:shadow-[0_4px_10px_rgb(255,107,53,0.15)] hover:bg-botkorp-orange/10 hover:text-gray-900 dark:hover:text-white border border-dashed border-gray-300/60 dark:border-botkorp-slate-blue/30 hover:border-botkorp-orange hover:scale-[1.01] flex items-center gap-2.5 group relative overflow-hidden"
+              className="w-full text-left px-3 py-2.5 rounded-xl transition-all duration-300 text-gray-700 dark:text-botkorp-silver bg-white/40 dark:bg-botkorp-black-light/20 shadow-[0_2px_6px_rgb(0,0,0,0.04)] dark:shadow-[0_2px_6px_rgb(0,0,0,0.1)] hover:shadow-[0_4px_10px_rgb(0,0,0,0.08)] dark:hover:shadow-[0_4px_10px_rgb(139,92,246,0.15)] hover:bg-purple-500/10 hover:text-gray-900 dark:hover:text-white border border-dashed border-gray-300/60 dark:border-botkorp-slate-blue/30 hover:border-purple-500 hover:scale-[1.01] flex items-center gap-2.5 group relative overflow-hidden"
               onClick={() => setShowCreateOrgDialog(true)}
             >
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 dark:from-botkorp-slate-blue/20 dark:to-botkorp-slate-blue/10 flex items-center justify-center group-hover:from-botkorp-orange group-hover:to-orange-600 group-hover:text-white transition-all duration-300 shadow-[inset_0_1px_2px_rgba(255,255,255,0.5)] dark:shadow-none group-hover:shadow-[0_4px_10px_rgb(255,107,53,0.25)] group-hover:scale-105">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 dark:from-botkorp-slate-blue/20 dark:to-botkorp-slate-blue/10 flex items-center justify-center group-hover:from-purple-500 group-hover:to-violet-600 group-hover:text-white transition-all duration-300 shadow-[inset_0_1px_2px_rgba(255,255,255,0.5)] dark:shadow-none group-hover:shadow-[0_4px_10px_rgb(139,92,246,0.25)] group-hover:scale-105">
                 <Plus className="h-3.5 w-3.5" />
               </div>
-              <span className="text-xs font-semibold group-hover:text-botkorp-orange transition-colors tracking-wide">
+              <span className="text-xs font-semibold group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors tracking-wide">
                 Create Organization
               </span>
             </button>
