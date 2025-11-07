@@ -921,7 +921,7 @@ export default function BillingPage() {
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
                   <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
-                    <CreditCard className="h-5 w-5 text-botkorp-orange" />
+                    <FiCreditCard className="h-5 w-5 text-botkorp-orange" />
                   </div>
                   <div>
                     <CardTitle className="text-base font-bold">Payment Methods</CardTitle>

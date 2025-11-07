@@ -37,7 +37,14 @@ import {
   AlertFeed,
   LiveServicesList,
   FleetStatusWidget,
-  ServiceActivityChart
+  ServiceActivityChart,
+  // V2 Components
+  StatusBanner,
+  NextActionsCard,
+  CompactKPICard,
+  CostSavingsKPI,
+  WeatherConditionsWidget,
+  UpcomingScheduleWidget
 } from '@/components/dashboard';
 
 import LocationWizard from '@/components/services/location-wizard';
@@ -448,10 +455,49 @@ export default function DashboardPageV2() {
       created_at: item.created_at
     }));
 
+  // Prepare action items (issues that need attention)
+  const actionItems = [
+    ...(activeAlerts.filter(a => a.severity === 'critical' || a.severity === 'high').map(alert => ({
+      id: alert.id,
+      title: alert.title,
+      description: alert.description,
+      severity: alert.severity,
+      type: 'alert'
+    }))),
+    // Add more action items from other sources as needed
+  ].slice(0, 5);
+
+  // Calculate system status
+  const getSystemStatus = () => {
+    const criticalCount = analytics?.alerts?.critical || 0;
+    const warningCount = analytics?.alerts?.warning || 0;
+    const offlineBots = analytics?.bots?.offline || 0;
+    
+    if (criticalCount > 0 || offlineBots > 2) return 'critical';
+    if (warningCount > 0 || offlineBots > 0) return 'attention';
+    return 'operational';
+  };
+
+  const systemStatus = getSystemStatus();
+
+  // Mock upcoming services (replace with real data from API)
+  const upcomingServices = [
+    // This should come from actual scheduled services API
+    // For now, empty array until we have real data
+  ];
+
+  // Calculate cost savings (example calculation)
+  const calculateMonthlySavings = () => {
+    const totalServices = analytics?.services?.total_services || 0;
+    const avgTraditionalCost = 500; // Average cost per traditional service
+    const avgBotServiceCost = 200; // Average cost per bot service
+    return totalServices * (avgTraditionalCost - avgBotServiceCost);
+  };
+
   return (
-    <div className="p-3 md:p-5 space-y-5 max-w-[1600px] mx-auto min-h-screen">
+    <div className="p-3 md:p-4 space-y-4 max-w-[1800px] mx-auto min-h-screen">
       {/* Header */}
-      <div className="space-y-5 animate-in fade-in slide-in-from-top-3 duration-500">
+      <div className="space-y-4 animate-in fade-in slide-in-from-top-3 duration-500">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold mb-1">
@@ -475,60 +521,84 @@ export default function DashboardPageV2() {
           </Button>
         </div>
 
-        {/* Hero KPIs - Soft UI Enhanced */}
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
+        {/* Status Banner - Prominent System Status */}
+        <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
+          <StatusBanner
+            status={systemStatus}
+            issueCount={actionItems.length}
+            lastUpdated={new Date().toISOString()}
+          />
+        </div>
+
+        {/* Compact KPIs - Executive Summary (5 cards) */}
+        <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '100ms' }}>
-            <SystemHealthCard
-              score={analytics?.system_health?.score || 0}
-              trend={2.5}
-              breakdown={analytics?.system_health || {}}
+            <CompactKPICard
+              icon={Activity}
+              label="Services Active"
+              value={activeServices?.length || 0}
+              subtitle={`${analytics?.services?.total_services || 0} total services`}
+              trend={{ value: 12, direction: 'up' }}
+              color="orange"
+              onClick={() => navigate('/portal/services')}
             />
           </div>
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '150ms' }}>
-            <ActiveBotsKPI
-              operational={analytics?.bots?.operational || 0}
-              total={analytics?.bots?.total || 0}
-              charging={analytics?.bots?.charging || 0}
-              offline={analytics?.bots?.offline || 0}
-              errors={analytics?.bots?.errors || 0}
+            <CompactKPICard
+              icon={MapPin}
+              label="Coverage Today"
+              value={`${Math.round((analytics?.services_today?.area_covered_sqm || 0))} m²`}
+              subtitle={`${analytics?.services_today?.completed || 0} services done`}
+              trend={{ value: 8, direction: 'up' }}
+              color="green"
             />
           </div>
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '200ms' }}>
-            <TodaysCoverageKPI
-              areaCovered={analytics?.services_today?.area_covered_sqm || 0}
-              targetArea={3000} // This could be calculated from scheduled services
-              servicesCompleted={analytics?.services_today?.completed || 0}
-              servicesScheduled={analytics?.services_today?.scheduled || 0}
+            <CostSavingsKPI
+              monthlySavings={calculateMonthlySavings()}
+              comparisonText="vs traditional service"
+              trend={{ value: 15, direction: 'up' }}
             />
           </div>
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '250ms' }}>
-            <ActiveAlertsKPI
-              total={analytics?.alerts?.total || 0}
-              critical={analytics?.alerts?.critical || 0}
-              warning={analytics?.alerts?.warning || 0}
-              info={analytics?.alerts?.info || 0}
-              onViewAll={() => console.log('View all alerts')}
+            <CompactKPICard
+              icon={Bot}
+              label="Bots Working"
+              value={`${analytics?.bots?.operational || 0}/${analytics?.bots?.total || 0}`}
+              subtitle={`${analytics?.bots?.charging || 0} charging`}
+              trend={{ value: 0, direction: 'neutral' }}
+              color="blue"
+              onClick={() => navigate('/admin/bot-management')}
+            />
+          </div>
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '300ms' }}>
+            <CompactKPICard
+              icon={AlertTriangle}
+              label="Active Issues"
+              value={actionItems.length}
+              subtitle={`${analytics?.alerts?.critical || 0} critical`}
+              trend={{ value: actionItems.length > 0 ? 100 : 0, direction: actionItems.length > 0 ? 'up' : 'neutral' }}
+              color="red"
             />
           </div>
         </div>
 
-        {/* Active Alerts Section */}
-        {activeAlerts.length > 0 && (
-          <div className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200">
-            <AlertFeed
-              alerts={activeAlerts}
-              onDismiss={handleDismissAlert}
-              onView={handleViewAlert}
-              onViewAll={() => console.log('View all alerts')}
-              maxVisible={3}
-            />
-          </div>
-        )}
+        {/* Next Actions or All Clear */}
+        <div className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200">
+          <NextActionsCard
+            actions={actionItems}
+            onActionClick={(action) => {
+              if (action.type === 'alert') {
+                handleViewAlert(action);
+              }
+            }}
+          />
+        </div>
 
-        {/* Main Content Grid */}
-        <div className="grid gap-5 lg:grid-cols-3 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-300">
-          {/* Left Column (2/3) */}
-          <div className="lg:col-span-2 space-y-5">
+        {/* Main Content Grid - Two Column Professional Layout */}
+        <div className="grid gap-4 lg:grid-cols-[1fr_400px] animate-in fade-in slide-in-from-bottom-3 duration-500 delay-300">
+          {/* Left Column - Main Content */}
+          <div className="space-y-4">
             {/* Live Services */}
             {activeServices && activeServices.length > 0 && (
               <div className="animate-in fade-in slide-in-from-left-3 duration-500">
@@ -548,28 +618,66 @@ export default function DashboardPageV2() {
                 timeRange="30d"
               />
             </div>
+
+            {/* Active Alerts - Only if not showing in action items */}
+            {activeAlerts.length > actionItems.length && (
+              <div className="animate-in fade-in slide-in-from-left-3 duration-500 delay-200">
+                <AlertFeed
+                  alerts={activeAlerts.slice(actionItems.length)}
+                  onDismiss={handleDismissAlert}
+                  onView={handleViewAlert}
+                  onViewAll={() => console.log('View all alerts')}
+                  maxVisible={3}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Right Column (1/3) */}
-          <div className="space-y-5">
-            {/* Fleet Status */}
+          {/* Right Column - Sidebar Widgets */}
+          <div className="space-y-4">
+            {/* Weather & Conditions */}
             <div className="animate-in fade-in slide-in-from-right-3 duration-500">
+              <WeatherConditionsWidget
+                temperature={22}
+                condition="clear"
+                humidity={65}
+                windSpeed={12}
+                visibility={10}
+                impact="optimal"
+              />
+            </div>
+
+            {/* Fleet Status */}
+            <div className="animate-in fade-in slide-in-from-right-3 duration-500 delay-100">
               <FleetStatusWidget fleetData={fleetStatus} />
             </div>
 
-            {/* Quick Actions - Soft UI Enhanced */}
-            <Card className="border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 animate-in fade-in slide-in-from-right-3 duration-500 delay-100">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
+            {/* Upcoming Schedule */}
+            <div className="animate-in fade-in slide-in-from-right-3 duration-500 delay-200">
+              <UpcomingScheduleWidget
+                upcomingServices={upcomingServices}
+                onViewAll={() => navigate('/portal/services')}
+              />
+            </div>
+
+            {/* Quick Actions - Compact */}
+            <Card className="border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 rounded-3xl animate-in fade-in slide-in-from-right-3 duration-500 delay-300">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-botkorp-orange/20 to-botkorp-orange/10 dark:from-botkorp-orange/30 dark:to-botkorp-orange/20 flex items-center justify-center shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
                     <Activity className="h-5 w-5 text-botkorp-orange" />
                   </div>
-                  <h3 className="text-base font-bold">Quick Actions</h3>
+                  <div>
+                    <h3 className="text-sm font-bold">Quick Actions</h3>
+                    <p className="text-xs text-muted-foreground/70 font-medium">
+                      Common tasks
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-2.5">
+                <div className="space-y-2">
                   <Button
                     variant="outline"
-                    className="w-full justify-start h-11 text-sm font-semibold rounded-xl border-0 bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[0_4px_20px_rgb(255,107,53,0.15)] hover:bg-botkorp-orange hover:text-white transition-all duration-300 active:scale-95"
+                    className="w-full justify-start h-10 text-xs font-semibold rounded-xl border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95"
                     onClick={() => navigate('/portal/services/add')}
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -577,7 +685,7 @@ export default function DashboardPageV2() {
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-full justify-start h-11 text-sm font-semibold rounded-xl border-0 bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[0_4px_20px_rgb(59,130,246,0.15)] hover:bg-blue-500 hover:text-white transition-all duration-300 active:scale-95"
+                    className="w-full justify-start h-10 text-xs font-semibold rounded-xl border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95"
                     onClick={() => navigate('/admin/bot-management')}
                   >
                     <Bot className="h-4 w-4 mr-2" />
@@ -585,7 +693,7 @@ export default function DashboardPageV2() {
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-full justify-start h-11 text-sm font-semibold rounded-xl border-0 bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[0_4px_20px_rgb(220,38,38,0.25)] text-red-600 hover:bg-red-600 hover:text-white transition-all duration-300 active:scale-95"
+                    className="w-full justify-start h-10 text-xs font-semibold rounded-xl border-0 bg-gradient-to-br from-red-100 to-white dark:from-red-950 dark:to-slate-800 shadow-[4px_4px_12px_rgba(220,38,38,0.2),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(220,38,38,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(220,38,38,0.2),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(220,38,38,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] text-red-600 dark:text-red-400 transition-all duration-300 active:scale-95"
                   >
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     Emergency Stop
