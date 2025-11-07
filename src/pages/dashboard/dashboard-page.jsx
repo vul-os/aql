@@ -534,7 +534,7 @@ export default function DashboardPageV2() {
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '100ms' }}>
             <CompactKPICard
-              icon={Activity}
+              image="/images/3d-service.png"
               label="Services Active"
               value={activeServices?.length || 0}
               subtitle={`${analytics?.services?.total_services || 0} total services`}
@@ -545,7 +545,7 @@ export default function DashboardPageV2() {
           </div>
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '150ms' }}>
             <CompactKPICard
-              icon={MapPin}
+              image="/images/3d-coverage.png"
               label="Coverage Today"
               value={`${Math.round((analytics?.services_today?.area_covered_sqm || 0))} m²`}
               subtitle={`${analytics?.services_today?.completed || 0} services done`}
@@ -562,7 +562,7 @@ export default function DashboardPageV2() {
           </div>
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '250ms' }}>
             <CompactKPICard
-              icon={Bot}
+              image="/images/3d-bot.png"
               label="Bots Working"
               value={`${analytics?.bots?.operational || 0}/${analytics?.bots?.total || 0}`}
               subtitle={`${analytics?.bots?.charging || 0} charging`}
@@ -573,7 +573,7 @@ export default function DashboardPageV2() {
           </div>
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '300ms' }}>
             <CompactKPICard
-              icon={AlertTriangle}
+              image="/images/3d-alert.png"
               label="Active Issues"
               value={actionItems.length}
               subtitle={`${analytics?.alerts?.critical || 0} critical`}

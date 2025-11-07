@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle2, AlertTriangle, AlertCircle, Clock } from 'lucide-react';
+import { AlertTriangle, AlertCircle, Clock } from 'lucide-react';
 
 /**
  * Prominent Status Banner - Executive Summary at a Glance
@@ -14,7 +14,7 @@ export default function StatusBanner({
 }) {
   const statusConfig = {
     operational: {
-      icon: CheckCircle2,
+      image: '/images/3d-mark.png',
       bgGradient: 'from-emerald-500/10 via-emerald-500/5 to-transparent',
       borderColor: 'border-emerald-500/20',
       iconColor: 'text-emerald-500',
@@ -62,9 +62,13 @@ export default function StatusBanner({
     <Card className={`border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 rounded-3xl overflow-hidden relative`}>
       <CardContent className="p-4 relative">
         <div className="flex items-center gap-4">
-          {/* Icon */}
+          {/* Icon or Image */}
           <div className={`h-12 w-12 rounded-2xl bg-gradient-to-br ${config.iconBg === 'bg-emerald-500/10' ? 'from-emerald-500/20 to-emerald-500/10 dark:from-emerald-500/30 dark:to-emerald-500/20' : config.iconBg === 'bg-amber-500/10' ? 'from-amber-500/20 to-amber-500/10 dark:from-amber-500/30 dark:to-amber-500/20' : config.iconBg === 'bg-red-500/10' ? 'from-red-500/20 to-red-500/10 dark:from-red-500/30 dark:to-red-500/20' : 'from-blue-500/20 to-blue-500/10 dark:from-blue-500/30 dark:to-blue-500/20'} flex items-center justify-center flex-shrink-0 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]`}>
-            <Icon className={`h-6 w-6 ${config.iconColor}`} />
+            {config.image ? (
+              <img src={config.image} alt={config.defaultMessage} className="h-7 w-7 object-contain" />
+            ) : Icon ? (
+              <Icon className={`h-6 w-6 ${config.iconColor}`} />
+            ) : null}
           </div>
           
           {/* Content */}

@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Sprout, CheckCircle } from 'lucide-react';
+import { Sprout } from 'lucide-react';
 import NumberTicker from '@/components/ui/number-ticker';
 
 /**
@@ -62,7 +62,7 @@ export function TodaysCoverageKPI({
         {/* Services Info */}
         <div className="pt-4 border-t border-border/50">
           <div className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-green-600" />
+            <img src="/images/3d-mark.png" alt="Completed" className="h-4 w-4 object-contain" />
             <p className="text-sm">
               <span className="font-bold tabular-nums">{servicesCompleted}</span>
               <span className="text-muted-foreground/70 font-medium"> service{servicesCompleted !== 1 ? 's' : ''} completed</span>

@@ -8,6 +8,7 @@ import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
  */
 export default function CompactKPICard({
   icon: Icon,
+  image, // Optional: image path to use instead of icon
   label,
   value,
   subtitle,
@@ -68,7 +69,11 @@ export default function CompactKPICard({
         {/* Icon & Trend */}
         <div className="flex items-start justify-between mb-3">
           <div className={`h-10 w-10 rounded-2xl ${config.iconBg} flex items-center justify-center shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)] ${onClick ? 'group-hover:scale-110 transition-all duration-500' : ''}`}>
-            <Icon className={`h-5 w-5 ${config.iconColor}`} />
+            {image ? (
+              <img src={image} alt={label} className="h-6 w-6 object-contain" />
+            ) : Icon ? (
+              <Icon className={`h-5 w-5 ${config.iconColor}`} />
+            ) : null}
           </div>
           {trend && TrendIcon && (
             <div className={`flex items-center gap-1 ${

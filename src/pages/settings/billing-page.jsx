@@ -57,7 +57,6 @@ import { supabase } from '@/lib/supabase';
 import { usePaymentAuthorizations, usePaystack, formatCardNumber, formatExpiryDate, getCardIcon, isCardExpired } from '@/hooks/use-paystack';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import PageHeader from '@/components/ui/page-header';
 
 export default function BillingPage() {
   const { user, selectedOrg, selectedLocation } = useAuth();
@@ -381,43 +380,42 @@ export default function BillingPage() {
   }, [transactions, transactionFilter]);
 
   return (
-    <div className="p-3 md:p-5 space-y-5 max-w-[1600px] mx-auto">
+    <div className="p-3 space-y-3 max-w-[1600px] mx-auto">
       {/* Header - Soft UI */}
-      <div className="space-y-3 animate-in fade-in slide-in-from-top-3 duration-500">
-        <PageHeader
-          title="Billing & Payments"
-          subtitle="Comprehensive financial overview & management"
-          icon={<MdAccountBalanceWallet className="h-5 w-5 text-botkorp-orange" />}
-          action={
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => {
-                loadSubscriptions();
-                loadInvoices();
-                loadTransactions();
-              }}
-              className="h-9 px-4 rounded-xl border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95"
-            >
-              <FiRefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
-          }
-        />
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 animate-in fade-in slide-in-from-top-3 duration-500">
+        <div>
+          <h1 className="text-2xl font-bold bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">Billing & Payments</h1>
+          <p className="text-xs text-muted-foreground mt-1 font-medium">
+            Comprehensive financial overview & management
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              loadSubscriptions();
+              loadInvoices();
+              loadTransactions();
+            }}
+            className="h-9 px-4 rounded-xl border-0 bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 shadow-[4px_4px_12px_rgba(0,0,0,0.1),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_12px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.05)] hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.1),inset_-2px_-2px_6px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-95"
+          >
+            <FiRefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Analytics Stats Grid - Soft UI */}
       {(invoices.length > 0 || transactions.length > 0) && (
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
           {/* Monthly Bill Card */}
           <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
-            <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2 pt-5">
+            <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-1.5 pt-3.5">
               <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Monthly Bill</CardTitle>
-              <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-botkorp-orange/20 to-botkorp-orange/10 dark:from-botkorp-orange/30 dark:to-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-                <FiDollarSign className="h-4 w-4 text-botkorp-orange transition-all duration-500" />
-              </div>
+              <img src="/images/monthly-bill.png" alt="Monthly Bill" className="h-10 w-10 object-contain group-hover:scale-110 transition-all duration-500" />
             </CardHeader>
-            <CardContent className="relative pb-5">
+            <CardContent className="relative pb-3.5">
               <div className="text-3xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">R{totalMonthly.toFixed(2)}</div>
               {nextBillingDate && (
                 <p className="text-[11px] text-muted-foreground font-semibold mt-1 flex items-center gap-1">
@@ -430,13 +428,11 @@ export default function BillingPage() {
 
           {/* Total Spent Card */}
           <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
-            <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2 pt-5">
+            <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-1.5 pt-3.5">
               <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Spent</CardTitle>
-              <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-[#4F5D75]/20 to-[#4F5D75]/10 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-                <FiBarChart2 className="h-4 w-4 text-[#4F5D75] transition-all duration-500" />
-              </div>
+              <img src="/images/pie-chart_7745797.png" alt="Total Spent" className="h-10 w-10 object-contain group-hover:scale-110 transition-all duration-500" />
             </CardHeader>
-            <CardContent className="relative pb-5">
+            <CardContent className="relative pb-3.5">
               <div className="text-3xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">R{analytics.totalSpent.toFixed(2)}</div>
               <p className="text-[11px] text-muted-foreground font-semibold mt-1">All-time payments</p>
             </CardContent>
@@ -444,13 +440,11 @@ export default function BillingPage() {
 
           {/* Payment Success Rate Card */}
           <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
-            <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2 pt-5">
+            <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-1.5 pt-3.5">
               <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Success Rate</CardTitle>
-              <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-[#10B981]/20 to-[#10B981]/10 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-                <FiZap className="h-4 w-4 text-[#10B981] transition-all duration-500" />
-              </div>
+              <img src="/images/success-rate.png" alt="Success Rate" className="h-10 w-10 object-contain group-hover:scale-110 transition-all duration-500" />
             </CardHeader>
-            <CardContent className="relative pb-5">
+            <CardContent className="relative pb-3.5">
               <div className="text-3xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{analytics.successRate.toFixed(1)}%</div>
               <p className="text-[11px] text-muted-foreground font-semibold mt-1">
                 {analytics.successfulTransactions}/{analytics.totalTransactions} successful
@@ -460,17 +454,11 @@ export default function BillingPage() {
 
           {/* Spending Trend Card */}
           <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
-            <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2 pt-5">
+            <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-1.5 pt-3.5">
               <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Monthly Trend</CardTitle>
-              <div className={`h-10 w-10 rounded-2xl bg-gradient-to-br ${analytics.spendingChange >= 0 ? 'from-[#F59E0B]/20 to-[#F59E0B]/10' : 'from-[#10B981]/20 to-[#10B981]/10'} flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]`}>
-                {analytics.spendingChange >= 0 ? (
-                  <FiTrendingUp className="h-4 w-4 text-[#F59E0B] transition-all duration-500" />
-                ) : (
-                  <FiTrendingDown className="h-4 w-4 text-[#10B981] transition-all duration-500" />
-                )}
-              </div>
+              <img src="/images/trend.png" alt="Monthly Trend" className="h-10 w-10 object-contain group-hover:scale-110 transition-all duration-500" />
             </CardHeader>
-            <CardContent className="relative pb-5">
+            <CardContent className="relative pb-3.5">
               <div className={`text-3xl font-bold tabular-nums ${analytics.spendingChange >= 0 ? 'text-[#F59E0B]' : 'text-[#10B981]'}`}>
                 {analytics.spendingChange >= 0 ? '+' : ''}{analytics.spendingChange.toFixed(1)}%
               </div>
@@ -482,21 +470,18 @@ export default function BillingPage() {
 
       {/* Quick Actions & Status Bar - Soft UI */}
       {(subscriptions.length > 0 || authorizations.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200">
           {authorizations.length > 0 && (
             <Card className="border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
-              <CardContent className="p-4">
+              <CardContent className="p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#10B981]/15 to-[#10B981]/5 flex items-center justify-center shadow-[0_4px_20px_rgb(16,185,129,0.15)]">
-                      <FiShield className="h-5 w-5 text-[#10B981]" />
-                    </div>
+                    <img src="/images/active-icon.png" alt="Active" className="h-8 w-8 object-contain" />
                     <div>
                       <p className="text-xs text-muted-foreground font-medium">Auto-billing</p>
                       <p className="text-sm font-bold">Active</p>
                     </div>
                   </div>
-                  <FiCheckCircle className="h-5 w-5 text-[#10B981]" />
                 </div>
               </CardContent>
             </Card>
@@ -504,12 +489,10 @@ export default function BillingPage() {
 
           {subscriptions.length > 0 && (
             <Card className="border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
-              <CardContent className="p-4">
+              <CardContent className="p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
-                      <MdSmartToy className="h-5 w-5 text-botkorp-orange" />
-                    </div>
+                    <img src="/images/3d-bot.png" alt="Active Bots" className="h-8 w-8 object-contain" />
                     <div>
                       <p className="text-xs text-muted-foreground font-medium">Active Bots</p>
                       <p className="text-sm font-bold">{subscriptions.length} Bot{subscriptions.length !== 1 ? 's' : ''}</p>
@@ -522,12 +505,10 @@ export default function BillingPage() {
 
           {authorizations.length > 0 && (
             <Card className="border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
-              <CardContent className="p-4">
+              <CardContent className="p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#4F5D75]/15 to-[#4F5D75]/5 flex items-center justify-center shadow-[0_4px_20px_rgb(79,93,117,0.15)]">
-                      <FiCreditCard className="h-5 w-5 text-[#4F5D75]" />
-                    </div>
+                    <img src="/images/card.png" alt="Payment Methods" className="h-8 w-8 object-contain" />
                     <div>
                       <p className="text-xs text-muted-foreground font-medium">Payment Methods</p>
                       <p className="text-sm font-bold">{authorizations.length} Card{authorizations.length !== 1 ? 's' : ''}</p>
@@ -541,7 +522,7 @@ export default function BillingPage() {
       )}
 
       {/* Main Tabbed Content - Soft UI */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200">
         <TabsList className="grid w-full grid-cols-4 h-14 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 p-2 rounded-3xl shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] border-0 animate-in fade-in zoom-in-95 duration-300">
           <TabsTrigger 
             value="overview" 
@@ -574,16 +555,14 @@ export default function BillingPage() {
         </TabsList>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-5 mt-4">
+        <TabsContent value="overview" className="space-y-3 mt-3">
           {/* Current Monthly Bill - Always show if there are subscriptions */}
           {subscriptions.length > 0 && (
             <Card className="bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 border-0 animate-in fade-in slide-in-from-bottom-3 duration-500">
               <CardHeader className="pb-3 pt-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
-                      <MdReceipt className="h-5 w-5 text-botkorp-orange" />
-                    </div>
+                    <img src="/images/bill.png" alt="Current Billing" className="h-9 w-9 object-contain" />
                     <div>
                       <CardTitle className="text-base font-bold">Current Billing</CardTitle>
                       <CardDescription className="text-[11px] font-medium">Your active subscriptions and monthly cost</CardDescription>
@@ -625,9 +604,7 @@ export default function BillingPage() {
               <CardHeader className="pb-3 pt-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#4F5D75]/15 to-[#4F5D75]/5 flex items-center justify-center shadow-[0_4px_20px_rgb(79,93,117,0.15)]">
-                      <FiPieChart className="h-5 w-5 text-[#4F5D75]" />
-                    </div>
+                    <img src="/images/pie-chart.png" alt="Spending Insights" className="h-9 w-9 object-contain" />
                     <div>
                       <CardTitle className="text-base font-bold">Spending Insights</CardTitle>
                       <CardDescription className="text-[11px] font-medium">Your financial activity overview</CardDescription>
@@ -750,9 +727,7 @@ export default function BillingPage() {
                 <Card className="bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 border-0 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-200">
                   <CardHeader className="pb-3 pt-5">
                     <div className="flex items-center gap-3">
-                      <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
-                        <FiCalendar className="h-5 w-5 text-botkorp-orange" />
-                      </div>
+                      <img src="/images/calendar.png" alt="Upcoming Payments" className="h-9 w-9 object-contain" />
                       <CardTitle className="text-base font-bold">Upcoming Payments</CardTitle>
                     </div>
                   </CardHeader>
@@ -799,7 +774,7 @@ export default function BillingPage() {
         </TabsContent>
 
         {/* Subscriptions Tab */}
-        <TabsContent value="subscriptions" className="space-y-5 mt-4">
+        <TabsContent value="subscriptions" className="space-y-3 mt-3">
           {subscriptions.length > 0 ? (
             <Card className="bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 border-0 animate-in fade-in slide-in-from-bottom-3 duration-500">
               <CardHeader className="pb-3 pt-5">
@@ -915,7 +890,7 @@ export default function BillingPage() {
         </TabsContent>
 
         {/* Payment Methods Tab */}
-        <TabsContent value="payments" className="space-y-5 mt-4">
+        <TabsContent value="payments" className="space-y-3 mt-3">
           <Card className="bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 border-0 animate-in fade-in slide-in-from-bottom-3 duration-500">
             <CardHeader className="pb-3 pt-5">
               <div className="flex items-center justify-between flex-wrap gap-3">
@@ -1091,7 +1066,7 @@ export default function BillingPage() {
         </TabsContent>
 
         {/* History Tab */}
-        <TabsContent value="history" className="space-y-5 mt-4">
+        <TabsContent value="history" className="space-y-3 mt-3">
           {/* Transactions Section */}
           <Card className="bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 border-0 animate-in fade-in slide-in-from-bottom-3 duration-500">
             <CardHeader className="pb-3 pt-5">

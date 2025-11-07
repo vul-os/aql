@@ -23,7 +23,7 @@ export default function CostSavingsKPI({
 
   return (
     <CompactKPICard
-      icon={DollarSign}
+      image="/images/3d-wallet.png"
       label="Cost Saved"
       value={formatCurrency(monthlySavings)}
       subtitle={comparisonText}

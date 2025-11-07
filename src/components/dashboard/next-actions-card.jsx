@@ -3,7 +3,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
-  CheckCircle2, 
   AlertTriangle, 
   AlertCircle, 
   ArrowRight,
@@ -22,7 +21,7 @@ export default function NextActionsCard({ actions = [], onActionClick }) {
         <CardContent className="p-5 relative">
           <div className="flex items-start gap-3 mb-4">
             <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 dark:from-emerald-500/30 dark:to-emerald-500/20 flex items-center justify-center flex-shrink-0 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              <img src="/images/3d-mark.png" alt="All Clear" className="h-6 w-6 object-contain" />
             </div>
             <div>
               <h3 className="text-sm font-bold mb-1">All Clear</h3>
