@@ -459,9 +459,7 @@ export default function ServicesPage() {
                   <span className="text-muted-foreground">this week</span>
                 </div>
               </div>
-              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-botkorp-orange/20 to-botkorp-orange/10 dark:from-botkorp-orange/30 dark:to-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-                <LayoutGrid className="h-6 w-6 text-botkorp-orange transition-all duration-500" />
-              </div>
+              <img src="/images/house.png" alt="Total Services" className="h-12 w-12 object-contain group-hover:scale-110 transition-all duration-500" />
             </div>
           </CardContent>
         </Card>
@@ -477,9 +475,7 @@ export default function ServicesPage() {
                   <span>{Math.round((activeCount / (services.length || 1)) * 100)}% operational</span>
                 </div>
               </div>
-              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-green-500/20 to-green-500/10 dark:from-green-500/30 dark:to-green-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-                <CheckCircle2 className="h-6 w-6 text-green-600 transition-all duration-500" />
-              </div>
+              <img src="/images/active-icon.png" alt="Active Now" className="h-12 w-12 object-contain group-hover:scale-110 transition-all duration-500" />
             </div>
           </CardContent>
         </Card>
@@ -495,9 +491,7 @@ export default function ServicesPage() {
                   <span>Automated units</span>
                 </div>
               </div>
-              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-botkorp-orange/20 to-botkorp-orange/10 dark:from-botkorp-orange/30 dark:to-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-                <Bot className="h-6 w-6 text-botkorp-orange transition-all duration-500" />
-              </div>
+              <img src="/images/3d-bot.png" alt="Bots Deployed" className="h-12 w-12 object-contain group-hover:scale-110 transition-all duration-500" />
             </div>
           </CardContent>
         </Card>
@@ -513,9 +507,7 @@ export default function ServicesPage() {
                   <span>{Math.round(totalArea).toLocaleString()} m²</span>
                 </div>
               </div>
-              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-500/10 dark:from-blue-500/30 dark:to-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-                <Ruler className="h-6 w-6 text-blue-600 transition-all duration-500" />
-              </div>
+              <img src="/images/3d-coverage.png" alt="Total Coverage" className="h-12 w-12 object-contain group-hover:scale-110 transition-all duration-500" />
             </div>
           </CardContent>
         </Card>
@@ -734,9 +726,7 @@ export default function ServicesPage() {
                   : "space-y-2"
                 }>
                   {filteredServices.map((service, index) => {
-                    const Icon = getServiceIcon(service.service_type);
                     const status = getStatusInfo(service);
-                    const StatusIcon = status.icon;
                     
                     return viewMode === 'grid' ? (
                       // Grid View Card - Soft UI
@@ -749,49 +739,36 @@ export default function ServicesPage() {
                           {/* Header */}
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <div className="flex items-start gap-2 flex-1 min-w-0">
-                              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-all duration-300 shadow-[0_4px_20px_rgb(255,107,53,0.15)] group-hover:shadow-[0_4px_20px_rgb(255,107,53,0.25)]">
-                                <Icon className="h-5 w-5 text-botkorp-orange" />
-                              </div>
+                              <img 
+                                src="/images/lawn-care.png" 
+                                alt="Service" 
+                                className="h-10 w-10 object-contain flex-shrink-0 group-hover:scale-105 transition-all duration-300"
+                              />
                               <div className="flex-1 min-w-0">
                                 <h4 className="text-sm font-bold truncate group-hover:text-botkorp-orange transition-colors">
                                   {service.name}
                                 </h4>
-                                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                                  <MapPin className="h-3 w-3" />
+                                <p className="text-xs text-muted-foreground mt-1">
                                   {service.location?.name}
                                 </p>
                                 <Badge variant="outline" className="mt-2 text-[10px] h-5 border-none bg-botkorp-orange/10 text-botkorp-orange font-semibold px-2 rounded-full">
-                                  <StatusIcon className="h-3 w-3 mr-1" />
                                   {status.text}
                                 </Badge>
                               </div>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                              }}
-                              className="h-8 w-8 p-0 rounded-xl hover:bg-botkorp-orange/10"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
                           </div>
 
                           {/* Stats */}
                           <div className="grid grid-cols-3 gap-2 mb-2">
                             <div className="text-center p-2 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all duration-300">
-                              <Sprout className="h-3.5 w-3.5 text-green-600 mx-auto mb-1" />
                               <div className="text-base font-bold tabular-nums">{service.garden_count}</div>
                               <p className="text-[10px] text-muted-foreground font-medium">Gardens</p>
                             </div>
                             <div className="text-center p-2 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all duration-300">
-                              <Bot className="h-3.5 w-3.5 text-botkorp-orange mx-auto mb-1" />
                               <div className="text-base font-bold tabular-nums">{service.bot_count}</div>
                               <p className="text-[10px] text-muted-foreground font-medium">Bots</p>
                             </div>
                             <div className="text-center p-2 rounded-xl bg-background/60 backdrop-blur-sm shadow-[inset_0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[inset_0_2px_8px_rgb(0,0,0,0.06)] transition-all duration-300">
-                              <Ruler className="h-3.5 w-3.5 text-blue-600 mx-auto mb-1" />
                               <div className="text-base font-bold tabular-nums">{Math.round(service.total_area)}</div>
                               <p className="text-[10px] text-muted-foreground font-medium">m²</p>
                             </div>
@@ -833,15 +810,16 @@ export default function ServicesPage() {
                         <CardContent className="p-3">
                           <div className="flex items-center justify-between gap-4">
                             <div className="flex items-center gap-4 flex-1 min-w-0">
-                              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-all duration-300 shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
-                                <Icon className="h-5 w-5 text-botkorp-orange" />
-                              </div>
+                              <img 
+                                src="/images/lawn-care.png" 
+                                alt="Service" 
+                                className="h-10 w-10 object-contain flex-shrink-0 group-hover:scale-105 transition-all duration-300"
+                              />
                               <div className="flex-1 min-w-0">
                                 <h4 className="text-sm font-bold truncate group-hover:text-botkorp-orange transition-colors">
                                   {service.name}
                                 </h4>
-                                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" />
+                                <p className="text-xs text-muted-foreground">
                                   {service.location?.name}
                                 </p>
                               </div>
@@ -861,7 +839,6 @@ export default function ServicesPage() {
                                 <p className="text-[10px] text-muted-foreground font-medium">m²</p>
                               </div>
                               <Badge variant="outline" className="text-[10px] h-6 border-none bg-botkorp-orange/10 text-botkorp-orange font-semibold px-3 rounded-full">
-                                <StatusIcon className="h-3 w-3 mr-1" />
                                 {status.text}
                               </Badge>
                               <Button
@@ -925,9 +902,11 @@ export default function ServicesPage() {
           <Card className="border-0 bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 sticky top-4">
             <CardHeader className="pb-2 pt-3">
               <div className="flex items-center gap-3 mb-1">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
-                  <Activity className="h-5 w-5 text-botkorp-orange" />
-                </div>
+                <img 
+                  src="/images/recent-activity.png" 
+                  alt="Recent Activity" 
+                  className="h-10 w-10 object-contain"
+                />
                 <div>
                   <CardTitle className="text-sm font-bold">Recent Activity</CardTitle>
                   <CardDescription className="text-[11px] font-medium">Latest service updates</CardDescription>
@@ -938,42 +917,29 @@ export default function ServicesPage() {
               {recentActivity.length > 0 ? (
                 <div className="divide-y divide-border/50">
                   {recentActivity.map((activity, index) => (
-                    <div key={index} className="px-3 py-2 hover:bg-botkorp-orange/5 transition-colors duration-300 cursor-pointer">
-                      <div className="flex gap-2">
-                        <div className="flex-shrink-0">
-                          {activity.type === 'activated' ? (
-                            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-green-500/15 to-green-500/5 flex items-center justify-center shadow-[inset_2px_2px_5px_rgba(0,0,0,0.05)]">
-                              <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                            </div>
-                          ) : (
-                            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center shadow-[inset_2px_2px_5px_rgba(0,0,0,0.05)]">
-                              <Plus className="h-3.5 w-3.5 text-blue-600" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold">
-                            <span>{activity.service.name}</span>
-                            <span className="text-muted-foreground font-medium">{' '}{activity.type === 'activated' ? 'activated' : 'created'}</span>
-                          </p>
-                          <p className="text-[11px] text-muted-foreground mt-0.5 font-medium">
-                            {format(new Date(activity.timestamp), 'MMM d, h:mm a')}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1.5">
-                            <Badge variant="outline" className="text-[10px] h-5 border-none bg-botkorp-orange/10 text-botkorp-orange font-semibold px-2 rounded-full">
-                              {activity.service.location?.name}
-                            </Badge>
-                          </div>
-                        </div>
+                    <div key={index} className="px-3 py-2.5 hover:bg-botkorp-orange/5 transition-colors duration-300 cursor-pointer">
+                      <p className="text-xs font-bold">
+                        <span>{activity.service.name}</span>
+                        <span className="text-muted-foreground font-medium">{' '}{activity.type === 'activated' ? 'activated' : 'created'}</span>
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5 font-medium">
+                        {format(new Date(activity.timestamp), 'MMM d, h:mm a')}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <Badge variant="outline" className="text-[10px] h-5 border-none bg-botkorp-orange/10 text-botkorp-orange font-semibold px-2 rounded-full">
+                          {activity.service.location?.name}
+                        </Badge>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="px-6 py-8 text-center">
-                  <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 mb-3 shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
-                    <Activity className="h-6 w-6 text-botkorp-orange" />
-                  </div>
+                  <img 
+                    src="/images/recent-activity.png" 
+                    alt="No Activity" 
+                    className="h-12 w-12 object-contain mx-auto mb-3"
+                  />
                   <p className="text-xs text-muted-foreground font-medium">
                     No recent activity
                   </p>

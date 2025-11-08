@@ -645,67 +645,67 @@ export default function MembersPage() {
       {/* Enhanced Stats - Soft UI */}
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
-          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2 pt-5">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Members</CardTitle>
-            <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-botkorp-orange/20 to-botkorp-orange/10 dark:from-botkorp-orange/30 dark:to-botkorp-orange/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-              <Users className="h-4 w-4 text-botkorp-orange transition-all duration-500" />
-            </div>
-          </CardHeader>
-          <CardContent className="relative pb-5">
-            <div className="text-3xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{stats.total}</div>
-            <div className="flex items-center gap-1 text-[11px] mt-1">
-              <TrendingUp className="h-3 w-3 text-green-600" />
-              <span className="text-green-600 font-semibold">{stats.recentJoins}</span>
-              <span className="text-muted-foreground font-medium">this week</span>
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Members</p>
+                <p className="text-2xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{stats.total}</p>
+                <div className="flex items-center gap-1 text-xs">
+                  <TrendingUp className="h-3 w-3 text-green-600" />
+                  <span className="text-green-600 font-medium">{stats.recentJoins}</span>
+                  <span className="text-muted-foreground">this week</span>
+                </div>
+              </div>
+              <img src="/images/members-icon.png" alt="Members" className="h-12 w-12 object-contain group-hover:scale-110 transition-all duration-500" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
-          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2 pt-5">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Pending Invites</CardTitle>
-            <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-500/10 dark:from-amber-500/30 dark:to-amber-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-              <Mail className="h-4 w-4 text-amber-600 transition-all duration-500" />
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Pending Invites</p>
+                <p className="text-2xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{stats.pending}</p>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  <span>Awaiting acceptance</span>
+                </div>
+              </div>
+              <img src="/images/invite.png" alt="Invite" className="h-12 w-12 object-contain group-hover:scale-110 transition-all duration-500" />
             </div>
-          </CardHeader>
-          <CardContent className="relative pb-5">
-            <div className="text-3xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{stats.pending}</div>
-            <p className="text-[11px] text-muted-foreground font-semibold mt-1 flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              Awaiting acceptance
-            </p>
           </CardContent>
         </Card>
 
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
-          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2 pt-5">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Admins</CardTitle>
-            <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-500/10 dark:from-blue-500/30 dark:to-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-              <Shield className="h-4 w-4 text-blue-600 transition-all duration-500" />
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Admins</p>
+                <p className="text-2xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{stats.admins}</p>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Shield className="h-3 w-3" />
+                  <span>{stats.managers} managers</span>
+                </div>
+              </div>
+              <img src="/images/admin.png" alt="Admin" className="h-12 w-12 object-contain group-hover:scale-110 transition-all duration-500" />
             </div>
-          </CardHeader>
-          <CardContent className="relative pb-5">
-            <div className="text-3xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{stats.admins}</div>
-            <p className="text-[11px] text-muted-foreground font-semibold mt-1 flex items-center gap-1">
-              <Shield className="h-3 w-3" />
-              {stats.managers} managers
-            </p>
           </CardContent>
         </Card>
 
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05)] hover:shadow-[12px_12px_24px_rgba(0,0,0,0.15),-12px_-12px_24px_rgba(255,255,255,1)] dark:hover:shadow-[12px_12px_24px_rgba(0,0,0,0.5),-12px_-12px_24px_rgba(255,255,255,0.08)] transition-all duration-500 group rounded-3xl">
-          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2 pt-5">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Removed</CardTitle>
-            <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-red-500/20 to-red-500/10 dark:from-red-500/30 dark:to-red-500/20 flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1),inset_-2px_-2px_5px_rgba(255,255,255,0.7)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.1)]">
-              <UserX className="h-4 w-4 text-red-600 transition-all duration-500" />
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Removed</p>
+                <p className="text-2xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{removedMembers.length}</p>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <UserX className="h-3 w-3" />
+                  <span>Inactive accounts</span>
+                </div>
+              </div>
+              <img src="/images/delete..png" alt="Delete" className="h-12 w-12 object-contain group-hover:scale-110 transition-all duration-500" />
             </div>
-          </CardHeader>
-          <CardContent className="relative pb-5">
-            <div className="text-3xl font-bold tabular-nums bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{removedMembers.length}</div>
-            <p className="text-[11px] text-muted-foreground font-semibold mt-1 flex items-center gap-1">
-              <UserX className="h-3 w-3" />
-              Inactive accounts
-            </p>
           </CardContent>
         </Card>
       </div>
@@ -1346,9 +1346,11 @@ export default function MembersPage() {
           <Card className="bg-gradient-to-br from-background to-muted/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 border-0 sticky top-6">
             <CardHeader className="pb-3 pt-5">
               <div className="flex items-center gap-3">
-                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 flex items-center justify-center shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
-                  <Activity className="h-5 w-5 text-botkorp-orange" />
-                </div>
+                <img 
+                  src="/images/recent-activity.png" 
+                  alt="Recent Activity" 
+                  className="h-11 w-11 object-contain"
+                />
                 <div>
                   <CardTitle className="text-base font-bold">Recent Activity</CardTitle>
                   <CardDescription className="text-[11px] font-medium">Latest team updates</CardDescription>
@@ -1360,45 +1362,32 @@ export default function MembersPage() {
                 <div className="divide-y divide-border/50">
                   {memberActivity.map((activity, index) => (
                     <div key={index} className="px-5 py-3 hover:bg-botkorp-orange/5 transition-all duration-300">
-                      <div className="flex gap-3">
-                        <div className="flex-shrink-0">
-                          {activity.type === 'joined' ? (
-                            <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
-                              <UserCheck className="h-4 w-4 text-green-600" />
-                            </div>
-                          ) : (
-                            <div className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center">
-                              <Mail className="h-4 w-4 text-amber-600" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
-                            {activity.type === 'joined' ? (
-                              <>
-                                <span className="font-semibold">{activity.member?.user?.full_name || activity.member?.user?.email}</span>
-                                {' '}joined as <span className="capitalize">{activity.member?.role}</span>
-                              </>
-                            ) : (
-                              <>
-                                {activity.inviter?.full_name || 'Someone'} invited{' '}
-                                <span className="font-semibold">{activity.email}</span> as <span className="capitalize">{activity.role}</span>
-                              </>
-                            )}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            {format(new Date(activity.timestamp), 'MMM d, h:mm a')}
-                          </p>
-                        </div>
-                      </div>
+                      <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                        {activity.type === 'joined' ? (
+                          <>
+                            <span className="font-semibold">{activity.member?.user?.full_name || activity.member?.user?.email}</span>
+                            {' '}joined as <span className="capitalize">{activity.member?.role}</span>
+                          </>
+                        ) : (
+                          <>
+                            {activity.inviter?.full_name || 'Someone'} invited{' '}
+                            <span className="font-semibold">{activity.email}</span> as <span className="capitalize">{activity.role}</span>
+                          </>
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {format(new Date(activity.timestamp), 'MMM d, h:mm a')}
+                      </p>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="px-5 py-12 text-center">
-                  <div className="inline-flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-botkorp-orange/15 to-botkorp-orange/5 mb-3 shadow-[0_4px_20px_rgb(255,107,53,0.15)]">
-                    <Activity className="h-8 w-8 text-botkorp-orange" />
-                  </div>
+                  <img 
+                    src="/images/recent-activity.png" 
+                    alt="No Activity" 
+                    className="h-16 w-16 object-contain mx-auto mb-3"
+                  />
                   <p className="text-xs text-muted-foreground font-medium">
                     No recent activity
                   </p>
