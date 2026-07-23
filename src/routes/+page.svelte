@@ -1,5 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import Devices from '$lib/screens/Devices.svelte';
+  import Energy from '$lib/screens/Energy.svelte';
+  import Automations from '$lib/screens/Automations.svelte';
 
   const nav = [
     { id: 'overview',    label: 'Overview' },
@@ -64,6 +67,9 @@
   const activeLabel = $derived(nav.find((n) => n.id === view)?.label ?? '');
 
   onMount(() => {
+    // deep-link a view (used by the screenshot script): ?view=devices
+    const v = new URLSearchParams(location.search).get('view');
+    if (v && nav.some((n) => n.id === v)) view = v;
     const iv = setInterval(tick, 1000);
     (async () => {
       try {
@@ -197,6 +203,12 @@
           </div>
         </div>
       </section>
+    {:else if view === 'devices'}
+      <Devices />
+    {:else if view === 'energy'}
+      <Energy />
+    {:else if view === 'automations'}
+      <Automations />
     {:else}
       <section class="placeholder panel">
         <span class="ph-glyph display">◈</span>
