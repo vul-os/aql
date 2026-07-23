@@ -3,8 +3,11 @@ importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
 // Initialize Firebase in the service worker
+// NOTE: service workers can't read build-time env vars — inject this config at
+// build/deploy time. Firebase web config is public-by-design, but left as a
+// placeholder here so no project-identifying key is committed.
 firebase.initializeApp({
-  apiKey: "REDACTED_FIREBASE_KEY",
+  apiKey: "__FIREBASE_API_KEY__",
   authDomain: "botkorp-za.firebaseapp.com",
   projectId: "botkorp-za",
   storageBucket: "botkorp-za.firebasestorage.app",

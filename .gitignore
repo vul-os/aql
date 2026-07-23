@@ -5,3 +5,17 @@ node_modules
 dist
 
 .firebase
+
+# secrets / env (added during scrub)
+.env
+.env.*
+!.env.example
+SUPABASE_API_KEYS.txt
+*.pem
+*.key
+
+# build artifacts
+node_modules/
+.vite/
+coverage/
+dist/

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { MapPin, Loader2, AlertCircle, CheckCircle, Search, Navigation } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
-const MAPBOX_TOKEN = 'pk.REDACTED_MAPBOX_TOKEN';
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
 export default function LocationChecker({ onLocationSelect, initialAddress = '', embedded = false, autoDetect = false }) {
   const [address, setAddress] = useState(initialAddress);
