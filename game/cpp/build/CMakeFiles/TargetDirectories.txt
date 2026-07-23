@@ -1,3 +1,0 @@
-/Users/pc/Documents/exo/botkorp-mono/game/cpp/build/CMakeFiles/mowbot_sim.dir
-/Users/pc/Documents/exo/botkorp-mono/game/cpp/build/CMakeFiles/edit_cache.dir
-/Users/pc/Documents/exo/botkorp-mono/game/cpp/build/CMakeFiles/rebuild_cache.dir
