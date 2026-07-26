@@ -1,0 +1,14 @@
+[extend]
+useDefault = true
+
+# Conformance test vectors are fixtures, not credentials. The `claim_token` in
+# proto/vectors/ base64url-decodes to the literal string
+# "test-claim-token-123ABCDEFGHIJKL" and is asserted byte-for-byte by both the
+# gateway and controller suites (61 vectors / 68 checks), so it cannot be
+# rewritten without invalidating the vectors it exists to pin.
+[[rules]]
+id = "generic-api-key"
+[rules.allowlist]
+regexTarget = "match"
+regexes = ['''dGVzdC1jbGFpbS10b2tlbi0xMjNBQkNERUZHSElKS0w''']
+paths = ['''proto/vectors/(pairing\.json|generate\.mjs)''']
