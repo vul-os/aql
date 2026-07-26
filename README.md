@@ -1,9 +1,8 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/logo-wordmark-dark.svg">
-    <img src="assets/brand/logo-wordmark.svg" alt="Aql" width="200">
-  </picture>
+  <img src="assets/brand/aql-mark.svg" alt="Aql" width="76" height="76">
 </p>
+
+<h1 align="center">Aql</h1>
 
 <p align="center"><strong>An open-source command centre for the physical world. One hub owns everything.</strong></p>
 

@@ -334,7 +334,7 @@ async function main() {
     browser = await chromium.launch();
 
     const desktopShots = [
-      { path: '/', file: 'landing-hero.png', settleMs: 1_400, expectText: 'lintel' },
+      { path: '/', file: 'landing-hero.png', settleMs: 1_400, expectText: 'Aql' },
       { path: '/docs', file: 'docs.png' },
       { path: '/security', file: 'security.png' },
       { path: '/app', file: 'portal-dashboard.png', expectText: 'Recent activity' },

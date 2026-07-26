@@ -1,8 +1,14 @@
-# Lintel Design System — extracted for Aql
+# Aql Design System
 
-Status: documentation only. Nothing in Aql has been restyled yet. This is a precise,
-evidence-based extraction of lintel's visual language (`lintel/src`, `lintel/site`,
-`lintel/public`) so the next wave can port it onto Aql's SvelteKit shell.
+Status: **this is the shipped system.** It began as an evidence-based extraction of
+lintel's visual language, written while a port onto Aql's SvelteKit shell was still
+the plan. That port never happened — lintel's frontend became Aql's outright, so
+every value below now describes live code at `src/`, not a target to build toward.
+§7 records why the direction changed.
+
+Paths written as `lintel/...` in citations refer to the pre-fold layout; those files
+now live at the same path minus the `lintel/` prefix (`lintel/src/styles/tokens.css`
+is today `src/styles/tokens.css`).
 
 Every value below is cited `path:line` from the files actually read. Where lintel
 itself doesn't determine something (e.g. it has no dedicated wordmark SVG), this
@@ -91,9 +97,10 @@ matches the background rect fill in `lintel/public/favicon.svg:5` and
 `lintel/public/og.svg:5-6` (`#1A1F36` → `#0F1326`). This means the shipped favicon/
 mark predates (or was deliberately kept off) the warm-neutral palette rewrite —
 the mark is still on the old navy identity while the rest of the UI moved to warm
-near-black. Carry this forward as a decision point, not a bug to silently fix:
-Aql's next wave should decide whether to re-key the mark to `--ink` (`#141210`)
-or keep the navy as a distinct "mark-only" colour.
+near-black. **RESOLVED (see §8):** the mark was re-keyed to `--ink` (`#141210`) rather
+than keeping the navy as a distinct "mark-only" colour, so the identity now
+belongs to the palette it ships beside. The shadow hardcodes in `Card.tsx` and
+`Button.tsx` still carry the old navy and are worth a separate sweep.
 
 ---
 
@@ -466,9 +473,13 @@ Key distinguishing choices, all evidenced above:
   blank/placeholder state — this is a content-voice trait as much as a visual
   one, but it's consistent enough to be part of "the look."
 
-### Contrast with Aql's current look
+### Contrast with the pre-fold Aql look
 
-Aql today (`src/app.css:1-157`, `site/index.html:1-40`) is a **dark-only
+> **Historical.** The system described below was deleted in the fold — `src/app.css`
+> no longer exists. Kept because it records what was traded away, and why the warm
+> palette reads so differently from what Aql shipped before.
+
+Aql then (`src/app.css:1-157`, `site/index.html:1-40`) was a **dark-only
 ops/telemetry console**: pure near-black backgrounds (`--ink-950: #08090a`, no
 light theme exists at all — `<meta name="color-scheme" content="dark">`,
 `site/index.html:8`), a single molten-amber signal colour (`--signal: #f2a72c`)
@@ -501,119 +512,58 @@ not a token tweak.
 
 ---
 
-## 7. Migration notes
+## 7. How this system reached Aql
 
-### Aql files that will need to change to adopt this system
+The original plan behind this document was to translate lintel's React/Tailwind
+design system into Aql's SvelteKit + plain-CSS console. **That is not what
+happened, and this section is kept only so the change of direction is legible.**
 
-Verified to exist in this repo (`/Users/pc/code/vulos/aql`) as of this wave:
+Aql's SvelteKit console turned out to be a three-file shell rendering a demo
+dataset, against lintel's 35-page React application talking to a real gateway.
+Porting the former's three screens into the latter was a fraction of the reverse,
+and the house language policy is JSX for shells and apps. So the SvelteKit shell
+was deleted and lintel's frontend became Aql's, wholesale.
 
-- `src/app.css` — the entire file is Aql's current design system (fonts,
-  palette, base body/panel/dot rules); this is the direct equivalent of
-  lintel's `tokens.css` + `main.css` combined and will need a full rewrite,
-  not a patch.
-- `src/routes/+layout.svelte` — imports `../app.css` as the single global
-  stylesheet entry point (`src/routes/+layout.svelte:2`); this is where a new
-  `tokens.css`-equivalent import would be wired in.
-- `src/routes/+layout.ts`, `src/routes/+page.svelte` — exist but were not
-  found to contain styling; check for inline classes/styles when the actual
-  restyle wave begins.
-- `static/fonts/` — currently holds Aql's five font files
-  (`bricolage-700.woff2`, `bricolage-500.woff2`, `plexmono-400/500/600.woff2`).
-  Lintel's six vendored variable fonts (`fraunces-var.woff2`,
-  `fraunces-italic-var.woff2`, `inter-var.woff2`, `inter-italic-var.woff2`,
-  `jetbrains-mono-var.woff2`, `jetbrains-mono-italic-var.woff2` — currently
-  sitting in `lintel/public/fonts/`) will need to be copied into `static/fonts/`
-  in a future wave (not done in this wave — this wave is docs/asset-extraction
-  only for brand marks, not fonts, per the task scope).
-- `assets/brand/` — Aql's current mark set
-  (`favicon.svg`, `logo-mark.svg`, `logo-wordmark.svg`, `logo-wordmark-dark.svg`,
-  all confirmed present) uses the old amber/navy rotated-square identity and
-  will eventually be replaced or retired once a new mark is designed; this
-  wave only adds lintel's source assets alongside them (see §8 below) — it does
-  not touch or delete the existing four files.
-- `site/index.html` — Aql's self-contained marketing/landing page
-  (`<title>Aql — command center for the physical world</title>`,
-  `site/index.html:6`) has its entire palette/type system inlined in a
-  `<style>` block (`site/index.html:8-40`+), mirroring `src/app.css`; would
-  need the same full rewrite lintel's own `lintel/site/index.html` represents
-  for lintel.
-- No `tailwind.config.js` exists in either `lintel/` or the Aql root — Aql does
-  not currently use Tailwind at all (plain CSS + Svelte), so adopting lintel's
-  system means either introducing Tailwind v4 to Aql's SvelteKit build, or
-  (more consistent with Aql's existing plain-CSS approach) manually
-  transcribing the *values* this document captures into hand-written CSS
-  classes/utilities rather than porting Tailwind's utility-class approach
-  wholesale.
+The practical consequence for this document: **there was no translation step.**
+Everything in §1–§6 is not a specification to be re-implemented — it is a
+description of code that now lives at `src/`, in its original form. The token
+file is `src/styles/tokens.css`, the components are `src/components/ui/`, and
+the Tailwind utility strings cited throughout §5 are the live styling mechanism,
+not something to hand-expand into plain CSS.
 
-### React/Tailwind assumptions that need translating to SvelteKit + plain CSS
+`src/app.css`, referenced by the original version of this section as the file to
+change, no longer exists. Neither does the SvelteKit `+layout.svelte`,
+`static/fonts/`, or the Bricolage/PlexMono pairing — Aql now serves the three
+vendored variable faces documented in §2.
 
-- **Tailwind utility classes are the actual styling mechanism** for nearly
-  every component cited in §5 (`Button.tsx`, `Card.tsx`, `Field.tsx`,
-  `Modal.tsx`, `shared.tsx`, etc.) — there is no separate `.css`/`.module.css`
-  per component. Porting to Aql (plain CSS, per `src/app.css`'s existing
-  convention) means each Tailwind utility string in this document needs to be
-  hand-expanded into real CSS rules/classes; there is no drop-in equivalent
-  file to copy.
-- **CSS custom properties (`tokens.css`) port cleanly** — this part is
-  framework-agnostic and can be carried over close to verbatim into a new
-  `:root` / `:root[data-theme='dark']` block in `app.css`.
-- **The `@theme` block in `main.css` (`lintel/src/styles/main.css:53-74`) is
-  Tailwind-v4-specific config-as-CSS** (it's how Tailwind v4 maps custom
-  properties to utility class names like `bg-terracotta`). If Aql doesn't
-  adopt Tailwind, this block's *values* still port (they're just aliases back
-  to the `tokens.css` variables) but the block itself has no meaning outside
-  Tailwind.
-- **React-specific mechanics** with no Svelte equivalent to reuse directly:
-  `ThemeProvider`/`useTheme` context (`lintel/src/lib/theme.tsx`) → would
-  become a Svelte store; `createPortal`-based `Modal` (`Modal.tsx:41,71`) →
-  Svelte has no portal primitive built in, needs `svelte:element`/action-based
-  portal or a library; `forwardRef` on `Field`/`Button` → not needed in
-  Svelte, bindings work differently.
-- **`cn()` (a `tailwind-merge` + `clsx` helper, `lintel/src/lib/cn.ts`)** is a
-  Tailwind-ecosystem convenience with no purpose if Aql doesn't adopt Tailwind;
-  Svelte's native class directives (`class:foo={cond}`) or plain template
-  strings would replace it.
-- **The Fraunces `SOFT` variable-font axis usage (`font-variation-settings`)**
-  is plain CSS and ports with no framework translation needed — this is the
-  one component of lintel's type system that is *not* Tailwind-coupled.
-- **Prism syntax-highlighting classes** (`.hl-*`, `main.css:580-696`) assume a
-  Prism.js-tokenized `<pre><code>` structure from the React docs pages
-  (`lintel/src/pages/docs/CodeBlock.tsx` — present but not read in this wave);
-  Aql would need its own code-block component/tokenizer if it wants this exact
-  look for any docs surface.
+What remains genuinely open is small and listed in §8 and §1: the `Card.tsx` /
+`Button.tsx` shadow hardcodes still carry the retired navy, and `--radius-arch`
+is defined but unused.
 
----
+## 8. Brand assets — settled
 
-## 8. Asset extraction (this wave)
+The extraction wave copied lintel's marks in under `lintel-*` names; a later
+wave resolved §1's navy-vs-palette question and consolidated them. What ships
+now:
 
-Copied read-only from `lintel/public/` into `assets/brand/` (additive — none
-of Aql's existing four brand files were modified or removed):
+| File | Notes |
+|---|---|
+| `assets/brand/aql-mark.svg` | The authored source. lintel's arch glyph and terracotta keystone kept exactly (same path data), re-keyed to the warm palette: field `#1A1F36` navy → `#141210` (`--ink`), arch `#F4EDE2` → `#F5EFE6`, keystone `#D6624D` → `#E0896A` (`--terracotta`). Because the mark is a permanently dark surface it uses the **dark-theme** tunings of ink and terracotta. |
+| `assets/brand/aql-og.svg` | 1200×630 social card, authored source. Uses a system serif on purpose — OG images are rasterised by whoever renders them and cannot rely on the vendored woff2s. |
 
-| New file | Source | Notes |
-|---|---|---|
-| `assets/brand/lintel-favicon.svg` | `lintel/public/favicon.svg` | Exact copy, original filename prefixed. 64×64 viewBox, navy `#1A1F36` field, cream `#F4EDE2` arch stroke, terracotta `#D6624D` keystone dot (see §1's navy-vs-warm-palette note — this exact mark's colours don't match `tokens.css`). |
-| `assets/brand/lintel-icon.svg` | `lintel/public/icon.svg` | Byte-identical to `favicon.svg` in the source repo. |
-| `assets/brand/lintel-og.svg` | `lintel/public/og.svg` | Full 1200×630 social-card composition: same arch mark at 5.5× scale, plus the wordmark **rendered as literal `<text>`** (`font-family="Georgia, 'Times New Roman', serif" font-style="italic"`, not Fraunces — this OG card predates/bypasses the vendored-font system since OG images are static rasterized-at-share-time), tagline "Texts that open gates.", and footer captions. Useful as a reference composition, not a component to reuse as-is. |
-| `assets/brand/aql-mark.svg` | `lintel/public/favicon.svg` (copy) | Placeholder for the next wave to wire up as Aql's new mark. **Content is currently byte-identical to `lintel-favicon.svg`** — including its `<title id="t">lintel</title>` and lintel-specific `<desc>` — deliberately left unedited per this wave's read-only/no-restyle scope. The next wave must update the title/desc text (and decide on the navy-vs-tokens.css colour question from §1) before treating this as Aql's real mark. |
+Everything under `public/` (`favicon.svg`, `icon.svg`, `og.svg`, the 16/32
+PNGs, `apple-touch-icon.png`, `og.png`) is **generated** from those two
+sources. The 16/32 PNGs render from an optically-corrected variant with a
+heavier stroke and larger dot, so the arch survives at 16px.
 
-**No wordmark SVG asset exists in lintel.** Confirmed by listing
-`lintel/public/` in full (`favicon-16x16.png`, `apple-touch-icon.png`,
-`icon.svg`, `og.svg`, `sitemap.xml`, `robots.txt`, `og.png`, `favicon.svg`,
-`favicon-32x32.png`, `images/auth-hero.jpg`, `fonts/*`) — there is no
-`wordmark.svg` or equivalent. Lintel's wordmark is **rendered as live text**,
-not a vector asset, in two places:
-- `Wordmark` component: `<em class="font-display italic tracking-tight">lintel</em>`
-  (`lintel/src/components/illustrations/ArchMark.tsx:50-56`)
-- Sidebar: `<span class="font-display italic text-lg">lintel</span>`
-  (`lintel/src/components/nav/AppSidebar.tsx:15`)
+**§1's decision point is resolved:** the navy `#1A1F36` is gone rather than
+kept as a mark-only colour. Grep confirms no occurrence of `#1A1F36`,
+`#F4EDE2` or `#D6624D` anywhere in `assets/brand/` or `public/`.
 
-Per the task instruction, **no `aql-wordmark.svg` was created** — inventing one
-would mean drawing a wordmark lintel itself doesn't have as a standalone asset.
-The equivalent for Aql is: once "Aql" is set in Fraunces (or whatever face the
-next wave picks) at the CSS level, no wordmark SVG is needed at all — this is a
-CSS-only pattern, not an asset-porting one. Aql's existing
-`assets/brand/logo-wordmark.svg` / `logo-wordmark-dark.svg` (mono "AQL" text
-baked into an SVG, `letter-spacing="5"`, `font-family="ui-monospace,'SF Mono',
-'JetBrains Mono',Menlo,monospace"`) are a genuine SVG-wordmark today and remain
-untouched; the next wave should decide whether to keep that approach or switch
-to lintel's live-text convention.
+**There is still no wordmark SVG, deliberately.** lintel never had one — its
+wordmark is live text in Fraunces italic, in `ArchMark.tsx`'s `Wordmark` and in
+`AppSidebar.tsx`. Aql keeps that convention, so no `aql-wordmark.svg` was
+drawn. Aql's own pre-fold `logo-wordmark.svg` / `logo-wordmark-dark.svg` (mono
+"AQL" baked into an SVG) and its amber `logo-mark.svg` / `favicon.svg` were
+deleted once nothing referenced them; the README header now uses the mark plus
+a text heading.

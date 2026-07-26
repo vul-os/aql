@@ -20,7 +20,7 @@ export const ADMIN_NAV_ITEM: NavItem = { to: '/app/admin', label: 'Instance admi
 // in their own sidebar section, under their own /app/preview/* path prefix, so
 // they can never be mistaken for the gateway-backed items in APP_NAV_ITEMS.
 // Every one of these pages renders <DemoBanner /> above the fold.
-export const PREVIEW_NAV_LABEL = 'Command center · demo';
+export const PREVIEW_NAV_LABEL = 'Command centre · demo';
 
 export const PREVIEW_NAV_ITEMS: NavItem[] = [
   { to: '/app/preview/devices', label: 'Home devices' },
