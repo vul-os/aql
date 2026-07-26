@@ -34,7 +34,7 @@ The full walkthrough, including number advice and failure modes, is in
 [Linking WhatsApp](linking-whatsapp.md). WhatsApp is the one channel that always needs
 a public HTTPS endpoint — Meta's Cloud API only speaks webhooks, there is no
 alternative — see [Ingress & reachability](ingress.md) for the honest options (public
-bind, any tunnel including a self-hosted `vulos-relayd`, or the paid Vulos Relay
+bind, any tunnel including a self-hosted `vulos-relayd`, or the hosted Ephor
 convenience).
 
 ### Opt-in: a self-hosted bridge instead of the Cloud API

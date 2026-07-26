@@ -49,8 +49,8 @@ nothing held back.
 - **Reachability is your choice**: a public IP behind your own reverse proxy or a
   TLS-terminating tunnel (the gateway itself speaks plain HTTP only — see
   [Ingress & reachability](ingress.md)), any tunnel you already trust running beside
-  the binary (including a self-hosted, no-account-needed `vulos-relayd`, or the paid
-  Vulos Relay convenience) — or, with
+  the binary (including a self-hosted, no-account-needed `vulos-relayd`, or the hosted
+  Ephor convenience) — or, with
   **Slack Socket Mode (shipped)**, no public URL at all: the gateway dials out to Slack
   over a WebSocket instead of receiving webhooks. Controllers already dial out too.
   Telegram and WhatsApp still need a reachable URL today (Telegram webhook, WhatsApp's

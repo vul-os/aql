@@ -2,12 +2,11 @@
 
 The lintel marketing site, in the house product-repo mini-site format. Fully static,
 zero external requests, fully separate from the application: fonts are vendored in
-`fonts/`, the markdown renderer in `docs/vendor/`. Host it anywhere; it also syncs into
-the Vulos console as the product mini-site.
+`fonts/`, the markdown renderer in `docs/vendor/`. Host it anywhere; it's fully static
+and self-contained.
 
 - `index.html` — the one-file landing page. All asset paths are relative, so the same
-  file serves standalone **and** synced into vulos-cloud at
-  `/products/lintel/landing.html` (same-origin iframe safe).
+  file serves standalone from any host (same-origin iframe safe).
 - `docs.html` — a self-contained docs viewer at the site root (sidebar, search, TOC,
   hash routes like `docs.html#/self-host`). Theme persists via localStorage
   `lintel.theme`.

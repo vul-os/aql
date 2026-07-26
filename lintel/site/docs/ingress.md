@@ -101,9 +101,9 @@ comfortable operating:
   (e.g. `http://localhost:8080`), done. These terminate TLS at their own edge or local
   agent and forward plain HTTP the rest of the way over loopback — that matches the
   gateway exactly as it is, no separate reverse proxy needed.
-- **`vulos-relayd`** — the open-source reverse-tunnel daemon behind Vulos Relay
-  (WSS + yamux, SSRF-guarded). It's MIT-licensed and **self-hostable with no Vulos
-  account and no billing relationship** — you run the client agent yourself, beside the
+- **`vulos-relayd`** — the open-source reverse-tunnel daemon behind Ephor
+  (WSS + yamux, SSRF-guarded). It's MIT-licensed and **self-hostable with no account
+  needed** — you run the client agent yourself, beside the
   gateway, the same way you'd run any other tunnel here. It terminates the WSS tunnel
   locally and forwards plain HTTP to the gateway over loopback — the same pattern as
   the others. It's listed alongside them because it happens to exist and is a solid
@@ -122,18 +122,19 @@ locally; don't point a raw passthrough tunnel straight at the gateway's listener
 - Trade-off: one more moving part to operate; outages in the tunnel take your WhatsApp
   channel down even if the gateway is healthy.
 
-### (c) Vulos Relay — the paid convenience
+### (c) Ephor — a hosted option
 
-If you'd rather not run and monitor a tunnel yourself, **Vulos Relay** is a hosted,
-managed version of the same `vulos-relayd` software — one of the two things Vulos
-actually charges for (the other being backup storage; see
-[vulos.org](https://vulos.org)). Point the gateway at it the same way you'd point it at
-any other tunnel, and Vulos operates the reachability fabric for you.
+If you'd rather not run and monitor a tunnel yourself, **Ephor** is a hosted version of
+the same `vulos-relayd` software — the reachability broker your box dials out to. Point
+the gateway at it the same way you'd point it at any other tunnel, and someone else
+operates the reachability fabric for you. Ephor is open source and self-hostable, so
+you can just as well run your own instead of using a hosted instance.
 
-- Costs: a Vulos Relay subscription.
+- Costs: nothing if you self-host Ephor; whatever the operator charges if you use a
+  hosted instance.
 - Trade-off: none technically — it's the same tunnel model as (b), just operated for
   you. It's an *option*, never a requirement: lintel has no code path that assumes
-  Relay exists, and every self-host guide in this repo works without it.
+  Ephor exists, and every self-host guide in this repo works without it.
 
 ## Where this leaves each channel
 
@@ -151,7 +152,7 @@ any other tunnel, and Vulos operates the reachability fabric for you.
 
 lintel has no hard runtime dependency on any Vulos product, ever — it is a
 standalone, MIT-licensed system that runs to completion with nothing but a box and,
-optionally, your own channel credentials. Vulos Relay shows up here strictly as one
+optionally, your own channel credentials. Ephor shows up here strictly as one
 *feature-scoped* ingress option for a single channel (WhatsApp), competing on equal
 footing with cloudflared, frp, and a self-run `vulos-relayd`. Nothing breaks, degrades,
 or nags you if you never touch it.

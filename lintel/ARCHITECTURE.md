@@ -200,8 +200,8 @@ alternative), so a WhatsApp channel always needs a public HTTPS URL Meta can rea
    and hand the gateway plain HTTP, so no extra proxy is needed. A tunnel run in raw
    TCP/SNI-passthrough mode (e.g. `frp` TCP passthrough) doesn't work against the
    gateway directly, since it has nothing to terminate that TLS with — put a reverse
-   proxy behind a passthrough tunnel if you want that shape. The paid, hosted
-   **Vulos Relay** is the same tunnel model as a convenience, never a requirement — one
+   proxy behind a passthrough tunnel if you want that shape. The hosted
+   **Ephor** is the same tunnel model as a convenience, never a requirement — one
    feature-scoped ingress option among several, not a dependency.
 3. **Zero-infrastructure mode** — real today for Slack. **Slack Socket Mode ships**:
    set an app-level token and the gateway dials **out** to Slack over a single

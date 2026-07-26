@@ -111,7 +111,7 @@ increasing order of self-sufficiency:
    URL; a Slack-only install on an estate LAN needs none.
 
 The full option-by-option breakdown — public bind, any tunnel (incl. self-hosted
-`vulos-relayd`), the paid Vulos Relay convenience, and which channels need zero
+`vulos-relayd`), the hosted Ephor convenience, and which channels need zero
 ingress — is in [Ingress & reachability](ingress.md).
 
 ## The contracts that must not break

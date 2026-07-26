@@ -177,8 +177,8 @@ Pick whichever of these fits your life:
   (e.g. `frp`'s TCP passthrough, rather than its HTTP proxy mode) forwards
   still-encrypted bytes all the way to the gateway, which has nothing to decrypt them
   with — put your own reverse proxy (as above) behind a passthrough tunnel if you want
-  that shape. lintel has no structural dependency on any provider — **Vulos Relay**
-  (the paid, hosted version of `vulos-relayd`) is one option among these, never a
+  that shape. lintel has no structural dependency on any provider — **Ephor**
+  (the hosted version of `vulos-relayd`) is one option among these, never a
   requirement.
 - **No public URL at all** — a gateway on the estate LAN as a complete installation,
   and this is **real today**. Controllers dial out, and Slack **Socket Mode** ships:
