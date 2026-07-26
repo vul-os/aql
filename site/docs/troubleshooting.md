@@ -5,16 +5,16 @@ The short list of things that actually go wrong, and what to do about each.
 ## Chat
 
 **I text `open` and get no reply at all.**
-The gateway never got the message. First check you're texting the number (or Slack/Telegram
+The hub never got the message. First check you're texting the number (or Slack/Telegram
 app) shown in the portal under **Settings → Channels**. If you're on Slack **Socket
-Mode**, check `SLACK_APP_TOKEN` is set and the gateway logs show the outbound
+Mode**, check `SLACK_APP_TOKEN` is set and the hub logs show the outbound
 connection is up — there's no webhook URL to check in that mode. Otherwise (Slack
 Events API, Telegram, WhatsApp — all webhook-based today), verify your public URL is
 up (`curl https://your-gate.example/healthz`) and re-check the webhook URL in the
 Meta/Slack/Telegram console. Tunnel users: is the tunnel actually connected?
 
 **I get "I don't recognise this number/account".**
-Your chat identity isn't a member anywhere on this gateway. An admin adds you under
+Your chat identity isn't a member anywhere on this hub. An admin adds you under
 **Members** — for WhatsApp by phone number (exact international format, `+27…`), for
 Slack by member id or invite link, for Telegram by chat id.
 
@@ -30,7 +30,7 @@ issue — see below.
 You hit a built-in rate limit: the per-access-point cooldown (default 10 s between
 opens) or the hourly cap (default 30 opens/member, 500/account). These protect
 against runaway scripts, not people — waiting the stated time always clears it. The
-gateway operator tunes them via the `RATE_*` env vars; see
+hub operator tunes them via the `RATE_*` env vars; see
 [Rate limits & quotas](limits.md).
 
 **The bot says "Daily limit reached for this location."**
@@ -40,7 +40,7 @@ won't help. Ask an admin: they can raise or clear it under the location's **Limi
 page, and admins themselves are exempt from quotas, so they can always let you in.
 
 **The bot says "This account has been suspended by the gateway operator."**
-The *instance admin* — the person running the gateway, not your account's admin —
+The *instance admin* — the person running the hub, not your account's admin —
 suspended the whole account. Opens are denied on every channel (chat, portal, API
 all return `account_suspended`), but `close` still works and you can still log in
 to the portal and see your account's state. Only the operator can lift it; there is
@@ -58,7 +58,7 @@ Meta must reach your URL over valid HTTPS. Check the verify token matches your `
 and that the tunnel/proxy passes `GET` challenges through untouched.
 
 **Events arrive but the audit log shows `bad signature`.**
-Your app secret / signing secret is wrong or rotated. The gateway fail-closes on
+Your app secret / signing secret is wrong or rotated. The hub fail-closes on
 signature mismatch by design. Paste the current secret into `.env` and restart.
 
 ## API
@@ -76,13 +76,13 @@ second look on the location's **Limits** page — see
 ## Controllers
 
 **LED pulsing orange forever.**
-The controller can't reach the gateway: wrong Wi-Fi credentials, dead SIM, or the
-gateway URL from pairing is unreachable. It dials out on 443 — most networks just work;
+The controller can't reach the hub: wrong Wi-Fi credentials, dead SIM, or the
+hub URL from pairing is unreachable. It dials out on 443 — most networks just work;
 captive-portal Wi-Fi doesn't.
 
 **LED red.**
 Signature verification failure — the controller is refusing commands. This happens
-when a gateway was restored **without** its original keys ([see backup
+when a hub was restored **without** its original keys ([see backup
 notes](self-host.md)). Re-pair the controller with a fresh claim.
 
 **Test pulse works, the remote-style open doesn't (or vice versa).**
@@ -90,20 +90,20 @@ Wiring. The controller relay must sit in parallel with the receiver relay on the
 `COM`/`NO` pair — see [Controllers](controllers.md).
 
 **Controller shows offline in the portal but the gate still opens locally.**
-Expected: your existing remotes and the app's emergency path don't need the gateway.
+Expected: your existing remotes and the app's emergency path don't need the hub.
 Fix the connectivity at the gate (Wi-Fi signal at the motor is the usual suspect).
 
 ## The app
 
 **Emergency screen says "no controller in range".**
 BLE range is tens of meters — stand at the gate. On LAN discovery, phone and controller
-must be on the same network. Also confirm the controller was paired to the gateway your
+must be on the same network. Also confirm the controller was paired to the hub your
 app is signed into.
 
 **"Grant expired."**
 Offline emergency grants are short-lived by design, and the plan is for the app to
 refresh one silently whenever it opens with connectivity. That refresh flow isn't
-built yet, though — the gateway can mint a grant on request (`POST
+built yet, though — the hub can mint a grant on request (`POST
 /v1/offline-grants`), but the app doesn't request, store or present one, so this
 message and the offline emergency path itself aren't reachable in the shipped app
 today. See [Emergency access](emergency-access.md) for current status.
@@ -114,7 +114,7 @@ today. See [Emergency access](emergency-access.md) for current status.
 `POST /admin/claim` fails closed, and the error code says why: `claim_closed` —
 an instance admin already exists (or a claim was already redeemed once); the token
 is burned forever and cannot be re-armed by changing the env. `claim_disabled` —
-`ADMIN_CLAIM_TOKEN` isn't set in the gateway's environment; set it and restart.
+`ADMIN_CLAIM_TOKEN` isn't set in the hub's environment; set it and restart.
 `invalid_claim_token` — the token doesn't match; check for stray whitespace or an
 old value. Also note the claim promotes an existing **active, signed-in** user —
 sign up first, then redeem. `GET /admin/claim` tells you where you stand:
@@ -125,11 +125,11 @@ The API refuses to disable or demote the *last* active instance admin precisely 
 this can't happen through Aql itself — but it can't protect you from a lost
 password (there is no 2FA to lose — Aql doesn't have it). Honestly: there is no
 in-band recovery. Regaining
-the seat requires direct access to the gateway's database (set the admin flag on
+the seat requires direct access to the hub's database (set the admin flag on
 another active user yourself) — which is also why "who can touch the host" *is*
 your real admin list. Grant a second admin early and this note stays theoretical.
 
-## Gateway
+## Hub
 
 **It won't start after an upgrade.**
 Read the first log lines — schema migrations run at boot and say what they did.

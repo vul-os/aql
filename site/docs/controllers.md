@@ -2,7 +2,7 @@
 
 A controller is the unit at the gate: a Pi-class board running the Aql agent,
 wired to the motor's relay input, on Wi-Fi or a GSM 4G SIM. It dials **out** to exactly
-one gateway, verifies every command's signature against that gateway's pinned key, and
+one hub, verifies every command's signature against that hub's pinned key, and
 pulses the relay.
 
 Because the connection is outbound (persistent WebSocket), a controller works behind
@@ -14,10 +14,10 @@ volunteer configured in 2014. Zero inbound ports, zero port-forwarding.
 The agent in [`controller/`](https://github.com/vul-os/aql/tree/main/controller) is
 a real, standalone Go module — std-lib first, no CGO. What's **implemented and
 conformance-tested** against the `proto/` vectors: fail-closed command verification
-(signature, addressing, replay window, lockdown), pairing with gateway-key **pinning**,
+(signature, addressing, replay window, lockdown), pairing with hub-key **pinning**,
 a durable signed event queue, the WSS transport, and **offline grants over both LAN/mDNS
 and BLE** (the BLE framing codec + session verified at ATT MTUs 23/185/512). A
-cross-module e2e harness boots the real gateway and controller binaries together and
+cross-module e2e harness boots the real hub and controller binaries together and
 proves the money path end to end.
 
 **Kept honest — what is still stubbed:**
@@ -41,7 +41,7 @@ Build and drive it without any hardware:
 cd aql/controller
 go build ./...                                   # default build, zero external deps
 
-# Live agent against a dev gateway (mock relay; prints state transitions)
+# Live agent against a dev hub (mock relay; prints state transitions)
 go run ./cmd/controller-sim --gateway http://localhost:8080 --claim-token <TOKEN>
 
 go run ./cmd/controller-sim --offline-demo       # replays offline-grant vectors + a live LAN open
@@ -78,16 +78,16 @@ gate motor        COM ──┬── existing receiver relay
 
 ## Pairing: the claim-token flow
 
-Pairing binds a controller to one access point on one gateway, and — critically — pins
-that gateway's public signing key in the controller's storage. The flow:
+Pairing binds a controller to one access point on one hub, and — critically — pins
+that hub's public signing key in the controller's storage. The flow:
 
 1. **Admin creates a claim.** Portal → Devices → *Pair new*. Pick the access point
    (e.g. *Oakridge · Main gate*). The portal shows a short-lived claim token, as a QR
    code and as text.
 2. **The device redeems it.** Give the controller the token (scan the QR with the app
    while on the controller's setup Wi-Fi, or paste it into the agent's console). The
-   controller calls the gateway, redeems the claim, and the two exchange keys: the
-   controller's public key is stored server-side; the gateway's public signing key is
+   controller calls the hub, redeems the claim, and the two exchange keys: the
+   controller's public key is stored server-side; the hub's public signing key is
    **pinned** on the device.
 3. **Keys are fixed from here.** The claim token dies on redemption. From now on the
    controller accepts only commands signed by the pinned key — a hostile network, DNS

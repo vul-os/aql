@@ -4,6 +4,11 @@ A condensed tour of how Aql fits together. The long-form version — including t
 that are designed but not built — lives in the repository's
 [`ARCHITECTURE.md`](https://github.com/vul-os/aql/blob/main/ARCHITECTURE.md).
 
+Aql is one hub that owns the devices around a home or a business. Its device model has
+seven kinds — camera, lighting, robot, climate, energy, sensor and **access** — and one of
+them, access, is driven end to end today. The engine that would drive the other six is
+[not built](devices.md). Everything below describes the hub as it exists.
+
 ## No cloud centre
 
 Aql has no central service that everything depends on, and no hosted service at all. It
@@ -20,25 +25,37 @@ decentralization, made visible.
 ## The system at a glance
 
 ```
-resident ── "open" ──► WhatsApp / Slack / Telegram
-                              │ webhook (signature-verified), or an
-                              │ outbound socket the hub dialled (Slack Socket Mode)
+resident ── "open" ──► chat rail (WhatsApp / Slack / Telegram)
+                              │ moving to Ephor — see below
                               ▼
         ┌──────────────── HUB — one Go binary · SQLite ────────────────┐
-        │  channel seam → open-path choke point → device hub → audit   │
-        │                 (membership · rate limits ·   (Ed25519 sign) │
-        │                  quotas · visitor grants)                    │
+        │  input seam → open-path choke point → device hub → audit     │
+        │               (membership · rate limits ·     (Ed25519 sign) │
+        │                quotas · visitor grants)                      │
         │  embedded web console + app API                              │
         │  ─────────────────────────────────────────────────────────   │
-        │  device engine (drivers, telemetry, automations): NOT BUILT  │
+        │  device engine — camera · lighting · robot · climate ·       │
+        │  energy · sensor drivers, telemetry, automations: NOT BUILT  │
         └───────────────────────┬──────────────────────────────────────┘
               outbound wss ⇦ dial-out (no inbound ports at the gate)
                               │
-                     controller (Wi-Fi / GSM)
+                     controller (Wi-Fi / GSM)   ← the "access" kind, today
                               │ verifies pinned-key signature
                               ▼
                      relay closes → 🚧 gate opens
 ```
+
+> **The chat rail is moving to [Ephor](https://github.com/vul-os/ephor).** The adapters
+> that terminate WhatsApp, Slack and Telegram are being lifted out of Aql and into Ephor,
+> the coordinator implementation in the KOTVA family — the component whose job is bridging
+> legacy rails. In the target shape Ephor terminates the rail and hands the hub an
+> authorised command; the hub checks the rules, signs, and actuates. Ephor is separate and
+> swappable. **That move is in progress**: texting a gate open works today, but the adapter
+> plumbing inside the hub is transitional and the Ephor-backed path is not shipped either.
+> Note the naming — Aql's hub is *not* a KOTVA gateway; it bridges chat rails into its own
+> local domain, and the gateway/coordinator role in that family is Ephor's. The `gateway/`
+> directory keeps its spelling only because the path, module path and binary name are
+> compat surface.
 
 The desktop app talks HTTPS to the hub for admin — and, by design, would talk directly
 to the controller over LAN/BLE with an offline-verifiable grant in an emergency. That
@@ -48,12 +65,13 @@ last path is only three-quarters built; see [Emergency access](emergency-access.
 
 | Component | What it is | Status | Stack |
 | --- | --- | --- | --- |
-| **hub** (`gateway/`) | The entire server: channels, the open path, console, API, device hub, audit | **Shipped** — 60 routes, 183 tests green | Go · SQLite (`modernc.org/sqlite`, no CGO) · embedded console |
+| **hub** (`gateway/`) | The entire server: the open path, console, API, device hub, audit | **Shipped** — 60 routes, 219 tests green | Go · SQLite (`modernc.org/sqlite`, no CGO) · embedded console |
 | **controller** (`controller/`) | The unit wired to the gate relay; verifies signatures, drives the motor | **Shipped** — 45 tests green; GPIO relay and BLE radio still unvalidated | Go, std-lib first, own module |
 | **e2e** (`e2e/`) | Cross-module harness: boots the real hub + controller binaries and proves the open path over the wire | **Shipped** | Go, subprocess-driven |
 | **console / app** (`src/`, `src-tauri/`) | Web console embedded in the hub, plus a Tauri v2 desktop shell with a hub picker | **Shipped** (admin surfaces) | React 19 · Vite · Tauri v2 |
 | **proto** (`proto/`) | The versioned wire contracts + conformance vectors | **Shipped** — 61 vectors, 68 checks | Markdown + JSON fixtures |
-| **device engine** | Protocol drivers, discovery, telemetry, automations, energy | **Not built** | — |
+| **device engine** | Protocol drivers, discovery, telemetry, automations, energy — six of the seven device kinds | **Not built** | — |
+| **console demo data** | The device / energy / automations figures, from `src/lib/demoData.ts` | **Demo only** — marked as such at the point of use | TypeScript, in-memory |
 
 ### One implementation, no second server
 
@@ -88,7 +106,8 @@ them — the *controller* does, at redemption time. Geofencing does not exist in
 
 1. **Chat** — primary. Webhook or dialled socket → identity resolution → the choke point
    → signed command → in-thread reply. See [Chat channels](channels.md). Note the
-   platform sees the plaintext; see [Security](security.md).
+   platform sees the plaintext, whichever component terminates the rail; see
+   [Security](security.md).
 2. **App** — emergency. Short-TTL signed grants verified offline by the controller.
    Controller verification and hub issuance are real; the phone half is not built.
 3. **Console** — fallback. Unlimited, served by the hub itself.
@@ -107,10 +126,12 @@ of self-sufficiency:
    the binary; these terminate TLS at their own edge or local agent and forward plain
    HTTP, so they work as-is. A tunnel in raw TCP/SNI-passthrough mode does not, since the
    hub has no TLS of its own — put a reverse proxy behind that instead.
-3. **No public URL at all** — real today. Controllers dial out, and Slack **Socket Mode
-   ships**: with an `xapp-…` app-level token the hub dials out to Slack over an outbound
-   WebSocket, so a LAN-only hub with no reachable address runs Slack end to end. Only
-   WhatsApp webhooks, the Telegram webhook, and off-LAN console access need a public URL.
+3. **No public URL at all** — real today. Controllers dial out unconditionally, and the
+   Slack rail can dial out too (Socket Mode: with an `xapp-…` app-level token the
+   connection is a single outbound WebSocket), so a LAN-only hub with no reachable address
+   runs a chat rail end to end. Only WhatsApp webhooks, the Telegram webhook, and off-LAN
+   console access need a public URL. Which component holds that outbound socket is what the
+   move to Ephor changes.
 
 ## The contracts that must not break
 
@@ -143,6 +164,6 @@ Telegram cost nothing).
 | Database | SQLite (pure-Go driver) | Zero-dependency self-hosting; one file to back up; cross-compiles to a Pi with `CGO_ENABLED=0` |
 | Console | React 19 + Vite | One build serves the hub-embedded console and the Tauri shell |
 | Desktop app | Tauri v2 | Desktop from one codebase; a native HTTP plugin so the console can reach any hub without a CORS allowlist |
-| Rust core | Deliberately thin | One IPC command (`system_pulse`). The device engine is meant to grow here — it has not started |
+| Rust core | Deliberately thin | One IPC command (`system_pulse`). The device engine could grow here or in the Go hub — undecided, and not started either way |
 | Billing | None — no billing code at all | Everything is free; self-hosters pay their own providers directly |
 | License | MIT OR Apache-2.0, everything (`LICENSE-MIT`, `LICENSE-APACHE`) | The whole system is the product; nothing is held back |

@@ -186,6 +186,115 @@ export const FEATURES = [
     ]],
   },
 
+  // ── Aql-wide product claims, added by the 2026-07-26 positioning
+  // correction. Aql is a command centre for the physical world whose device
+  // model has SEVEN kinds — camera, lighting, robot, climate, energy, sensor
+  // and access — and exactly one of them (access) is real end to end. The
+  // README, ROADMAP, ARCHITECTURE §8 and site/docs/devices.md now say that
+  // in those words, which makes "no device engine exists" a load-bearing
+  // documented claim rather than an omission. These entries hold that line
+  // in both directions: nobody can quietly re-imply the engine ships, and
+  // the day any of it actually lands the check fails until the docs catch
+  // up. Evidence roots stay on implementation code only (never src/, which
+  // is UI copy — see this file's header); the console's demo dataset lives
+  // at src/lib/demoData.ts and is deliberately NOT evidence of anything.
+  {
+    id: 'device-engine-drivers',
+    label: 'Device engine — any protocol driver for the six non-access device kinds (Matter, MQTT, Zigbee, ONVIF, Modbus, Z-Wave)',
+    docStatus: 'planned',
+    docRefs: [
+      'README.md — "There is no Matter, MQTT, Zigbee, ONVIF, Modbus or Z-Wave driver in this repository. Not a stub, not an interface — nothing."',
+      'ARCHITECTURE.md §8 — "The device engine — designed, not started"',
+      'ROADMAP.md Phase 1 — "Nothing here exists in code"',
+      'site/docs/devices.md — the per-kind status table: six kinds "Demo data only"',
+    ],
+    // "Matter" is deliberately absent from the pattern: it is an ordinary
+    // English word and matches prose all over this codebase. The other five
+    // protocol names are unambiguous, and no plausible Matter driver lands
+    // without at least one of them landing too.
+    evidence: [[
+      { root: 'gateway/internal', pattern: 'MQTT|Zigbee|ONVIF|Modbus|Z-?Wave', flags: 'i' },
+      { root: 'controller/internal', pattern: 'MQTT|Zigbee|ONVIF|Modbus|Z-?Wave', flags: 'i' },
+      { root: 'src-tauri/src', pattern: 'MQTT|Zigbee|ONVIF|Modbus|Z-?Wave', flags: 'i' },
+    ]],
+  },
+  {
+    id: 'automations-runtime',
+    label: 'Automations runtime (a real trigger → condition → action engine over device state)',
+    docStatus: 'planned',
+    docRefs: [
+      'README.md — "The automations runtime. No rule object, no scheduler, no execution engine."',
+      'ROADMAP.md Phase 3',
+      'site/docs/devices.md § Automations — "None of it exists"',
+      'site/docs/architecture.md § What the open path actually is — "There is no rule object in the hub"',
+    ],
+    // Deliberately narrow. A loose /schedul|cron/ matches the controller's
+    // scheduleRelease() relay timer, which is not an automations engine.
+    evidence: [[
+      { root: 'gateway/internal', pattern: 'AutomationRule|RuleEngine|automations_|type Automation\\b|EvaluateRule', flags: 'i' },
+      { root: 'controller/internal', pattern: 'AutomationRule|RuleEngine|automations_|type Automation\\b|EvaluateRule', flags: 'i' },
+    ]],
+  },
+  {
+    id: 'energy-metering',
+    label: 'Energy metering — meter/inverter ingestion, rollups, source-mix accounting',
+    docStatus: 'planned',
+    docRefs: [
+      'README.md — "Energy metering. No ingestion, no rollups, no source-mix accounting."',
+      'ROADMAP.md Phase 4',
+      'site/docs/devices.md § Energy — "Built: nothing"',
+    ],
+    evidence: [[
+      { root: 'gateway/internal', pattern: 'MeterReading|kWh|inverter|EnergyReading|solar', flags: 'i' },
+      { root: 'controller/internal', pattern: 'MeterReading|kWh|inverter|EnergyReading|solar', flags: 'i' },
+    ]],
+  },
+  {
+    id: 'camera-pipeline',
+    label: 'Camera pipeline — live view or recording (ONVIF/RTSP)',
+    docStatus: 'planned',
+    docRefs: [
+      'README.md — "The camera pipeline. No live view, no recording, no ONVIF/RTSP code."',
+      'ROADMAP.md Phase 5',
+      'site/docs/devices.md § Security & bots — "Built: nothing"',
+    ],
+    evidence: [[
+      { root: 'gateway/internal', pattern: 'RTSP|VideoStream|CameraStream|ffmpeg|onvif', flags: 'i' },
+      { root: 'controller/internal', pattern: 'RTSP|VideoStream|CameraStream|ffmpeg|onvif', flags: 'i' },
+    ]],
+  },
+  {
+    id: 'keychain-credential-vault',
+    label: 'OS-keychain-backed credential vault for device/service secrets',
+    docStatus: 'planned',
+    docRefs: [
+      'ROADMAP.md Phase 2 — "Not built: there is no keychain or keyring code anywhere in the repository today"',
+      'site/docs/overview.md — the data directory holds the unencrypted signing key and JWT secret',
+    ],
+    evidence: [[
+      { root: 'gateway/internal', pattern: 'keychain|keyring|CredentialVault|SecretService', flags: 'i' },
+      { root: 'controller/internal', pattern: 'keychain|keyring|CredentialVault|SecretService', flags: 'i' },
+      { root: 'src-tauri/src', pattern: 'keychain|keyring|CredentialVault|SecretService', flags: 'i' },
+    ]],
+  },
+  {
+    id: 'ble-peripheral-off-linux',
+    label: 'BLE GATT peripheral backing on any platform other than Linux/BlueZ',
+    docStatus: 'planned',
+    docRefs: [
+      'README.md — "the GATT peripheral glue exists only for Linux/BlueZ behind -tags ble ... On every other platform the peripheral returns ErrUnsupported"',
+      'ROADMAP.md Finishing Phase 0 — "every other platform returns ErrUnsupported"',
+      'controller/internal/bleperiph/start_ble_linux.go — "//go:build ble && linux"',
+    ],
+    // Hardware validation itself is not regex-checkable — "has this ever run
+    // on a real radio" is a human fact. What IS checkable is the narrower
+    // structural claim the docs make: the only peripheral backing is Linux.
+    // The catch-all stub (`//go:build !ble || (ble && !linux)`) returns
+    // ErrUnsupported today; if a second backend lands, that stops being true
+    // and this fires so the docs get corrected.
+    evidence: [{ file: 'controller/internal/bleperiph/start_stub.go', patternAbsent: 'ErrUnsupported' }],
+  },
+
   // ── shipped — genuinely real today. Encoded so a regression (someone
   // rips the code out but the docs keep bragging) fails loudly, same as a
   // false "shipped" claim would.

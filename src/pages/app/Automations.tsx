@@ -1,12 +1,54 @@
+// Automations — Aql's when → do screen.
+//
+// There is no rule engine yet (ROADMAP Phase 3), so every rule on this page
+// comes from the built-in demo dataset and is marked as such per panel. The
+// "New rule" control is disabled rather than hidden: the shape of the feature
+// is real and planned, the engine behind it is not. Nothing here is wired to
+// an endpoint.
+//
+// The access-control module has its own real automation surface — time
+// windows and temporary grants under Access control → Temp access — which
+// does run on the gateway. This page does not pretend to be that.
+
 import { useState } from 'react';
-import { PageHeader } from '../AppLayout';
+import { Link } from 'react-router-dom';
+import { PageHeader } from './AppLayout';
 import { Card, StatBlock } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/cn';
-import { automations } from './demoData';
-import { DemoBanner, InertNote } from './shared';
+import { automations } from '@/lib/demoData';
+import { DemoChip, InertNote } from '@/components/demo/DemoMarks';
 
-export default function PreviewAutomationsPage() {
+/** A readout that is entirely fixture data — the chip sits on the number. */
+function DemoStat({
+  label,
+  value,
+  unit,
+  hint,
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+  hint: string;
+}) {
+  return (
+    <Card>
+      <DemoChip className="absolute top-4 right-4" label="Demo" />
+      <StatBlock
+        label={label}
+        value={
+          <span className="numeral">
+            {value}
+            {unit && <span className="ml-1.5 text-sm text-ink/45 font-sans">{unit}</span>}
+          </span>
+        }
+        hint={hint}
+      />
+    </Card>
+  );
+}
+
+export default function AutomationsPage() {
   const [rules, setRules] = useState(() => automations.map((a) => ({ ...a })));
   const active = rules.filter((r) => r.enabled).length;
 
@@ -17,52 +59,25 @@ export default function PreviewAutomationsPage() {
   return (
     <>
       <PageHeader
-        kicker="Preview · demo data"
+        kicker="Rules"
         title="Automations"
-        description="How when → do rules will read once there's a rule engine to run them. These six are fixtures."
+        description="When something happens, do something. One rule list across every device kind Aql speaks to."
       />
 
-      <DemoBanner what="This rule list, and every count above it," />
-
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6">
-        <Card>
-          <StatBlock
-            label="Rules"
-            value={<span className="numeral">{rules.length}</span>}
-            hint="demo list"
-          />
-        </Card>
-        <Card>
-          <StatBlock
-            label="Enabled"
-            value={<span className="numeral">{active}</span>}
-            hint="demo list"
-          />
-        </Card>
-        <Card>
-          <StatBlock
-            label="Runs today"
-            value={<span className="numeral">37</span>}
-            hint="fixture"
-          />
-        </Card>
-        <Card>
-          <StatBlock
-            label="Last trigger"
-            value={
-              <span className="numeral">
-                2<span className="ml-1.5 text-sm text-ink/45 font-sans">min ago</span>
-              </span>
-            }
-            hint="fixture"
-          />
-        </Card>
+        <DemoStat label="Rules" value={String(rules.length)} hint="fixture list" />
+        <DemoStat label="Enabled" value={String(active)} hint="fixture list" />
+        <DemoStat label="Runs today" value="37" hint="fixed number" />
+        <DemoStat label="Last trigger" value="2" unit="min ago" hint="fixed number" />
       </div>
 
       <Card className="p-0 overflow-hidden">
-        <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-ink/8">
-          <span className="text-[10px] uppercase tracking-[0.18em] text-ink/55">
-            Automation rules
+        <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-ink/8">
+          <span className="inline-flex items-center gap-3">
+            <span className="text-[10px] uppercase tracking-[0.18em] text-ink/55">
+              Automation rules
+            </span>
+            <DemoChip />
           </span>
           <Button
             variant="outline"
@@ -87,7 +102,7 @@ export default function PreviewAutomationsPage() {
                 type="button"
                 role="switch"
                 aria-checked={r.enabled}
-                aria-label={`${r.enabled ? 'Disable' : 'Enable'} ${r.name} (preview only)`}
+                aria-label={`${r.enabled ? 'Disable' : 'Enable'} ${r.name} (demo rule — not saved)`}
                 onClick={() => toggle(i)}
                 className={cn(
                   'mt-1 shrink-0 relative h-5 w-9 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
@@ -135,11 +150,19 @@ export default function PreviewAutomationsPage() {
           ))}
         </ul>
 
-        <div className="px-6 py-5">
+        <div className="px-6 py-5 border-t border-ink/8">
           <InertNote>
             The toggles move because they&rsquo;re useful to look at — but they only change this
             page in this tab. Nothing is saved, no rule ever fires, and the run counts are fixed
             numbers. A real when&nbsp;&rarr;&nbsp;do engine is ROADMAP Phase 3.
+          </InertNote>
+          <InertNote className="mt-2">
+            The one scheduling that <span className="text-ink/70">does</span> run today is
+            access-side:{' '}
+            <Link to="/app/grants" className="underline hover:text-ink/70">
+              Temp access
+            </Link>{' '}
+            issues real time-boxed grants your gateway enforces.
           </InertNote>
         </div>
       </Card>

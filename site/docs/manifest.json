@@ -108,7 +108,7 @@
     },
     {
       "id": "devices",
-      "title": "Devices, energy & automations",
+      "title": "Devices",
       "file": "devices.md"
     },
     {
@@ -142,11 +142,17 @@
       ]
     },
     {
+      "title": "What the hub owns",
+      "pages": [
+        "devices",
+        "controllers",
+        "emergency-access"
+      ]
+    },
+    {
       "title": "Run a hub",
       "pages": [
         "self-host",
-        "channels",
-        "linking-whatsapp",
         "ingress"
       ]
     },
@@ -159,16 +165,10 @@
       ]
     },
     {
-      "title": "At the gate",
+      "title": "Input surfaces",
       "pages": [
-        "controllers",
-        "emergency-access"
-      ]
-    },
-    {
-      "title": "Beyond access control",
-      "pages": [
-        "devices"
+        "channels",
+        "linking-whatsapp"
       ]
     },
     {

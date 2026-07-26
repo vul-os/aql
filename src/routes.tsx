@@ -53,34 +53,22 @@ const routes: RouteObject[] = [
     element: wrap(() => import('@/pages/app/AppLayout')),
     errorElement,
     children: [
-      { index: true, element: wrap(() => import('@/pages/app/Dashboard')), errorElement },
+      // Aql's four primary screens — the product. Devices spans all seven
+      // device kinds; the access-control module's own deep screens follow.
+      // There is no /app/preview/* namespace: demo-fed panels live inside
+      // these routes and mark themselves per item (src/components/demo/).
+      { index: true, element: wrap(() => import('@/pages/app/Overview')), errorElement },
+      { path: 'devices', element: wrap(() => import('@/pages/app/Devices')), errorElement },
+      { path: 'automations', element: wrap(() => import('@/pages/app/Automations')), errorElement },
+      { path: 'energy', element: wrap(() => import('@/pages/app/Energy')), errorElement },
+      // Access control — every one of these is gateway-backed and real.
       { path: 'open', element: wrap(() => import('@/pages/app/OpenGate')), errorElement },
       { path: 'access-points', element: wrap(() => import('@/pages/app/AccessPoints')), errorElement },
       { path: 'access-points/:id', element: wrap(() => import('@/pages/app/AccessPoint')), errorElement },
-      { path: 'devices', element: wrap(() => import('@/pages/app/Devices')), errorElement },
       { path: 'members', element: wrap(() => import('@/pages/app/Members')), errorElement },
       { path: 'analytics', element: wrap(() => import('@/pages/app/Analytics')), errorElement },
       { path: 'grants', element: wrap(() => import('@/pages/app/Grants')), errorElement },
       { path: 'settings', element: wrap(() => import('@/pages/app/Settings')), errorElement },
-      // Aql command-center screens. Demo dataset only — no device engine exists
-      // (ROADMAP Phase 1), so they are namespaced under /app/preview/* and each
-      // renders a <DemoBanner />. Keep them off the un-prefixed paths: '/app/devices'
-      // is the real, gateway-backed controller list and must stay that way.
-      {
-        path: 'preview/devices',
-        element: wrap(() => import('@/pages/app/preview/PreviewDevices')),
-        errorElement,
-      },
-      {
-        path: 'preview/energy',
-        element: wrap(() => import('@/pages/app/preview/PreviewEnergy')),
-        errorElement,
-      },
-      {
-        path: 'preview/automations',
-        element: wrap(() => import('@/pages/app/preview/PreviewAutomations')),
-        errorElement,
-      },
       {
         path: 'admin',
         element: wrap(() => import('@/pages/app/admin/AdminLayout')),

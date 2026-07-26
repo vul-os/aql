@@ -7,25 +7,81 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 > Entries before the fold (see Unreleased) describe this project under its former name,
 > **lintel**. They are left as written — rewriting history to say "Aql" would make the
-> record less accurate, not more.
+> record less accurate, not more. That also means older entries use *gateway* as the
+> product noun for the server; from the fold onwards the server is **the hub**, and only
+> the `gateway/` path, the Go module path and the binary name keep that spelling.
 
 ---
 
 ## [Unreleased]
 
-### Changed — the fold: lintel becomes Aql's access + chat engine
+### Changed — positioning corrected: Aql is the hub, access control is its first module
 
-**lintel and Aql are now one repository and one product.** Aql is an open-source command
-centre for the physical world; lintel's chat-driven physical access control is the part
-of it that is finished, and it is now Aql's access and chat engine. Nothing was thrown
-away on the lintel side: the Go hub, the controller agent, the wire contracts, and every
-test came across intact.
+A previous documentation pass rewrote this project as if it were a gate opener with a
+device roadmap attached. That was backwards, and this pass reverses it.
 
-What moved the other way is smaller and worth stating plainly. **Aql's previous frontend
-— a Tauri + SvelteKit shell whose Overview / Devices / Energy / Automations screens
-rendered an in-memory demo dataset — has been deleted.** It was a UI with nothing behind
-it; the shipped console (React 19 + Vite, embedded in the hub) replaced it. Any image or
-document showing those four screens is from the retired prototype. The Tauri v2 desktop
+**Aql is an open-source command centre for the physical world** — one self-hosted hub
+meant to own everything physical around a home or a business. Its device model has seven
+kinds: camera, lighting, robot, climate, energy, sensor and **access**. Access control is
+one kind among seven. What the fold contributed is that it makes that one kind *genuinely
+real* — signed commands, a paired controller that pins the hub's key, offline grants, a
+tamper-evident trail. **It is the first working module, not the product.**
+
+- `README.md` restored to Aql's own identity: the three-column framing (one hub owns
+  everything / you own the box / works with any hardware, paired with Zana), the "software
+  brain for your physical space" statement, and access control as a strong section rather
+  than the headline.
+- `ROADMAP.md` restored to the original phase arc — device engine → persistence & secrets
+  → automations → energy → security & bots → remote access → mobile → Zana — with Phase 0
+  recording honestly that a complete access-control module arrived via the fold, and a
+  "Finishing Phase 0" section for the emergency-access loop, the GPIO driver and the BLE
+  radio.
+- The manual (`site/docs/`) rebalanced to read as a hub's manual. `devices.md` is now the
+  chapter about what the hub owns (all seven kinds, with a status per kind) instead of an
+  appendix of unbuilt things; `manifest.json` groups follow ("What the hub owns" now sits
+  directly after "Start here", and chat moved to "Input surfaces").
+- Corrected a stale figure repeated across the docs: the hub's suite is **219 Go tests**,
+  not 183. 60 HTTP routes, 45 controller tests and 61 vectors / 68 checks were accurate.
+
+### Changed — the server is "the hub", never "the gateway"
+
+In the KOTVA family *gateway* names the §7 coordinator role — the legacy-rail adapter,
+implemented by **[Ephor](https://github.com/vul-os/ephor)**. Aql's Go component is not
+that: it owns devices, evaluates rules, keeps the audit log and issues signed commands.
+All prose across the README, `ARCHITECTURE.md`, `ROADMAP.md` and the manual now says
+**hub**. Unchanged, because they are compat surface: the `gateway/` directory, the Go
+module path `github.com/vul-os/aql/gateway`, the binary and its `gateway verify-audit`
+subcommand, the `aql-gateway` image, `LINTEL_*`, `lintel.db`, `_lintel._tcp`, the JWT
+issuer and everything under `proto/vectors/`.
+
+### Changed — the chat rail is moving to Ephor (in progress)
+
+The adapters that terminate WhatsApp, Slack and Telegram are being lifted out of Aql and
+into Ephor. Target shape: a resident texts a channel, Ephor terminates that rail and hands
+the hub an authorised command, and the hub checks the rules, signs, and actuates. Ephor is
+separate and swappable — run your own or point at one.
+
+**The move is not finished, and the docs say so.** Texting a gate open works today; the
+adapter code in `gateway/internal/channels/` is transitional and is no longer documented
+as the supported long-term path, and the Ephor-backed path is not presented as shipped
+either. `scripts/feature-claims.manifest.mjs` still carries `whatsapp-channel`,
+`slack-channel`, `telegram-channel` and `slack-socket-mode` as shipped claims — the code
+genuinely is still present, so those entries remain truthful and were deliberately left
+alone rather than weakened to suit a doc pass.
+
+### Changed — the fold: lintel becomes Aql's first real device kind
+
+**lintel and Aql are now one repository and one product.** Nothing was thrown away on the
+lintel side: the Go hub, the controller agent, the wire contracts, and every test came
+across intact.
+
+What moved the other way is smaller and worth stating plainly. **Aql's previous frontend —
+a Tauri + SvelteKit shell — has been deleted**, and the shipped console (React 19 + Vite,
+embedded in the hub) replaced it. Its in-memory demo dataset survived the move and was
+ported over verbatim (`src/lib/demoData.ts`: twelve fictional devices across all seven
+kinds), so the device, energy and automations views still exist — as demo data, marked as
+such at the point of use, sitting beside real hub-backed access data. Any image under
+`assets/screens/` predates the fold and pictures the retired shell. The Tauri v2 desktop
 shell survives, now wrapping the real console, with a hub picker on first run.
 
 ### Changed — documentation reconciled to the merged product
@@ -39,8 +95,8 @@ shell survives, now wrapping the real console, with a hub picker on first run.
   `SCREENSHOTS`, `THREAT-MODEL`) were folded into that structure rather than left
   alongside lintel's fifteen: the first five were merged into the manual and removed;
   `THREAT-MODEL.md` was rewritten and kept.
-- **Two new manual chapters**: `devices.md`, which states the unbuilt device/energy/
-  automation half honestly instead of implying it from a screenshot, and `faq.md`.
+- **Two new manual chapters**: `devices.md`, covering all seven device kinds and stating
+  the unbuilt engine honestly instead of implying it from a screenshot, and `faq.md`.
 - Rebranded lintel → Aql across the manual, **except** the identifiers that are a
   deployment or wire contract: the `LINTEL_*` environment variables, the `lintel.db`
   filename, and the controller's `_lintel._tcp` mDNS service. Those were deliberately left

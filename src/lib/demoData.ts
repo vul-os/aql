@@ -6,9 +6,13 @@
 // seam", "device discovery replacing the demo dataset") is not built. Nothing
 // in this file talks to a gateway, a controller, or a socket.
 //
-// Every screen that reads from here MUST say so in the UI — see <DemoBanner />
-// in ./shared.tsx. Do not wire these shapes to endpoints that do not exist; the
-// real engine will replace this module behind the same types.
+// This is ONE kind of data in the portal, not a separate section of it. Aql's
+// screens (Overview, Devices, Automations, Energy) mix it with real,
+// gateway-backed access data, so every panel, row and figure that reads from
+// here MUST carry a per-item demo marker at the point of use — see
+// <DemoChip /> and <InertNote /> in src/components/demo/DemoMarks.tsx. Do not
+// wire these shapes to endpoints that do not exist; the real engine will
+// replace this module behind the same types.
 
 export type DeviceState = 'live' | 'warn' | 'alert' | 'off';
 
@@ -23,6 +27,12 @@ export interface Device {
   seen: string;
 }
 
+/**
+ * All seven device kinds Aql models: Camera, Lighting, Robot, Climate,
+ * Energy, Sensor and Access. Kept complete and byte-faithful to the pre-fold
+ * dataset — see `demoDevices` below for the subset the portal actually
+ * renders, and why.
+ */
 export const devices: Device[] = [
   { id: 'cam-gate',   name: 'Front Gate Camera', kind: 'Camera',    zone: 'Perimeter', state: 'live',  read: '1080p · 24fps',  detail: 'H.264 · motion zones armed', seen: 'now' },
   { id: 'cam-yard',   name: 'Yard Camera',       kind: 'Camera',    zone: 'Exterior',  state: 'live',  read: '1080p · 24fps',  detail: 'H.264 · night mode', seen: 'now' },
@@ -36,6 +46,39 @@ export const devices: Device[] = [
   { id: 'tank',       name: 'Water Tank',        kind: 'Sensor',    zone: 'Utility',   state: 'alert', read: 'level 12%',      detail: 'below threshold · pump off', seen: '6m' },
   { id: 'gate-lock',  name: 'Gate Lock',         kind: 'Access',    zone: 'Perimeter', state: 'live',  read: 'locked',         detail: 'last opened 12:04', seen: '2h' },
   { id: 'door-lock',  name: 'Front Door',        kind: 'Access',    zone: 'Interior',  state: 'live',  read: 'locked',         detail: 'auto-lock armed', seen: '3h' },
+];
+
+/** The one kind the portal does NOT fake: Access is served by the gateway. */
+export const REAL_KIND = 'Access';
+
+/**
+ * What the device list actually renders from this file.
+ *
+ * The Access rows above are dropped: access points and their paired
+ * controllers are real in this product — they come from the gateway, carry
+ * signed commands and actually open a gate. Showing a fixture "Gate Lock"
+ * next to a controller that genuinely works would be the one confusion this
+ * dataset must never cause.
+ */
+export const demoDevices: Device[] = devices.filter((d) => d.kind !== REAL_KIND);
+
+/** The six kinds this dataset stands in for, in a stable display order. */
+export const DEMO_KINDS: string[] = [...new Set(demoDevices.map((d) => d.kind))];
+
+export interface EventRow {
+  t: string;
+  tag: string;
+  msg: string;
+  sev: 'ok' | 'warn' | 'alert';
+}
+
+/** Fixture event log from the pre-fold console. Never appended to at runtime. */
+export const events: EventRow[] = [
+  { t: '14:22:07', tag: 'MOTION', msg: 'Front Gate Camera · person detected', sev: 'warn' },
+  { t: '14:21:52', tag: 'ENERGY', msg: 'Solar Array crossed 3.0 kW', sev: 'ok' },
+  { t: '14:20:31', tag: 'ROBOT',  msg: 'Mower returned to dock · battery 81%', sev: 'ok' },
+  { t: '14:18:04', tag: 'ALERT',  msg: 'Water Tank level below threshold', sev: 'alert' },
+  { t: '14:15:40', tag: 'AUTO',   msg: 'Rule "Dusk lights" armed', sev: 'ok' },
 ];
 
 export interface Automation {
@@ -71,6 +114,10 @@ export const circuits: Circuit[] = [
   { name: 'Robots',     kw: 0.26, max: 1.0 },
 ];
 
+/** Fixture headline figures the Overview readouts quote, in one place. */
+export const DEMO_POWER_DRAW_KW = 2.41;
+export const DEMO_SOLAR_KW = 3.1;
+
 /** Build an SVG path from a 0..1 series across a viewbox. */
 export function path(seriesValues: number[], w: number, h: number): string {
   const step = w / (seriesValues.length - 1);
@@ -81,7 +128,7 @@ export function path(seriesValues: number[], w: number, h: number): string {
 
 /**
  * Deterministic seeded series — the same numbers on every render, so the
- * preview screens are stable for screenshots and never look like a live feed
+ * demo panels are stable for screenshots and never look like a live feed
  * that happens to be still.
  */
 export function series(n: number, seed = 1, amp = 0.3, base = 0.5): number[] {

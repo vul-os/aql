@@ -2,16 +2,16 @@
 
 The HTTP API isn't required to use Aql — most people only ever touch chat. But if
 you're integrating with property-management software, wiring the gate into a home
-automation, or building on top of a gateway, this is for you.
+automation, or building on top of a hub, this is for you.
 
-The API is served by the gateway itself — every gateway, the same way — under `/v1`.
+The API is served by the hub itself — every hub, the same way — under `/v1`.
 
-> The `/v1` surface is stabilising alongside the Go gateway; pre-1.0, expect additive
+> The `/v1` surface is stabilising alongside the Go hub; pre-1.0, expect additive
 > changes — the repository's route code is the source of truth for what exists today.
 
 ## Authentication
 
-**Today**, the gateway only issues short-lived bearer session tokens from
+**Today**, the hub only issues short-lived bearer session tokens from
 `POST /v1/auth/login` / `/v1/auth/refresh` — the same tokens the portal itself uses —
 sent as:
 
@@ -32,7 +32,7 @@ the portal under **Settings → API tokens** (tracked in the repo todo), shaped 
 `Authorization: Bearer aql_live_<token>`. Until that ships, integrating means logging
 in a service account and refreshing its session token like any other client.
 
-Every gateway issues its own tokens/sessions — there is no central token authority.
+Every hub issues its own tokens/sessions — there is no central token authority.
 
 ## Open an access point
 

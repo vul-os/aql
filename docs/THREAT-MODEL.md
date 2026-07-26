@@ -58,6 +58,13 @@ Aql *does* have an optional third-party **input rail**, and when you use it you 
 that platform's visibility over that rail. Those are different claims, and this document
 keeps them apart deliberately.
 
+**In progress:** the chat adapters (WhatsApp, Slack, Telegram) are being lifted out of
+Aql's hub and into [Ephor](https://github.com/vul-os/ephor), a separate, swappable
+legacy-rail adapter — not shipped yet. That move relocates *where* the plaintext is
+handled (Ephor terminates the rail and hands the hub an authorised command instead of
+the hub terminating it directly); it does not remove the exposure described above. A
+third party still sees the message either way.
+
 ### Reducing chat-rail exposure
 
 - **Use Slack Socket Mode** if the workspace shape fits: the hub dials out and there is

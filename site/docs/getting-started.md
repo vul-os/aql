@@ -1,32 +1,42 @@
 # Getting started
 
-Aql gets you from "I'd like to text my gate open" to actually doing it in about an
-evening, assuming the controller hardware is mounted. Everything runs on your own hub —
-there is no hosted service and nothing to sign up for. This chapter is the short path;
-[Run a hub](self-host.md) has the full install, reachability and backup detail.
+Aql is meant to be the software brain for your physical space — one self-hosted hub
+that owns your cameras, lighting, robots, climate, energy and access control. Step one
+of standing that up is always the same regardless of which device kind you care about:
+run **your hub**. Step two is making one module real. Today, the module that's real end
+to end is physical access control: gates, doors and barriers, opened from chat or the
+web console. This chapter gets you from nothing to a hub with a gate wired into it, in
+about an evening, assuming the controller hardware is mounted. Everything runs on your
+own hub — there is no hosted service and nothing to sign up for. This chapter is the
+short path; [Run a hub](self-host.md) has the full install, reachability and backup
+detail.
 
 > **What you can actually do today** is physical access control: gates, doors and
 > barriers, opened from chat or the web console. Lights, cameras, meters, mowers and
-> bots are the roadmap — no driver for any of them exists yet. See
-> [Devices, energy & automations](devices.md) before you plan around them.
+> bots are the roadmap — no driver for any of them exists yet, and the device, energy
+> and automation screens in the console currently run on a built-in demo dataset rather
+> than real hardware. See [Devices](devices.md) before you plan
+> around them.
 
 ## What you'll need
 
-- A gate, door or barrier with a **dry-contact relay input** (most motors have one).
+- Somewhere for the hub to live: a VPS, a Pi, any always-on box. Docker or a bare
+  binary — your call. This is the thing that will eventually own everything else in
+  your space, so it's worth putting it somewhere that stays on.
+- A gate, door or barrier with a **dry-contact relay input** (most motors have one) —
+  today's working device kind, and the first module you can make real.
 - A Pi-class board running the controller agent. **Note:** the GPIO relay driver is not
   implemented — the default build logs actuations instead of pulsing a real relay, so
   driving actual hardware means writing that driver first. See
   [Controllers](controllers.md).
-- Somewhere for the hub to live: a VPS, a Pi, any always-on box. Docker or a bare
-  binary — your call.
 - A chat channel to bring: a Slack workspace is the five-minute start; WhatsApp needs
   your own Meta business number (a WABA) — see [Chat channels](channels.md).
 - Ten minutes of ladder time to wire the controller in parallel with your existing motor.
 
 ## The six steps
 
-1. **Run the hub.** One binary, one SQLite file, web console embedded. Build it from
-   source:
+1. **Run the hub.** This is the part every device kind will eventually sit behind — one
+   binary, one SQLite file, web console embedded. Build it from source:
 
    ```sh
    git clone https://github.com/vul-os/aql
@@ -117,5 +127,5 @@ the reply is a numbered picker — they answer `1`, `2` or `3`.
 - [Chat channels](channels.md) — Slack in minutes, and the channel seam.
 - [Linking WhatsApp](linking-whatsapp.md) — bringing your own number and WABA.
 - [Controllers](controllers.md) — wiring and pairing.
-- [Devices, energy & automations](devices.md) — what Aql is meant to control next, and
+- [Devices](devices.md) — what Aql is meant to control next, and
   what it cannot control today.

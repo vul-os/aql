@@ -1,38 +1,69 @@
-# Devices, energy & automations
+# Devices
 
-This chapter is about the half of Aql that is **not built**. It exists so the ambition is
-written down honestly instead of implied by a screenshot.
+This chapter is about the thing Aql is for: **one hub that owns everything physical**
+around a home or a business. It is also the chapter with the largest gap between design
+and code, so it says which is which on every line.
 
-> **Nothing on this page ships today.** There is no device driver of any kind in the
+> **The device engine does not exist yet.** There is no device driver of any kind in the
 > codebase — no Matter, no MQTT, no Zigbee, no ONVIF, no Modbus, no Z-Wave. There is no
 > automations runtime, no scene engine, no energy ingestion, and no camera pipeline. A
 > grep of the hub and controller sources for any of those protocol names returns nothing.
-> The only device class Aql drives is a gate/door/barrier controller.
+> The only device class the hub drives today is a gate/door/barrier controller.
 
-## What Aql actually controls today
+## The seven device kinds
+
+Aql's device model has seven kinds. They are what the console renders, what the
+automations runtime would fire on, and what a driver has to map its protocol onto:
+
+| Kind | Examples | Status |
+| --- | --- | --- |
+| **Camera** | Gate camera, yard camera (ONVIF/RTSP) | Demo data only — no pipeline |
+| **Lighting** | Zigbee groups, individual fixtures | Demo data only — no driver |
+| **Robot** | Robot mower, security patrol bot, cleaning bot | Demo data only — no control path |
+| **Climate** | Thermostats, HVAC | Demo data only — no driver |
+| **Energy** | Solar array, grid meter, battery | Demo data only — no ingestion |
+| **Sensor** | Water tank level, contact and motion sensors | Demo data only — no driver |
+| **Access** | Gate lock, door lock, barrier | **Real, end to end** |
+
+**Access is the exception, and it is deliberately the reference shape.** It has a
+versioned wire contract with conformance vectors, a device agent that verifies an
+Ed25519 signature instead of trusting its network, offline verification for when the hub
+is unreachable, and an audit row written in the same transaction as the decision. Those
+are the parts that are painful to retrofit, which is why the first kind was taken all the
+way down. See [Controllers](controllers.md) and [Emergency access](emergency-access.md).
+
+## What the hub actually drives today
 
 One thing: an **access point** — a gate, door, barrier, or "other" — through a paired
 controller that verifies an Ed25519-signed command. The only dispatchable commands are
 `open` and `close`. Access-point kinds are constrained to those four values by a database
-check constraint; there is no generic device model behind them.
+check constraint; there is no generic device model behind them yet.
 
-The console's **Devices** page lists paired *controllers* — their access point, online
-state and pairing status. It is not a smart-home device list.
+Everything the console shows you about a *real* device is about a paired controller — its
+access point, online state and pairing status. Anything else on those screens comes from
+the demo dataset below.
 
-## What is intended
+## The demo dataset
 
-The design goal is one hub that owns everything physical in a home or a business:
-cameras, lights, mowers, IoT sensors, energy meters, and security/cleaning bots —
-**plus** the physical access control that already works. One control plane, one audit
-trail, one place to automate across all of it.
+The console's device, energy and automations views are real, interactive UI over a
+built-in in-memory dataset (`src/lib/demoData.ts`): twelve fictional devices spread across
+all seven kinds, a fabricated 24-hour power curve, and six example automations that never
+run. Because that data sits beside real, hub-backed access data on the same screens, every
+panel, row and figure that comes from it is marked as demo at the point of use. Nothing
+behind it talks to hardware, a socket or a database.
 
-Two things make that scope wider than a typical smart-home hub, and they are the reason
+They exist because the shape of the target is worth being able to see and argue with. They
+are not a capability. Treat any screenshot of them the same way.
+
+## Why the scope is wider than a smart-home hub
+
+Two things make this scope wider than a typical smart-home hub, and they are the reason
 the project exists rather than deferring to one:
 
 - **Business, not just home.** Locations, access points, accounts and an operator seat
   above them are already modelled that way in the shipped hub — multiple sites under one
   binary is not a retrofit.
-- **Autonomous bots as a first-class device class**, alongside cameras and sensors, with
+- **Autonomous bots as a first-class device kind**, alongside cameras and sensors, with
   their own state machine (patrol, dock, charge) — rather than an afterthought
   integration.
 
@@ -60,6 +91,9 @@ Planned adapters, roughly in the order that unlocks the most devices:
 | ONVIF | IP cameras (most brands) | Planned — no code |
 | Modbus | Energy meters, industrial/building sensors | Planned — no code |
 | Generic HTTP/webhook | Anything with an API — the catch-all escape hatch | Planned — no code |
+
+Bringing the existing access path onto the same internal model — so `access` is one kind
+among seven rather than a parallel stack — is part of the same phase.
 
 **Where would it live?** Undecided, and worth stating rather than hand-waving. Aql has
 two plausible homes for a device engine: the Go hub (which already owns persistence,
@@ -92,13 +126,18 @@ Intended: camera live view and recording (ONVIF/RTSP), robot control for mowers,
 cleaning and patrol beyond a status row, and alerting tied to real sensor or camera
 events. Built: nothing.
 
-## Chat as the input surface for all of it
+Movement commands are the one place where "just add a driver" is not enough: a compromised
+client must not be able to drive a machine into a person, so rate-limiting and scoping on
+movement belong in the engine from the start rather than after.
 
-The channel seam is deliberately device-agnostic — a channel resolves a sender to an
-identity and a message to an intent, then hands off to a choke point that decides. The
-intent vocabulary is currently `open`, `close` and picker replies, because that is the
-only thing there is to command. Extending it to "turn the lights off" is a small change
-*at the seam* and a large change *behind it*: the device engine has to exist first.
+## Reaching devices: input surfaces
+
+The input surfaces — chat, the console, the app — are deliberately device-agnostic. A
+surface resolves a person to an identity and a request to an intent, then hands off to a
+choke point that decides. The intent vocabulary is currently `open`, `close` and picker
+replies, because that is the only thing there is to command. Extending it to "turn the
+lights off" is a small change *at the surface* and a large change *behind it*: the device
+engine has to exist first. See [Chat channels](channels.md).
 
 ## Zana
 

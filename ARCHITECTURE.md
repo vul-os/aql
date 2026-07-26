@@ -1,13 +1,14 @@
 # Aql architecture
 
 > **An open-source command centre for the physical world.** One hub you run yourself,
-> meant to own everything physical around a home or a business — with chat as an input
-> surface onto it. Today it drives one device class end to end: gates, doors and
-> barriers.
+> meant to own everything physical around a home or a business — cameras, lighting,
+> robots, climate, energy, sensors and access — with chat and a console as input surfaces
+> onto it. Today exactly one of those seven device kinds is driven end to end: **access**
+> (gates, doors and barriers).
 
-Aql has no cloud. It is just the **system**: a hub you run, controllers at your gates, an
-app in your pocket — every line open source, nothing hosted by us.
-[vulos.org/products/aql](https://vulos.org/products/aql) is the project site (docs +
+Aql has no cloud. It is just the **system**: a hub you run, devices at the edge that
+verify rather than trust, an app in your pocket — every line open source, nothing hosted
+by us. [vulos.org/products/aql](https://vulos.org/products/aql) is the project site (docs +
 downloads), not a service. There is **no billing system** — nothing in the binaries
 charges anyone anything — **no account** with us, and **no telemetry**.
 
@@ -21,14 +22,25 @@ exist and which are design intent. The condensed operator-facing tour is
 
 | Layer | Status |
 | --- | --- |
-| Hub (`gateway/`) — channels, open path, console, API, device hub, audit | **Built.** 60 HTTP routes, 183 Go tests green across 8 packages |
+| Hub (`gateway/`) — open path, console, API, device hub, audit | **Built.** 60 HTTP routes, 219 Go tests green across 8 packages |
+| **Access module** — the first device kind wired end to end | **Built.** Signed commands, pinned-key controller, offline grants, tamper-evident audit |
 | Controller agent (`controller/`) — pairing, signed commands, grants, events | **Built.** 45 Go tests green. GPIO relay driver and BLE radio are **not** |
 | Wire contracts (`proto/`) | **Built.** 61 conformance vectors, 68 checks, consumed by both sides |
 | Cross-module harness (`e2e/`) | **Built.** Boots real binaries and drives the open path over the wire |
-| Web console + desktop shell (`src/`, `src-tauri/`) | **Built** for admin surfaces. No emergency-access screen, no device screens |
+| Web console + desktop shell (`src/`, `src-tauri/`) | **Built** for admin surfaces. The device / energy / automations screens run on a demo dataset; there is no emergency-access screen |
 | **Device engine** — drivers, discovery, telemetry, automations, energy | **Not built.** No Matter, MQTT, Zigbee, ONVIF, Modbus or Z-Wave code exists |
 | **Phone-side offline grants** | **Not built.** The contract, controller verification and hub issuance are real; nothing on a phone presents a grant |
+| Chat rail | **In transition.** Moving out of Aql into [Ephor](https://github.com/vul-os/ephor); the adapters in `gateway/internal/channels/` are transitional (§3a) |
 | Geofencing, online time-window rules, analytics API, outbound webhooks, scoped API tokens, 2FA | **Not built** |
+
+### The seven device kinds
+
+Aql's device model has seven kinds — **camera, lighting, robot, climate, energy, sensor,
+access**. Six of them are visible today only through the console's demo dataset
+(`src/lib/demoData.ts`: twelve fictional devices, marked as demo at the point of use),
+because the engine that would populate them from real hardware is §8 and does not exist.
+**Access** is the exception: it has a real wire contract, a real device agent and a real
+audit trail, and it is the reference shape for how the other six should eventually work.
 
 ---
 
@@ -41,7 +53,7 @@ flowchart LR
         A["🛡️ Admin / staff"]
     end
 
-    subgraph channels ["Chat channels (input surface)"]
+    subgraph channels ["Chat rail (input surface — moving to Ephor)"]
         WA["WhatsApp<br/>(Meta Cloud API)"]
         TG["Telegram bot<br/>(webhook)"]
         SL["Slack bot<br/>(Events API / Socket Mode)"]
@@ -49,15 +61,15 @@ flowchart LR
     end
 
     subgraph gw ["HUB — one Go binary · SQLite"]
-        CH["Channel seam"]
+        CH["Channel seam<br/>(transitional)"]
         RE["Open-path choke point<br/>membership · rate limits · quotas<br/>visitor grants"]
         PORTAL["Web console<br/>(embedded React build)"]
         HUB["Device hub<br/>signed commands · Ed25519"]
         AUD[("Audit log<br/>hash-chained, append-only")]
-        DEV["Device engine<br/>(NOT BUILT)"]
+        DEV["Device engine<br/>(NOT BUILT)<br/>camera · lighting · robot<br/>climate · energy · sensor"]
     end
 
-    subgraph site ["At the gate"]
+    subgraph site ["At the edge — the access kind, today"]
         C["Controller<br/>Wi-Fi / GSM 4G"]
         G["🚧 Gate / door / barrier"]
     end
@@ -76,10 +88,11 @@ flowchart LR
     APP -. "emergency: LAN / BLE<br/>(phone half not built)" .-> C
 ```
 
-Everything server-side is **one binary**. The hub receives channel webhooks (or dials out
-for Slack Socket Mode), runs the open path, serves the console and the app's API, holds
-the audit log, and pushes signed commands to controllers. Controllers dial **out**, so
-they work behind NAT and on CGNAT'd 4G SIMs with zero inbound ports.
+Everything server-side is **one binary**. The hub owns state, decides, signs, and holds the
+audit log; it serves the console and the app's API, and pushes signed commands to devices.
+Devices at the edge verify what the hub sends rather than trusting the network they sit on.
+Controllers dial **out**, so they work behind NAT and on CGNAT'd 4G SIMs with zero inbound
+ports.
 
 ---
 
@@ -87,7 +100,7 @@ they work behind NAT and on CGNAT'd 4G SIMs with zero inbound ports.
 
 | Component | What it is | Runs on | Stack |
 | --- | --- | --- | --- |
-| **gateway** (the hub) | The entire server: channels, open path, console, API, device hub, audit | Any VPS / Pi / always-on box | Go · SQLite (`modernc.org/sqlite`, no CGO) · `go:embed` console |
+| **the hub** (`gateway/`) | The entire server: open path, console, API, device hub, audit. The directory keeps its old spelling; the product noun is *hub* (§3a) | Any VPS / Pi / always-on box | Go · SQLite (`modernc.org/sqlite`, no CGO) · `go:embed` console |
 | **controller** | The unit wired to the gate relay; verifies signatures, drives the motor. The agent is real and conformance-tested; the GPIO relay and BLE radio are the hardware-only surfaces still missing | Pi-class board at the gate, Wi-Fi or GSM | Go, own module, std-lib first (`-tags gpio` / `-tags ble` for hardware) |
 | **e2e** | Cross-module harness: boots real hub + controller binaries and proves the open path over the wire | CI, dev machine | Go, subprocess-driven |
 | **src / src-tauri** | The console (embedded in the hub) and the Tauri v2 desktop shell with a hub picker | Browser, desktop | React 19 · Vite · Tauri v2 · Rust (thin) |
@@ -99,7 +112,8 @@ they work behind NAT and on CGNAT'd 4G SIMs with zero inbound ports.
 
 ```
 aql/
-├── gateway/      # 🟢 the hub: Go, the whole product server (auth, open path, hub, admin, channels)
+├── gateway/      # 🟢 the hub: Go, the whole product server (auth, open path, device hub, admin)
+│                 #    …plus channels/, the transitional chat adapters moving to Ephor (§3a)
 │   └── migrations/   # SQLite schema, clean folded baseline (7 migrations, 22 tables)
 ├── controller/   # 🟢 reference gate device agent (own Go module); GPIO/BLE need real hardware
 ├── e2e/          # 🟢 cross-module suite, real hub + controller binaries over the wire
@@ -119,27 +133,49 @@ referring to it is stale.
 
 ---
 
-## 3. The three access paths
+## 3. Input surfaces, and the three ways to reach a gate
 
-People reach the gate in three ways, ranked by how people actually behave.
+An input surface is anything that turns a human intention into an intent the hub can act
+on. There are three: chat, the app, and the web console. None of them is access-specific by
+design — the seam behind each is device-agnostic — but access is the only device kind
+behind them today, so in practice all three are described here in terms of opening a gate.
 
-### 3a. Chat — the primary path
+### 3a. Chat — the primary path, and a rail in transition
 
 The hub exposes a **channel seam**: a small interface that resolves a sender to an
 identity, turns a message into an intent, and sends replies. Everything behind the seam
 is channel-agnostic — a channel decides how to ask and how to reply, never whether the
 gate may open.
 
-| Channel | Identity | Transport | Status |
+> **Where this is going: [Ephor](https://github.com/vul-os/ephor).** The adapters that
+> terminate WhatsApp, Slack and Telegram are being lifted out of Aql and into Ephor, the
+> coordinator implementation in the KOTVA family — the component whose job is bridging
+> legacy rails. In the target shape a resident texts a channel, Ephor terminates the rail
+> and hands the hub an authorised command, and the hub does what only it can do: check the
+> rules, sign it, actuate. Ephor is separate and swappable — run your own or point at one.
+>
+> **That move is in progress.** Texting a gate open works today, but the adapter code in
+> `gateway/internal/channels/` is transitional and is not the long-term answer, and the
+> Ephor-backed path is not shipped either. Note also the naming: **Aql's hub is not a KOTVA
+> gateway.** It bridges chat rails into its own local domain; the gateway/coordinator role
+> in that family is Ephor's. The `gateway/` directory keeps its spelling only because the
+> path, the Go module path and the binary name are compat surface. See
+> [`docs/KOTVA-ALIGNMENT.md`](docs/KOTVA-ALIGNMENT.md).
+
+| Channel | Identity | Transport | Today |
 | --- | --- | --- | --- |
-| **WhatsApp** | phone number | Meta Cloud API webhook (HMAC-verified) | **Built.** High friction — needs a verified WABA |
-| **Slack** | member id | Events API webhook (signed requests, 300 s replay window) **or** Socket Mode (outbound WSS, zero ingress) | **Built.** Both modes |
-| **Telegram** | chat id | Webhook, secret-token header verified | **Built.** Long-polling is roadmap |
+| **WhatsApp** | phone number | Meta Cloud API webhook (HMAC-verified) | Works — transitional. High friction: needs a verified WABA |
+| **Slack** | member id | Events API webhook (signed requests, 300 s replay window) **or** Socket Mode (outbound WSS, zero ingress) | Works — transitional. Both modes |
+| **Telegram** | chat id | Webhook, secret-token header verified | Works — transitional. Long-polling is roadmap |
 | **Discord** | user id | — | **Not built.** No code |
 | **DMTAP** | keypair / `name@domain` | — | **Not built.** A `DialChannel` scaffold exists; its only transport implementation fails closed |
 
 Memberships are keyed on `(channel, external_id)`, not phone-number-only, so one person
 can be reachable on several channels.
+
+The intent vocabulary the seam resolves is `open`, `close` and picker replies — because
+that is the only thing there is to command. Extending it to "turn the lights off" is a
+small change *at the seam* and a large change *behind it*: §8 has to exist first.
 
 > **The chat rail is not private.** Meta, Slack and Telegram see the plaintext of every
 > message — the hub must read it to act on it. This is the largest privacy exposure in the
@@ -151,6 +187,11 @@ default, fails closed toward the official Cloud API, logs a ban-risk warning on 
 boot, and **violates KOTVA §26.8.2's unconditional MUST NOT on unofficial WhatsApp client
 libraries**. It is documented rather than hidden; it is not recommended. See
 [`docs/KOTVA-ALIGNMENT.md`](docs/KOTVA-ALIGNMENT.md).
+
+Whichever component terminates the rail, the exposure is the same: **Meta, Slack and
+Telegram see the plaintext of every message**, because something has to read it to act on
+it. Moving the rail to Ephor relocates *where* the plaintext is handled; it does not remove
+a third party from the loop. The web console path has no chat platform in it at all.
 
 ```mermaid
 sequenceDiagram
@@ -226,11 +267,12 @@ match.
    their own edge and hand the hub plain HTTP. A tunnel in raw TCP/SNI-passthrough mode
    does not work directly — put a reverse proxy behind it. The hosted **Ephor** is the
    same tunnel model as a convenience, never a requirement.
-3. **Zero-infrastructure mode** — real today for Slack. **Socket Mode ships**: set an
-   app-level token and the hub dials **out** over a single WebSocket, no inbound port or
-   URL needed. Controllers dial out unconditionally. A hub on a LAN Pi with no public URL
-   already does Slack + LAN console + controllers end to end. Only WhatsApp, Telegram
-   (until long-polling lands) and remote app access need a public URL.
+3. **Zero-infrastructure mode** — real today. Controllers dial out unconditionally, and
+   the Slack rail can dial out too (Socket Mode: set an app-level token and the connection
+   is a single outbound WebSocket, no inbound port or URL needed). A hub on a LAN Pi with
+   no public URL already does chat + LAN console + controllers end to end. Only the
+   WhatsApp and Telegram webhooks and remote app access need a public URL. Which component
+   holds that outbound socket is exactly what §3a's move to Ephor is about.
 
 Full breakdown: [`site/docs/ingress.md`](site/docs/ingress.md).
 
@@ -312,9 +354,10 @@ deployment and wire contract for hubs and controllers already in the field.
 
 ## 8. The device engine — designed, not started
 
-The wider product promise — cameras, lights, mowers, IoT sensors, energy, security and
-cleaning bots under one hub — rests on a device engine that **does not exist in code**.
-No protocol driver of any kind is present.
+This section is the product, and it is the part that does not exist yet. "One hub owns
+everything" — cameras, lighting, robots, climate, energy, sensors, alongside the access
+control that already works — rests on a device engine that **is not present in code**. No
+protocol driver of any kind exists in this repository.
 
 The intended shape is a single internal device abstraction (id, kind, zone, state,
 commands, telemetry) that every driver maps onto, with discovery in front of it and a
@@ -322,11 +365,23 @@ protocol-agnostic console behind it. Planned adapters: Matter, MQTT, Zigbee, ONV
 Modbus, generic HTTP/webhook. An automations runtime (`trigger → condition → action`) and
 energy ingestion sit on top of the same device state.
 
+**Access is the shape to copy, not the exception to it.** The access module already proves
+the parts that are hard to retrofit: a versioned wire contract with conformance vectors, a
+device that verifies a signature instead of trusting its network, and an audit row written
+in the same transaction as the decision. Bringing the access path onto the same internal
+device model — so `access` is one kind among seven rather than a parallel stack — is part
+of this phase.
+
 **Where it lands is undecided.** Two plausible homes: the Go hub, which already owns
 persistence, audit and the open path and runs on the always-on box; or the Rust core in
 `src-tauri/`, which today exposes exactly one IPC command (`system_pulse`, host
 telemetry) and is not even called by the frontend. The hub is the likelier answer.
 Nothing has been committed.
+
+Until then the console's device, energy and automations views read `src/lib/demoData.ts` —
+twelve fictional devices across the seven kinds, mixed into screens that also carry real
+access data and therefore marked as demo at the point of use rather than page-wide. They
+are the shape of the target, not a capability.
 
 Full detail, including what "works with any hardware" does and does not mean:
 [`site/docs/devices.md`](site/docs/devices.md).

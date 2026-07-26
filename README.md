@@ -8,7 +8,8 @@
 
 <p align="center">
   <a href="#what-is-aql">What</a> ·
-  <a href="#what-actually-works-today">Status</a> ·
+  <a href="#status-what-is-real">Status</a> ·
+  <a href="#the-first-real-module-access-control">Access control</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="#safety">Safety</a> ·
@@ -22,91 +23,141 @@
 
 <table align="center">
   <tr>
-    <td align="center" width="33%"><strong>One hub, everything</strong><br><sub>The goal: cameras, lights, mowers, IoT sensors, energy, security &amp; cleaning bots — <em>plus</em> physical access control — under one control plane. Access control is the part that's finished.</sub></td>
-    <td align="center" width="33%"><strong>Chat is an input surface</strong><br><sub>Text WhatsApp, Slack or Telegram and act on your hub. Opening a gate is the flagship case, not the whole product.</sub></td>
-    <td align="center" width="33%"><strong>You own the box</strong><br><sub>No cloud broker, no account, no telemetry, no billing code. It works offline and it answers to you.</sub></td>
+    <td align="center" width="33%"><strong>One hub, everything</strong><br><sub>Cameras, lighting, robots, climate, energy, sensors and access control — one control plane for your home or your business, with automations that span every device.</sub></td>
+    <td align="center" width="33%"><strong>You own the box</strong><br><sub>Runs on your own machine. No cloud broker, no account, no telemetry, no billing code. It works offline and it answers to you.</sub></td>
+    <td align="center" width="33%"><strong>Works with any hardware</strong><br><sub>Vendor-neutral by design — and paired with <a href="https://github.com/vul-os/zana">Zana</a>, an open-hardware line of devices (robot mowers, sensor nodes, security &amp; cleaning bots) built to run best on Aql.</sub></td>
   </tr>
 </table>
 
 ## What is Aql?
 
-**Aql** (Arabic عقل — *"the mind"*) is the software brain for your physical space: one
-self-hosted hub that owns the devices around a home or a business, with automations that
-span all of them, and chat as one of the ways you reach it.
+**Aql** (Arabic عقل — *"the mind"*) is the software brain for your physical space. Plug in
+your cameras, lights, lawnmowers, IoT sensors, energy meters, gates and autonomous bots,
+and Aql becomes the single place you **see and control all of it** — with automations that
+span every device, whether you run a house or a whole facility.
 
-Its companion is **[Zana](https://github.com/vul-os/zana)** — an open-hardware line
-(robot mowers, sensor nodes, security &amp; cleaning bots). Aql is designed to control
-*any* hardware; Zana devices are designed to run best on Aql.
+Think of it as the reach of Home Assistant, pushed wider: not just consumer smart-home
+gadgets, but **autonomous robots and business fleets**, under **one hub that owns
+everything**. You run the hub yourself, on your own box. There is no cloud in the middle,
+nothing to sign up for, and no billing code anywhere in the binaries.
 
-## What actually works today
+Its companion is **[Zana](https://github.com/vul-os/zana)** — an open-hardware line (robot
+mowers, sensor nodes, security &amp; cleaning bots). Aql controls *any* hardware; Zana
+devices are designed to run best on Aql.
+
+## Status: what is real
 
 This project has a documented history of correcting its own overclaims, so here is the
-line, drawn hard.
+line, drawn hard: **one of the seven device kinds Aql is designed to own is genuinely
+finished. The engine behind the other six is not built.**
 
 ### ✅ Built, tested, running
 
-**Chat-driven physical access control, end to end.**
-
-- **The hub** (`gateway/`) — one Go binary with SQLite inside: chat channels, the open
-  path, the embedded web console, the API, the controller hub, and the audit log.
-  **60 HTTP routes, 183 Go tests green.**
-- **Chat channels** — WhatsApp (Meta Cloud API, HMAC-verified), Slack (Events API **and**
-  Socket Mode, which needs no public URL at all), Telegram (webhook, secret-token
-  verified). One person can be reachable on several channels.
-- **The open path** — a single choke point every open funnels through, whichever channel
-  it came from: membership, account-suspended and user-disabled checks (fail-closed),
-  then open cooldown, per-member and per-account hourly caps, and optional per-location
-  daily quotas. `close` is never denied. Visitor passes are refunded if an open is denied.
-- **Tamper-evident audit** — `access_logs` and `admin_audit_log` are SHA-256 hash-chained
-  with append-only database triggers, verifiable live or against a cold backup with
-  `gateway verify-audit`, no server running.
+- **The hub** (`gateway/`) — one Go binary with SQLite inside: the web console, the API,
+  the controller hub, the tamper-evident audit log, accounts/locations/members, and an
+  instance-admin seat above every account. **60 HTTP routes, 219 Go tests green.**
+- **Access control, end to end** — signed commands, a paired controller that pins the
+  hub's key, offline grants, reachable from chat or the console. The whole section below is
+  about it; it is the first module that is real from the message to the motor.
 - **The controller agent** (`controller/`) — pairing that **pins** the hub's signing key
-  permanently, fail-closed command verification in a fixed order (signature → addressing
-  → validity window → replay → lockdown), a durable signed event queue, and offline grant
+  permanently, fail-closed command verification in a fixed order (signature → addressing →
+  validity window → replay → lockdown), a durable signed event queue, and offline grant
   verification over LAN/mDNS. **45 Go tests green.**
-- **Signed commands** — Ed25519 with nonce and expiry. A hostile network, a DNS hijack or
-  a malicious tunnel cannot forge an open.
 - **Wire contracts** (`proto/`) — **61 conformance vectors, 68 checks**, consumed by both
   the hub's and the controller's own test suites, plus an independent `verify.mjs`
   self-checker.
-- **A cross-module e2e harness** that boots the real hub and controller binaries and
-  drives the open path over the wire.
+- **A cross-module e2e harness** that boots the real hub and controller binaries and drives
+  the open path over the wire.
 
 ### 🔨 Not built
 
 - **The device engine.** There is **no** Matter, MQTT, Zigbee, ONVIF, Modbus or Z-Wave
-  driver in this repository. Not a stub, not an interface — nothing. The only device
-  class Aql drives is a gate/door/barrier controller.
+  driver in this repository. Not a stub, not an interface — nothing. The only device class
+  the hub drives today is a gate/door/barrier controller.
 - **The automations runtime.** No rule object, no scheduler, no execution engine.
 - **Energy metering.** No ingestion, no rollups, no source-mix accounting.
+- **The camera pipeline.** No live view, no recording, no ONVIF/RTSP code.
+- **The non-access device screens run on a demo dataset.** The console's device, energy and
+  automations views are real, interactive UI over a built-in in-memory dataset
+  (`src/lib/demoData.ts`) — twelve fictional devices across the seven kinds, marked as demo
+  at the point of use. Nothing behind them talks to hardware.
 - **The phone half of offline emergency access.** The wire contract, the controller-side
-  verification and the hub's issuance endpoint are all real and conformance-tested —
-  but nothing on a resident's phone requests, stores or presents a grant, so **that path
-  does not run end to end**.
-- **The GPIO relay driver.** The default controller build uses a mock relay that only
-  logs; the `-tags gpio` file is a stub that panics by design. Driving a real gate means
-  writing that driver first.
+  verification and the hub's issuance endpoint are all real and conformance-tested — but
+  nothing on a resident's phone requests, stores or presents a grant, so **that path does
+  not run end to end**.
+- **The GPIO relay driver.** The default controller build uses a mock relay that only logs;
+  the `-tags gpio` file is a stub that **panics by design**
+  ([`controller/internal/relay/gpio.go`](controller/internal/relay/gpio.go)). Driving a
+  real gate means writing that driver first.
 - **The BLE radio.** Framing, session and verification are real and unit-tested with no
-  radio; the GATT peripheral glue exists only for Linux/BlueZ behind `-tags ble` and has
-  **never been validated on hardware**.
+  radio; the GATT peripheral glue exists only for **Linux/BlueZ** behind `-tags ble` and has
+  **never been validated on hardware**. On every other platform the peripheral returns
+  `ErrUnsupported`.
 - **Geofencing, online time-window rules, analytics endpoints, Google OAuth / email
-  verification / password reset, outbound webhooks, scoped API tokens, 2FA.** Some of
-  these have console screens the hub does not serve; the drift is tracked mechanically by
-  a route-parity test.
+  verification / password reset, outbound webhooks, scoped API tokens, 2FA.** Some of these
+  have console screens the hub does not serve; the drift is tracked mechanically by a
+  route-parity test.
 
 Phase-by-phase status: **[ROADMAP.md](ROADMAP.md)**. Adversarial view:
 **[docs/THREAT-MODEL.md](docs/THREAT-MODEL.md)**.
 
-## One honest caveat about chat
+## The first real module: access control
 
-A resident texting `open` is trusting **Meta, Slack or Telegram** with that message. The
-hub has to read the plaintext to act on it, so this is not and cannot be an
-end-to-end-encrypted path while chat is an input surface. The platform can see who opened
-which gate and when.
+Aql's device model has seven kinds — camera, lighting, robot, climate, energy, sensor and
+**access**. Access is the one that has been driven all the way down to the metal, and it is
+the reference for how every other kind should eventually work: a real wire contract, a
+device that verifies rather than trusts, and an audit trail you can check after the fact.
 
-What it cannot do is forge an open — the command the controller accepts is signed by your
-hub and verified against a key it pinned at pairing. And the web console path involves no
-chat platform at all. Both halves of that are documented up front in the
+- **A choke point every open funnels through**, whichever surface it came from: membership,
+  account-suspended and user-disabled checks (fail-closed), then open cooldown, per-member
+  and per-account hourly caps, and optional per-location daily quotas. `close` is never
+  denied. Visitor passes are refunded if an open is denied.
+- **Signed commands** — Ed25519 with nonce and expiry, over canonical JSON. A hostile
+  network, a DNS hijack or a malicious tunnel cannot forge an open.
+- **A paired controller that pins the hub's key** at pairing, permanently. Only a `repair`
+  command signed by that pinned key — or a physical factory reset — can rotate it.
+  Controllers dial **out**, so they work behind NAT and on CGNAT'd 4G SIMs with zero
+  inbound ports.
+- **Offline grants** — the hub mints short-TTL signed capabilities; the controller verifies
+  them in eleven normative steps and can open a gate with the hub, the internet and every
+  chat platform down. (The phone side is the missing half — see above.)
+- **Tamper-evident audit** — `access_logs` and `admin_audit_log` are SHA-256 hash-chained
+  with append-only database triggers, verifiable live or against a cold backup with
+  `gateway verify-audit`, no server running. Detection, not prevention: the honest ceiling
+  is documented.
+- **Visitor / temporary passes** — a phone number gets named access points for a dated
+  window with an optional use cap, revocable.
+
+Manual: [Controllers](site/docs/controllers.md) · [Emergency
+access](site/docs/emergency-access.md) · [Rate limits &amp; quotas](site/docs/limits.md).
+
+## Chat: an input surface onto the hub
+
+Chat is one of the ways you reach your hub — not the product, and not specific to gates.
+The seam behind it resolves a sender to an identity and a message to an intent, then hands
+off to whatever the hub owns. Today the intent vocabulary is `open`, `close` and picker
+replies, because gates are the only device class there is to command. A resident texting
+`open` and a gate swinging is the working instance of a wider idea.
+
+> **The chat rail is moving to [Ephor](https://github.com/vul-os/ephor).** The adapters
+> that terminate WhatsApp, Slack and Telegram are being lifted out of Aql and into Ephor,
+> the coordinator implementation in the KOTVA family — the component whose job is bridging
+> legacy rails. In the target shape Ephor terminates the rail and hands the hub an
+> authorised command; the hub does what only it can do: check the rules, sign it, actuate.
+> Ephor is separate and swappable — run your own, or point at one. **That move is in
+> progress**: texting a gate open works today, but the adapter plumbing in
+> `gateway/internal/channels/` is transitional, not the long-term answer. Aql's hub is not
+> a KOTVA gateway — it bridges chat rails into its own local domain; Ephor is the
+> gateway/coordinator implementation in that family. See
+> [docs/KOTVA-ALIGNMENT.md](docs/KOTVA-ALIGNMENT.md).
+
+**One honest caveat, whichever component terminates the rail.** A resident texting `open`
+is trusting **Meta, Slack or Telegram** with that message. Something has to read the
+plaintext to act on it, so this is not and cannot be an end-to-end-encrypted path while
+chat is an input surface. The platform can see who opened which gate and when. What it
+cannot do is forge an open — the command the controller accepts is signed by your hub and
+verified against a key it pinned at pairing. And the web console path involves no chat
+platform at all. Both halves are documented up front in the
 [threat model](docs/THREAT-MODEL.md).
 
 ## Screenshots
@@ -137,8 +188,8 @@ cd aql/gateway && go build ./cmd/gateway
 ```
 
 Pure-Go SQLite, so `CGO_ENABLED=0 GOARCH=arm64` cross-compiles cleanly for a Pi. The hub
-serves **plain HTTP** and refuses to bind a public address unless you pass
-`-behind-proxy` — put Caddy, nginx or a TLS-terminating tunnel in front of it.
+serves **plain HTTP** and refuses to bind a public address unless you pass `-behind-proxy`
+— put Caddy, nginx or a TLS-terminating tunnel in front of it.
 
 **Run the console / desktop app:**
 
@@ -149,37 +200,39 @@ npm run app:dev      # native desktop window (needs Rust + Tauri system deps)
 npm run app:build    # platform installers
 ```
 
-Then: claim the admin seat, name a location, add an access point, pair a controller, link
-a channel, text `open`. The six-step walkthrough is
+Then: claim the admin seat, name a location, add an access point, pair a controller, link a
+channel, text `open`. The six-step walkthrough is
 **[site/docs/getting-started.md](site/docs/getting-started.md)**.
 
 ## How it works
 
-Everything runs on your box. Chat platforms deliver a message (or the hub dials out to
-them); the hub decides; the hub signs; a controller at the gate verifies against a key it
-pinned and pulses a relay. Controllers dial **out**, so they work behind NAT and CGNAT'd
-4G SIMs with zero inbound ports.
+Everything runs on your box. The hub owns state, decides, signs, and keeps the audit log;
+devices at the edge verify what the hub sends rather than trusting the network they are on.
+Access control is wired all the way through that path today; every other device kind is
+waiting on the driver seam.
 
 ```mermaid
 %%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-monospace, SFMono-Regular, Menlo, monospace','primaryColor':'transparent','primaryBorderColor':'#14b8a6','primaryTextColor':'#8f969e','lineColor':'#8a8f98','nodeBorder':'#5f8f8a','edgeLabelBackground':'transparent','clusterBorder':'#3f8f86','clusterBkg':'transparent'}}}%%
 flowchart LR
-    chat["WhatsApp · Slack · Telegram<br/>(input surface — sees plaintext)"]
+    chat["Chat rail<br/>WhatsApp · Slack · Telegram<br/>(moving to Ephor)"]
+    console["Web console / desktop app"]
     subgraph box["your box"]
-        hub["Aql hub<br/>(one Go binary)<br/>channels · open path · console · API"]
+        hub["Aql hub<br/>(one Go binary)<br/>state · rules · signing · audit"]
         db[("SQLite<br/>state + hash-chained audit")]
         eng["device engine<br/>(NOT BUILT)"]
         hub <--> db
         hub -.- eng
     end
-    subgraph gate["at the gate"]
-        ctl["Controller<br/>(pins the hub's key)"]
+    subgraph edge["your devices"]
+        ctl["Access controller<br/>(pins the hub's key)"]
         motor["🚧 Gate / door / barrier"]
         ctl --> motor
     end
-    future["Cameras · lights · mowers<br/>sensors · meters · bots<br/>(planned adapters)"]
+    future["Cameras · lighting · robots<br/>climate · energy · sensors<br/>(planned adapters)"]
     chat --> hub
+    console --> hub
     hub -->|"Ed25519-signed command<br/>outbound wss ⇦ dial-out"| ctl
-    eng -.->|"Matter · MQTT · Zigbee<br/>ONVIF · Modbus"| future
+    eng -.->|"Matter · MQTT · Zigbee<br/>ONVIF · Modbus · HTTP"| future
     zana["Zana hardware<br/>(open devices, run best on Aql)"]
     zana -.-> eng
 ```
@@ -191,13 +244,13 @@ The device-engine layer is designed and **not built** — see
 ## Safety
 
 **Aql actuates physical barriers and must never be the sole egress path from a building.**
-Fire and building codes in most jurisdictions require code-compliant fail-safe mechanical
-or electrical release hardware on egress routes, regardless of what any access-control
-system does. Aql is designed to run **in parallel** with that hardware — never in series
-with it, and never as a replacement for it.
+Fire and building codes in most jurisdictions require code-compliant fail-safe mechanical or
+electrical release hardware on egress routes, regardless of what any access-control system
+does. Aql is designed to run **in parallel** with that hardware — never in series with it,
+and never as a replacement for it.
 
-The reference controller's relay driver is *specified* fail-safe (normally-open output,
-the line drops on process exit or panic → gate closed), but **the GPIO driver is an
+The reference controller's relay driver is *specified* fail-safe (normally-open output, the
+line drops on process exit or panic → gate closed), but **the GPIO driver is an
 unimplemented stub that panics by design and has never actuated real hardware in this
 repository's tests.** Compliance with local fire, building, safety and accessibility codes
 is the operator's responsibility.
@@ -210,13 +263,13 @@ is the operator's responsibility.
 | Chapter | What it covers |
 |---|---|
 | [Overview](site/docs/overview.md) | What Aql is, what's built, what isn't |
-| [Getting started](site/docs/getting-started.md) | The six steps from nothing to texting a gate open |
+| [Getting started](site/docs/getting-started.md) | From nothing to a hub with a gate on it |
 | [FAQ](site/docs/faq.md) | Straight answers — including how it differs from Home Assistant |
-| [Run a hub](site/docs/self-host.md) | Install, config, reachability, backup, upgrade |
-| [Chat channels](site/docs/channels.md) · [Linking WhatsApp](site/docs/linking-whatsapp.md) · [Ingress](site/docs/ingress.md) | Attaching channels, and what needs a public URL |
+| [Run a hub](site/docs/self-host.md) · [Ingress](site/docs/ingress.md) | Install, config, reachability, backup, upgrade |
 | [Instance admin](site/docs/admin.md) · [Rate limits & quotas](site/docs/limits.md) · [Troubleshooting](site/docs/troubleshooting.md) | Operating a hub |
-| [Controllers](site/docs/controllers.md) · [Emergency access](site/docs/emergency-access.md) | Wiring, pairing, and the offline grant path |
-| [Devices, energy & automations](site/docs/devices.md) | The unbuilt half, stated honestly |
+| [Devices](site/docs/devices.md) | The seven device kinds, the driver seam, and what of it exists |
+| [Controllers](site/docs/controllers.md) · [Emergency access](site/docs/emergency-access.md) | The access module: wiring, pairing, and the offline grant path |
+| [Chat channels](site/docs/channels.md) · [Linking WhatsApp](site/docs/linking-whatsapp.md) | Chat as an input surface, and where that rail is going |
 | [Architecture](site/docs/architecture.md) · [Security](site/docs/security.md) · [API](site/docs/api.md) · [Screenshots](site/docs/screenshots.md) | Reference |
 
 **Deep reference** — for contributors and auditors: [`docs/`](docs/) holds the
@@ -237,25 +290,32 @@ npm run check:claims  # docs-vs-code feature-claim guard
 npm run test:e2e      # Playwright against a real hub binary
 npm run screenshotter # regenerate console screenshots
 
-cd gateway    && go test ./...   # 183 tests
+cd gateway    && go test ./...   # 219 tests
 cd controller && go test ./...   # 45 tests
 cd e2e        && go test ./...   # real binaries over the wire
 node proto/vectors/verify.mjs    # 61 vectors, 68 checks
 ```
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and [ARCHITECTURE.md](ARCHITECTURE.md) before
-changing anything structural. Note that the `LINTEL_*` environment variables, the
-`lintel.db` filename and the controller's `_lintel._tcp` mDNS service keep their pre-merge
-names on purpose — they are a deployment and wire contract for hubs and controllers
-already in the field.
+changing anything structural.
+
+Two naming notes. First, **the hub's directory is `gateway/` but the hub is not a
+gateway** — in the KOTVA family that word names the legacy-rail coordinator role, which is
+Ephor's job, not Aql's. The path, the Go module path and the binary name keep their
+spelling as compat surface; the product noun is *hub*. Second, the `LINTEL_*` environment
+variables, the `lintel.db` filename and the controller's `_lintel._tcp` mDNS service keep
+their pre-merge names on purpose — they are a deployment and wire contract for hubs and
+controllers already in the field.
 
 ## Ecosystem
 
-Aql is one half of a pair:
+Aql is one half of a pair, and a member of a family:
 
 - **Aql** — the brain (this repo): the software command centre.
 - **[Zana](https://github.com/vul-os/zana)** — the body: open-hardware designs for the
-  devices Aql is meant to control (robot mower, sensor nodes, security &amp; cleaning bots).
+  devices Aql controls (robot mower, sensor nodes, security &amp; cleaning bots).
+- **[Ephor](https://github.com/vul-os/ephor)** — the coordinator/gateway implementation in
+  the KOTVA family; where Aql's chat rail is moving.
 
 ## License
 

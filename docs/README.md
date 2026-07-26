@@ -4,7 +4,7 @@ Two documentation sets live in this repository, and the split is deliberate.
 
 | Where | What it is | Who reads it | Published? |
 | --- | --- | --- | --- |
-| **[`site/docs/`](../site/docs/)** | **The manual.** One ordered path from "what is this" → "run a hub" → "wire a gate" → "operate it" → reference. Everything a person needs to *use* Aql. | Operators, residents, evaluators | **Yes** — `site/docs.html` renders exactly this set, driven by `site/docs/manifest.json` |
+| **[`site/docs/`](../site/docs/)** | **The manual.** One ordered path from "what is this" → "what the hub owns" → "run a hub" → "operate it" → reference. Everything a person needs to *use* Aql. | Operators, residents, evaluators | **Yes** — `site/docs.html` renders exactly this set, driven by `site/docs/manifest.json` |
 | **`docs/` (here)** | **The deep reference.** Long-form engineering material that is too detailed, too internal, or too exhaustive for the manual. | Contributors, auditors, implementers | No — read in the repo |
 | Repo root | Front matter: [`README.md`](../README.md), [`ARCHITECTURE.md`](../ARCHITECTURE.md), [`ROADMAP.md`](../ROADMAP.md), [`CHANGELOG.md`](../CHANGELOG.md), [`CONTRIBUTING.md`](../CONTRIBUTING.md), [`SECURITY.md`](../SECURITY.md) | Anyone landing on the repo | GitHub renders them |
 
@@ -20,7 +20,8 @@ cross-link instead of duplicating.
 | --- | --- |
 | [`THREAT-MODEL.md`](THREAT-MODEL.md) | The adversarial model: what is defended, what is not, and the chat rail's exposure stated up front. Marks every control as *Shipped* or *Target*. |
 | [`CHAT-COMMANDS.md`](CHAT-COMMANDS.md) | The exhaustive chat command and reply reference — every intent, every phrasing, every reply string. |
-| [`KOTVA-ALIGNMENT.md`](KOTVA-ALIGNMENT.md) | Evidence-based audit of Aql against the KOTVA substrate spec: capability mapping, §26 node-mode obligations, offline-grant conformance, and the work list. |
+| [`KOTVA-ALIGNMENT.md`](KOTVA-ALIGNMENT.md) | Evidence-based audit of Aql against the KOTVA substrate spec: capability mapping, §26 node-mode obligations, offline-grant conformance, and the work list. It is also the canonical statement of the boundary: Aql's hub is **not** a KOTVA gateway — that role belongs to [Ephor](https://github.com/vul-os/ephor), which is where Aql's chat rail is moving. |
+| [`EPHOR-CHAT-SEAM.md`](EPHOR-CHAT-SEAM.md) | Design specification for moving the chat rails out of Aql's hub and into Ephor. **Nothing in it is built** — it is the shape of a decided direction, not a description of shipped code. |
 | [`DESIGN-SYSTEM.md`](DESIGN-SYSTEM.md) | The visual system behind the console and the site — tokens, type, motion, component rules. |
 | `assets/` | Images used by the files above. |
 

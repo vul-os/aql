@@ -10,17 +10,31 @@ gate may open.
 Today the only intent the seam resolves to is opening or closing an access point,
 because that is the only device class the hub drives. Texting a light or a mower is the
 design intent, not a shipped capability — see
-[Devices, energy & automations](devices.md). The full command surface is documented in
+[Devices](devices.md). The full command surface is documented in
 [`docs/CHAT-COMMANDS.md`](https://github.com/vul-os/aql/blob/main/docs/CHAT-COMMANDS.md).
+
+> **The chat rail is moving to Ephor.** The adapters that terminate WhatsApp, Slack and
+> Telegram are being lifted out of Aql and into [Ephor](https://github.com/vul-os/ephor),
+> the coordinator implementation in the KOTVA family — the component whose job is
+> bridging legacy rails. In the target shape a resident texts a channel, Ephor terminates
+> that rail and hands the hub an authorised command, and the hub does what only it can
+> do: check the rules, sign it, actuate. Ephor is separate and swappable — run your own
+> or point at one. **That move is in progress.** Texting a gate open works today; the
+> wiring described in this chapter is what a hub does now, not the long-term answer.
+> Aql's hub is not a KOTVA gateway — it bridges chat rails to its own local domain; Ephor
+> is the gateway/coordinator implementation in that family (see
+> [`docs/KOTVA-ALIGNMENT.md`](https://github.com/vul-os/aql/blob/main/docs/KOTVA-ALIGNMENT.md)).
+> The adapter code below still lives in the hub, in `gateway/internal/channels/`, while
+> that move happens.
 
 Identity is keyed on `(channel, external id)` — not phone-number-only — so one person
 can be reachable on WhatsApp and Slack at once without being two people in your records.
 
 | Channel | Identity | Status | Self-host friction |
 | --- | --- | --- | --- |
-| WhatsApp | phone number | **Shipped** — Meta Cloud API | **High** — verified Meta business + WABA + number |
-| Slack | member id | **Shipped** — Events API **and** Socket Mode | Minutes — an app manifest + signing secret |
-| Telegram | chat id | **Shipped** — opens wired through the shared pipeline | Minutes — a BotFather token + webhook secret |
+| WhatsApp | phone number | **Works today — transitional** — Meta Cloud API | **High** — verified Meta business + WABA + number |
+| Slack | member id | **Works today — transitional** — Events API **and** Socket Mode | Minutes — an app manifest + signing secret |
+| Telegram | chat id | **Works today — transitional** — opens wired through the shared pipeline | Minutes — a BotFather token + webhook secret |
 | Discord | user id | **Not built** — roadmap, no code | Minutes — a bot token, once it exists |
 | DMTAP | keypair / `name@domain` | **Not built** — a `DialChannel` scaffold exists whose only transport implementation fails closed | — |
 
@@ -37,9 +51,9 @@ The primary channel, and the hard one to self-host. The short version:
    phone number.
 2. Point Meta's webhook at `https://your-gate.example/webhooks/whatsapp` with your verify
    token; subscribe to `messages`.
-3. Put the permanent token, app secret and phone-number id in the gateway's `.env`.
+3. Put the permanent token, app secret and phone-number id in the hub's `.env`.
 
-The gateway verifies Meta's HMAC signature on every webhook and drops anything that
+The hub verifies Meta's HMAC signature on every webhook and drops anything that
 fails. Replies use the Cloud API send endpoint — including interactive numbered lists
 for gate pickers.
 
@@ -57,7 +71,7 @@ WhatsApp Web bridge (Evolution API, fronting Baileys). It is off by default, opt
 only, and **not an equal option to the Cloud API**: it violates KOTVA §26.8.2's
 unconditional *MUST NOT* on unofficial WhatsApp client libraries, and it puts your own
 WhatsApp number at real ban risk (Meta bans unofficial clients, commonly within weeks
-rather than years, and tightened enforcement further on 2026-01-15). The gateway logs a
+rather than years, and tightened enforcement further on 2026-01-15). The hub logs a
 ban-risk warning on every boot whenever `bridge` is selected.
 
 It is documented rather than hidden because the code path exists
@@ -76,8 +90,8 @@ resident's phone can present one, so that path cannot save you (see
 The five-minute channel, and the recommended first channel for self-hosters:
 
 1. Create a Slack app from a manifest at api.slack.com. This one requests exactly
-   what the gateway uses — message events, mentions, interactivity for the gate
-   buttons, and `chat:write` for replies (substitute your gateway's URL):
+   what the hub uses — message events, mentions, interactivity for the gate
+   buttons, and `chat:write` for replies (substitute your hub's URL):
 
    ```yaml
    display_information:
@@ -113,8 +127,8 @@ The five-minute channel, and the recommended first channel for self-hosters:
 
 2. The **Events API** request URL is `https://your-gate.example/webhooks/slack`
    (interactive button clicks arrive at `/webhooks/slack/interactions`). Slack
-   sends a challenge; the gateway answers it automatically.
-3. Configure the gateway:
+   sends a challenge; the hub answers it automatically.
+3. Configure the hub:
 
 ```sh
 SLACK_BOT_TOKEN=xoxb-…
@@ -128,11 +142,11 @@ and logged.
 
 ### Socket Mode — the zero-URL install
 
-**Socket Mode is shipped.** Set `SLACK_APP_TOKEN` to an app-level token (`xapp-…`) and
-the gateway **dials out** to Slack over a single outbound WebSocket
+**Socket Mode works today.** Set `SLACK_APP_TOKEN` to an app-level token (`xapp-…`) and
+the hub **dials out** to Slack over a single outbound WebSocket
 (`apps.connections.open` → `wss://…`) instead of receiving webhooks — it acks each
 envelope and feeds the payload through the *same* handlers the Events API webhook uses.
-A gateway on a LAN with **no public URL at all** runs Slack fully: this is what makes
+A hub on a LAN with **no public URL at all** runs Slack fully: this is what makes
 "a Pi on the estate LAN is a complete installation" real. Enable Socket Mode in the app
 manifest, mint the app-level token, and set:
 
@@ -140,7 +154,7 @@ manifest, mint the app-level token, and set:
 SLACK_APP_TOKEN=xapp-…   # optional — presence enables Socket Mode (no public URL needed)
 ```
 
-With no `SLACK_APP_TOKEN`, the gateway stays on the Events API webhook
+With no `SLACK_APP_TOKEN`, the hub stays on the Events API webhook
 (`/webhooks/slack`), which needs a reachable URL. Either mode works; Socket Mode is the
 one that needs zero ingress — see [Ingress & reachability](ingress.md).
 
@@ -155,7 +169,7 @@ Slack replies support the same numbered pickers and quota warnings as WhatsApp.
 
 Telegram is wired to the **real open path** in the hub:
 
-- **What works now** — the gateway receives updates on `/webhooks/telegram`,
+- **What works now** — the hub receives updates on `/webhooks/telegram`,
   verifying the `X-Telegram-Bot-Api-Secret-Token` header against your configured
   webhook secret (mismatches are rejected). A linked user texting `open` runs the
   **same rules-and-signing pipeline** as every other channel: identity resolution,
@@ -174,7 +188,7 @@ Setup:
 1. Create a bot with **@BotFather** and keep the bot token.
 2. Register the webhook with a secret:
    `https://api.telegram.org/bot<token>/setWebhook?url=https://your-gate.example/webhooks/telegram&secret_token=<secret>`.
-3. Configure the gateway:
+3. Configure the hub:
 
 ```sh
 TELEGRAM_BOT_TOKEN=123456:ABC-…
@@ -213,6 +227,13 @@ honest reply rather than silence.
 
 The seam is deliberately small: resolve sender → identity, message → intent, reply →
 send. Every open on every channel funnels through the one open-path choke point — a
-channel decides how to ask and how to reply, never whether the gate may open. If you
-want Signal or SMS, the three shipped channels (WhatsApp, Slack, Telegram) are the
-reference to copy. Contributions welcome — the gateway is MIT.
+channel decides how to ask and how to reply, never whether the gate may open.
+
+That said, `gateway/internal/channels/` is not where a new rail belongs going forward.
+As described above, the three working channels are moving out of Aql and into
+[Ephor](https://github.com/vul-os/ephor) — the coordinator that terminates chat rails
+for the whole KOTVA family. If you want Signal, SMS or another rail, the shape to copy
+is the same channel seam (resolve sender → identity, message → intent, reply → send),
+but the place to build it is Ephor, not a new file under the hub. Contributions and
+design discussion are welcome on [GitHub](https://github.com/vul-os/aql) — Aql's code is
+MIT.

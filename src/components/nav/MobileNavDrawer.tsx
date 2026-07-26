@@ -4,10 +4,10 @@ import { ArchMark } from '@/components/illustrations/ArchMark';
 import { ThemeToggle } from './ThemeToggle';
 import { cn } from '@/lib/cn';
 import {
+  ACCESS_NAV_ITEMS,
+  ACCESS_NAV_LABEL,
   ADMIN_NAV_ITEM,
   APP_NAV_ITEMS,
-  PREVIEW_NAV_ITEMS,
-  PREVIEW_NAV_LABEL,
 } from './items';
 import { useAuth } from '@/lib/auth';
 
@@ -86,11 +86,11 @@ export function MobileNavDrawer({
             </NavLink>
           ))}
 
-          {/* Demo-only screens, fenced off from the gateway-backed nav above. */}
+          {/* One module of the hub above — every screen in it is gateway-backed. */}
           <p className="px-3 mt-4 mb-1 text-[10px] uppercase tracking-[0.22em] text-ink/40">
-            {PREVIEW_NAV_LABEL}
+            {ACCESS_NAV_LABEL}
           </p>
-          {PREVIEW_NAV_ITEMS.map((it) => (
+          {ACCESS_NAV_ITEMS.map((it) => (
             <NavLink
               key={it.to}
               to={it.to}

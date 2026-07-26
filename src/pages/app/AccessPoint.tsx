@@ -187,7 +187,7 @@ export default function AccessPointPage() {
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-xs sm:text-[13px] text-ink/55">
         <Link to="/app" className="hover:text-ink transition-colors">
-          Dashboard
+          Overview
         </Link>
         <span aria-hidden>/</span>
         <Link to="/app/access-points" className="hover:text-ink transition-colors">

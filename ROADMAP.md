@@ -1,32 +1,35 @@
 # Roadmap
 
 > [!NOTE]
-> Phase 0 is the only phase that is actually built — and it is a great deal more than a
-> foundation. Everything after it is a plan, not a promise. No dates, because none of it
-> is scheduled.
+> Aql is early. Phase 0 is the only phase that is actually built — and it is a great deal
+> more than a foundation. Everything after it is a plan, not a promise. No dates, because
+> none of it is scheduled.
 
-Aql is an open-source command centre for the physical world. The chat-driven physical
-access-control system is finished; the wider device engine has not started. That is the
-whole shape of this roadmap.
+Aql is an open-source command centre for the physical world: one hub that owns the devices
+around a home or a business. The device model has seven kinds — **camera, lighting, robot,
+climate, energy, sensor and access**. Exactly one of them, **access**, is driven end to end
+today. The engine that would drive the other six does not exist yet. That is the whole
+shape of this roadmap.
 
 ---
 
-## Phase 0 — Chat-driven physical access control (done)
+## Phase 0 — Foundation and the first real module (done)
 
-This phase shipped by folding a complete access-control product into Aql. It is not a
-demo and not a UI shell — it is a running system with tests, conformance vectors and a
-cross-module harness.
+Phase 0 was always meant to be the app shell plus the operations console. It ended up
+being considerably more, because a complete chat-driven **physical access-control system**
+was folded into Aql wholesale. That module is not a demo and not a UI shell — it is a
+running system with tests, conformance vectors and a cross-module harness, and it is the
+reference for how every other device kind should eventually work: a versioned wire
+contract, a device that verifies rather than trusts, and an audit trail you can check
+after the fact.
 
-**The hub** (`gateway/`) — one Go binary, SQLite inside, **60 HTTP routes, 183 tests
+**The hub** (`gateway/`) — one Go binary, SQLite inside, **60 HTTP routes, 219 tests
 green** across 8 packages:
 
 - [x] Accounts, locations, access points, members with roles, invites
 - [x] An **instance-admin** operator seat above every account: one-shot claim
       (constant-time, atomic, fail-closed, fully audited), account suspension, user
       disable, runtime limit overrides, cross-account audit
-- [x] **Chat channels** — WhatsApp (Meta Cloud API, HMAC-verified), Slack (Events API
-      **and** Socket Mode / zero ingress), Telegram (webhook, secret-token verified),
-      behind one device-agnostic channel seam
 - [x] **The open path** — one choke point every open funnels through: membership,
       account-suspended and user-disabled (fail-closed), open cooldown, per-member and
       per-account hourly caps, per-member and per-location daily quotas. `close` is never
@@ -68,38 +71,28 @@ green**:
 
 - [x] React 19 + Vite console, embedded in the hub via `go:embed`, and wrapped by a
       Tauri v2 desktop shell with a hub picker on first run
+- [x] The operations-console views — devices, energy, automations — over a built-in
+      **demo dataset** (`src/lib/demoData.ts`: twelve fictional devices across all seven
+      kinds). Real, interactive UI; no engine behind it. Demo figures are marked as such
+      at the point of use, because they sit beside real access data
 - [x] A route-parity test that diffs every frontend API call against the hub's real
       registered routes (AST-extracted), and a docs-vs-code feature-claim guard
       (`npm run check:claims`)
 
-> **What Phase 0 replaced.** An earlier Aql prototype was a Tauri + SvelteKit shell with
-> an in-memory demo dataset driving Overview / Devices / Energy / Automations screens.
-> That app is **gone** — the fold replaced it with the real access-control console. Any
-> image or doc showing those four screens is from the retired prototype.
+> **What the fold changed.** Aql's original Phase 0 was a Tauri + SvelteKit shell with an
+> in-memory demo dataset driving Overview / Devices / Energy / Automations. The fold
+> replaced that shell with the access module's React console and ported the demo dataset
+> into it verbatim, so the same four screens survive with real access data mixed in. The
+> SvelteKit app itself is gone. Any screenshot in `assets/screens/` predates the fold and
+> shows the retired shell.
 
-### Known gaps inside Phase 0
+### Finishing Phase 0
 
-Real work, not new features — listed so they aren't mistaken for done:
+Real work, not new features — listed so it isn't mistaken for done.
 
-- [ ] **GPIO relay driver.** The `-tags gpio` file is a stub that panics; the default
-      build logs instead of actuating. No build has ever driven real hardware in this
-      repo's tests
-- [ ] **BLE radio validation.** The GATT peripheral glue exists only for Linux/BlueZ
-      behind `-tags ble` and has never run on hardware
-- [ ] **The phone half of offline emergency access** — see Phase 1
-- [ ] Console screens ahead of their backend: analytics, per-access-point maintenance,
-      password reset / email verification / Google OAuth
-- [ ] Telegram long-polling (the zero-ingress path for that channel)
-- [ ] Discord channel — designed into the seam, no code
-- [ ] Scoped API tokens and outbound webhooks
-- [ ] 2FA, and any in-band recovery for a lost sole instance-admin password
-- [ ] Position/tamper sensors on the controller return static values
-
----
-
-## Phase 1 — Close the emergency-access loop (not built)
-
-The highest-value next piece, because three of its four parts already exist.
+**Close the emergency-access loop.** The highest-value next piece, because three of its
+four parts already exist (the wire contract, the controller's 11-step verification, the
+hub's issuance endpoint):
 
 - [ ] App-side grant client: request, store and refresh a grant when connectivity allows
 - [ ] App-side presentation over LAN/mDNS and BLE, with the challenge-response the
@@ -109,16 +102,35 @@ The highest-value next piece, because three of its four parts already exist.
 - [ ] Grant revocation semantics beyond "wait for expiry" (currently an accepted v0
       non-goal)
 
+**Hardware the reference controller has never actually touched:**
+
+- [ ] **GPIO relay driver.** `controller/internal/relay/gpio.go` is a `-tags gpio` stub
+      whose `Pulse`/`Hold`/`Release` all panic by design; the default build logs instead of
+      actuating. No build has ever driven real hardware in this repo's tests
+- [ ] **BLE radio validation.** The GATT peripheral glue exists only for Linux/BlueZ behind
+      `-tags ble` and has never run on hardware; every other platform returns
+      `ErrUnsupported`
+- [ ] Controller position/tamper sensors return static values
+
+**Console screens ahead of their backend** (tracked mechanically by the route-parity test):
+
+- [ ] Analytics, per-access-point maintenance, password reset / email verification /
+      Google OAuth
+- [ ] Scoped API tokens and outbound webhooks
+- [ ] 2FA, and any in-band recovery for a lost sole instance-admin password
+
 ---
 
-## Phase 2 — Device engine (not built)
+## Phase 1 — Device engine (not built)
 
-Where "one hub owns everything" becomes real. Nothing here exists in code.
+Where "one hub owns everything" stops being a sentence. Nothing here exists in code — no
+protocol driver of any kind is present in this repository.
 
-- [ ] Decide where it lives: the Go hub (owns persistence, audit and the always-on box)
-      or the Rust core in `src-tauri/` (currently one IPC command). The hub is the likely
-      answer; it has not been committed
-- [ ] One internal device model — id, kind, zone, state, commands, telemetry
+- [ ] Decide where it lives: the Go hub (which already owns persistence, audit and the
+      always-on box) or the Rust core in `src-tauri/` (currently one IPC command). The hub
+      is the likely answer; it has not been committed
+- [ ] One internal device model — id, kind, zone, state, commands, telemetry — that the
+      console renders generically, with no protocol-specific code
 - [ ] Driver/adapter seam so a protocol can be added without touching the console:
   - [ ] Matter
   - [ ] MQTT
@@ -127,28 +139,42 @@ Where "one hub owns everything" becomes real. Nothing here exists in code.
   - [ ] Modbus
   - [ ] Generic HTTP/webhook
 - [ ] Discovery (mDNS/SSDP, Zigbee pairing, MQTT topic scan, ONVIF probe, manual add)
-- [ ] Device credential vault in the OS keychain, scoped per device, never in the SQLite
-      file or a plaintext config
-- [ ] Extend the channel seam's intent vocabulary past `open`/`close` so chat reaches the
-      new device classes
+      replacing the demo dataset with live device state
+- [ ] Bring the existing access module onto the same internal device model, so `access` is
+      one kind among seven rather than a parallel stack
+- [ ] Extend the input surfaces' intent vocabulary past `open`/`close` so chat and the
+      console reach the new device classes
+
+---
+
+## Phase 2 — Local persistence & secrets (partly real)
+
+- [x] SQLite for state, history and configuration — shipped with the hub (7 migrations,
+      22 tables), one file to back up, pure-Go driver so it cross-compiles to a Pi
+- [ ] Extend that schema to device state, telemetry and history once Phase 1 exists
+- [ ] **OS-keychain-backed credential vault** for device and service secrets, scoped per
+      device, so nothing sits in plaintext in the SQLite file or a config file. Not built:
+      there is no keychain or keyring code anywhere in the repository today. The hub's own
+      signing key and JWT secret currently live unencrypted in its data directory
 
 ---
 
 ## Phase 3 — Automations (not built)
 
-- [ ] A real `trigger → condition → action` engine over live device state
+- [ ] A real `trigger → condition → action` engine over live device state (today's
+      automations screen is demo data with no execution behind it)
 - [ ] Scheduling, conditions and run history, persisted
 - [ ] Fail-closed behaviour on ambiguous sensor state for anything that actuates
 - [ ] Online time-window and schedule rules for access too — today there is no rule object
       in the hub at all, and weekly windows exist only inside offline grants (evaluated by
-      the controller)
+      the controller, not the hub)
 
 ---
 
-## Phase 4 — Energy (not built)
+## Phase 4 — Energy metering (not built)
 
-- [ ] Meter and inverter ingestion
-- [ ] Historical rollups (hourly / daily / monthly)
+- [ ] Real meter and inverter ingestion replacing the demo 24h chart
+- [ ] Historical rollups (hourly / daily / monthly) in SQLite
 - [ ] Source-mix accounting (solar / grid / battery) from live readings
 
 ---
@@ -156,7 +182,7 @@ Where "one hub owns everything" becomes real. Nothing here exists in code.
 ## Phase 5 — Security & bots (not built)
 
 - [ ] Camera live view and recording (ONVIF/RTSP)
-- [ ] Robot control — mowers, cleaning, patrol — beyond a status row
+- [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
 - [ ] Rate-limiting and scoping on movement commands, so a compromised client cannot drive
       a machine into a person
@@ -165,20 +191,24 @@ Where "one hub owns everything" becomes real. Nothing here exists in code.
 
 ## Phase 6 — Reachability & remote access (partly real)
 
-- [ ] LAN-first control, always — **already true** for the console and controllers
-- [x] Zero-ingress operation is real today via Slack Socket Mode and outbound-dialling
-      controllers
-- [ ] Telegram long-polling
+- [x] LAN-first control, always — true today for the console and for controllers
+- [x] Zero-ingress operation, real today via outbound-dialling controllers and a chat rail
+      that can dial out rather than receive webhooks
 - [ ] A considered story for reaching your hub from outside the LAN beyond "run a tunnel",
       off by default, with its own threat-model addendum
+- [ ] Chat rails move to **[Ephor](https://github.com/vul-os/ephor)**, the coordinator
+      implementation in the KOTVA family, so the hub consumes a rail terminator instead of
+      implementing adapters. In progress; the adapters currently in `gateway/internal/
+      channels/` are transitional and neither half of that move is finished
 
 ---
 
-## Phase 7 — Mobile (not built)
+## Phase 7 — Mobile packaging (not built)
 
 - [ ] iOS/Android builds via Tauri mobile
 - [ ] Mobile layout passes on the console
-- [ ] The emergency-access screen from Phase 1 is the reason mobile matters most
+- [ ] The emergency-access screen from "Finishing Phase 0" is the reason mobile matters
+      most
 
 ---
 
@@ -194,5 +224,7 @@ Where "one hub owns everything" becomes real. Nothing here exists in code.
 ## Ecosystem
 
 - **Aql** (this repo) — the software command centre
-- **[Zana](https://github.com/vul-os/zana)** — open-hardware designs for the devices Aql
-  is meant to control
+- **[Zana](https://github.com/vul-os/zana)** — open-hardware designs for the devices Aql is
+  meant to control
+- **[Ephor](https://github.com/vul-os/ephor)** — the coordinator/gateway implementation in
+  the KOTVA family, and where Aql's chat rail is heading

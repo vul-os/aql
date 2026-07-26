@@ -19,6 +19,13 @@ and the day's opens.
 
 [Dark variant](screenshots/dark/portal-dashboard.png)
 
+> This screen has grown since the capture above: it now also surfaces tiles for the
+> device kinds beyond access control (lighting, cameras, energy, and the rest) so the
+> "one hub, seven device kinds" idea is visible on day one, not just implied. Those
+> tiles run on the built-in demo dataset and carry a small demo marker; the
+> access-control panels next to them (opens, access points, recent activity) are real
+> and unmarked. A refreshed capture is pending.
+
 ## Access points & controllers
 
 Where gates, doors and barriers live — each access point with its paired controller and
@@ -93,9 +100,18 @@ The landing page, for the curious:
 
 [Landing dark](screenshots/dark/landing-hero.png)
 
-## What is not pictured
+## Devices, energy & automations
 
-There are no screenshots of device, energy or automation screens because **those screens
-do not exist**. Any older Aql image showing an Overview / Devices / Energy / Automations
-console came from a demo build that was replaced when the two projects merged; that UI is
-not in this repository. See [Devices, energy & automations](devices.md).
+The console also has screens for the other device kinds Aql means to own — devices,
+energy and automations — alongside the access-control screens above. They are not
+screenshotted in this tour yet. What they show today is not a live reading of anything:
+there is no device engine, so every figure on those three screens comes from a
+built-in demo dataset, marked per item with a small chip rather than hidden or left to
+imply otherwise, and every control on the demo side renders disabled. That is different
+from the access-control screens pictured above, which talk to your hub for real.
+
+Any older Aql image showing an Overview / Devices / Energy / Automations console as a
+fully live product predates this repository — it came from a demo build that was
+replaced when the two projects merged. See
+[Devices](devices.md) for exactly what's built and what's fixture
+data on each of these screens.

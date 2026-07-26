@@ -1,12 +1,19 @@
+// Energy — Aql's metering screen.
+//
+// Every figure here comes from the built-in demo dataset: there is no meter,
+// inverter or battery ingestion (ROADMAP Phase 4). Each panel carries its own
+// demo chip and its own note saying what would have to exist for it to be
+// real. The curve is seeded, not animated — a chart that ticks is a chart
+// claiming to measure something.
+
 import { useId, useMemo, useState } from 'react';
-import { PageHeader } from '../AppLayout';
+import { PageHeader } from './AppLayout';
 import { Card, StatBlock } from '@/components/ui/Card';
-import { cn } from '@/lib/cn';
-import { ENERGY_AXIS_MAX_KW, circuits, path, series } from './demoData';
-import { DemoBanner, InertNote, Meter } from './shared';
+import { ENERGY_AXIS_MAX_KW, circuits, path, series } from '@/lib/demoData';
+import { DemoChip, InertNote, Meter } from '@/components/demo/DemoMarks';
 
 // 48 half-hour samples = the last 24 hours. Seeded, so the same curve renders
-// on every load — a preview that never pretends to tick.
+// on every load — a demo panel that never pretends to tick.
 const POINTS = 48;
 const VB_W = 640;
 const VB_H = 200;
@@ -24,30 +31,20 @@ const SOURCES = [
   { name: 'Battery', kw: 0.61, pct: 11 },
 ];
 
-export default function PreviewEnergyPage() {
+export default function EnergyPage() {
   return (
     <>
       <PageHeader
-        kicker="Preview · demo data"
+        kicker="Metering"
         title="Energy"
-        description="The shape of the metering screen. The curve, the source split and the circuit list are all fixtures."
+        description="Draw, generation and per-circuit load for the whole site. Every figure below is fixture data until meter ingestion lands."
       />
 
-      <DemoBanner what="Every figure on this page" />
-
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6">
-        <Card>
-          <StatBlock label="Now drawing" value={<Numeral value="2.41" unit="kW" />} />
-        </Card>
-        <Card>
-          <StatBlock label="Solar output" value={<Numeral value="3.10" unit="kW" />} />
-        </Card>
-        <Card>
-          <StatBlock label="Today" value={<Numeral value="18.4" unit="kWh" />} />
-        </Card>
-        <Card>
-          <StatBlock label="Est. cost" value={<Numeral value="R42" unit="today" />} />
-        </Card>
+        <DemoStat label="Now drawing" value="2.41" unit="kW" />
+        <DemoStat label="Solar output" value="3.10" unit="kW" />
+        <DemoStat label="Today" value="18.4" unit="kWh" />
+        <DemoStat label="Est. cost" value="R42" unit="today" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
@@ -82,7 +79,7 @@ export default function PreviewEnergyPage() {
       </div>
 
       <Card className="p-0 overflow-hidden">
-        <PanelHead title="Circuits" trailing={`${circuits.length} monitored`} />
+        <PanelHead title="Circuits" trailing={`${circuits.length} listed`} />
         <div className="p-6 flex flex-col gap-4">
           {circuits.map((c) => (
             <div
@@ -108,19 +105,31 @@ export default function PreviewEnergyPage() {
   );
 }
 
-function Numeral({ value, unit }: { value: string; unit: string }) {
+/** A readout that is entirely fixture data — the chip sits on the number. */
+function DemoStat({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
-    <span className="numeral">
-      {value}
-      <span className="ml-1.5 text-sm text-ink/45 font-sans">{unit}</span>
-    </span>
+    <Card>
+      <DemoChip className="absolute top-4 right-4" label="Demo" />
+      <StatBlock
+        label={label}
+        value={
+          <span className="numeral">
+            {value}
+            <span className="ml-1.5 text-sm text-ink/45 font-sans">{unit}</span>
+          </span>
+        }
+      />
+    </Card>
   );
 }
 
 function PanelHead({ title, trailing }: { title: string; trailing?: string }) {
   return (
-    <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-ink/8">
-      <span className="text-[10px] uppercase tracking-[0.18em] text-ink/55">{title}</span>
+    <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-ink/8">
+      <span className="inline-flex items-center gap-3">
+        <span className="text-[10px] uppercase tracking-[0.18em] text-ink/55">{title}</span>
+        <DemoChip />
+      </span>
       {trailing && (
         <span className="text-[10px] uppercase tracking-[0.18em] text-ink/40">{trailing}</span>
       )}
@@ -156,8 +165,11 @@ function PowerChart() {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-ink/8">
-        <span className="text-[10px] uppercase tracking-[0.18em] text-ink/55">
-          Power · last 24 h
+        <span className="inline-flex items-center gap-3">
+          <span className="text-[10px] uppercase tracking-[0.18em] text-ink/55">
+            Power · last 24 h
+          </span>
+          <DemoChip />
         </span>
         <div className="flex items-center gap-4 text-[10px] uppercase tracking-[0.16em] text-ink/50">
           <span className="inline-flex items-center gap-2">
@@ -288,7 +300,7 @@ function PowerChart() {
         </div>
       </div>
 
-      <div className={cn('px-6 pb-6')}>
+      <div className="px-6 pb-6">
         <InertNote>
           A seeded curve, not a meter. Real ingestion and historical rollups are ROADMAP Phase 4.
         </InertNote>

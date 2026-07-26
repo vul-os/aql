@@ -1,9 +1,24 @@
+// Aql's Overview — the hub's front page, recovered from the pre-fold console
+// (`src/routes/+page.svelte` at commit bf99a4d) and merged with the real,
+// gateway-backed dashboard that replaced it.
+//
+// Two kinds of thing share this screen on purpose: what your gateway actually
+// reports (opens today, access points, recent activity, locations) and what
+// the built-in demo dataset stands in for until the device engine exists
+// (fleet tiles for the other six device kinds, power draw, alerts, the event
+// log). Each is marked where it sits — <DemoChip /> on the fixture panels,
+// nothing on the real ones. See src/components/demo/DemoMarks.tsx.
+//
+// Deliberately NOT ported from the Svelte original: its "Live signal" wave,
+// which re-randomised on a 1s interval. A chart that moves is a chart that
+// claims to be measuring something; there is no telemetry pipeline. The same
+// reasoning killed the fake camera REC dot — don't bring either back.
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { PageHeader } from './AppLayout';
 import { Card } from '@/components/ui/Card';
 import { AccessPointAction } from '@/components/access/AccessPointAction';
 import { CreateAccessPointModal } from '@/components/access/CreateAccessPointModal';
+import { DemoChip, InertNote, StateDot } from '@/components/demo/DemoMarks';
 import { useAuth } from '@/lib/auth';
 import {
   api,
@@ -11,6 +26,7 @@ import {
   type AccountSummary,
   type LocationRow,
 } from '@/lib/api';
+import { DEMO_POWER_DRAW_KW, demoDevices, events as demoEvents } from '@/lib/demoData';
 import { fromUnix } from '@/lib/time';
 import { cn } from '@/lib/cn';
 
@@ -60,7 +76,11 @@ type QuotaWatchEntry = {
   cap: number;
 };
 
-export default function Dashboard() {
+// Fixture-derived headline figures, computed once (never on an interval).
+const DEMO_ALERTS = demoDevices.filter((d) => d.state === 'alert').length;
+const DEMO_REPORTING = demoDevices.filter((d) => d.state !== 'off').length;
+
+export default function Overview() {
   const { user, currentAccount } = useAuth();
   const [summary, setSummary] = useState<AccountSummary | null>(null);
   const [locations, setLocations] = useState<LocationRow[]>([]);
@@ -171,7 +191,9 @@ export default function Dashboard() {
   // Regular dashboard — user has at least one access point.
   return (
     <>
-      <div className="flex flex-col gap-3 sm:gap-4 min-h-[calc(100svh-7rem)] sm:min-h-[calc(100svh-9rem)]">
+      {/* No min-height stretch here: Overview continues below with the fleet,
+          event log and activity, so the quick-access row sizes to content. */}
+      <div className="flex flex-col gap-3 sm:gap-4">
         <header className="flex items-end justify-between gap-3 flex-wrap">
           <h1 className="font-display-tight text-2xl sm:text-3xl lg:text-[36px] leading-tight tracking-[-0.02em] min-w-0">
             {greeting}, <span className="text-terracotta">{firstName}</span>.
@@ -223,33 +245,68 @@ export default function Dashboard() {
           </div>
         )}
 
-        <section className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+        {/* Readouts. Card 1 is your gateway's own count; cards 2–4 are the
+            estate at large, which the demo dataset stands in for until the
+            device engine lands — each says so on the card. */}
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
           <Card className="bg-ink text-paper p-4 sm:p-5">
             <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-paper/55">Opens today</p>
             <p className="font-display text-3xl sm:text-4xl mt-1.5 sm:mt-2 leading-none tabular-nums">
               {summary ? summary.opens_today.toLocaleString() : '—'}
             </p>
             <p className="text-[10px] sm:text-xs text-paper/60 mt-1 sm:mt-1.5 truncate">
-              {summary ? trendDelta(summary.opens_today, summary.opens_yesterday) : ''}
+              {summary ? trendDelta(summary.opens_today, summary.opens_yesterday) : 'across your access points'}
             </p>
           </Card>
+
           <Card className="p-4 sm:p-5">
-            <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-ink/55">Locations</p>
+            <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-ink/55">Devices</p>
             <p className="font-display text-3xl sm:text-4xl mt-1.5 sm:mt-2 leading-none tabular-nums">
-              {summary ? summary.location_count.toString() : locations.length.toString()}
+              {accessPoints.length + DEMO_REPORTING}
+              <span className="text-sm text-ink/40 ml-1.5">
+                / {accessPoints.length + demoDevices.length}
+              </span>
             </p>
-            <p className="text-[10px] sm:text-xs text-ink/55 mt-1 sm:mt-1.5">active</p>
+            <p className="text-[10px] sm:text-xs text-ink/55 mt-1 sm:mt-1.5 leading-snug">
+              {accessPoints.length} on your gateway · {demoDevices.length} demo
+            </p>
           </Card>
+
           <Card className="p-4 sm:p-5">
-            <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-ink/55">Members</p>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-ink/55">Power draw</p>
+              <DemoChip label="Demo" />
+            </div>
             <p className="font-display text-3xl sm:text-4xl mt-1.5 sm:mt-2 leading-none tabular-nums">
-              {summary ? summary.member_count.toString() : '—'}
+              {DEMO_POWER_DRAW_KW.toFixed(2)}
+              <span className="text-sm text-ink/40 ml-1.5">kW</span>
             </p>
-            <p className="text-[10px] sm:text-xs text-ink/55 mt-1 sm:mt-1.5">across portfolio</p>
+            <p className="text-[10px] sm:text-xs text-ink/55 mt-1 sm:mt-1.5 truncate">
+              fixed figure · no meter attached
+            </p>
+          </Card>
+
+          <Card className={cn('p-4 sm:p-5', DEMO_ALERTS > 0 && 'border-terracotta/30')}>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-ink/55">Alerts</p>
+              <DemoChip label="Demo" />
+            </div>
+            <p
+              className={cn(
+                'font-display text-3xl sm:text-4xl mt-1.5 sm:mt-2 leading-none tabular-nums',
+                DEMO_ALERTS > 0 && 'text-terracotta',
+              )}
+            >
+              {DEMO_ALERTS}
+              <span className="text-sm text-ink/40 ml-1.5">open</span>
+            </p>
+            <p className="text-[10px] sm:text-xs text-ink/55 mt-1 sm:mt-1.5 truncate">
+              from fixture devices only
+            </p>
           </Card>
         </section>
 
-        <section className="flex flex-col gap-3 flex-1">
+        <section className="flex flex-col gap-3">
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.22em] text-ink/55">Quick access</p>
@@ -269,7 +326,105 @@ export default function Dashboard() {
         </section>
       </div>
 
+      {/* Fleet — the whole estate in one grid, exactly as the pre-fold console
+          laid it out. Access tiles are your real access points; the rest are
+          fixtures and carry a chip saying so. */}
       <section className="mt-10 sm:mt-14 grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-2 p-0 overflow-hidden">
+          <div className="flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-ink/8">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-ink/55">Fleet</p>
+              <p className="text-[11px] text-ink/45 mt-0.5">
+                {accessPoints.length + demoDevices.length} devices · 7 kinds
+              </p>
+            </div>
+            <Link to="/app/devices" className="text-sm text-ink/60 hover:text-ink shrink-0">
+              All devices →
+            </Link>
+          </div>
+          <ul className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-ink/8">
+            {accessPoints.slice(0, 3).map((ap) => (
+              <li key={ap.id} className="bg-paper-cool p-4">
+                <div className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-moss shrink-0" aria-hidden />
+                  <span className="text-[10px] uppercase tracking-[0.16em] text-ink/45">Access</span>
+                </div>
+                <Link
+                  to={`/app/access-points/${ap.id}`}
+                  className="block mt-1.5 text-sm text-ink truncate hover:underline"
+                >
+                  {ap.name}
+                </Link>
+                <p className="mt-1.5 font-mono text-[11px] text-ink/55 truncate">
+                  {ap.meter.last_op_at
+                    ? `last op ${relativeTime(ap.meter.last_op_at)}`
+                    : 'no ops yet'}
+                </p>
+              </li>
+            ))}
+            {demoDevices.slice(0, 9 - Math.min(accessPoints.length, 3)).map((d) => (
+              <li key={d.id} className={cn('bg-paper-cool p-4', d.state === 'off' && 'opacity-60')}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2 min-w-0">
+                    <StateDot state={d.state} />
+                    <span className="text-[10px] uppercase tracking-[0.16em] text-ink/45 truncate">
+                      {d.kind}
+                    </span>
+                  </span>
+                  <DemoChip label="Demo" />
+                </div>
+                <p className="mt-1.5 text-sm text-ink truncate">{d.name}</p>
+                <p className="mt-1.5 font-mono text-[11px] text-ink/55 truncate">{d.read}</p>
+              </li>
+            ))}
+          </ul>
+          <div className="px-5 sm:px-6 py-4 border-t border-ink/8">
+            <InertNote>
+              Access tiles are live — they open a real gate. The rest are fixture rows: Aql&rsquo;s
+              device engine (discovery, driver adapters, telemetry) is ROADMAP Phase 1.
+            </InertNote>
+          </div>
+        </Card>
+
+        <Card className="p-0 overflow-hidden">
+          <div className="flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-ink/8">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-ink/55">Event log</p>
+            <DemoChip />
+          </div>
+          <ul className="divide-y divide-ink/8">
+            {demoEvents.map((e) => (
+              <li key={e.t} className="flex items-baseline gap-3 px-5 sm:px-6 py-3 text-[13px]">
+                <span className="font-mono text-[11px] text-ink/45 shrink-0">{e.t}</span>
+                <span
+                  className={cn(
+                    'text-[9px] uppercase tracking-[0.14em] w-14 shrink-0',
+                    e.sev === 'alert'
+                      ? 'text-terracotta'
+                      : e.sev === 'warn'
+                        ? 'text-gold'
+                        : 'text-moss',
+                  )}
+                >
+                  {e.tag}
+                </span>
+                <span className="text-ink/70 min-w-0 truncate">{e.msg}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="px-5 sm:px-6 py-4 border-t border-ink/8">
+            <InertNote>
+              Five fixed lines that never change. Your real access log — every open, close and
+              denial — is under{' '}
+              <Link to="/app/analytics" className="underline hover:text-ink/70">
+                Analytics
+              </Link>
+              .
+            </InertNote>
+          </div>
+        </Card>
+      </section>
+
+      <section className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2 p-0 overflow-hidden">
           <div className="px-5 sm:px-6 pt-5 pb-2 flex items-center justify-between">
             <h2 className="font-display text-xl sm:text-2xl">Recent activity</h2>

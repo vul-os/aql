@@ -1,6 +1,6 @@
 # Instance admin
 
-Every gateway has an operator: the person who runs the machine, sets the env, and
+Every hub has an operator: the person who runs the machine, sets the env, and
 answers the phone when something breaks. Aql gives that person a real seat —
 the **instance admin** — with its own claim flow, its own surfaces, and its own audit
 trail. This chapter is how you claim it, what it lets you do, and exactly where its
@@ -9,7 +9,7 @@ power stops.
 ## Who the instance admin is
 
 The instance admin is *not* another account role. Owners and admins live inside an
-account; the instance admin stands outside all of them, at the level of the gateway
+account; the instance admin stands outside all of them, at the level of the hub
 itself:
 
 | Role | Scope | Typical person |
@@ -17,19 +17,19 @@ itself:
 | Member | One account — can open what they've been given | A resident, an employee |
 | Account admin | Assigned locations in one account — devices, members, policies | The HOA committee member |
 | Owner | One whole account — danger-zone settings, billing-free by design | Whoever signed the account up |
-| Instance admin | The gateway — every account, every user, the limits, the audit | The operator running the box |
+| Instance admin | The hub — every account, every user, the limits, the audit | The operator running the box |
 
 On a home install these are usually the same human wearing four hats. On a shared
-gateway — one operator hosting several estates — they are different people, and the
+hub — one operator hosting several estates — they are different people, and the
 separation matters: an account owner can never see another account, and the instance
 admin's cross-account view is an explicit, audited capability, not a loophole.
 
 ## Claiming admin on first boot
 
-A fresh gateway has no instance admin. The seat is claimed exactly once, using a
+A fresh hub has no instance admin. The seat is claimed exactly once, using a
 token you set in the environment:
 
-1. Set `ADMIN_CLAIM_TOKEN` to a long random secret before starting the gateway
+1. Set `ADMIN_CLAIM_TOKEN` to a long random secret before starting the hub
    (see [Run a hub](self-host.md)).
 2. Sign up and sign in as an ordinary user — the claim promotes an existing,
    active user.

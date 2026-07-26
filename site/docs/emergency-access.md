@@ -2,19 +2,19 @@
 
 The Aql app (desktop, iOS, Android — one Tauri codebase) is deliberately **not**
 the daily driver. It exists for two jobs: the admin console, and opening the gate when
-everything else is down — no internet, no gateway, no Meta.
+everything else is down — no internet, no hub, no Meta.
 
 ## The idea: offline-verifiable grants
 
-Whenever the app opens with connectivity, the gateway issues it a **grant**: a
+Whenever the app opens with connectivity, the hub issues it a **grant**: a
 short-lived signed statement of that user's rights — which locations, which access
 points, until when — bound to the app's own keypair. Think of it as a signed hall pass
 that the controller can check without phoning anyone.
 
 ```
-online, earlier:            gateway ── signs ──► grant (rights + expiry + app key)
+online, earlier:            hub ── signs ──► grant (rights + expiry + app key)
 internet down, at the gate: app ◄── mDNS / BLE ──► controller
-                            controller: verify grant sig  (pinned gateway key)
+                            controller: verify grant sig  (pinned hub key)
                                         verify nonce sig  (app key)
                                         check rights + expiry
                                         ✓ open · queue audit event
@@ -27,13 +27,13 @@ internet down, at the gate: app ◄── mDNS / BLE ──► controller
 2. The app presents its grant and asks to open.
 3. The controller replies with a random **nonce**; the app signs `grant ‖ nonce` with
    its own key.
-4. The controller verifies the grant's signature against its **pinned gateway key**,
+4. The controller verifies the grant's signature against its **pinned hub key**,
    checks expiry and rights, verifies the nonce signature against the app key named in
    the grant — and opens.
 5. The audit event is queued on the controller and uploaded when connectivity returns.
    Offline opens are still audited opens.
 
-No step involves the internet, the gateway, or any Aql server. A recorded exchange
+No step involves the internet, the hub, or any Aql server. A recorded exchange
 is useless later: the nonce makes every challenge unique.
 
 ## What's implemented
@@ -48,7 +48,7 @@ MTUs 23/185/512; the **BLE radio (GATT peripheral) still needs hardware validati
 its BlueZ glue compiles behind `-tags ble` on Linux but has not been exercised on real
 hardware yet.
 
-**Gateway-side issuance is now real.** `POST /v1/offline-grants`
+**Hub-side issuance is now real.** `POST /v1/offline-grants`
 ([`gateway/internal/httpapi/offline_grants.go`](https://github.com/vul-os/aql/blob/main/gateway/internal/httpapi/offline_grants.go))
 authenticates the caller, re-checks the exact same membership / account-suspended /
 user-disabled gates the live `/open` path enforces (all-or-nothing — a caller not
@@ -61,11 +61,11 @@ with [`keys.SignGrant`](https://github.com/vul-os/aql/blob/main/gateway/internal
 caller-extendable, and every issuance is written to the admin audit trail. The
 cross-module e2e test that exercises the LAN redemption path
 (`e2e/harness_test.go` / `TestOfflineGrant_Redeem`) now calls this real endpoint
-instead of self-signing a grant with the gateway's key, as it used to — the
-gateway → controller half of the path is proven end to end against real issuance.
+instead of self-signing a grant with the hub's key, as it used to — the
+hub → controller half of the path is proven end to end against real issuance.
 
 One deliberate gap: issuance does **not** check a controller's lockdown state — the
-gateway has no visibility into that, by design (lockdown is controller-local; see
+hub has no visibility into that, by design (lockdown is controller-local; see
 "that locality is the feature this whole path exists for" in `proto/grants.md`) — so a
 grant can be minted while a controller happens to be in lockdown. That isn't an
 oversight: lockdown is still enforced, unmodified, at redemption time (step 2 of the
@@ -76,11 +76,11 @@ later regardless.
 **What is still not built: the app.** Nothing on the phone requests, stores or
 presents a grant — the Tauri app (`src/` + `src-tauri/`) ships an admin console today
 and no emergency-access UI. So the path is now three pieces of four: the wire
-contract, the controller-side verification, and gateway-side issuance are all real and
+contract, the controller-side verification, and hub-side issuance are all real and
 conformance-tested; the fourth — an app that holds a grant and proves it to a
 controller over LAN/BLE — does not exist yet. A resident cannot use offline emergency
 access today, because nothing on their phone can present a grant, even though the
-gateway is now willing to hand one out.
+hub is now willing to hand one out.
 
 ## Revocation and expiry
 

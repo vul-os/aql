@@ -1,26 +1,28 @@
 # Security
 
-A gate is the smallest serious piece of infrastructure in your day. This chapter is how
-Aql earns the right to open one — and it applies to every gateway alike, because
+A gate is the smallest serious piece of infrastructure in your day, and access control
+is the first device kind Aql's hub drives end to end — the wider device engine
+(cameras, lighting, robots, climate, energy) isn't built yet. This chapter is how
+Aql earns the right to open a gate today — and it applies to every hub alike, because
 there is only one binary.
 
 ## The layers
 
 | Layer | Mechanism |
 | --- | --- |
-| Command integrity | Ed25519-signed commands with nonce + expiry; the controller pins the gateway's key at pairing |
+| Command integrity | Ed25519-signed commands with nonce + expiry; the controller pins the hub's key at pairing |
 | Pairing | Claim-token flow: admin creates a claim, the device redeems it once, keys are exchanged |
-| Emergency grants | Short-TTL signed capability bound to the app's keypair; nonce challenge-response — **controller-side verification and gateway-side issuance are both real and conformance-tested; the app doesn't request/present a grant yet, see below** |
-| Channel ingress | Per-channel verification (Meta HMAC, Slack signed-request scheme + replay window, Telegram secret-token header) — fail closed |
+| Emergency grants | Short-TTL signed capability bound to the app's keypair; nonce challenge-response — **controller-side verification and hub-side issuance are both real and conformance-tested; the app doesn't request/present a grant yet, see below** |
+| Channel ingress | Per-channel verification (Meta HMAC, Slack signed-request scheme + replay window, Telegram secret-token header) — fail closed; this adapter code is mid-move out of Aql and into [Ephor](https://github.com/vul-os/ephor), see **What we deliberately don't claim** below |
 | Tenancy | Tenant-isolated at the query layer — app-layer org scoping on every SQLite query in the Go hub, including the rate-limit and quota counters |
-| Transport | Plain HTTP — the binary has no TLS/ACME code at all. TLS is the operator's job: a reverse proxy or a TLS-terminating tunnel in front of the gateway. `-listen` refuses to bind a non-loopback address on its own — see [Ingress & reachability](ingress.md) |
+| Transport | Plain HTTP — the binary has no TLS/ACME code at all. TLS is the operator's job: a reverse proxy or a TLS-terminating tunnel in front of the hub. `-listen` refuses to bind a non-loopback address on its own — see [Ingress & reachability](ingress.md) |
 | Audit | Hash-chained, tamper-*evident* event log: every open, denial, pairing and config change, with append-only DB triggers and a verify command that works against a cold backup — see **Tamper-evident audit log** below for exactly what that does and doesn't guarantee |
 | Login | Per-IP and per-account brute-force throttles on login/register/refresh/admin-claim, fail-closed; live per-request session revocation; a "log out everywhere" endpoint — see **Login & session security** below |
 | Abuse limits | Cooldowns, hourly caps and optional per-location quotas at one choke point — see [Rate limits & quotas](limits.md) |
 
 ## Signed commands and key pinning
 
-Every command a controller receives is signed by its gateway's Ed25519 key, carries a
+Every command a controller receives is signed by its hub's Ed25519 key, carries a
 random nonce, and expires seconds after issue. The controller learned that key exactly
 once — at pairing — and pins it. The consequences are pleasant:
 
@@ -49,7 +51,7 @@ optional and per-location: off by default for houses, on by default for complexe
 
 When enabled, every chat open must include a recent location signal — a shared location
 attached to the message, or a live-location ping from the last few minutes. Outside the
-radius, the gateway declines politely and writes the verdict **including the actual GPS
+radius, the hub declines politely and writes the verdict **including the actual GPS
 distance** to the audit log, so admins can investigate.
 
 Choosing a radius:
@@ -71,10 +73,10 @@ Edge cases handled explicitly:
 ## Emergency access, adversarially
 
 The offline grant path is designed to add no new soft spot: the controller checks a
-grant **signed by the pinned gateway key**, then a fresh nonce signed by the app key
+grant **signed by the pinned hub key**, then a fresh nonce signed by the app key
 the grant names. Neither the LAN nor Bluetooth is trusted. Revocation converges within
 the grant TTL. **Status:** that verification logic is real and conformance-tested on
-the controller side, and the gateway now really mints and signs the grants it
+the controller side, and the hub now really mints and signs the grants it
 verifies (`POST /v1/offline-grants`) — also conformance-tested against the same
 vectors. What's not built yet is the app: nothing on the phone requests, stores or
 presents a grant, so the path still doesn't run end-to-end for a resident — see
@@ -97,7 +99,7 @@ The two audit tables — `access_logs` (every open, close and denial) and
 are hash-chained: each row carries a `SHA-256` hash over its own content plus the
 previous row's hash, so the rows form one unbroken chain per table. Database
 triggers reject any direct `UPDATE` or `DELETE` against either table, with two
-narrow, schema-verified exceptions (a one-time hash backfill when a gateway
+narrow, schema-verified exceptions (a one-time hash backfill when a hub
 upgrades onto this scheme, and SQLite's own cascade nulling a foreign key when
 the location/account/device it points at is deleted — never the audit content
 itself). `GET /v1/admin/audit/verify` (admin-only) and the `gateway verify-audit`
@@ -189,17 +191,20 @@ deliberately narrow:
 ## What we deliberately don't claim
 
 - Aql is not end-to-end encrypted messaging — chat channels are WhatsApp's and
-  Slack's infrastructure, and the gateway must read messages to act on them.
-- Your gateway is as secure as the machine it runs on. Back up your data directory —
+  Slack's infrastructure, and the hub must read messages to act on them. The chat
+  adapters themselves are moving out of Aql and into [Ephor](https://github.com/vul-os/ephor)
+  (in progress, not shipped) — that relocates *where* the plaintext is handled, not
+  whether it's exposed: a third party still sees the message either way.
+- Your hub is as secure as the machine it runs on. Back up your data directory —
   but know what's actually in it: alongside `lintel.db` it holds `gateway_ed25519.seed`
-  (the Ed25519 key that signs every open/close command this gateway ever sends — steal
+  (the Ed25519 key that signs every open/close command this hub ever sends — steal
   it and you can forge signed opens for every access point it manages, indefinitely)
   and `jwt_secret` (the HMAC key behind every session). Both are raw, unencrypted key
   material at mode `0600`. A plain `tar czf backup.tgz ./data` captures the database
   and both keys in one unencrypted archive, so protect that archive like the keys
   themselves — encrypt it at rest, and don't leave a copy somewhere less trusted than
-  the gateway itself. The `.env` file (channel tokens, `ADMIN_CLAIM_TOKEN` before
-  it's claimed) is worth protecting too, but it is not where the gateway's own
+  the hub itself. The `.env` file (channel tokens, `ADMIN_CLAIM_TOKEN` before
+  it's claimed) is worth protecting too, but it is not where the hub's own
   cryptographic identity lives.
 - The audit log's append-only-ness is enforced by database triggers, not just
   application discipline, and tampering with it is now *detectable* via its hash

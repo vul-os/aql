@@ -2,37 +2,51 @@
 
 ### What is Aql?
 
-Aql (Arabic عقل, "the mind") is an open-source **command centre for the physical world**:
-one self-hosted hub, on a box you own, meant to see and control everything physical
-around a home or a business — cameras, lights, mowers, IoT sensors, energy, security and
-cleaning bots — plus physical access control.
+Aql (Arabic عقل, "the mind") is an open-source **command centre for the physical world** —
+the software brain for your physical space. One self-hosted hub, on a box you own, meant to
+see and control everything physical around a home or a business.
 
-The access-control half is finished and running. The wider device engine is not built.
-Both halves of that sentence matter.
+Its device model has seven kinds: **camera, lighting, robot, climate, energy, sensor and
+access**. One of them — access — is finished and running. The engine that would drive the
+other six is not built. Both halves of that sentence matter.
 
 ### What can it actually do today?
 
-Physical access control, end to end:
+Physical access control, end to end — the first of the seven kinds to be driven all the
+way down to the metal:
 
-- A resident texts `open` on WhatsApp, Slack or Telegram; the hub resolves who they are,
-  applies membership, rate limits and quotas, signs an Ed25519 command, and a paired
-  controller at the gate verifies it against a pinned key and pulses the relay.
+- A resident texts `open`; the hub resolves who they are, applies membership, rate limits
+  and quotas, signs an Ed25519 command, and a paired controller at the gate verifies it
+  against a pinned key and pulses the relay.
 - A web console does the same thing without any chat platform, plus members, visitor
   passes, devices, and a tamper-evident audit log.
 - An operator seat above every account, with runtime limit overrides and a cross-account
   audit view.
 
-The hub is 60 HTTP routes and 183 Go tests; the controller agent is 45 more; the wire
+The hub is 60 HTTP routes and 219 Go tests; the controller agent is 45 more; the wire
 contracts have 61 conformance vectors (68 checks) that both sides are tested against.
 
 ### What can't it do?
 
 No device drivers (Matter, MQTT, Zigbee, ONVIF, Modbus), no automations runtime, no
-energy metering, no camera pipeline, no robot control. No geofencing and no time-window
-rules for online opens. The offline emergency-access path works on the controller and the
-hub but **not on a phone** — nothing on a resident's device requests, holds or presents a
-grant, so that path does not run end to end. See
-[Devices, energy & automations](devices.md) and [Emergency access](emergency-access.md).
+energy metering, no camera pipeline, no robot control — so six of the seven device kinds
+exist only as a **demo dataset** in the console (`src/lib/demoData.ts`, marked as demo
+wherever it appears). No geofencing and no time-window rules for online opens. The offline
+emergency-access path works on the controller and the hub but **not on a phone** — nothing
+on a resident's device requests, holds or presents a grant, so that path does not run end
+to end. See [Devices](devices.md) and [Emergency access](emergency-access.md).
+
+### Where is the chat side going?
+
+Out of Aql. The adapters that terminate WhatsApp, Slack and Telegram are moving into
+**[Ephor](https://github.com/vul-os/ephor)**, the coordinator implementation in the KOTVA
+family, whose job is bridging legacy rails. In the target shape Ephor terminates the rail
+and hands the hub an authorised command; the hub checks the rules, signs it, and actuates.
+Ephor is separate and swappable — run your own or point at one.
+
+**That move is in progress.** Texting a gate open works today; the plumbing that does it is
+transitional, and the Ephor-backed path is not shipped either. See
+[Chat channels](channels.md).
 
 ### How is it different from Home Assistant?
 
@@ -42,15 +56,16 @@ integration ecosystem that Aql does not:
 | | Home Assistant | Aql |
 | --- | --- | --- |
 | Primary audience | Home | Home **and** business |
-| Shipped integrations | Thousands | One device class: gate/door/barrier controllers |
-| Access control | An integration among many | The finished core, with signed commands and a tamper-evident audit log |
-| Chat control | Add-on / notification-shaped | A first-class input surface with identity resolution, quotas and per-channel signature verification |
-| Model | One hub, huge integration ecosystem | One hub intended to own everything physical — cameras, energy, access, robots — under one control plane |
+| Shipped integrations | Thousands | One device kind: gate/door/barrier controllers |
+| Access control | An integration among many | The first kind taken all the way down — signed commands, a device that verifies rather than trusts, a tamper-evident audit log |
+| Chat control | Add-on / notification-shaped | A first-class input surface with identity resolution, quotas and per-rail signature verification |
+| Model | One hub, huge integration ecosystem | One hub intended to own everything physical — cameras, lighting, robots, climate, energy, sensors, access — under one control plane |
 | Packaging | Server-first (add-ons, HAOS) | One Go binary for the hub, plus a Tauri desktop console |
 
-Aql is not trying to out-integrate Home Assistant. It starts from a narrower, more
-opinionated shape — one hub, one authority, business and robots included from the start,
-with the access-control and audit path taken seriously — and grows outward.
+Aql is not trying to out-integrate Home Assistant, and today it is nowhere close. It starts
+from a narrower, more opinionated shape — one hub, one authority, business and robots
+included from the start, with the access-control and audit path taken seriously — and grows
+outward. The reach is the ambition; one device kind is the evidence.
 
 ### Does it need the cloud?
 
@@ -106,9 +121,17 @@ No, and nothing. There is no hosted service and no billing code anywhere in the 
 Your costs are your own hardware and, if you run a WhatsApp channel on your own number,
 Meta's per-conversation fees billed directly to you. Slack and Telegram cost nothing.
 
+### Why is the hub's directory called `gateway/` if it isn't a gateway?
+
+Because the path is compat surface and the word got taken. In the KOTVA family "gateway"
+names the legacy-rail coordinator role — [Ephor](https://github.com/vul-os/ephor)'s job.
+Aql's hub is not that: it bridges chat rails into its own local domain. The directory, the
+Go module path and the binary name keep their old spelling so builds and deployments do not
+break; in prose, the thing is a **hub**.
+
 ### Why do some things still say "lintel"?
 
-Aql's access-control half shipped under the name *lintel* before the two projects merged.
+Aql's access module shipped under the name *lintel* before the two projects merged.
 The environment variables (`LINTEL_*`), the SQLite filename (`lintel.db`) and the
 controller's mDNS service (`_lintel._tcp`) are a deployment and wire contract for hubs
 and controllers already in the field, so they were deliberately left alone. Renaming them

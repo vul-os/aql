@@ -10,7 +10,7 @@ nothing else. Aql has no billing, so no limit here is ever about money.
 
 1. **Rate limits** protect the *system*: cooldowns and hourly ceilings that stop any
    one identity — or the whole account — from hammering the gate. Always on, tuned by
-   the gateway operator.
+   the hub operator.
 2. **Quotas** express *policy*: "the cleaner can open four times a day." Optional,
    per-location, set by admins in the portal. Off until you set one.
 
@@ -37,7 +37,7 @@ Semantics worth knowing:
   accidentally unset by a typo.
 - Hourly and daily windows are fixed, UTC-aligned windows. A denial always says how
   long until a retry can succeed.
-- The operator can also override any of these at runtime through the gateway's admin
+- The operator can also override any of these at runtime through the hub's admin
   limits endpoint; resolution is *runtime override → env var → built-in default*.
 
 ## Admin quotas

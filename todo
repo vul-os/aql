@@ -3,11 +3,22 @@
 Scratch list. The structured version is ROADMAP.md; this is the running one.
 
 ## direction (see ARCHITECTURE.md)
-- Aql = one hub that owns everything physical. Chat is an input surface, not the product.
-- Shipped: the Go hub (channels, open path, console, audit, SQLite), the controller agent
+- Aql = one hub that owns everything physical. Seven device kinds: camera, lighting,
+  robot, climate, energy, sensor, access. Access is the ONE that's real end to end —
+  the first module, not the product.
+- Chat is an input surface across the hub, not the product. Gates are today's working
+  instance because they're the only device class there is to command.
+- Shipped: the hub (open path, console, audit, SQLite), the controller agent
   (pinned-key pairing, fail-closed verification, offline LAN grants), signed commands,
   proto/'s 61 vectors / 68 checks, the e2e harnesses.
-- Not shipped: the device engine, automations, energy, the phone half of offline grants.
+- Not shipped: the device engine, automations, energy, the camera pipeline, the phone
+  half of offline grants. Six of the seven kinds are demo data (`src/lib/demoData.ts`).
+
+## naming, settled
+- The hub is a **hub**. Never "the gateway" in prose — in the KOTVA family that word is
+  the legacy-rail coordinator role, which is Ephor's job. `gateway/`, the Go module path,
+  the binary name, `LINTEL_*`, `lintel.db`, `_lintel._tcp` and proto/vectors/ all keep
+  their spelling: compat surface.
 
 ## next up
 - [ ] app-side offline grants: request / store / refresh, then present over LAN + BLE.
@@ -16,12 +27,33 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 - [ ] GPIO relay driver behind `-tags gpio` (today: a stub that panics; default build
       logs). Fail-safe spec: normally-open, line drops on exit/panic.
 - [ ] BLE radio validation on real Linux/BlueZ hardware — framing + session are tested,
-      the radio has never run.
+      the radio has never run. No peripheral backing exists off Linux at all.
 - [ ] decide where the device engine lives: Go hub vs the Rust core in src-tauri/.
       Hub is the likely answer (owns persistence, audit, the always-on box). Write it
       down in ARCHITECTURE.md §8 once decided.
 - [ ] first driver behind the seam — MQTT is the cheapest breadth (and the likely Zana
       transport).
+- [ ] bring access onto the same internal device model once that model exists, so it is
+      one kind among seven rather than a parallel stack.
+
+## chat rail → Ephor (in progress)
+- [ ] the WhatsApp / Slack / Telegram adapters move OUT of Aql and into Ephor
+      (github.com/vul-os/ephor). Target shape: Ephor terminates the rail and hands the hub
+      an authorised command; the hub checks rules, signs, actuates. Swappable — run one or
+      point at one.
+- [ ] `gateway/internal/channels/` is transitional until that lands. Don't document it as
+      the supported path; don't rip it out either — it's what works today.
+- [ ] `scripts/feature-claims.manifest.mjs` still has `whatsapp-channel`, `slack-channel`,
+      `telegram-channel`, `slack-socket-mode` as shipped Aql claims. The code IS still
+      there, so those entries are truthful today — revisit when the move lands rather
+      than weakening them now.
+- [ ] Telegram long-polling (`getUpdates`) — the zero-ingress path for that channel.
+      Probably lands in Ephor rather than here.
+- [ ] Discord — designed into the seam, no code yet. Same question: whose seam?
+- [ ] extend the intent vocabulary past `open`/`close` once there is more than one device
+      class to command
+- [ ] DMTAP channel stays a scaffold with a fail-closed transport until there is a real
+      wire format. Do not present it as a channel.
 
 ## console ↔ hub drift (tracked by src/lib/__tests__/routeParity.test.ts)
 Each of these is UI with no backend. Either build the route or remove the screen.
@@ -29,14 +61,6 @@ Each of these is UI with no backend. Either build the route or remove the screen
 - [ ] per-access-point maintenance log (`GET/POST /access-points/{id}/maintenance`)
 - [ ] password reset / email verify / update password / Google OAuth
 - [ ] `/reference/countries`, `/phones/me/phones`, `PUT /auth/me/slack`, `PATCH /auth/me/profile`
-
-## channels
-- [ ] Telegram long-polling (`getUpdates`) — the zero-ingress path for that channel
-- [ ] Discord — designed into the seam, no code yet
-- [ ] extend the intent vocabulary past `open`/`close` once there is more than one device
-      class to command
-- [ ] DMTAP channel stays a scaffold with a fail-closed transport until there is a real
-      wire format. Do not present it as a channel.
 
 ## api & integrations
 - [ ] scoped API tokens (`aql_live_…`), issued per location, read / read-write
@@ -49,6 +73,9 @@ Each of these is UI with no backend. Either build the route or remove the screen
 ## security / ops
 - [ ] 2FA, and some in-band recovery for a lost sole instance-admin password
 - [ ] grant revocation beyond "wait for the TTL" (accepted v0 non-goal today)
+- [ ] OS-keychain credential vault for device/service secrets — ROADMAP Phase 2. Today
+      there is no keychain/keyring code at all, and the hub's signing key + JWT secret sit
+      unencrypted in the data directory
 - [ ] controller position/tamper sensors return static values — wire real ones
 - [ ] pen test the pairing + signed-command path against the proto vectors
 - [ ] publish the aql-gateway image automatically (docker.yml is workflow_dispatch only)
@@ -59,6 +86,8 @@ Each of these is UI with no backend. Either build the route or remove the screen
 - [ ] `src/mocks/*` is dead code — nothing imports it (the screenshotter uses
       `scripts/screenshotter-fixtures/`). Delete or wire it up.
 - [ ] `assets/brand/lintel-*.svg` are stale; `aql-mark.svg` exists alongside
+- [ ] `assets/screens/*.png` predate the fold — they picture the retired SvelteKit shell.
+      Regenerate against the real console or delete them.
 - [ ] `src-tauri`'s `system_pulse` IPC command is never called by the frontend
 - [ ] stale `backend/` references in load-bearing code comments
       (`gateway/internal/httpapi/server.go`, `src/lib/api.ts`, `routeParity.test.ts`)
@@ -70,7 +99,7 @@ Each of these is UI with no backend. Either build the route or remove the screen
   — Aql has NO billing system. Operators solve money outside the system; see
   ARCHITECTURE.md §4 "Money is out of scope".
 - the Cloudflare Workers + Postgres backend. Deleted. The Go hub is the only server.
-- the SvelteKit demo console (Overview / Devices / Energy / Automations on an in-memory
-  dataset). Replaced by the real console in the fold.
+- the SvelteKit shell itself. The fold replaced it with the React console; its demo
+  dataset was ported over verbatim and is still the source for six of the seven kinds.
 - renaming `LINTEL_*`, `lintel.db` or `_lintel._tcp`. Deployment and wire contract for
   hardware already in the field.

@@ -1,9 +1,12 @@
 # Aql documentation
 
-**An open-source command centre for the physical world.** One hub you run yourself that
-owns the devices around a home or a business — and, today, a finished chat-driven
-physical-access-control system inside it: a resident texts WhatsApp, Slack or Telegram,
-and a gate opens.
+**An open-source command centre for the physical world.** Aql (Arabic عقل — *"the mind"*)
+is the software brain for your physical space: one hub you run yourself that owns the
+devices around a home or a business — cameras, lighting, robots, climate, energy, sensors
+and access control — with automations that span all of them and several ways to reach it.
+
+Think of it as the reach of Home Assistant pushed wider: not just consumer smart-home
+gadgets, but autonomous robots and business fleets, under one hub that owns everything.
 
 Aql has no cloud centre and no hosted service. It is a network of independent **hubs**;
 anyone can run one, and every hub is somebody's own. `vulos.org/products/aql` is the
@@ -12,25 +15,31 @@ to sign up for, no account, no telemetry, and no billing code anywhere in the bi
 
 > ### What is built, plainly
 >
-> **Built and running:** the hub (a single Go binary, SQLite inside), chat channels
-> (WhatsApp, Slack, Telegram), the rules and quota engine, the tamper-evident audit
-> log, the embedded web console, controller pairing with gateway-key pinning,
-> Ed25519-signed commands, and gateway-side offline-grant issuance.
+> Aql's device model has **seven kinds** — camera, lighting, robot, climate, energy,
+> sensor and **access**. Exactly one of them is real end to end.
 >
-> **Not built:** the wider device engine (Matter, MQTT, Zigbee, ONVIF, Modbus drivers),
-> the automations runtime, energy metering, and the phone half of the offline-grant
-> flow. Those are the roadmap, not the product — see [Devices, energy &
-> automations](devices.md) and [ROADMAP.md](https://github.com/vul-os/aql/blob/main/ROADMAP.md).
+> **Built and running:** the hub (a single Go binary, SQLite inside), the rules and quota
+> engine, the tamper-evident audit log, the embedded web console, controller pairing with
+> hub-key pinning, Ed25519-signed commands, and hub-side offline-grant issuance — i.e.
+> the whole **access** kind, from the message to the motor.
+>
+> **Not built:** the device engine that would drive the other six kinds (no Matter, MQTT,
+> Zigbee, ONVIF or Modbus driver exists), the automations runtime, energy metering, the
+> camera pipeline, and the phone half of the offline-grant flow. The console's device,
+> energy and automations screens run on a built-in **demo dataset**. Those are the
+> roadmap, not the product — see [Devices](devices.md) and
+> [ROADMAP.md](https://github.com/vul-os/aql/blob/main/ROADMAP.md).
 
 ## The pieces
 
 | Piece | What it is | Status |
 | --- | --- | --- |
-| **Hub (gateway)** | One Go binary with an embedded SQLite database. It receives chat webhooks, runs your access rules, serves the web console and the app's API, keeps the audit log, and pushes signed commands to controllers. | **Shipped** |
+| **The hub** (`gateway/`) | One Go binary with an embedded SQLite database. It owns state, runs your rules, serves the web console and the app's API, keeps the audit log, and pushes signed commands to devices. | **Shipped** |
+| **Access module** | The first device kind wired all the way down: signed commands, a paired controller, offline grants, a tamper-evident trail. | **Shipped** |
 | **Controller** | The small device wired to a gate's relay. It dials *out* to the hub over a persistent connection, verifies command signatures against a pinned key, and pulses the motor. Wi-Fi or GSM. | **Shipped** (GPIO relay + BLE radio still need hardware validation — see [Controllers](controllers.md)) |
-| **Console** | The web dashboard, embedded inside the hub binary. No separate deployment. | **Shipped** |
+| **Console** | The web dashboard, embedded inside the hub binary. No separate deployment. | **Shipped** for admin surfaces; the device/energy/automations screens are demo data |
 | **Desktop app** | A Tauri v2 shell around the same console, with a hub picker so one build points at any hub. | **Shipped** (admin only — no emergency-access screen; see [Emergency access](emergency-access.md)) |
-| **Device engine** | Protocol drivers, discovery, telemetry, automations, energy metering. | **Not built** — see [Devices, energy & automations](devices.md) |
+| **Device engine** | Protocol drivers, discovery, telemetry, automations, energy metering. | **Not built** — see [Devices](devices.md) |
 
 The private things worth protecting on any hub are its data directory — which holds the
 SQLite database (`lintel.db`) plus the unencrypted Ed25519 signing key and JWT secret the
@@ -38,24 +47,64 @@ hub generates on first boot — and its `.env` (channel credentials, and
 `ADMIN_CLAIM_TOKEN` before it's claimed). See [Security](security.md) for what is
 actually in each.
 
-> **Why some identifiers still say `lintel`.** Aql's access-control half shipped under
-> the name *lintel* before the two projects merged. The environment variables
-> (`LINTEL_DATA_DIR`, `LINTEL_LISTEN`, …), the SQLite filename (`lintel.db`) and the
-> controller's mDNS service (`_lintel._tcp`) are a **deployment and wire contract** for
-> hubs and controllers already in the field, so they were deliberately left alone.
-> Renaming them would break upgrades and re-pairing for no benefit. Everything
-> user-facing is Aql.
+> **Two naming notes.**
+>
+> **The hub lives in `gateway/`, but it is not a gateway.** In the KOTVA family that word
+> names the legacy-rail coordinator role — the job [Ephor](https://github.com/vul-os/ephor)
+> does. Aql's hub bridges chat rails into its own local domain; it is not that component.
+> The directory path, the Go module path and the binary name keep their spelling because
+> they are compat surface. In prose, the thing is a **hub**.
+>
+> **Why some identifiers still say `lintel`.** Aql's access module shipped under the name
+> *lintel* before the two projects merged. The environment variables (`LINTEL_DATA_DIR`,
+> `LINTEL_LISTEN`, …), the SQLite filename (`lintel.db`) and the controller's mDNS service
+> (`_lintel._tcp`) are a **deployment and wire contract** for hubs and controllers already
+> in the field, so they were deliberately left alone. Renaming them would break upgrades
+> and re-pairing for no benefit. Everything user-facing is Aql.
+
+## Access control: the first module that is real
+
+Access is one device kind among seven, and it is the one that has been driven all the way
+down to the metal. It is also the reference shape for how the other six should eventually
+work — a versioned wire contract, a device that verifies rather than trusts, and an audit
+trail you can check after the fact.
+
+- **One choke point** every open funnels through, whichever surface it came from:
+  membership, account-suspended and user-disabled checks (fail-closed), then open
+  cooldown, per-member and per-account hourly caps, and optional per-location daily
+  quotas. `close` is never denied.
+- **Ed25519-signed commands** with nonce and expiry. The controller pins the hub's key at
+  pairing, so a hostile network, a DNS hijack or a malicious tunnel cannot forge an open.
+- **Offline grants** the controller can verify with the hub, the internet and every chat
+  platform down — eleven normative verification steps, conformance-tested.
+- **Tamper-evident audit** — hash-chained, append-only, verifiable against a cold backup.
+
+Chapters: [Controllers](controllers.md) · [Emergency access](emergency-access.md) ·
+[Rate limits & quotas](limits.md).
 
 ## Chat is an input surface, not the product
 
-The flagship case is opening a gate from a chat message — because it is the case that is
-finished end to end, and because it is the one people actually use daily. The design
-intent is wider than that: chat is *an* input surface onto whatever the hub owns, and
-the choke point every open funnels through is device-agnostic by construction.
+Chat is one of the ways you reach your hub. The seam behind it resolves a sender to an
+identity and a message to an intent, then hands off to a choke point that decides — and
+that choke point is device-agnostic by construction. A resident texting `open` and a gate
+swinging is today's working instance of a wider idea.
 
-Today that choke point drives exactly one device class: gate/door/barrier controllers.
-Lights, cameras, mowers, meters and bots are the roadmap, not a shipped capability — no
-driver for any of them exists in the code.
+The intent vocabulary is currently `open`, `close` and picker replies, because gates are
+the only device class there is to command. Lights, cameras, mowers, meters and bots are
+the roadmap, not a shipped capability.
+
+> **The chat rail is moving to [Ephor](https://github.com/vul-os/ephor).** The adapters
+> that terminate WhatsApp, Slack and Telegram are being lifted out of Aql and into Ephor,
+> the coordinator implementation in the KOTVA family — the component whose job is bridging
+> legacy rails. In the target shape Ephor terminates the rail and hands the hub an
+> authorised command; the hub does what only it can do: check the rules, sign it, actuate.
+> Ephor is separate and swappable — run your own, or point at one. **That move is in
+> progress**: texting a gate open works today, but the wiring described in
+> [Chat channels](channels.md) is what a hub does now, not the long-term answer.
+
+Whichever component terminates the rail, the exposure is the same: the chat platform sees
+the plaintext of every message, because something has to read it to act on it. The web
+console path has no chat platform in it at all. See [Security](security.md).
 
 ## The three ways in (access control)
 
@@ -73,7 +122,7 @@ driver for any of them exists in the code.
 ## Running it
 
 There is one way to run Aql: yourself. That is the product — the whole system, nothing
-held back, MIT-licensed.
+held back, MIT OR Apache-2.0.
 
 - **Run a hub** on a VPS, a Pi, or a box in the gatehouse — one binary, one SQLite file.
   Start with [Getting started](getting-started.md) or the full
@@ -84,12 +133,8 @@ held back, MIT-licensed.
 - **Reachability is your choice**: a public IP behind your own reverse proxy or a
   TLS-terminating tunnel (the hub itself speaks plain HTTP only — see
   [Ingress & reachability](ingress.md)), any tunnel you already trust running beside the
-  binary (including a self-hosted, no-account-needed `vulos-relayd`, or the hosted Ephor
-  convenience) — or, with **Slack Socket Mode (shipped)**, no public URL at all: the hub
-  dials out to Slack over a WebSocket instead of receiving webhooks. Controllers already
-  dial out too. Telegram and WhatsApp still need a reachable URL today (Telegram webhook;
-  WhatsApp's Cloud API is webhook-only by Meta's design) — long-polling for Telegram is
-  on the roadmap. Full breakdown: [Ingress & reachability](ingress.md).
+  binary — or no public URL at all, since controllers dial out and the Slack rail can dial
+  out too. Full breakdown: [Ingress & reachability](ingress.md).
 
 ## Zana — the open-hardware companion
 
@@ -103,9 +148,8 @@ and no Zana-specific code exists in this repository.
 
 - New here, want the fastest path? → [Getting started](getting-started.md)
 - Self-hosting on your own hardware? → [Run a hub](self-host.md)
+- Wondering what the hub will own beyond gates? → [Devices](devices.md)
 - Wiring a gate? → [Controllers](controllers.md)
-- Wondering what Aql will control beyond gates? → [Devices, energy &
-  automations](devices.md)
 - Evaluating for a complex or a security review? → [Security](security.md) and
   [Architecture](architecture.md)
 - Straight answers, including how this differs from Home Assistant? → [FAQ](faq.md)

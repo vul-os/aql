@@ -11,7 +11,7 @@ export function AppTopBar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const segs = loc.pathname.split('/').filter(Boolean);
   const last = segs[segs.length - 1] ?? 'app';
-  const title = last === 'app' ? 'Dashboard' : last.replace(/-/g, ' ');
+  const title = last === 'app' ? 'Overview' : last.replace(/-/g, ' ');
 
   return (
     <>

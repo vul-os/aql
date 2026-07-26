@@ -72,13 +72,19 @@ export default function AppLayout() {
               /auth/me/slack routes — see api.ts's doc comments), so they
               could never succeed and would have nagged on every page load
               forever. Reinstate once those routes exist server-side. */}
-          {/* Children come from routes.tsx. Two kinds live under this shell:
-              gateway-backed pages (dashboard, access points, devices, members,
-              grants, analytics, settings, admin), and the /app/preview/*
-              command-center screens, which run on a hard-coded demo dataset and
-              each declare that with <DemoBanner /> — see
-              src/pages/app/preview/. Nothing under preview/ makes a network
-              call; don't wire one until the device engine exists. */}
+          {/* Children come from routes.tsx: Aql's four primary screens
+              (Overview, Devices, Automations, Energy) and the access-control
+              module's deep screens (access points, members, temp access,
+              analytics, settings, admin).
+
+              Both kinds of data share those screens. Access, members, grants
+              and audit are gateway-backed and real; the other six device
+              kinds, the energy figures and the rule list come from
+              src/lib/demoData.ts because the device engine is ROADMAP Phase 1.
+              Every demo-fed panel/row marks itself with <DemoChip /> at the
+              point of use (src/components/demo/DemoMarks.tsx), and inert
+              controls stay disabled with a note. Don't wire a demo shape to an
+              endpoint that doesn't exist. */}
           <Outlet />
         </main>
       </div>
