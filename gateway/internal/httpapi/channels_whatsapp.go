@@ -134,17 +134,17 @@ func (s *Server) waHandleText(ctx contextT, msg *channels.WAMessage, from, chatI
 		return s.waNoAccessReply(ctx, to, chatID, from, locations)
 	}
 
-	isClose := strings.Contains(body, "close")
-	isOpen := strings.Contains(body, "open")
+	// The verb comes from the body, once, and every menu rendered below is told
+	// which one it is. Nothing downstream re-guesses it and nothing falls back
+	// to a default — hasVerb false means the body asked for neither and the
+	// welcome menu (which genuinely offers open) is the reply.
+	verb, hasVerb := channels.TextGateVerb(body)
 	isHelp := body == "hi" || body == "hello" || body == "help" || body == "menu"
 
 	portal := s.channelPublicURL()
 
-	if (isOpen || isClose) && !isHelp {
-		command := "open"
-		if isClose {
-			command = "close"
-		}
+	if hasVerb && !isHelp {
+		command := verb.Command()
 		// Narrow by location only when exactly one was named. A body that names
 		// two ("home" against `Home` and `Home Office`) narrows to neither: the
 		// gate matcher then runs over the full authorized set, where a genuinely
@@ -161,7 +161,7 @@ func (s *Server) waHandleText(ctx contextT, msg *channels.WAMessage, from, chatI
 		if gate.Ambiguous() {
 			// Fail closed on ambiguity: nothing actuates, and the picker lists
 			// exactly the gates that matched. The tap re-authorizes as always.
-			return one(to, chatID, channels.PushAmbiguousGateMenu(command, gate.Candidates, portal))
+			return one(to, chatID, channels.PushAmbiguousGateMenu(verb, gate.Candidates, portal))
 		}
 		target, hasTarget := gate.AP, gate.Unique()
 		// Unchanged collapse rules for a body that named no gate at all.
@@ -173,27 +173,34 @@ func (s *Server) waHandleText(ctx contextT, msg *channels.WAMessage, from, chatI
 		if hasTarget {
 			return s.waAccessCommand(ctx, to, chatID, from, target.APID, target.APName, command)
 		}
+		// Nothing resolved. Every picker below carries the verb the member
+		// asked for — this is where "close the back gate" used to come back
+		// offering to open, because these three shared the welcome menus'
+		// renderer and it minted open_ap: rows unconditionally.
 		if loc.Unique() {
-			return one(to, chatID, channels.PushGateMenu(loc.Location.Name, filtered, portal))
+			return one(to, chatID, channels.PushGateMenu(verb, loc.Location.Name, filtered, portal))
 		}
 		if len(locations) > 1 {
-			return one(to, chatID, channels.PushLocationMenu(locations, portal))
+			return one(to, chatID, channels.PushLocationMenu(verb, locations, portal))
 		}
-		return one(to, chatID, channels.PushGateMenu(locations[0].Name, allGrants, portal))
+		return one(to, chatID, channels.PushGateMenu(verb, locations[0].Name, allGrants, portal))
 	}
 
+	// Greeting: "hi"/"menu" is an offer to open, so these two say VerbOpen and
+	// mean it. This is the branch the shared default was right for.
 	if isHelp {
 		if len(locations) > 1 {
-			return one(to, chatID, channels.PushLocationMenu(locations, portal))
+			return one(to, chatID, channels.PushLocationMenu(channels.VerbOpen, locations, portal))
 		}
-		return one(to, chatID, channels.PushGateMenu(locations[0].Name, allGrants, portal))
+		return one(to, chatID, channels.PushGateMenu(channels.VerbOpen, locations[0].Name, allGrants, portal))
 	}
 
-	// Fallback: welcome menu.
+	// Fallback: welcome menu — a body naming no verb at all. Also an offer to
+	// open; the member asked for nothing, so nothing is being un-done.
 	if len(locations) == 1 {
-		return one(to, chatID, channels.PushGateMenu(locations[0].Name, allGrants, portal))
+		return one(to, chatID, channels.PushGateMenu(channels.VerbOpen, locations[0].Name, allGrants, portal))
 	}
-	return one(to, chatID, channels.PushLocationMenu(locations, portal))
+	return one(to, chatID, channels.PushLocationMenu(channels.VerbOpen, locations, portal))
 }
 
 // waNoAccessReply mirrors the backend's honest copy when a number has no ready
@@ -248,7 +255,11 @@ func (s *Server) waHandleInteractive(ctx contextT, msg *channels.WAMessage, from
 	if !ok {
 		return text(to, chatID, channels.UnknownSelectionMessage)
 	}
-	if cmd == channels.SelSelectLoc {
+	// A location tap is a NARROWING step, never an actuation. The id itself
+	// carries the verb the member originally asked for (select_loc: open,
+	// select_loc_close: close) so the gate picker behind it renders that verb
+	// instead of re-defaulting to open one message after they asked to close.
+	if verb, isNarrowing := channels.LocationCommandVerb(cmd); isNarrowing {
 		allGrants, err := s.store.AvailableAccessPointsByPhone(ctx, from, 0)
 		if err != nil {
 			s.log.Error("wa available", "err", err)
@@ -258,7 +269,7 @@ func (s *Server) waHandleInteractive(ctx contextT, msg *channels.WAMessage, from
 		if len(locGates) == 0 {
 			return text(to, chatID, "That location has no active gates or doors ready yet.")
 		}
-		return one(to, chatID, channels.PushGateMenu(locGates[0].LocName, locGates, s.channelPublicURL()))
+		return one(to, chatID, channels.PushGateMenu(verb, locGates[0].LocName, locGates, s.channelPublicURL()))
 	}
 	// The verb comes from the allowlist, never from the id's text.
 	command, ok := channels.SelectionCommandVerb(cmd)

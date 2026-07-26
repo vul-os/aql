@@ -239,12 +239,19 @@ func (d *DMTAP) serveOnce(ctx context.Context) error {
 // ---------------------------------------------------------------------------
 
 // DMTAPMenu is the help/greeting text.
+//
+// It names BOTH verbs and always shows one attached to a gate name. DMTAP has
+// no buttons, so the words here are the whole interface: the old copy said
+// "name one directly", which invited a bare gate name — and a bare gate name
+// carries no verb, which is how a reply to a "close" question used to be read
+// as an open. There is no default verb; the copy has to ask for one.
 func DMTAPMenu(profileName string) string {
 	hello := "Welcome to lintel."
 	if profileName != "" {
 		hello = "Hi " + profileName + "."
 	}
-	return hello + "\n\nSend \"open\" to open your linked gates, or name one directly (e.g. \"open the side gate\")."
+	return hello + "\n\nSend \"open\" or \"close\" for your linked gates, or name one with the action" +
+		" (e.g. \"open the side gate\", \"close the side gate\")."
 }
 
 // DMTAPGateList renders the gate picker as a plain numbered list — backend
@@ -275,4 +282,28 @@ func DMTAPGateList(gates []store.AvailableAP, publicURL string) string {
 		b.WriteString(n)
 	}
 	return b.String()
+}
+
+// DMTAPGatePrompt is the "which gate?" question, and it is verb-shaped on
+// purpose. A text-only rail has no button to carry the verb across the turn:
+// whatever the resident types next is parsed on its own. The old prompt was
+// "Which gate? Reply with its name:", so a member who asked to CLOSE and
+// answered exactly as instructed sent a bare gate name — which resolved to the
+// default verb, which was open. The gateway asked a question whose honest
+// answer opened the gate. Now it asks for the verb back, and shows it.
+func DMTAPGatePrompt(verb GateVerb, gates []store.AvailableAP, publicURL string) string {
+	example := "<name>"
+	if len(gates) > 0 {
+		example = gates[0].APName
+	}
+	return "Which gate? Reply \"" + verb.Command() + " <name>\" — e.g. \"" + verb.Command() + " " + example + "\":\n" +
+		DMTAPGateList(gates, publicURL)
+}
+
+// DMTAPAmbiguousPrompt is the same question after a mention matched more than
+// one gate: it names what did NOT happen (nothing) and asks for the verb back
+// alongside the name, for exactly the reason DMTAPGatePrompt does.
+func DMTAPAmbiguousPrompt(verb GateVerb, candidates []store.AvailableAP, publicURL string) string {
+	return "That matches more than one gate, so I haven't " + verb.Past() + " anything. " +
+		DMTAPGatePrompt(verb, candidates, publicURL)
 }

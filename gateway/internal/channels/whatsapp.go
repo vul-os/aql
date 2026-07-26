@@ -165,9 +165,10 @@ func gateFooter(g store.AvailableAP) (string, bool) {
 	return "You have " + remaining + " uses remaining.", true
 }
 
-// waGateRows renders at most PickerCapacity gate rows carrying selCmd
-// (SelOpenAP or SelCloseAP) as the selection command.
-func waGateRows(selCmd string, gates []store.AvailableAP) []WhatsAppRow {
+// waGateRows renders at most PickerCapacity gate rows, each carrying verb's
+// selection command (open_ap: or close_ap:) as its id.
+func waGateRows(verb GateVerb, gates []store.AvailableAP) []WhatsAppRow {
+	selCmd := verb.SelectionCommand()
 	rows := make([]WhatsAppRow, 0, PickerCapacity)
 	for _, g := range gates {
 		if len(rows) == PickerCapacity {
@@ -186,16 +187,32 @@ func waGateRows(selCmd string, gates []store.AvailableAP) []WhatsAppRow {
 // gate, list otherwise) — backend pushGateMenu. Past PickerCapacity the list
 // is truncated and SAYS SO in the body (TruncationNotice); a resident is never
 // shown a short list that looks complete.
-func PushGateMenu(locationName string, gates []store.AvailableAP, publicURL string) WAReply {
+//
+// verb is REQUIRED and is the whole point of this signature. This renderer is
+// shared between the welcome/greeting menus (where open is genuinely what the
+// resident is being offered) and the fallback for an open/close request that
+// resolved to no gate — and it used to mint open_ap: rows for both, so "close
+// the back gate" against a fleet with no `back gate` came back offering to
+// open. Passing VerbOpen here is a decision, not a default: see verb.go.
+func PushGateMenu(verb GateVerb, locationName string, gates []store.AvailableAP, publicURL string) WAReply {
 	if len(gates) == 1 {
 		g := gates[0]
+		body := `Welcome to ` + locationName + `. Message "open" any time, or tap below to open ` + g.APName + `.`
+		if verb != VerbOpen {
+			// Reached only from a close request: no welcome, and it says plainly
+			// that nothing has moved yet.
+			body = `I haven't closed anything. Tap below to close ` + g.APName + `.`
+		}
 		i := WhatsAppInteractive{
 			Type: "button",
-			Body: WAText{Text: `Welcome to ` + locationName + `. Message "open" any time, or tap below to open ` + g.APName + `.`},
+			Body: WAText{Text: body},
 			Action: WhatsAppAction{
 				Buttons: []WhatsAppButton{{
-					Type:  "reply",
-					Reply: WhatsAppButtonReply{ID: "open_ap:" + g.APID, Title: waTitle("Open "+g.APName, 20)},
+					Type: "reply",
+					Reply: WhatsAppButtonReply{
+						ID:    verb.SelectionCommand() + ":" + g.APID,
+						Title: waTitle(verb.Title()+" "+g.APName, 20),
+					},
 				}},
 			},
 		}
@@ -204,13 +221,15 @@ func PushGateMenu(locationName string, gates []store.AvailableAP, publicURL stri
 		}
 		return waInteractiveReply(i)
 	}
-	rows := waGateRows(SelOpenAP, gates)
+	rows := waGateRows(verb, gates)
+	prompt := "Welcome to " + locationName + ". Which gate would you like to open?"
+	if verb != VerbOpen {
+		prompt = "I haven't closed anything. Which gate would you like to close?"
+	}
 	i := WhatsAppInteractive{
 		Type:   "list",
 		Header: &WAText{Type: "text", Text: locationName},
-		Body: WAText{Text: withTruncationNotice(
-			"Welcome to "+locationName+". Which gate would you like to open?",
-			len(rows), len(gates), publicURL)},
+		Body:   WAText{Text: withTruncationNotice(prompt, len(rows), len(gates), publicURL)},
 		Action: WhatsAppAction{Button: "Select gate", Sections: []WhatsAppSection{{Title: "Available gates", Rows: rows}}},
 	}
 	if len(gates) > 0 {
@@ -228,40 +247,43 @@ func PushGateMenu(locationName string, gates []store.AvailableAP, publicURL stri
 // normal open_ap/close_ap path. Never call this with fewer than two candidates.
 //
 // The rows carry the verb the member actually asked for: an unresolved "close"
-// must not come back as a row that opens. command is "open" or "close";
-// anything else is treated as "open" only for the row prefix, and the caller is
-// responsible for never getting there (store/openpath.go rejects the rest).
-func PushAmbiguousGateMenu(command string, candidates []store.AvailableAP, publicURL string) WAReply {
-	selCmd, verb := SelOpenAP, "opened"
-	if command == "close" {
-		selCmd, verb = SelCloseAP, "closed"
-	}
-	rows := waGateRows(selCmd, candidates)
+// must not come back as a row that opens. verb was a "open"/"close" string that
+// treated anything else as open; it is now a GateVerb, so the only way to get
+// open_ap: rows out of this is to ask for them (verb.go).
+func PushAmbiguousGateMenu(verb GateVerb, candidates []store.AvailableAP, publicURL string) WAReply {
+	rows := waGateRows(verb, candidates)
 	return waInteractiveReply(WhatsAppInteractive{
 		Type:   "list",
 		Header: &WAText{Type: "text", Text: "Which one?"},
 		Body: WAText{Text: withTruncationNotice(
-			"That matches more than one gate, so I haven't "+verb+" anything. Which one did you mean?",
+			"That matches more than one gate, so I haven't "+verb.Past()+" anything. Which one did you mean?",
 			len(rows), len(candidates), publicURL)},
 		Action: WhatsAppAction{Button: "Select gate", Sections: []WhatsAppSection{{Title: "Matching gates", Rows: rows}}},
 	})
 }
 
 // PushLocationMenu renders the "which location" list — backend pushLocationMenu.
-func PushLocationMenu(locations []store.LinkedLocation, publicURL string) WAReply {
+//
+// verb is REQUIRED for the same reason PushGateMenu's is, one hop earlier: the
+// row ids are what the resident's tap comes back as, so the verb they asked for
+// has to be minted into them or it is gone by the time the gate picker renders.
+func PushLocationMenu(verb GateVerb, locations []store.LinkedLocation, publicURL string) WAReply {
+	selCmd := verb.LocationCommand()
 	rows := make([]WhatsAppRow, 0, PickerCapacity)
 	for _, l := range locations {
 		if len(rows) == PickerCapacity {
 			break
 		}
-		rows = append(rows, WhatsAppRow{ID: "select_loc:" + l.ID, Title: waTitle(l.Name, 24)})
+		rows = append(rows, WhatsAppRow{ID: selCmd + ":" + l.ID, Title: waTitle(l.Name, 24)})
+	}
+	prompt := "Welcome back. Which location do you want to use?"
+	if verb != VerbOpen {
+		prompt = "I haven't closed anything. Which location is the gate at?"
 	}
 	return waInteractiveReply(WhatsAppInteractive{
 		Type:   "list",
 		Header: &WAText{Type: "text", Text: "Locations"},
-		Body: WAText{Text: withTruncationNotice(
-			"Welcome back. Which location do you want to use?",
-			len(rows), len(locations), publicURL)},
+		Body:   WAText{Text: withTruncationNotice(prompt, len(rows), len(locations), publicURL)},
 		Action: WhatsAppAction{Button: "Choose location", Sections: []WhatsAppSection{{Title: "Your locations", Rows: rows}}},
 	})
 }
@@ -273,8 +295,11 @@ func PushCloseButton(accessPointID, gateName string) WAReply {
 		Type: "button",
 		Body: WAText{Text: "Would you like to close " + gateName + "?"},
 		Action: WhatsAppAction{Buttons: []WhatsAppButton{{
-			Type:  "reply",
-			Reply: WhatsAppButtonReply{ID: "close_ap:" + accessPointID, Title: waTitle("Close "+gateName, 20)},
+			Type: "reply",
+			Reply: WhatsAppButtonReply{
+				ID:    VerbClose.SelectionCommand() + ":" + accessPointID,
+				Title: waTitle(VerbClose.Title()+" "+gateName, 20),
+			},
 		}}},
 	})
 }
@@ -414,20 +439,29 @@ func FindMentionedGate(body string, gates []store.AvailableAP) GateMatch {
 
 // The complete set of selection commands this gateway mints. Every id that
 // travels over a chat rail is written by one of the renderers in this package
-// ("open_ap:", "close_ap:", "select_loc:" here; "open_ap:" on Telegram), and a
-// provider echoes back the id verbatim — so nothing legitimate is unprefixed,
-// and nothing legitimate carries a command outside this list.
+// ("open_ap:", "close_ap:", "select_loc:", "select_loc_close:" here;
+// "open_ap:" on Telegram), and a provider echoes back the id verbatim — so
+// nothing legitimate is unprefixed, and nothing legitimate carries a command
+// outside this list.
+//
+// The two select_loc commands are the same narrowing step carrying the two
+// verbs; see GateVerb.LocationCommand (verb.go) for why the verb has to ride
+// on the id rather than be re-guessed after the tap. SelSelectLoc keeps its
+// original wire value, so a location menu sent before this existed still
+// resolves, and resolves to the verb it was rendered with.
 const (
-	SelOpenAP    = "open_ap"
-	SelCloseAP   = "close_ap"
-	SelSelectLoc = "select_loc"
+	SelOpenAP         = "open_ap"
+	SelCloseAP        = "close_ap"
+	SelSelectLoc      = "select_loc"
+	SelSelectLocClose = "select_loc_close"
 )
 
 // selectionCommands is the allowlist ParseSelection validates against.
 var selectionCommands = map[string]bool{
-	SelOpenAP:    true,
-	SelCloseAP:   true,
-	SelSelectLoc: true,
+	SelOpenAP:         true,
+	SelCloseAP:        true,
+	SelSelectLoc:      true,
+	SelSelectLocClose: true,
 }
 
 // ParseSelection splits an interactive reply id "cmd:arg" (backend split(':')).

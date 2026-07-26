@@ -204,7 +204,7 @@ func TestLocationMatchOutcomes(t *testing.T) {
 func TestPushAmbiguousGateMenuAsksAndActuatesNothing(t *testing.T) {
 	cands := []store.AvailableAP{ap("ap-gate", "Gate", "Home"), ap("ap-front", "Front Gate", "Home")}
 
-	r := PushAmbiguousGateMenu("open", cands, testPortal)
+	r := PushAmbiguousGateMenu(VerbOpen, cands, testPortal)
 	if r.Interactive == nil || r.Interactive.Type != "list" {
 		t.Fatalf("ambiguity must render a picker: %+v", r)
 	}
@@ -217,7 +217,7 @@ func TestPushAmbiguousGateMenuAsksAndActuatesNothing(t *testing.T) {
 	}
 
 	// An unresolved CLOSE must not come back as a row that opens.
-	rc := PushAmbiguousGateMenu("close", cands, testPortal)
+	rc := PushAmbiguousGateMenu(VerbClose, cands, testPortal)
 	if !strings.Contains(rc.Interactive.Body.Text, "haven't closed") {
 		t.Errorf("close body: %q", rc.Interactive.Body.Text)
 	}
@@ -271,7 +271,7 @@ func TestSlackAccessBlocksStaysUnderCeiling(t *testing.T) {
 func TestEveryPickerDisclosesTruncation(t *testing.T) {
 	gates := manyGates(34)
 
-	wa := PushGateMenu("Home", gates, testPortal)
+	wa := PushGateMenu(VerbOpen, "Home", gates, testPortal)
 	if got := wa.Interactive.Body.Text; !strings.Contains(got, "Showing 10 of 34") || !strings.Contains(got, "https://gate.example/app") {
 		t.Errorf("whatsapp gate menu: %q", got)
 	}
@@ -279,7 +279,7 @@ func TestEveryPickerDisclosesTruncation(t *testing.T) {
 		t.Errorf("whatsapp rows: %d", n)
 	}
 
-	amb := PushAmbiguousGateMenu("open", gates, testPortal)
+	amb := PushAmbiguousGateMenu(VerbOpen, gates, testPortal)
 	if got := amb.Interactive.Body.Text; !strings.Contains(got, "Showing 10 of 34") {
 		t.Errorf("whatsapp ambiguity menu: %q", got)
 	}
@@ -288,7 +288,7 @@ func TestEveryPickerDisclosesTruncation(t *testing.T) {
 	for i := range locs {
 		locs[i] = store.LinkedLocation{ID: "l" + itoa(int64(i)), Name: "Site " + itoa(int64(i))}
 	}
-	lm := PushLocationMenu(locs, testPortal)
+	lm := PushLocationMenu(VerbOpen, locs, testPortal)
 	if got := lm.Interactive.Body.Text; !strings.Contains(got, "Showing 10 of 12") {
 		t.Errorf("whatsapp location menu: %q", got)
 	}
@@ -318,7 +318,7 @@ func TestEveryPickerDisclosesTruncation(t *testing.T) {
 func TestPickersStaySilentWhenComplete(t *testing.T) {
 	gates := manyGates(PickerCapacity)
 
-	if got := PushGateMenu("Home", gates, testPortal).Interactive.Body.Text; got != "Welcome to Home. Which gate would you like to open?" {
+	if got := PushGateMenu(VerbOpen, "Home", gates, testPortal).Interactive.Body.Text; got != "Welcome to Home. Which gate would you like to open?" {
 		t.Errorf("whatsapp body changed for a complete list: %q", got)
 	}
 	body, _ := TelegramGatePicker("Which gate would you like to open?", gates, testPortal)

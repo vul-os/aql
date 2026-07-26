@@ -155,7 +155,7 @@ func TestWaTitleTruncates(t *testing.T) {
 
 func TestPushGateMenuRendering(t *testing.T) {
 	// Single gate → button with open_ap action.
-	single := PushGateMenu("Home", []store.AvailableAP{{APID: "ap1", APName: "Main gate", LocName: "Home", Type: store.APMember}}, testPortal)
+	single := PushGateMenu(VerbOpen, "Home", []store.AvailableAP{{APID: "ap1", APName: "Main gate", LocName: "Home", Type: store.APMember}}, testPortal)
 	if single.Interactive == nil || single.Interactive.Type != "button" {
 		t.Fatalf("single gate should be a button: %+v", single)
 	}
@@ -164,13 +164,13 @@ func TestPushGateMenuRendering(t *testing.T) {
 	}
 
 	// Visitor grant footer shows remaining uses.
-	vis := PushGateMenu("Home", []store.AvailableAP{{APID: "ap1", APName: "Gate", LocName: "Home", Type: store.APVisitor, MaxUses: nz(3), UsesCount: 1}}, testPortal)
+	vis := PushGateMenu(VerbOpen, "Home", []store.AvailableAP{{APID: "ap1", APName: "Gate", LocName: "Home", Type: store.APVisitor, MaxUses: nz(3), UsesCount: 1}}, testPortal)
 	if vis.Interactive.Footer == nil || vis.Interactive.Footer.Text != "You have 2 uses remaining." {
 		t.Errorf("visitor footer: %+v", vis.Interactive.Footer)
 	}
 
 	// Multiple gates → list with open_ap rows.
-	multi := PushGateMenu("Home", []store.AvailableAP{
+	multi := PushGateMenu(VerbOpen, "Home", []store.AvailableAP{
 		{APID: "ap1", APName: "Front", LocName: "Home", Type: store.APMember},
 		{APID: "ap2", APName: "Back", LocName: "Home", Type: store.APMember},
 	}, testPortal)

@@ -66,9 +66,9 @@ func (s *Server) handleDMTAPIntent(ctx contextT, intent channels.DMTAPIntent) {
 	txt := channels.NormalizeText(intent.Body)
 	switch {
 	case txt == "open" || txt == "close" || txt == "gates":
-		command := "open"
+		verb := channels.VerbOpen
 		if txt == "close" {
-			command = "close"
+			verb = channels.VerbClose
 		}
 		gates, err := s.store.AvailableAccessPointsByProfile(ctx, profileID)
 		if err != nil {
@@ -79,32 +79,42 @@ func (s *Server) handleDMTAPIntent(ctx contextT, intent channels.DMTAPIntent) {
 		case 0:
 			s.dmtapReply(ctx, chatID, intent.GroupID, "You don't have any active gate access. Please contact the administrator.")
 		case 1:
-			s.dmtapAccessCommand(ctx, chatID, intent.GroupID, profileID, gates[0].APID, gates[0].APName, command)
+			s.dmtapAccessCommand(ctx, chatID, intent.GroupID, profileID, gates[0].APID, gates[0].APName, verb.Command())
 		default:
-			s.dmtapReply(ctx, chatID, intent.GroupID, "Which gate? Reply with its name:\n"+channels.DMTAPGateList(gates, s.channelPublicURL()))
+			// The follow-up question carries the verb, because on a text-only
+			// rail the answer is parsed on its own: a prompt that invited a bare
+			// gate name turned "close" into an open one message later.
+			s.dmtapReply(ctx, chatID, intent.GroupID, channels.DMTAPGatePrompt(verb, gates, s.channelPublicURL()))
 		}
 	case dmtapHelpWords[txt]:
 		s.dmtapReply(ctx, chatID, intent.GroupID, channels.DMTAPMenu(displayName))
 	default:
-		// Free text — try to resolve a mentioned gate name (mirrors WhatsApp's
+		// Free text. The verb is read FIRST and is required: a body that names a
+		// gate and no action ("side door", the natural answer to an old-style
+		// "reply with its name" prompt) used to resolve to the default verb,
+		// which was open. There is no default verb — docs/CHAT-COMMANDS.md §3.5
+		// — so a verbless body is a question, answered with the menu. WhatsApp
+		// already worked this way (it needs "open"/"close" in the body to reach
+		// its actuation branch at all); this makes DMTAP match.
+		verb, hasVerb := channels.TextGateVerb(txt)
+		if !hasVerb {
+			s.dmtapReply(ctx, chatID, intent.GroupID, channels.DMTAPMenu(displayName))
+			return
+		}
+		// Try to resolve a mentioned gate name (mirrors WhatsApp's
 		// FindMentionedGate), else fall back to the menu. A body naming more
 		// than one gate resolves to none of them: it asks, listing only the
-		// gates that matched.
+		// gates that matched, and asks in the verb the member used.
 		gates, err := s.store.AvailableAccessPointsByProfile(ctx, profileID)
 		if err == nil {
 			m := channels.FindMentionedGate(txt, gates)
 			switch {
 			case m.Unique():
-				command := "open"
-				if strings.Contains(txt, "close") {
-					command = "close"
-				}
-				s.dmtapAccessCommand(ctx, chatID, intent.GroupID, profileID, m.AP.APID, m.AP.APName, command)
+				s.dmtapAccessCommand(ctx, chatID, intent.GroupID, profileID, m.AP.APID, m.AP.APName, verb.Command())
 				return
 			case m.Ambiguous():
 				s.dmtapReply(ctx, chatID, intent.GroupID,
-					"That matches more than one gate, so nothing was opened or closed. Which one? Reply with its name:\n"+
-						channels.DMTAPGateList(m.Candidates, s.channelPublicURL()))
+					channels.DMTAPAmbiguousPrompt(verb, m.Candidates, s.channelPublicURL()))
 				return
 			}
 		}
