@@ -79,12 +79,19 @@ func ParseTGUpdate(body []byte) (*TGUpdate, error) {
 // Reply rendering
 // ---------------------------------------------------------------------------
 
-// TelegramGateKeyboard renders the gate picker as an inline keyboard, one
-// button per gate (callback data "open_ap:<id>"), max 10 rows.
-func TelegramGateKeyboard(gates []store.AvailableAP) InlineKeyboard {
+// TelegramGatePicker renders the gate picker as an inline keyboard, one button
+// per gate (callback data "open_ap:<id>"), capped at PickerCapacity rows —
+// together with the message body that must accompany it.
+//
+// It returns the body rather than leaving it to the caller precisely because
+// the cap lives here: an inline keyboard has nowhere to say "there are more",
+// so the disclosure has to ride in the text, and a renderer that silently
+// dropped rows while the caller wrote the text is how a truncated list ends up
+// looking complete. The prompt param keeps the caller's wording.
+func TelegramGatePicker(prompt string, gates []store.AvailableAP, publicURL string) (string, InlineKeyboard) {
 	kb := InlineKeyboard{}
 	for _, g := range gates {
-		if len(kb.Rows) == 10 {
+		if len(kb.Rows) == PickerCapacity {
 			break
 		}
 		kb.Rows = append(kb.Rows, []InlineButton{{
@@ -92,7 +99,7 @@ func TelegramGateKeyboard(gates []store.AvailableAP) InlineKeyboard {
 			CallbackData: "open_ap:" + g.APID,
 		}})
 	}
-	return kb
+	return withTruncationNotice(prompt, len(kb.Rows), len(gates), publicURL), kb
 }
 
 // TelegramMenu is the help/greeting text.

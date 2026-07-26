@@ -155,7 +155,7 @@ func TestWaTitleTruncates(t *testing.T) {
 
 func TestPushGateMenuRendering(t *testing.T) {
 	// Single gate → button with open_ap action.
-	single := PushGateMenu("Home", []store.AvailableAP{{APID: "ap1", APName: "Main gate", LocName: "Home", Type: store.APMember}})
+	single := PushGateMenu("Home", []store.AvailableAP{{APID: "ap1", APName: "Main gate", LocName: "Home", Type: store.APMember}}, testPortal)
 	if single.Interactive == nil || single.Interactive.Type != "button" {
 		t.Fatalf("single gate should be a button: %+v", single)
 	}
@@ -164,7 +164,7 @@ func TestPushGateMenuRendering(t *testing.T) {
 	}
 
 	// Visitor grant footer shows remaining uses.
-	vis := PushGateMenu("Home", []store.AvailableAP{{APID: "ap1", APName: "Gate", LocName: "Home", Type: store.APVisitor, MaxUses: nz(3), UsesCount: 1}})
+	vis := PushGateMenu("Home", []store.AvailableAP{{APID: "ap1", APName: "Gate", LocName: "Home", Type: store.APVisitor, MaxUses: nz(3), UsesCount: 1}}, testPortal)
 	if vis.Interactive.Footer == nil || vis.Interactive.Footer.Text != "You have 2 uses remaining." {
 		t.Errorf("visitor footer: %+v", vis.Interactive.Footer)
 	}
@@ -173,7 +173,7 @@ func TestPushGateMenuRendering(t *testing.T) {
 	multi := PushGateMenu("Home", []store.AvailableAP{
 		{APID: "ap1", APName: "Front", LocName: "Home", Type: store.APMember},
 		{APID: "ap2", APName: "Back", LocName: "Home", Type: store.APMember},
-	})
+	}, testPortal)
 	if multi.Interactive.Type != "list" || len(multi.Interactive.Action.Sections[0].Rows) != 2 {
 		t.Errorf("multi list: %+v", multi.Interactive)
 	}
@@ -183,15 +183,58 @@ func TestPushGateMenuRendering(t *testing.T) {
 }
 
 func TestParseSelection(t *testing.T) {
-	for _, tc := range []struct{ in, cmd, arg string }{
-		{"open_ap:ap1", "open_ap", "ap1"},
-		{"close_ap:ap9", "close_ap", "ap9"},
-		{"select_loc:loc1", "select_loc", "loc1"},
-		{"bare", "open", "bare"},
+	for _, tc := range []struct {
+		in, cmd, arg string
+		ok           bool
+	}{
+		{"open_ap:ap1", "open_ap", "ap1", true},
+		{"close_ap:ap9", "close_ap", "ap9", true},
+		{"select_loc:loc1", "select_loc", "loc1", true},
+		// An id carrying a ':' in the argument still splits on the FIRST one.
+		{"open_ap:ap:1", "open_ap", "ap:1", true},
+		// Defect 2: an unprefixed id used to return ("open", id) — the most
+		// dangerous verb the gateway has, handed out on a malformed reply.
+		{"bare", "", "", false},
+		{"", "", "", false},
+		// An unknown command must not fall through to a verb either.
+		{"wat:ap1", "", "", false},
+		{"open:ap1", "", "", false},
+		{"open_ap", "", "", false},
+		// A known command with no argument names no target.
+		{"open_ap:", "", "", false},
+		{":ap1", "", "", false},
 	} {
-		cmd, arg := ParseSelection(tc.in)
-		if cmd != tc.cmd || arg != tc.arg {
-			t.Errorf("%q → (%q,%q) want (%q,%q)", tc.in, cmd, arg, tc.cmd, tc.arg)
+		cmd, arg, ok := ParseSelection(tc.in)
+		if cmd != tc.cmd || arg != tc.arg || ok != tc.ok {
+			t.Errorf("%q → (%q,%q,%v) want (%q,%q,%v)", tc.in, cmd, arg, ok, tc.cmd, tc.arg, tc.ok)
+		}
+	}
+}
+
+// TestSelectionCommandVerbIsAllowlisted proves the verb is looked up, never
+// derived from the id text, and that select_loc yields no verb at all.
+func TestSelectionCommandVerbIsAllowlisted(t *testing.T) {
+	for _, tc := range []struct {
+		cmd, verb string
+		ok        bool
+	}{
+		{SelOpenAP, "open", true},
+		{SelCloseAP, "close", true},
+		{SelSelectLoc, "", false},
+		{"closet", "", false}, // used to satisfy strings.HasPrefix(cmd, "close")
+		{"opener", "", false},
+		{"", "", false},
+	} {
+		verb, ok := SelectionCommandVerb(tc.cmd)
+		if verb != tc.verb || ok != tc.ok {
+			t.Errorf("%q → (%q,%v) want (%q,%v)", tc.cmd, verb, ok, tc.verb, tc.ok)
+		}
+	}
+	// Whatever the allowlist yields must stay inside what the choke point
+	// accepts (store/openpath.go: open | close, nothing else).
+	for cmd := range selectionCommands {
+		if verb, ok := SelectionCommandVerb(cmd); ok && verb != "open" && verb != "close" {
+			t.Errorf("%q yields verb %q, which store.LogAccess rejects", cmd, verb)
 		}
 	}
 }

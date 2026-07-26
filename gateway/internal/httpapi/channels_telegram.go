@@ -93,7 +93,8 @@ func (s *Server) processTGMessage(ctx contextT, msg *channels.TGMessage) {
 		case 1:
 			s.tgAccessCommand(ctx, msg.Chat.ID, chatID, profileID, gates[0].APID, gates[0].APName)
 		default:
-			s.tgSendKeyboard(ctx, msg.Chat.ID, chatID, "Which gate would you like to open?", channels.TelegramGateKeyboard(gates))
+			body, kb := channels.TelegramGatePicker("Which gate would you like to open?", gates, s.channelPublicURL())
+			s.tgSendKeyboard(ctx, msg.Chat.ID, chatID, body, kb)
 		}
 	case tgHelpWords[txt]:
 		s.tgSendText(ctx, msg.Chat.ID, chatID, channels.TelegramMenu(displayName))
@@ -105,9 +106,9 @@ func (s *Server) processTGMessage(ctx contextT, msg *channels.TGMessage) {
 func (s *Server) processTGCallback(ctx contextT, cq *channels.TGCallbackQuery) {
 	// Always dismiss the button spinner, even on a no-op.
 	s.tgSend.AnswerCallback(ctx, cq.ID)
-	cmd, apID := channels.ParseSelection(cq.Data)
-	if cmd != "open_ap" || apID == "" {
-		return
+	cmd, apID, ok := channels.ParseSelection(cq.Data)
+	if !ok || cmd != channels.SelOpenAP {
+		return // unrecognised callback data actuates nothing
 	}
 	userKey := strconv.FormatInt(cq.From.ID, 10)
 	profileID, err := s.store.ResolveChannelIdentity(ctx, channels.KindTelegram, userKey)

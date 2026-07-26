@@ -146,7 +146,7 @@ func (s *Server) processSlackEvent(ctx contextT, teamID string, ev *channels.Sla
 			s.slackReply(ctx, chatID, channelID, "You don't have any active gate access. Please contact the administrator.", nil)
 			return
 		}
-		s.slackReply(ctx, chatID, channelID, "Select a gate to open", channels.AccessBlocks(displayName, gates))
+		s.slackReply(ctx, chatID, channelID, "Select a gate to open", channels.AccessBlocks(displayName, gates, s.channelPublicURL()))
 	default:
 		s.slackReply(ctx, chatID, channelID, channels.SlackMenu(displayName), nil)
 	}

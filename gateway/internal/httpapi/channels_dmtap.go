@@ -81,21 +81,30 @@ func (s *Server) handleDMTAPIntent(ctx contextT, intent channels.DMTAPIntent) {
 		case 1:
 			s.dmtapAccessCommand(ctx, chatID, intent.GroupID, profileID, gates[0].APID, gates[0].APName, command)
 		default:
-			s.dmtapReply(ctx, chatID, intent.GroupID, "Which gate? Reply with its name:\n"+channels.DMTAPGateList(gates))
+			s.dmtapReply(ctx, chatID, intent.GroupID, "Which gate? Reply with its name:\n"+channels.DMTAPGateList(gates, s.channelPublicURL()))
 		}
 	case dmtapHelpWords[txt]:
 		s.dmtapReply(ctx, chatID, intent.GroupID, channels.DMTAPMenu(displayName))
 	default:
 		// Free text — try to resolve a mentioned gate name (mirrors WhatsApp's
-		// FindMentionedGate), else fall back to the menu.
+		// FindMentionedGate), else fall back to the menu. A body naming more
+		// than one gate resolves to none of them: it asks, listing only the
+		// gates that matched.
 		gates, err := s.store.AvailableAccessPointsByProfile(ctx, profileID)
 		if err == nil {
-			if target, ok := channels.FindMentionedGate(txt, gates); ok {
+			m := channels.FindMentionedGate(txt, gates)
+			switch {
+			case m.Unique():
 				command := "open"
 				if strings.Contains(txt, "close") {
 					command = "close"
 				}
-				s.dmtapAccessCommand(ctx, chatID, intent.GroupID, profileID, target.APID, target.APName, command)
+				s.dmtapAccessCommand(ctx, chatID, intent.GroupID, profileID, m.AP.APID, m.AP.APName, command)
+				return
+			case m.Ambiguous():
+				s.dmtapReply(ctx, chatID, intent.GroupID,
+					"That matches more than one gate, so nothing was opened or closed. Which one? Reply with its name:\n"+
+						channels.DMTAPGateList(m.Candidates, s.channelPublicURL()))
 				return
 			}
 		}

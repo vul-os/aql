@@ -248,13 +248,16 @@ func DMTAPMenu(profileName string) string {
 }
 
 // DMTAPGateList renders the gate picker as a plain numbered list — backend
-// equivalent of PushGateMenu/TelegramGateKeyboard, but text-only.
-func DMTAPGateList(gates []store.AvailableAP) string {
+// equivalent of PushGateMenu/TelegramGatePicker, but text-only. Capped at
+// PickerCapacity, with the same honest disclosure when it truncates.
+func DMTAPGateList(gates []store.AvailableAP, publicURL string) string {
 	var b strings.Builder
+	shown := 0
 	for i, g := range gates {
-		if i == 10 {
+		if i == PickerCapacity {
 			break
 		}
+		shown++
 		if i > 0 {
 			b.WriteByte('\n')
 		}
@@ -266,6 +269,10 @@ func DMTAPGateList(gates []store.AvailableAP) string {
 			b.WriteString(g.LocName)
 			b.WriteString(")")
 		}
+	}
+	if n := TruncationNotice(shown, len(gates), publicURL); n != "" {
+		b.WriteString("\n\n")
+		b.WriteString(n)
 	}
 	return b.String()
 }

@@ -36,6 +36,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 // Kind constants — the identity space / source tag per channel (also the
@@ -269,7 +271,77 @@ func NormalizeSlackText(s string) string {
 
 // textIncludesName reports whether a normalized body mentions a name (used to
 // disambiguate "open the side gate" against the member's gates/locations).
+//
+// The match is WHOLE-WORD, not a bare substring. A bare strings.Contains is a
+// fail-open on a heterogeneous fleet: "gate" is a substring of "front gate",
+// so "open the front gate" matched an access point merely named `Gate` — and
+// because the caller took the FIRST match, which gate that resolved to was a
+// function of slice order. Requiring the name to sit on word boundaries kills
+// the accidental half of that (a name buried inside a longer word no longer
+// counts); the genuine half — several distinct names all mentioned — is
+// reported as ambiguity by FindMentionedGate/FindMentionedLocation and is
+// never resolved by order.
+//
+// A "word boundary" is anything that is not a letter or a digit (including the
+// start/end of the body), so punctuation, spaces and emoji all delimit. The
+// name itself may contain spaces: it is matched as a whole phrase.
 func textIncludesName(body, name string) bool {
 	n := strings.TrimSpace(strings.ToLower(name))
-	return n != "" && strings.Contains(body, n)
+	if n == "" {
+		return false
+	}
+	b := strings.ToLower(body)
+	for off := 0; off <= len(b)-len(n); {
+		i := strings.Index(b[off:], n)
+		if i < 0 {
+			return false
+		}
+		start := off + i
+		if !wordCharBefore(b, start) && !wordCharAfter(b, start+len(n)) {
+			return true
+		}
+		off = start + 1
+	}
+	return false
 }
+
+// wordCharBefore reports whether the rune ending at i is a letter or digit.
+func wordCharBefore(s string, i int) bool {
+	if i <= 0 {
+		return false
+	}
+	r, _ := utf8.DecodeLastRuneInString(s[:i])
+	return isWordRune(r)
+}
+
+// wordCharAfter reports whether the rune starting at i is a letter or digit.
+func wordCharAfter(s string, i int) bool {
+	if i >= len(s) {
+		return false
+	}
+	r, _ := utf8.DecodeRuneInString(s[i:])
+	return isWordRune(r)
+}
+
+func isWordRune(r rune) bool { return unicode.IsLetter(r) || unicode.IsDigit(r) }
+
+// ---------------------------------------------------------------------------
+// Picker capacity — one explicit capacity per rail, never an inline == 10
+// ---------------------------------------------------------------------------
+
+// PickerCapacity is how many rows any one picker may show. WhatsApp interactive
+// list sections are capped at 10 rows by the Cloud API and a Telegram inline
+// keyboard is unusable well before that, so 10 is the binding constraint on two
+// of the three rails; Slack is held to the same number for one consistent
+// picker shape (its own hard ceiling is SlackMaxBlocks).
+//
+// Truncating is allowed. Truncating SILENTLY is not: every renderer that drops
+// rows must carry TruncationNotice, so a resident is never shown a list that
+// looks complete and is not.
+const PickerCapacity = 10
+
+// SlackMaxBlocks is Slack's per-message Block Kit ceiling (chat.postMessage
+// rejects a payload with more blocks, so an uncapped picker does not truncate —
+// the whole reply fails to send and the member gets nothing). Renderers must
+// stay at or under it.
+const SlackMaxBlocks = 50

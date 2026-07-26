@@ -165,9 +165,28 @@ func gateFooter(g store.AvailableAP) (string, bool) {
 	return "You have " + remaining + " uses remaining.", true
 }
 
+// waGateRows renders at most PickerCapacity gate rows carrying selCmd
+// (SelOpenAP or SelCloseAP) as the selection command.
+func waGateRows(selCmd string, gates []store.AvailableAP) []WhatsAppRow {
+	rows := make([]WhatsAppRow, 0, PickerCapacity)
+	for _, g := range gates {
+		if len(rows) == PickerCapacity {
+			break
+		}
+		rows = append(rows, WhatsAppRow{
+			ID:          selCmd + ":" + g.APID,
+			Title:       waTitle(g.APName, 24),
+			Description: waTitle(g.LocName, 72),
+		})
+	}
+	return rows
+}
+
 // PushGateMenu renders the gate picker for one location (button when a single
-// gate, list otherwise) — backend pushGateMenu.
-func PushGateMenu(locationName string, gates []store.AvailableAP) WAReply {
+// gate, list otherwise) — backend pushGateMenu. Past PickerCapacity the list
+// is truncated and SAYS SO in the body (TruncationNotice); a resident is never
+// shown a short list that looks complete.
+func PushGateMenu(locationName string, gates []store.AvailableAP, publicURL string) WAReply {
 	if len(gates) == 1 {
 		g := gates[0]
 		i := WhatsAppInteractive{
@@ -185,21 +204,13 @@ func PushGateMenu(locationName string, gates []store.AvailableAP) WAReply {
 		}
 		return waInteractiveReply(i)
 	}
-	rows := make([]WhatsAppRow, 0, 10)
-	for _, g := range gates {
-		if len(rows) == 10 {
-			break
-		}
-		rows = append(rows, WhatsAppRow{
-			ID:          "open_ap:" + g.APID,
-			Title:       waTitle(g.APName, 24),
-			Description: waTitle(g.LocName, 72),
-		})
-	}
+	rows := waGateRows(SelOpenAP, gates)
 	i := WhatsAppInteractive{
 		Type:   "list",
 		Header: &WAText{Type: "text", Text: locationName},
-		Body:   WAText{Text: "Welcome to " + locationName + ". Which gate would you like to open?"},
+		Body: WAText{Text: withTruncationNotice(
+			"Welcome to "+locationName+". Which gate would you like to open?",
+			len(rows), len(gates), publicURL)},
 		Action: WhatsAppAction{Button: "Select gate", Sections: []WhatsAppSection{{Title: "Available gates", Rows: rows}}},
 	}
 	if len(gates) > 0 {
@@ -210,11 +221,37 @@ func PushGateMenu(locationName string, gates []store.AvailableAP) WAReply {
 	return waInteractiveReply(i)
 }
 
+// PushAmbiguousGateMenu is the reply when a message named more than one gate
+// ("open the front gate" against both `Gate` and `Front Gate`). It lists ONLY
+// the gates that matched, names the ambiguity rather than hiding it, and
+// actuates nothing — the tap that follows re-resolves and re-authorizes on the
+// normal open_ap/close_ap path. Never call this with fewer than two candidates.
+//
+// The rows carry the verb the member actually asked for: an unresolved "close"
+// must not come back as a row that opens. command is "open" or "close";
+// anything else is treated as "open" only for the row prefix, and the caller is
+// responsible for never getting there (store/openpath.go rejects the rest).
+func PushAmbiguousGateMenu(command string, candidates []store.AvailableAP, publicURL string) WAReply {
+	selCmd, verb := SelOpenAP, "opened"
+	if command == "close" {
+		selCmd, verb = SelCloseAP, "closed"
+	}
+	rows := waGateRows(selCmd, candidates)
+	return waInteractiveReply(WhatsAppInteractive{
+		Type:   "list",
+		Header: &WAText{Type: "text", Text: "Which one?"},
+		Body: WAText{Text: withTruncationNotice(
+			"That matches more than one gate, so I haven't "+verb+" anything. Which one did you mean?",
+			len(rows), len(candidates), publicURL)},
+		Action: WhatsAppAction{Button: "Select gate", Sections: []WhatsAppSection{{Title: "Matching gates", Rows: rows}}},
+	})
+}
+
 // PushLocationMenu renders the "which location" list — backend pushLocationMenu.
-func PushLocationMenu(locations []store.LinkedLocation) WAReply {
-	rows := make([]WhatsAppRow, 0, 10)
+func PushLocationMenu(locations []store.LinkedLocation, publicURL string) WAReply {
+	rows := make([]WhatsAppRow, 0, PickerCapacity)
 	for _, l := range locations {
-		if len(rows) == 10 {
+		if len(rows) == PickerCapacity {
 			break
 		}
 		rows = append(rows, WhatsAppRow{ID: "select_loc:" + l.ID, Title: waTitle(l.Name, 24)})
@@ -222,7 +259,9 @@ func PushLocationMenu(locations []store.LinkedLocation) WAReply {
 	return waInteractiveReply(WhatsAppInteractive{
 		Type:   "list",
 		Header: &WAText{Type: "text", Text: "Locations"},
-		Body:   WAText{Text: "Welcome back. Which location do you want to use?"},
+		Body: WAText{Text: withTruncationNotice(
+			"Welcome back. Which location do you want to use?",
+			len(rows), len(locations), publicURL)},
 		Action: WhatsAppAction{Button: "Choose location", Sections: []WhatsAppSection{{Title: "Your locations", Rows: rows}}},
 	})
 }
@@ -255,30 +294,174 @@ func UniqueLocations(gates []store.AvailableAP) []store.LinkedLocation {
 	return out
 }
 
-// FindMentionedLocation / FindMentionedGate resolve a free-text mention ("open
-// the side gate") to a target — backend findMentionedLocation/findMentionedGate.
-func FindMentionedLocation(body string, locations []store.LinkedLocation) (store.LinkedLocation, bool) {
-	for _, l := range locations {
-		if textIncludesName(body, l.Name) {
-			return l, true
-		}
+// ---------------------------------------------------------------------------
+// Free-text target resolution — ambiguity is an outcome, not a coin flip
+// ---------------------------------------------------------------------------
+
+// MatchOutcome is how a free-text mention resolved. It is deliberately a
+// three-state outcome rather than a bool: with a bool, "several targets
+// matched" is indistinguishable from "one target matched", and the caller
+// silently actuates whichever one happened to come first in the slice. A
+// caller must handle MatchAmbiguous explicitly — by asking — and cannot get
+// there by ignoring a return value.
+type MatchOutcome int
+
+const (
+	// MatchNone — no target's name was mentioned. Caller falls back to its
+	// existing behaviour (a picker, or the single-candidate collapse).
+	MatchNone MatchOutcome = iota
+	// MatchUnique — exactly one target was mentioned. Safe to act on.
+	MatchUnique
+	// MatchAmbiguous — two or more distinct targets were mentioned. NOTHING
+	// actuates: the caller must render the disambiguation picker. There is no
+	// tie-break, by order or by anything else — see docs/CHAT-COMMANDS.md §3.5.
+	MatchAmbiguous
+)
+
+func (o MatchOutcome) String() string {
+	switch o {
+	case MatchUnique:
+		return "unique"
+	case MatchAmbiguous:
+		return "ambiguous"
+	default:
+		return "none"
 	}
-	return store.LinkedLocation{}, false
 }
 
-func FindMentionedGate(body string, gates []store.AvailableAP) (store.AvailableAP, bool) {
-	for _, g := range gates {
-		if textIncludesName(body, g.APName) {
-			return g, true
-		}
+// GateMatch is the outcome of resolving a mention against the caller's
+// authorized access points. AP is meaningful ONLY when Unique() is true.
+type GateMatch struct {
+	Outcome    MatchOutcome
+	AP         store.AvailableAP   // valid iff Outcome == MatchUnique
+	Candidates []store.AvailableAP // every distinct AP mentioned (>= 2 when ambiguous)
+}
+
+// Unique reports the one case in which a caller may act without asking.
+func (m GateMatch) Unique() bool { return m.Outcome == MatchUnique }
+
+// Ambiguous reports that the caller must render a picker instead of acting.
+func (m GateMatch) Ambiguous() bool { return m.Outcome == MatchAmbiguous }
+
+// LocationMatch is the same outcome shape for the location-narrowing stage.
+type LocationMatch struct {
+	Outcome    MatchOutcome
+	Location   store.LinkedLocation   // valid iff Outcome == MatchUnique
+	Candidates []store.LinkedLocation // every distinct location mentioned
+}
+
+func (m LocationMatch) Unique() bool    { return m.Outcome == MatchUnique }
+func (m LocationMatch) Ambiguous() bool { return m.Outcome == MatchAmbiguous }
+
+func outcomeFor(n int) MatchOutcome {
+	switch {
+	case n == 1:
+		return MatchUnique
+	case n > 1:
+		return MatchAmbiguous
+	default:
+		return MatchNone
 	}
-	return store.AvailableAP{}, false
+}
+
+// FindMentionedLocation / FindMentionedGate resolve a free-text mention ("open
+// the side gate") to a target — backend findMentionedLocation/findMentionedGate.
+//
+// Both scan the WHOLE candidate list and report every distinct target whose
+// name the body mentions on word boundaries (textIncludesName). They never
+// return early on the first hit, so the answer does not depend on the order
+// the store happened to return rows in: shuffle the slice and the outcome, and
+// the resolved target, are identical. Candidates are de-duplicated by id — the
+// same physical gate reachable twice (a member grant and a visitor grant) is
+// one target, not an ambiguity.
+func FindMentionedLocation(body string, locations []store.LinkedLocation) LocationMatch {
+	var hits []store.LinkedLocation
+	seen := map[string]bool{}
+	for _, l := range locations {
+		if seen[l.ID] || !textIncludesName(body, l.Name) {
+			continue
+		}
+		seen[l.ID] = true
+		hits = append(hits, l)
+	}
+	m := LocationMatch{Outcome: outcomeFor(len(hits)), Candidates: hits}
+	if m.Unique() {
+		m.Location = hits[0]
+	}
+	return m
+}
+
+func FindMentionedGate(body string, gates []store.AvailableAP) GateMatch {
+	var hits []store.AvailableAP
+	seen := map[string]bool{}
+	for _, g := range gates {
+		if seen[g.APID] || !textIncludesName(body, g.APName) {
+			continue
+		}
+		seen[g.APID] = true
+		hits = append(hits, g)
+	}
+	m := GateMatch{Outcome: outcomeFor(len(hits)), Candidates: hits}
+	if m.Unique() {
+		m.AP = hits[0]
+	}
+	return m
+}
+
+// ---------------------------------------------------------------------------
+// Interactive selection ids
+// ---------------------------------------------------------------------------
+
+// The complete set of selection commands this gateway mints. Every id that
+// travels over a chat rail is written by one of the renderers in this package
+// ("open_ap:", "close_ap:", "select_loc:" here; "open_ap:" on Telegram), and a
+// provider echoes back the id verbatim — so nothing legitimate is unprefixed,
+// and nothing legitimate carries a command outside this list.
+const (
+	SelOpenAP    = "open_ap"
+	SelCloseAP   = "close_ap"
+	SelSelectLoc = "select_loc"
+)
+
+// selectionCommands is the allowlist ParseSelection validates against.
+var selectionCommands = map[string]bool{
+	SelOpenAP:    true,
+	SelCloseAP:   true,
+	SelSelectLoc: true,
 }
 
 // ParseSelection splits an interactive reply id "cmd:arg" (backend split(':')).
-func ParseSelection(id string) (cmd, arg string) {
-	if i := strings.IndexByte(id, ':'); i >= 0 {
-		return id[:i], id[i+1:]
+//
+// ok is false — and cmd/arg are empty — for an id with no ':' prefix, an empty
+// command or argument, or a command outside selectionCommands. It previously
+// returned ("open", id) for an unprefixed id, which made a malformed or
+// unrecognised interactive reply resolve to the single most dangerous verb the
+// gateway has. Fail closed instead: an id we did not mint actuates nothing.
+// Callers MUST check ok before touching cmd.
+func ParseSelection(id string) (cmd, arg string, ok bool) {
+	i := strings.IndexByte(id, ':')
+	if i < 0 {
+		return "", "", false
 	}
-	return "open", id
+	cmd, arg = id[:i], id[i+1:]
+	if arg == "" || !selectionCommands[cmd] {
+		return "", "", false
+	}
+	return cmd, arg, true
+}
+
+// SelectionCommandVerb maps a selection command to the open-path verb it
+// carries. The verb comes from this table, never from the id's text: ok is
+// false for select_loc (a narrowing step, not an actuation) and for anything
+// else. store/openpath.go still independently rejects any command outside
+// open/close — this is the layer above that boundary, not a replacement for it.
+func SelectionCommandVerb(cmd string) (verb string, ok bool) {
+	switch cmd {
+	case SelOpenAP:
+		return "open", true
+	case SelCloseAP:
+		return "close", true
+	default:
+		return "", false
+	}
 }

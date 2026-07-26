@@ -138,18 +138,34 @@ func (s *Server) waHandleText(ctx contextT, msg *channels.WAMessage, from, chatI
 	isOpen := strings.Contains(body, "open")
 	isHelp := body == "hi" || body == "hello" || body == "help" || body == "menu"
 
+	portal := s.channelPublicURL()
+
 	if (isOpen || isClose) && !isHelp {
 		command := "open"
 		if isClose {
 			command = "close"
 		}
-		mentionedLoc, hasLoc := channels.FindMentionedLocation(body, locations)
+		// Narrow by location only when exactly one was named. A body that names
+		// two ("home" against `Home` and `Home Office`) narrows to neither: the
+		// gate matcher then runs over the full authorized set, where a genuinely
+		// unique gate name still resolves and a repeated one comes back
+		// ambiguous. Picking one of the two by slice order is the thing this
+		// path must never do.
+		loc := channels.FindMentionedLocation(body, locations)
 		filtered := allGrants
-		if hasLoc {
-			filtered = filterByLocation(allGrants, mentionedLoc.ID)
+		if loc.Unique() {
+			filtered = filterByLocation(allGrants, loc.Location.ID)
 		}
-		target, hasTarget := channels.FindMentionedGate(body, filtered)
-		if !hasTarget && hasLoc && len(filtered) == 1 {
+
+		gate := channels.FindMentionedGate(body, filtered)
+		if gate.Ambiguous() {
+			// Fail closed on ambiguity: nothing actuates, and the picker lists
+			// exactly the gates that matched. The tap re-authorizes as always.
+			return one(to, chatID, channels.PushAmbiguousGateMenu(command, gate.Candidates, portal))
+		}
+		target, hasTarget := gate.AP, gate.Unique()
+		// Unchanged collapse rules for a body that named no gate at all.
+		if !hasTarget && loc.Unique() && len(filtered) == 1 {
 			target, hasTarget = filtered[0], true
 		} else if !hasTarget && len(locations) == 1 && len(allGrants) == 1 {
 			target, hasTarget = allGrants[0], true
@@ -157,27 +173,27 @@ func (s *Server) waHandleText(ctx contextT, msg *channels.WAMessage, from, chatI
 		if hasTarget {
 			return s.waAccessCommand(ctx, to, chatID, from, target.APID, target.APName, command)
 		}
-		if hasLoc {
-			return one(to, chatID, channels.PushGateMenu(mentionedLoc.Name, filtered))
+		if loc.Unique() {
+			return one(to, chatID, channels.PushGateMenu(loc.Location.Name, filtered, portal))
 		}
 		if len(locations) > 1 {
-			return one(to, chatID, channels.PushLocationMenu(locations))
+			return one(to, chatID, channels.PushLocationMenu(locations, portal))
 		}
-		return one(to, chatID, channels.PushGateMenu(locations[0].Name, allGrants))
+		return one(to, chatID, channels.PushGateMenu(locations[0].Name, allGrants, portal))
 	}
 
 	if isHelp {
 		if len(locations) > 1 {
-			return one(to, chatID, channels.PushLocationMenu(locations))
+			return one(to, chatID, channels.PushLocationMenu(locations, portal))
 		}
-		return one(to, chatID, channels.PushGateMenu(locations[0].Name, allGrants))
+		return one(to, chatID, channels.PushGateMenu(locations[0].Name, allGrants, portal))
 	}
 
 	// Fallback: welcome menu.
 	if len(locations) == 1 {
-		return one(to, chatID, channels.PushGateMenu(locations[0].Name, allGrants))
+		return one(to, chatID, channels.PushGateMenu(locations[0].Name, allGrants, portal))
 	}
-	return one(to, chatID, channels.PushLocationMenu(locations))
+	return one(to, chatID, channels.PushLocationMenu(locations, portal))
 }
 
 // waNoAccessReply mirrors the backend's honest copy when a number has no ready
@@ -225,8 +241,14 @@ func (s *Server) waHandleInteractive(ctx contextT, msg *channels.WAMessage, from
 	if sel == nil {
 		return nil
 	}
-	cmd, arg := channels.ParseSelection(sel.ID)
-	if cmd == "select_loc" {
+	// Fail closed on anything this gateway did not mint: an unprefixed id used
+	// to resolve to "open", and any unknown prefix fell through to the same
+	// default, so a malformed interactive reply actuated a gate.
+	cmd, arg, ok := channels.ParseSelection(sel.ID)
+	if !ok {
+		return text(to, chatID, channels.UnknownSelectionMessage)
+	}
+	if cmd == channels.SelSelectLoc {
 		allGrants, err := s.store.AvailableAccessPointsByPhone(ctx, from, 0)
 		if err != nil {
 			s.log.Error("wa available", "err", err)
@@ -236,11 +258,12 @@ func (s *Server) waHandleInteractive(ctx contextT, msg *channels.WAMessage, from
 		if len(locGates) == 0 {
 			return text(to, chatID, "That location has no active gates or doors ready yet.")
 		}
-		return one(to, chatID, channels.PushGateMenu(locGates[0].LocName, locGates))
+		return one(to, chatID, channels.PushGateMenu(locGates[0].LocName, locGates, s.channelPublicURL()))
 	}
-	command := "open"
-	if strings.HasPrefix(cmd, "close") {
-		command = "close"
+	// The verb comes from the allowlist, never from the id's text.
+	command, ok := channels.SelectionCommandVerb(cmd)
+	if !ok {
+		return text(to, chatID, channels.UnknownSelectionMessage)
 	}
 	apID := arg
 	gateName := strings.TrimPrefix(strings.TrimPrefix(sel.Title, "Open "), "Close ")

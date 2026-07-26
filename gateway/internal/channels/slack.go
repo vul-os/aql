@@ -85,7 +85,15 @@ func SlackMenu(profileName string) string {
 }
 
 // AccessBlocks renders the gate picker as Block Kit — backend accessBlocks.
-func AccessBlocks(profileName string, gates []store.AvailableAP) []Block {
+//
+// Capped at PickerCapacity gate sections. Slack rejects a message over
+// SlackMaxBlocks blocks outright, so the uncapped version did not degrade past
+// a certain fleet size — the reply simply failed to send and the member got
+// nothing back at all. When gates are dropped the picker says so
+// (TruncationNotice) instead of quietly showing a short list, and a final
+// defensive trim keeps the payload under the ceiling no matter what is added
+// above it.
+func AccessBlocks(profileName string, gates []store.AvailableAP, publicURL string) []Block {
 	name := profileName
 	if name == "" {
 		name = "there"
@@ -96,7 +104,12 @@ func AccessBlocks(profileName string, gates []store.AvailableAP) []Block {
 			"text": map[string]any{"type": "mrkdwn", "text": "Hi *" + name + "*, which gate would you like to open?"},
 		},
 	}
+	shown := 0
 	for _, g := range gates {
+		if shown == PickerCapacity {
+			break
+		}
+		shown++
 		blocks = append(blocks, Block{
 			"type": "section",
 			"text": map[string]any{"type": "mrkdwn", "text": "*" + g.APName + "*\n" + g.LocName},
@@ -107,6 +120,15 @@ func AccessBlocks(profileName string, gates []store.AvailableAP) []Block {
 				"action_id": "open_gate:" + g.APID,
 			},
 		})
+	}
+	if n := TruncationNotice(shown, len(gates), publicURL); n != "" {
+		blocks = append(blocks, Block{
+			"type":     "context",
+			"elements": []any{map[string]any{"type": "mrkdwn", "text": n}},
+		})
+	}
+	if len(blocks) > SlackMaxBlocks {
+		blocks = blocks[:SlackMaxBlocks]
 	}
 	return blocks
 }
