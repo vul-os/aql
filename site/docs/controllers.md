@@ -1,6 +1,6 @@
 # Controllers
 
-A controller is the unit at the gate: a Pi-class board running the lintel agent,
+A controller is the unit at the gate: a Pi-class board running the Aql agent,
 wired to the motor's relay input, on Wi-Fi or a GSM 4G SIM. It dials **out** to exactly
 one gateway, verifies every command's signature against that gateway's pinned key, and
 pulses the relay.
@@ -11,7 +11,7 @@ volunteer configured in 2014. Zero inbound ports, zero port-forwarding.
 
 ## The reference agent (real today)
 
-The agent in [`controller/`](https://github.com/vul-os/lintel/tree/main/controller) is
+The agent in [`controller/`](https://github.com/vul-os/aql/tree/main/controller) is
 a real, standalone Go module — std-lib first, no CGO. What's **implemented and
 conformance-tested** against the `proto/` vectors: fail-closed command verification
 (signature, addressing, replay window, lockdown), pairing with gateway-key **pinning**,
@@ -22,18 +22,23 @@ proves the money path end to end.
 
 **Kept honest — what is still stubbed:**
 
-- **GPIO relay driver** — a `-tags gpio` scaffold; the default build uses a mock relay
-  that logs actuations. Wiring a real relay means implementing `internal/relay` behind
-  `-tags gpio` (fail-safe: the line drops on exit/panic → gate closed).
-- **BLE radio** — the framing/session logic is real and tested, but the GATT peripheral
-  glue compiles only under `-tags ble` on Linux/BlueZ and is **not yet
-  hardware-validated**.
+- **GPIO relay driver** — not implemented. The default build uses a **mock relay that
+  only logs** actuations, and the `-tags gpio` file is a stub that **panics on purpose**
+  (`relay: gpio build-tag stub — implement the gpiochip driver before deploying to
+  hardware`, `controller/internal/relay/gpio.go`). Driving a real gate means writing that
+  driver yourself, to the fail-safe specification: normally-open output, line drops on
+  process exit or panic → gate closed. **No build of this agent has ever actuated real
+  hardware in this repository's tests.**
+- **BLE radio** — the framing codec, the session layer and grant verification are real
+  and unit-tested with no radio present, but the GATT peripheral glue exists **only for
+  Linux/BlueZ behind `-tags ble`** (every other platform gets a stub returning
+  `ErrUnsupported`) and has **never been validated on hardware**.
 - **Position/tamper sensors** — the `Sensors` interface returns static values today.
 
 Build and drive it without any hardware:
 
 ```sh
-cd lintel/controller
+cd aql/controller
 go build ./...                                   # default build, zero external deps
 
 # Live agent against a dev gateway (mock relay; prints state transitions)
@@ -47,7 +52,7 @@ On a real device the agent pairs once with a claim token and persists the result
 
 ```sh
 go run ./cmd/controller \
-  --state /var/lib/lintel --gateway https://gate.example.com \
+  --state /var/lib/aql --gateway https://gate.example.com \
   --claim-token <TOKEN> --access-points <ACCESS_POINT_ID>
 ```
 
@@ -62,13 +67,13 @@ Find the two terminals on the gate motor that the receiver pulses — usually la
 
 ```
 gate motor        COM ──┬── existing receiver relay
-                        └── lintel controller relay
+                        └── Aql controller relay
                   NO  ──┴───────────────┘
 ```
 
 - Most installs share the motor's 12&nbsp;V supply instead of the included adapter.
 - For 24&nbsp;V or AC motors, use an optoisolated relay board between controller and motor.
-- Your existing remotes, keypads and intercom keep working. lintel is in parallel,
+- Your existing remotes, keypads and intercom keep working. Aql is in parallel,
   never in the way.
 
 ## Pairing: the claim-token flow

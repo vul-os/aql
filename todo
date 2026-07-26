@@ -1,31 +1,76 @@
-# lintel — working todo
+# aql — working todo
+
+Scratch list. The structured version is ROADMAP.md; this is the running one.
 
 ## direction (see ARCHITECTURE.md)
-- Go single-binary gateway (SQLite, embedded portal, channel seam) — port from backend/
-- controller agent implementing proto/ (pairing, signed commands, offline grants, events)
-- Svelte 5 + Tauri app: admin console + LAN/BLE offline emergency access
-- Discord channel (WhatsApp + Slack shipped)
+- Aql = one hub that owns everything physical. Chat is an input surface, not the product.
+- Shipped: the Go hub (channels, open path, console, audit, SQLite), the controller agent
+  (pinned-key pairing, fail-closed verification, offline LAN grants), signed commands,
+  proto/'s 61 vectors / 68 checks, the e2e harnesses.
+- Not shipped: the device engine, automations, energy, the phone half of offline grants.
 
-## carried over (still relevant)
-- [x] buy domain on namecheap, lintel.com (retired by rename decision — project
-      site now lives at vulos.org/products/lintel, no separate domain)
-- [x] resend setup, connect dns settings
-- [x] static site/ (firebase removed by decision — host anywhere / Vulos console sync)
-- [x] google oauth set up
-- [x] light / dark mode with toggle in top bar
-- [x] docs home page with search
-- email templates, logo is in public folder
-- test google login: after 30 mins are you still logged in? does refresh rotation work?
-- basic API system: locations generate API keys; third-party device API with pairing +
-  signed keys (proto/ is the spec); pen tests; docs with python/go/curl examples
-- test the whatsapp flow end-to-end at a real gate: multi-access-point picker,
-  location-first flow, "hi" fallback lists linked locations or says not linked
-- avatar system: bunny CDN cache for avatar urls; google avatar url updates; all user
-  types can change avatar (or external url); same avatar system for locations
-- hide password config for google-only accounts (no password set)
-- more docs + syntax highlighting
+## next up
+- [ ] app-side offline grants: request / store / refresh, then present over LAN + BLE.
+      Three of four pieces already exist (contract, controller verification, hub
+      issuance) — this closes the loop. Needs an emergency screen in src/.
+- [ ] GPIO relay driver behind `-tags gpio` (today: a stub that panics; default build
+      logs). Fail-safe spec: normally-open, line drops on exit/panic.
+- [ ] BLE radio validation on real Linux/BlueZ hardware — framing + session are tested,
+      the radio has never run.
+- [ ] decide where the device engine lives: Go hub vs the Rust core in src-tauri/.
+      Hub is the likely answer (owns persistence, audit, the always-on box). Write it
+      down in ARCHITECTURE.md §8 once decided.
+- [ ] first driver behind the seam — MQTT is the cheapest breadth (and the likely Zana
+      transport).
 
-## removed by decision (do not resurrect)
-- billing / paystack / wallet / subscriptions / invoices / VAT / referrals / payouts /
-  pricing tiers / FX display — lintel has NO billing system. Operators solve money
-  outside the system; see ARCHITECTURE.md §4 "Money is out of scope".
+## console ↔ hub drift (tracked by src/lib/__tests__/routeParity.test.ts)
+Each of these is UI with no backend. Either build the route or remove the screen.
+- [ ] analytics: `/analytics/accounts/{id}/summary|insights`, `/analytics/locations/{id}/summary`
+- [ ] per-access-point maintenance log (`GET/POST /access-points/{id}/maintenance`)
+- [ ] password reset / email verify / update password / Google OAuth
+- [ ] `/reference/countries`, `/phones/me/phones`, `PUT /auth/me/slack`, `PATCH /auth/me/profile`
+
+## channels
+- [ ] Telegram long-polling (`getUpdates`) — the zero-ingress path for that channel
+- [ ] Discord — designed into the seam, no code yet
+- [ ] extend the intent vocabulary past `open`/`close` once there is more than one device
+      class to command
+- [ ] DMTAP channel stays a scaffold with a fail-closed transport until there is a real
+      wire format. Do not present it as a channel.
+
+## api & integrations
+- [ ] scoped API tokens (`aql_live_…`), issued per location, read / read-write
+- [ ] outbound webhooks (`open.succeeded`, `open.denied`, `device.offline`,
+      `member.revoked`) with HMAC-signed delivery
+- [ ] a token-scoped `GET /v1/events` feed (today the audit log is instance-admin only)
+- [ ] revoke-a-controller endpoint (no DELETE on /v1/devices yet)
+- [ ] API docs with python/go/curl examples
+
+## security / ops
+- [ ] 2FA, and some in-band recovery for a lost sole instance-admin password
+- [ ] grant revocation beyond "wait for the TTL" (accepted v0 non-goal today)
+- [ ] controller position/tamper sensors return static values — wire real ones
+- [ ] pen test the pairing + signed-command path against the proto vectors
+- [ ] publish the aql-gateway image automatically (docker.yml is workflow_dispatch only)
+
+## hygiene
+- [ ] `.env.example` still documents a `backend/` directory that no longer exists and a
+      Postgres `DATABASE_URL` nothing reads
+- [ ] `src/mocks/*` is dead code — nothing imports it (the screenshotter uses
+      `scripts/screenshotter-fixtures/`). Delete or wire it up.
+- [ ] `assets/brand/lintel-*.svg` are stale; `aql-mark.svg` exists alongside
+- [ ] `src-tauri`'s `system_pulse` IPC command is never called by the frontend
+- [ ] stale `backend/` references in load-bearing code comments
+      (`gateway/internal/httpapi/server.go`, `src/lib/api.ts`, `routeParity.test.ts`)
+- [ ] test the WhatsApp flow end to end at a real gate: multi-access-point picker,
+      location-first flow, "hi" fallback lists linked locations or says not linked
+
+## do not resurrect (removed by decision)
+- billing / wallet / subscriptions / invoices / VAT / referrals / payouts / pricing tiers
+  — Aql has NO billing system. Operators solve money outside the system; see
+  ARCHITECTURE.md §4 "Money is out of scope".
+- the Cloudflare Workers + Postgres backend. Deleted. The Go hub is the only server.
+- the SvelteKit demo console (Overview / Devices / Energy / Automations on an in-memory
+  dataset). Replaced by the real console in the fold.
+- renaming `LINTEL_*`, `lintel.db` or `_lintel._tcp`. Deployment and wire contract for
+  hardware already in the field.

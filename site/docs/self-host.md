@@ -1,34 +1,47 @@
-# Run a gateway
+# Run a hub
 
-The gateway is the entire server side of lintel: channels, rules, portal, API, device
-hub and audit log — one Go binary with one SQLite file. This chapter takes you from
-nothing to a reachable gateway with a channel attached.
+The hub (the `gateway` binary) is the entire server side of Aql: chat channels, the
+access rules, the web console, the API, the device hub and the audit log — one Go binary
+with one SQLite file. This chapter takes you from nothing to a reachable hub with a
+channel attached.
 
-Everything here is MIT-licensed and free. Your gateway is not a demo of anything: it is
-the whole system, every feature, no caps — and no billing code in the binary, so there
-is nothing to configure and nothing to pay us. Your costs are your own: a VPS or a Pi,
-and Meta's per-conversation fees if you run a WhatsApp channel on your own number
-(Meta bills you directly).
+Everything here is MIT-licensed and free. Your hub is not a demo of anything: it is the
+whole system, every feature, no caps — and no billing code in the binary, so there is
+nothing to configure and nothing to pay us. Your costs are your own: a VPS or a Pi, and
+Meta's per-conversation fees if you run a WhatsApp channel on your own number (Meta
+bills you directly).
+
+> **Naming.** The binary, its environment variables and its SQLite file still use the
+> name `lintel` — that is Aql's access-control half under its pre-merge name, kept
+> deliberately because those names are a deployment contract for hubs and controllers
+> already in the field. Everything user-facing is Aql; see
+> [Overview](overview.md).
 
 ## Install
 
-> **Status — the Go gateway exists and runs today.** The single-binary Go gateway in
-> [`gateway/`](https://github.com/vul-os/lintel/tree/main/gateway) implements the
-> product core now: auth, accounts/locations/access-points, controller pairing and the
-> WebSocket device hub, the signed open path, admin console, rate limits, and the
-> WhatsApp / Slack / Telegram channels. **Building from source is the reliable path
-> today** — see the commands below. Still deferred (and honest about it): the phone-OTP
-> verify routes, analytics endpoints, Google OAuth / email-verify / password-reset
-> ceremony, movement/meter records, and dropping the real portal bundle in for the
-> placeholder. The mature Cloudflare Workers backend in `backend/` remains the
-> behavioural reference the gateway is ported from.
+> **Status — the hub exists and runs today.** The single-binary Go hub in
+> [`gateway/`](https://github.com/vul-os/aql/tree/main/gateway) implements the product
+> core now: auth, accounts / locations / access points, controller pairing and the
+> WebSocket device hub, the signed open path, the admin console, rate limits and quotas,
+> visitor grants, the tamper-evident audit log, offline-grant issuance, and the WhatsApp
+> / Slack / Telegram channels — 60 registered HTTP routes, 183 Go tests, all green.
+> **Building from source is the reliable path today** — see the commands below.
+>
+> Honest gaps: there are **no analytics endpoints**, and **no Google OAuth,
+> email-verification or password-reset routes** — the console has screens for some of
+> these that the hub does not serve (they are enumerated as `KNOWN_UNAVAILABLE` in
+> `src/lib/__tests__/routeParity.test.ts`, so the drift is at least mechanically
+> tracked). The maintenance-logging UI on an access point posts to routes that do not
+> exist either; the hub returns fixed nulls for those fields. There is **no device
+> engine** — no drivers for lights, cameras, meters, mowers or sensors, and no
+> automations runtime; see [Devices, energy & automations](devices.md).
 
 **From source** (works today):
 
 ```sh
-git clone https://github.com/vul-os/lintel
-cd lintel/gateway && go build ./cmd/gateway
-./gateway -data /var/lib/lintel -listen :8080
+git clone https://github.com/vul-os/aql
+cd aql/gateway && go build ./cmd/gateway
+./gateway -data /var/lib/aql -listen :8080
 ```
 
 Pure-Go SQLite (`modernc.org/sqlite`, no CGO), so `CGO_ENABLED=0 GOARCH=arm64`
@@ -37,14 +50,14 @@ cross-compiles cleanly for a Pi.
 **Docker** — build the image locally from the `Dockerfile` in `gateway/`:
 
 ```sh
-cd lintel/gateway && docker build -t lintel-gateway .
-docker run -d --name lintel \
+cd aql/gateway && docker build -t aql-gateway .
+docker run -d --name aql \
   -p 8080:8080 \
-  -v lintel:/data \
-  lintel-gateway
+  -v aql:/data \
+  aql-gateway
 ```
 
-> The `ghcr.io/vul-os/lintel-gateway` image is built by CI but **not auto-published
+> The `ghcr.io/vul-os/aql-gateway` image is built by CI but **not auto-published
 > yet** — its workflow is manual-only. Build locally with the `Dockerfile` above, or
 > pull the published image once a release cuts it. Image and binary names are still
 > settling pre-1.0 — check the repository README for current tags before scripting
@@ -163,7 +176,7 @@ Pick whichever of these fits your life:
   ```
 
   ```sh
-  ./gateway -data /var/lib/lintel -listen 127.0.0.1:8080 \
+  ./gateway -data /var/lib/aql -listen 127.0.0.1:8080 \
     -public-url https://your-gate.example &
   caddy run   # or: systemctl enable --now caddy
   ```
@@ -177,7 +190,7 @@ Pick whichever of these fits your life:
   (e.g. `frp`'s TCP passthrough, rather than its HTTP proxy mode) forwards
   still-encrypted bytes all the way to the gateway, which has nothing to decrypt them
   with — put your own reverse proxy (as above) behind a passthrough tunnel if you want
-  that shape. lintel has no structural dependency on any provider — **Ephor**
+  that shape. Aql has no structural dependency on any provider — **Ephor**
   (the hosted version of `vulos-relayd`) is one option among these, never a
   requirement.
 - **No public URL at all** — a gateway on the estate LAN as a complete installation,

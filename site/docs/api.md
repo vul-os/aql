@@ -1,6 +1,6 @@
 # API reference
 
-The HTTP API isn't required to use lintel — most people only ever touch chat. But if
+The HTTP API isn't required to use Aql — most people only ever touch chat. But if
 you're integrating with property-management software, wiring the gate into a home
 automation, or building on top of a gateway, this is for you.
 
@@ -29,7 +29,7 @@ its own TTL runs out).
 
 **Planned**: long-lived, location-scoped, read/read-write **API tokens** issued from
 the portal under **Settings → API tokens** (tracked in the repo todo), shaped like
-`Authorization: Bearer lintel_live_<token>`. Until that ships, integrating means logging
+`Authorization: Bearer aql_live_<token>`. Until that ships, integrating means logging
 in a service account and refreshing its session token like any other client.
 
 Every gateway issues its own tokens/sessions — there is no central token authority.
@@ -37,7 +37,7 @@ Every gateway issues its own tokens/sessions — there is no central token autho
 ## Open an access point
 
 This one is real today, authenticated with the bearer session token from
-`POST /v1/auth/login` (not a scoped `lintel_live_…` API token yet — see
+`POST /v1/auth/login` (not a scoped `aql_live_…` API token yet — see
 [Authentication](#authentication)):
 
 ```
@@ -100,5 +100,14 @@ revoking a controller's key is a planned admin-ops surface.
 
 ## Rate limits
 
-1,000 requests/minute per token, soft. Opens are routed to a separate fast path and are
-never denied because of rate limits.
+There is **no global per-token request limit**. Two families of limit exist, and both are
+real:
+
+- **Open limits and quotas** apply to `POST /v1/access-points/:id/open` exactly as they
+  do to a chat message — the API is not a bypass. A denial is `429` with `Retry-After`
+  and a reason of `rate_limited` or `quota_exceeded`. See
+  [Rate limits & quotas](limits.md).
+- **Auth throttles** apply to `login` / `register` / `refresh` / `admin-claim`,
+  per-IP and (for login) per-account, fail-closed.
+
+`close` is never limited.

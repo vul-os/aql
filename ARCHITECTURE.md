@@ -1,14 +1,34 @@
-# lintel architecture
+# Aql architecture
 
-> **Texts that open gates.** A decentralized access-control system where a chat message —
-> WhatsApp, Slack, Telegram, Discord soon — opens a physical gate, door or barrier.
+> **An open-source command centre for the physical world.** One hub you run yourself,
+> meant to own everything physical around a home or a business — with chat as an input
+> surface onto it. Today it drives one device class end to end: gates, doors and
+> barriers.
 
-lintel has no cloud. It is just the **system**: a gateway you run, controllers at
-your gates, an app in your pocket — every line MIT-licensed, nothing hosted by us.
-[vulos.org/products/lintel](https://vulos.org/products/lintel) is the project site
-(docs + downloads), not a service. There is **no billing system** — nothing in the binary charges anyone
-anything; operators who want to charge their residents solve that themselves, outside
-the system. Usage tracking (opens, audit, analytics) is a product feature and stays.
+Aql has no cloud. It is just the **system**: a hub you run, controllers at your gates, an
+app in your pocket — every line open source, nothing hosted by us.
+[vulos.org/products/aql](https://vulos.org/products/aql) is the project site (docs +
+downloads), not a service. There is **no billing system** — nothing in the binaries
+charges anyone anything — **no account** with us, and **no telemetry**.
+
+This document is the canonical long-form architecture. It states plainly which parts
+exist and which are design intent. The condensed operator-facing tour is
+[`site/docs/architecture.md`](site/docs/architecture.md).
+
+---
+
+## 0. Built vs. designed, in one table
+
+| Layer | Status |
+| --- | --- |
+| Hub (`gateway/`) — channels, open path, console, API, device hub, audit | **Built.** 60 HTTP routes, 183 Go tests green across 8 packages |
+| Controller agent (`controller/`) — pairing, signed commands, grants, events | **Built.** 45 Go tests green. GPIO relay driver and BLE radio are **not** |
+| Wire contracts (`proto/`) | **Built.** 61 conformance vectors, 68 checks, consumed by both sides |
+| Cross-module harness (`e2e/`) | **Built.** Boots real binaries and drives the open path over the wire |
+| Web console + desktop shell (`src/`, `src-tauri/`) | **Built** for admin surfaces. No emergency-access screen, no device screens |
+| **Device engine** — drivers, discovery, telemetry, automations, energy | **Not built.** No Matter, MQTT, Zigbee, ONVIF, Modbus or Z-Wave code exists |
+| **Phone-side offline grants** | **Not built.** The contract, controller verification and hub issuance are real; nothing on a phone presents a grant |
+| Geofencing, online time-window rules, analytics API, outbound webhooks, scoped API tokens, 2FA | **Not built** |
 
 ---
 
@@ -21,19 +41,20 @@ flowchart LR
         A["🛡️ Admin / staff"]
     end
 
-    subgraph channels ["Chat channels"]
+    subgraph channels ["Chat channels (input surface)"]
         WA["WhatsApp<br/>(Meta Cloud API)"]
-        TG["Telegram bot"]
+        TG["Telegram bot<br/>(webhook)"]
         SL["Slack bot<br/>(Events API / Socket Mode)"]
-        DC["Discord bot<br/>(coming)"]
+        DC["Discord<br/>(not built)"]
     end
 
-    subgraph gw ["GATEWAY — one Go binary · SQLite"]
+    subgraph gw ["HUB — one Go binary · SQLite"]
         CH["Channel seam"]
-        RE["Rules engine<br/>rate limits · quotas<br/>(geofence, time windows: planned)"]
-        PORTAL["Management portal<br/>(embedded Svelte build)"]
+        RE["Open-path choke point<br/>membership · rate limits · quotas<br/>visitor grants"]
+        PORTAL["Web console<br/>(embedded React build)"]
         HUB["Device hub<br/>signed commands · Ed25519"]
-        AUD[("Audit log<br/>SQLite")]
+        AUD[("Audit log<br/>hash-chained, append-only")]
+        DEV["Device engine<br/>(NOT BUILT)"]
     end
 
     subgraph site ["At the gate"]
@@ -41,7 +62,7 @@ flowchart LR
         G["🚧 Gate / door / barrier"]
     end
 
-    APP["📱 lintel app<br/>Tauri · Svelte"]
+    APP["📱 Aql app<br/>Tauri v2 · React"]
 
     R -- "“open”" --> WA & TG & SL & DC
     WA & TG & SL & DC --> CH
@@ -52,80 +73,99 @@ flowchart LR
     RE --> AUD
     HUB -- "outbound wss ⇦ dial-out" --- C
     C -- relay closes --> G
-    APP -. "emergency: LAN / BLE<br/>offline-verified grant" .-> C
+    APP -. "emergency: LAN / BLE<br/>(phone half not built)" .-> C
 ```
 
-Everything server-side is **one binary**. The gateway receives channel webhooks, runs the
-rules, serves the portal and the app's API, holds the audit log, and pushes signed open
-commands to controllers. Controllers dial **out** to the gateway, so they work behind
-NAT and on CGNAT'd 4G SIMs with zero inbound ports.
+Everything server-side is **one binary**. The hub receives channel webhooks (or dials out
+for Slack Socket Mode), runs the open path, serves the console and the app's API, holds
+the audit log, and pushes signed commands to controllers. Controllers dial **out**, so
+they work behind NAT and on CGNAT'd 4G SIMs with zero inbound ports.
 
 ---
 
 ## 2. Components
 
-| Component      | What it is                                                                | Runs on                              | Stack                          |
-| -------------- | ------------------------------------------------------------------------- | ------------------------------------ | ------------------------------ |
-| **gateway**    | The entire server: channels, rules, portal, API, device hub, audit — runs the product core today | Any VPS / Pi / server with a public URL | Go · SQLite · `go:embed` portal |
-| **controller** | The unit wired to the gate relay; verifies signatures, drives the motor. Reference agent is real and conformance-tested; GPIO relay + BLE radio are the hardware-only surfaces still stubbed | Pi-class board at the gate, Wi-Fi or GSM | Go agent, own module (`-tags gpio`/`-tags ble` for hardware) |
-| **e2e**        | Cross-module harness: boots real gateway + controller binaries and proves the money path over the wire | CI, dev machine | Go, subprocess-driven |
-| **app**        | Admin console + **emergency access** for residents. Ships today as `src/` + `src-tauri/` (gateway picker included); a Svelte 5 rewrite is a longer-term target, not started | Desktop, iOS, Android                | React 19 · Tauri v2 (target: Svelte 5) |
-| **site**       | Marketing landing + docs — static mini-site (house format), fully separate from the app | Any static host · Vulos console sync | static HTML + markdown docs    |
-| **proto**      | The versioned wire contracts (see §7)                                      | —                                    | Markdown + schemas             |
+| Component | What it is | Runs on | Stack |
+| --- | --- | --- | --- |
+| **gateway** (the hub) | The entire server: channels, open path, console, API, device hub, audit | Any VPS / Pi / always-on box | Go · SQLite (`modernc.org/sqlite`, no CGO) · `go:embed` console |
+| **controller** | The unit wired to the gate relay; verifies signatures, drives the motor. The agent is real and conformance-tested; the GPIO relay and BLE radio are the hardware-only surfaces still missing | Pi-class board at the gate, Wi-Fi or GSM | Go, own module, std-lib first (`-tags gpio` / `-tags ble` for hardware) |
+| **e2e** | Cross-module harness: boots real hub + controller binaries and proves the open path over the wire | CI, dev machine | Go, subprocess-driven |
+| **src / src-tauri** | The console (embedded in the hub) and the Tauri v2 desktop shell with a hub picker | Browser, desktop | React 19 · Vite · Tauri v2 · Rust (thin) |
+| **e2e-browser** | Playwright suite that drives the real hub binary with the embedded console | CI | TypeScript |
+| **site** | Static mini-site: landing + a self-contained docs viewer over `site/docs/` | Any static host | Hand-written HTML + markdown |
+| **proto** | The versioned wire contracts and conformance vectors (§7) | — | Markdown + JSON |
 
 ### Repo layout
 
 ```
-lintel/
-├── backend/      # Cloudflare Workers · Hono · Postgres — behavioural reference the gateway ports from,
-│                 # still ahead on: phone-OTP verify, analytics, OAuth/email-verify/password-reset, meters
-├── src/          # current portal + marketing — React 19 · Vite (wrapped by src-tauri/ for desktop)
-├── src-tauri/    # Tauri v2 desktop shell — gateway picker, wraps src/
-├── scripts/      # screenshotter (Playwright product shots)
-├── site/         # marketing mini-site — hand-written index.html + docs.html + markdown docs (static)
-├── proto/        # pairing · signed commands · grants · events contracts (+ vectors/ conformance fixtures)
-├── gateway/      # 🟢 shipped: Go, the whole product server (auth, rules, hub, admin, channels)
-│   └── migrations/   # SQLite schema, clean folded baseline
-├── controller/   # 🟢 shipped: reference gate device agent (own Go module); GPIO/BLE need real hardware
-├── e2e/          # 🟢 shipped: cross-module suite, real gateway+controller binaries over the wire
-└── app/          # 🔨 not started: a dedicated Svelte 5 rewrite (today's app is src/ + src-tauri/)
+aql/
+├── gateway/      # 🟢 the hub: Go, the whole product server (auth, open path, hub, admin, channels)
+│   └── migrations/   # SQLite schema, clean folded baseline (7 migrations, 22 tables)
+├── controller/   # 🟢 reference gate device agent (own Go module); GPIO/BLE need real hardware
+├── e2e/          # 🟢 cross-module suite, real hub + controller binaries over the wire
+├── proto/        # 🟢 pairing · commands · grants · events contracts (+ vectors/ fixtures)
+├── src/          # 🟢 console + landing — React 19 · Vite (wrapped by src-tauri/ for desktop)
+├── src-tauri/    # 🟢 Tauri v2 desktop shell — hub picker, native HTTP plugin, one IPC command
+├── e2e-browser/  # 🟢 Playwright against the real embedded-console binary
+├── site/         # 🟢 static mini-site — index.html + docs.html + site/docs/*.md
+├── docs/         # 🟢 deep engineering reference (threat model, KOTVA alignment, design system)
+├── scripts/      # 🟢 screenshotter + docs-vs-code feature-claim guard
+└── (device engine)   # 🔨 not started — see §8
 ```
+
+**There is no `backend/`.** A Cloudflare Workers + Postgres backend was the behavioural
+reference the Go hub was ported from; it has been deleted. Any comment or doc still
+referring to it is stale.
 
 ---
 
 ## 3. The three access paths
 
-People reach the gate in three ways, ranked by how people actually behave:
+People reach the gate in three ways, ranked by how people actually behave.
 
 ### 3a. Chat — the primary path
 
-Chat is the product. The gateway exposes a **channel seam**: a small interface that
-resolves a sender to an identity, turns a message into an intent, and sends replies.
+The hub exposes a **channel seam**: a small interface that resolves a sender to an
+identity, turns a message into an intent, and sends replies. Everything behind the seam
+is channel-agnostic — a channel decides how to ask and how to reply, never whether the
+gate may open.
 
-| Channel      | Identity            | Transport             | Friction to self-host        |
-| ------------ | ------------------- | --------------------- | ---------------------------- |
-| **WhatsApp** | phone number        | Meta Cloud API webhook | High — needs a verified WABA |
-| **Slack**    | member id           | Events API webhook, or Socket Mode (outbound WSS, zero ingress) | Minutes — app manifest |
-| **Telegram** | chat id             | Webhook today (opens fully wired); long-polling on the roadmap | Minutes — BotFather token |
-| **Discord**  | user id             | bot gateway / webhook — **coming, not built** | Minutes — bot token          |
+| Channel | Identity | Transport | Status |
+| --- | --- | --- | --- |
+| **WhatsApp** | phone number | Meta Cloud API webhook (HMAC-verified) | **Built.** High friction — needs a verified WABA |
+| **Slack** | member id | Events API webhook (signed requests, 300 s replay window) **or** Socket Mode (outbound WSS, zero ingress) | **Built.** Both modes |
+| **Telegram** | chat id | Webhook, secret-token header verified | **Built.** Long-polling is roadmap |
+| **Discord** | user id | — | **Not built.** No code |
+| **DMTAP** | keypair / `name@domain` | — | **Not built.** A `DialChannel` scaffold exists; its only transport implementation fails closed |
 
 Memberships are keyed on `(channel, external_id)`, not phone-number-only, so one person
 can be reachable on several channels.
+
+> **The chat rail is not private.** Meta, Slack and Telegram see the plaintext of every
+> message — the hub must read it to act on it. This is the largest privacy exposure in the
+> system and it is stated up front in [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md).
+
+An opt-in WhatsApp **bridge engine** (Evolution API / Baileys) exists in code as an escape
+hatch for operators who cannot complete Meta's business verification. It is off by
+default, fails closed toward the official Cloud API, logs a ban-risk warning on every
+boot, and **violates KOTVA §26.8.2's unconditional MUST NOT on unofficial WhatsApp client
+libraries**. It is documented rather than hidden; it is not recommended. See
+[`docs/KOTVA-ALIGNMENT.md`](docs/KOTVA-ALIGNMENT.md).
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor R as Resident
     participant M as Meta Cloud API
-    participant GW as Gateway
+    participant GW as Hub
     participant C as Controller
     R->>M: "open" (WhatsApp)
-    M->>GW: webhook (signed)
+    M->>GW: webhook (HMAC-signed)
     GW->>GW: resolve (channel, sender) → memberships
-    GW->>GW: rules: location · access point · quota
+    GW->>GW: open path: suspended? disabled? limits? quotas?
     alt one access point
         GW->>C: signed open command (nonce · expiry)
-        C->>C: verify gateway signature (pinned key)
+        C->>C: verify hub signature (pinned key)
         C-->>GW: ack + result
         GW->>M: "✅ Gate opened — Main entrance"
         M->>R: reply in thread
@@ -137,181 +177,205 @@ sequenceDiagram
 
 ### 3b. The app — emergency access + admin
 
-The Tauri app is deliberately **not** the daily driver. It exists for two jobs: the
-admin console, and opening the gate **when everything else is down**.
+The Tauri app is deliberately **not** the daily driver. It exists for two jobs: the admin
+console, and opening the gate **when everything else is down**.
 
-The gateway periodically issues each app user an **offline-verifiable grant** — a
-short-lived signed statement of their rights (locations, access points, expiry) bound to
-the app's own keypair. Near the gate, the app finds the controller directly (mDNS on the
-same LAN, or BLE) and proves itself with a challenge-response. No internet, no gateway,
-no Meta involved.
+The design: the hub periodically issues each app user an **offline-verifiable grant** — a
+short-lived signed statement of their rights (locations, access points, expiry, an
+optional weekly window) bound to the app's own keypair. Near the gate, the app finds the
+controller directly (mDNS on the same LAN, or BLE) and proves itself with a
+challenge-response. No internet, no hub, no chat platform.
 
-**Status:** the wire contract, the controller-side verification, and the gateway's
-issuance endpoint (`POST /v1/offline-grants`) are all real and conformance-tested
-against `proto/vectors/`. The app side — requesting, storing and presenting a grant —
-is not built yet, so this path does not run end-to-end for a real resident today; see
-[Emergency access](site/docs/emergency-access.md) for the full status.
+**Status: three pieces of four.** The wire contract, the controller-side verification
+(11 normative steps, conformance-tested) and the hub's issuance endpoint
+(`POST /v1/offline-grants`) are all real. **The app side — requesting, storing and
+presenting a grant — is not built**, so this path does not run end to end for a real
+resident today. See [`site/docs/emergency-access.md`](site/docs/emergency-access.md).
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant APP as App (holds grant, signed earlier by gateway)
-    participant C as Controller (pins gateway public key)
-    Note over APP,C: Internet is down. Discovery via mDNS / BLE.
-    APP->>C: open request + grant
-    C->>APP: random nonce
-    APP->>C: sig(app_key, grant ‖ nonce)
-    C->>C: verify grant sig (gateway key) · expiry · rights · nonce sig (app key)
-    C-->>APP: ✅ opening
-    Note over C: queues audit event, uploads when back online
-```
+Grant issuance re-checks the same membership / account-suspended / user-disabled gates as
+a live open, is all-or-nothing across the requested access points, has a fixed 7-day TTL
+that callers cannot extend, and is written to the admin audit trail. It deliberately does
+**not** check a controller's lockdown state — lockdown is controller-local, and it is
+enforced unmodified at redemption time, which is the freshest possible signal. There is
+**no grant revocation channel**: revocation converges at grant expiry. That is an accepted
+v0 non-goal, stated in the code.
 
-Grants are refreshed whenever the app opens with connectivity, so revocation converges
-within the grant TTL — and the normal path is online anyway.
+### 3c. Web console — the fallback
 
-### 3c. Web portal — the fallback
-
-Unlimited access through the gateway's web portal, always. Quota warnings in chat
-("you have 5 opens left…") point here.
+Unlimited access through the hub's own console, always. Quota warnings in chat point
+here. This is also the path with no chat platform in the loop.
 
 ---
 
-## 4. Running a gateway — the WABA insight, reachability, and money
+## 4. Running a hub — the WABA insight, reachability, and money
 
 Webhooks are easy; **the WhatsApp number is hard**. A WhatsApp channel needs a verified
-Meta Business + WABA + phone number. Every gateway operator brings their own — lintel
-is never in the loop, and Meta bills the operator directly for their own conversations.
+Meta Business portfolio + WABA + phone number. Every hub operator brings their own — Aql
+is never in the loop, and Meta bills the operator directly.
 
-**Reachability is kept deliberately simple.** The gateway binds a listener and serves
-**plain HTTP, full stop** — no TLS/ACME code, no tunnel protocol, no relay dependency,
-no driver framework. TLS is entirely the operator's job: put a reverse proxy or a
-TLS-terminating tunnel in front of the gateway for anything reachable beyond
-`localhost` — see [`site/docs/ingress.md`](site/docs/ingress.md) for a working Caddy
-example. WhatsApp is the reason a public endpoint is ever needed at all: the Meta
-Cloud API is **webhook-only** (Meta calls out to you; there is no long-poll
-alternative), so a WhatsApp channel always needs a public HTTPS URL Meta can reach.
+**Reachability is kept deliberately simple.** The hub binds a listener and serves **plain
+HTTP, full stop** — no TLS/ACME code, no tunnel protocol, no relay dependency. TLS is
+entirely the operator's job. This is not merely advised, it is **enforced**: the hub
+refuses to start if `-listen` resolves to a non-loopback address unless `-behind-proxy`
+(env `LINTEL_BEHIND_PROXY`) is set. The check is address-resolution-aware, not a string
+match.
 
-1. **Direct** — a VPS or any public IP, behind your own reverse proxy (Caddy, nginx,
-   Traefik) or a TLS-terminating tunnel that holds the certificate. The gateway binary
-   itself has zero TLS/ACME code.
+1. **Direct** — a VPS or public IP behind your own reverse proxy (Caddy, nginx, Traefik).
 2. **Any tunnel you already trust** — cloudflared, Tailscale Funnel, ngrok, or a
-   self-hosted `vulos-relayd` (open-source, no Vulos account needed) — run beside the
-   binary, forwarding to its port; these terminate TLS at their own edge or local agent
-   and hand the gateway plain HTTP, so no extra proxy is needed. A tunnel run in raw
-   TCP/SNI-passthrough mode (e.g. `frp` TCP passthrough) doesn't work against the
-   gateway directly, since it has nothing to terminate that TLS with — put a reverse
-   proxy behind a passthrough tunnel if you want that shape. The hosted
-   **Ephor** is the same tunnel model as a convenience, never a requirement — one
-   feature-scoped ingress option among several, not a dependency.
-3. **Zero-infrastructure mode** — real today for Slack. **Slack Socket Mode ships**:
-   set an app-level token and the gateway dials **out** to Slack over a single
-   WebSocket, no inbound port or URL needed. Telegram long-polling (the same idea for
-   that channel) is on the roadmap — today Telegram uses a webhook, so it still needs
-   a reachable URL. Controllers dial out unconditionally. A gateway on a LAN Pi with no
-   public URL at all already does Slack + LAN portal + controllers end to end. Only
-   WhatsApp (Meta webhooks), Telegram (until long-polling lands) and remote app access
-   need a public URL.
+   self-hosted `vulos-relayd` (open source, no account needed). These terminate TLS at
+   their own edge and hand the hub plain HTTP. A tunnel in raw TCP/SNI-passthrough mode
+   does not work directly — put a reverse proxy behind it. The hosted **Ephor** is the
+   same tunnel model as a convenience, never a requirement.
+3. **Zero-infrastructure mode** — real today for Slack. **Socket Mode ships**: set an
+   app-level token and the hub dials **out** over a single WebSocket, no inbound port or
+   URL needed. Controllers dial out unconditionally. A hub on a LAN Pi with no public URL
+   already does Slack + LAN console + controllers end to end. Only WhatsApp, Telegram
+   (until long-polling lands) and remote app access need a public URL.
 
-Full option-by-option breakdown, including the WhatsApp-is-webhook-only reasoning and
-which channels need zero ingress today: [`site/docs/ingress.md`](site/docs/ingress.md).
+Full breakdown: [`site/docs/ingress.md`](site/docs/ingress.md).
 
-**Money is out of scope.** There is no billing code anywhere in the system. An operator
-who wants to charge their residents does it however they like — outside lintel.
+**Money is out of scope.** There is no billing code anywhere. An operator who wants to
+charge their residents does it outside Aql.
 
 ---
 
 ## 5. What "decentralized" means here
 
-Not federation. Not P2P. **Many independent gateways, each a full authority** over its
-own tenants, numbers, devices and audit log — with zero coordination between them.
+Not federation. Not P2P. **Many independent hubs, each a full authority** over its own
+tenants, devices and audit log — with zero coordination between them.
 
-- The app asks "which gateway?" on first run.
-- A controller pairs with exactly one gateway and **pins its signing key** — a hostile
+- The app asks "which hub?" on first run.
+- A controller pairs with exactly one hub and **pins its signing key** — a hostile
   network, DNS hijack, or malicious tunnel cannot forge an open.
+
+Each hub is itself genuinely multi-tenant: accounts, locations, access points, members
+with roles, and an instance-admin seat above every account. Isolation is app-layer org
+scoping applied on every query, including the rate-limit and quota counters.
+
+---
 
 ## 6. Security model
 
-| Layer            | Mechanism                                                                  |
-| ---------------- | -------------------------------------------------------------------------- |
-| Command integrity | Ed25519-signed commands: nonce + expiry, controller pins gateway key at pairing |
-| Pairing          | Claim-token flow (admin creates claim → device redeems → keys exchanged)    |
-| Emergency grants | Short-TTL signed capability bound to app keypair; nonce challenge-response  |
-| Channel ingress  | Per-channel verification (Meta HMAC, Slack signed-request scheme + replay window, Telegram secret-token header) |
-| Tenancy          | App-layer org scoping in SQLite (replaces Postgres RLS)                     |
-| Transport        | Plain HTTP — the gateway ships no TLS/ACME code; TLS comes from a reverse proxy or TLS-terminating tunnel the operator puts in front (see §4) |
-| Audit            | Append-only event log: every open, denial, pairing, config change           |
-| Abuse limits     | Non-monetary rate limits (open cooldown, hourly caps, chat flood throttle) + optional admin-set per-location quotas; denials audited, chat replies honest |
-| Instance admin   | Gateway operator role (one-time claim bootstrap): manage accounts/users, suspend, tune rate-limit defaults, cross-tenant audit view |
+| Layer | Mechanism |
+| --- | --- |
+| Command integrity | Ed25519-signed commands: nonce + expiry; the controller pins the hub key at pairing |
+| Pairing | Claim-token flow (admin creates claim → device redeems once → keys exchanged). After redemption only a `repair` command signed by the pinned key, or a physical factory reset, can change the pinned key |
+| Emergency grants | Short-TTL signed capability bound to app keypair; nonce challenge-response; controller-side verification in a fixed 11-step fail-closed order |
+| Channel ingress | Per-channel verification (Meta HMAC, Slack signed-request scheme + replay window, Telegram secret-token header) — **fail closed** |
+| Tenancy | App-layer org scoping on every SQLite query, counters included |
+| Transport | Plain HTTP; TLS comes from a reverse proxy or TLS-terminating tunnel. The binary refuses a non-loopback bind without `-behind-proxy` |
+| Audit | Hash-chained, append-only event log with DB triggers; verifiable live or against a cold backup. **Detection, not prevention** — see §6a |
+| Login | Per-IP and per-account brute-force throttles, fail-closed; live per-request session revocation; log-out-everywhere |
+| Abuse limits | Open cooldown, hourly and daily caps, optional per-location quotas at one choke point; denials audited, chat replies honest |
+| Instance admin | Operator seat via one-time claim; constant-time token check; atomic under concurrency; every attempt audited; cannot disable self or the last admin |
+
+### 6a. The two deliberate asymmetries
+
+Both are stated in code, and both are load-bearing:
+
+- **The open-path rate limiter fails *open*.** If the counter store errors, the open is
+  allowed and the audit row is tagged `rate_limit_check_failed`. A gate is physical
+  access; locking residents out because a bookkeeping table hiccuped is the worse
+  failure. Availability wins for enforcement; visibility is preserved.
+- **Everything else fails *closed*.** Webhook signatures, auth throttles, membership
+  checks, grant verification, command verification. A forged command is worse than a
+  missed rate limit.
+
+And the audit chain's honest ceiling: it makes tampering *detectable*, not impossible. An
+attacker with filesystem access who edits a row and recomputes every downstream hash
+leaves a clean-looking chain. The test suite proves that boundary directly.
+
+---
 
 ## 7. The contracts that must not break (`proto/`)
 
 Deployed hardware is forever. These wire contracts are versioned from day one because
 they are painful to retrofit:
 
-1. **Pairing** — claim token redemption, key exchange, gateway-key pinning
-2. **Signed commands** — open/close/query, nonce + expiry semantics
-3. **Offline grants** — grant format, challenge-response, revocation semantics
-4. **Controller events** — upstream direction: button pressed, gate held open, tamper
+1. **Pairing** — claim token redemption, key exchange, hub-key pinning
+2. **Signed commands** — open/close, nonce + expiry semantics
+3. **Offline grants** — grant format, challenge-response, window evaluation, revocation
+   semantics
+4. **Controller events** — upstream: button pressed, gate held open, tamper
 
-Binaries can churn; these can only be extended.
+Backed by **61 conformance vectors** across five fixture files, and a `verify.mjs`
+self-checker that independently re-canonicalizes, re-signs and re-evaluates each one —
+**68 checks**, because multi-step transcripts contribute more than one. Both the hub and
+the controller consume these fixtures in their own test suites. Binaries can churn; these
+can only be extended.
 
-## 8. Feature roadmap
+The same reasoning is why `LINTEL_*` environment variables, the `lintel.db` filename and
+the controller's `_lintel._tcp` mDNS service kept their pre-merge names: they are a
+deployment and wire contract for hubs and controllers already in the field.
 
-Per-location **settings toggles, off by default**:
+---
 
-- **Nearly free** (the audit log already has the data): time & attendance reports,
-  who's-on-site / evacuation list, open notifications.
-- **Shipped**: temporary/visitor access grants — a phone number gets access to named
-  access points for a one-off dated window, with an optional use cap, revocable, and
-  refunded on a rate-limit/quota denial (`POST/GET /v1/grants`, portal page). This is
-  the "contractor for one Saturday" case.
-- **Designed, not started**: one-time PIN/QR passes that don't require knowing the
-  visitor's number in advance, and *recurring* access windows — a schedule that repeats
-  (cleaner, every Tuesday 08:00–12:00) rather than a single dated window.
-- **Needs controller I/O** (protocol supports now, ship later): gate-held-open alerts,
-  visitor button → "someone at the gate, reply OPEN", lockdown mode.
-- **Non-goals for v1**: license-plate recognition, multi-party approval, occupancy caps.
-- **Research idea, not committed**: a **DMTAP channel adapter**, behind the same
-  `internal/channels/` seam every other channel implements — "send a signed DMTAP
-  message → gate opens." Unlike every channel above, it would depend on nobody: no
-  Meta, no Slack workspace, no BotFather token, no phone number at all — just a
-  keypair and a DMTAP-speaking counterparty, verified the same way controller commands
-  already are (signature, not a third party's account system). It would also stretch
-  what a "visitor" can be granted access as: today grants resolve to an E.164 number or
-  a channel member id; a DMTAP identity resolves to a raw key or a `name@domain`, so a
-  visitor pass could be issued to either without a phone number or a chat account of
-  any kind. A `DialChannel` scaffold and a `DMTAPTransport` interface now exist
-  (`gateway/internal/channels/dmtap.go`), matching the shape every other channel
-  implements — but there is exactly one implementation of that interface,
-  `NotImplementedTransport`, which always fails closed, so the channel does not run in
-  the shipped binary. No working transport, no wire format for turning a DMTAP message
-  into a gate command, no schedule.
+## 8. The device engine — designed, not started
 
+The wider product promise — cameras, lights, mowers, IoT sensors, energy, security and
+cleaning bots under one hub — rests on a device engine that **does not exist in code**.
+No protocol driver of any kind is present.
 
+The intended shape is a single internal device abstraction (id, kind, zone, state,
+commands, telemetry) that every driver maps onto, with discovery in front of it and a
+protocol-agnostic console behind it. Planned adapters: Matter, MQTT, Zigbee, ONVIF,
+Modbus, generic HTTP/webhook. An automations runtime (`trigger → condition → action`) and
+energy ingestion sit on top of the same device state.
 
-## 9. Tech decisions (and what we migrated away from)
+**Where it lands is undecided.** Two plausible homes: the Go hub, which already owns
+persistence, audit and the open path and runs on the always-on box; or the Rust core in
+`src-tauri/`, which today exposes exactly one IPC command (`system_pulse`, host
+telemetry) and is not even called by the frontend. The hub is the likelier answer.
+Nothing has been committed.
 
-| Decision              | Choice                         | Why                                                                 |
-| --------------------- | ------------------------------ | ------------------------------------------------------------------- |
-| Gateway language      | **Go** (was Deno/TS)           | Single small static binary, ARM-friendly, `go:embed` portal        |
-| Database              | **SQLite** (was Neon Postgres + RLS) | Zero-dependency self-hosting; one file to back up; RLS existed for shared-cloud tenancy we no longer have |
-| Frontend              | **Svelte 5** (target; today's shipped app is still React 19) | One codebase → embedded portal + Tauri desktop/mobile; small output |
-| Apps                  | **Tauri v2**                   | Desktop + iOS + Android; the desktop shell (gateway picker) ships today wrapping the current React codebase |
-| Billing               | **None**                       | Out of scope by design — operators charge their residents outside the system if they want to |
-| License               | **MIT, everything**            | The whole system is open — there is nothing else                    |
+Full detail, including what "works with any hardware" does and does not mean:
+[`site/docs/devices.md`](site/docs/devices.md).
 
-## 10. Migration path from the current codebase
+---
 
-The Cloudflare Workers/Hono backend (~2.9k lines of routes) was the **spec**, and the
-port is substantially done: auth, locations, access rules, controller pairing/hub and
-the WhatsApp/Slack/Telegram flows now run natively in the Go gateway, on a clean folded
-SQLite baseline (no Postgres, no RLS — tenancy is app-layer). What the backend still
-does that the gateway defers: phone-OTP verify, analytics endpoints, Google
-OAuth/email-verify/password-reset, meters, and the real portal bundle (the gateway
-embeds a placeholder behind `-tags portal` today). The React landing/docs brand
-(Fraunces/Inter/JetBrains Mono, ink-on-paper, arch motif) already lives in `site/`; a
-dedicated `app/` (Svelte 5) has not been started — the desktop app today is `src/` +
-`src-tauri/` (React 19 + Tauri v2), which already ships a gateway picker so one build
-can point at any gateway. The backend's test suite (unit, integration, security,
-contract) is the reference the gateway's own Go tests, plus the cross-module `e2e/`
-harness, were built against.
+## 9. Feature notes and known gaps
+
+**Shipped and worth knowing about:**
+
+- **Visitor / temporary access grants** — a phone number gets access to named access
+  points for a dated window, with an optional use cap, revocable, and **refunded** if the
+  open is then denied by a rate limit or quota. The "contractor for one Saturday" case.
+- **Runtime rate-limit overrides** — the operator can retune the four abuse limits without
+  a restart; resolution is *runtime override → env var → built-in default*, and
+  `GET /admin/limits` shows all four layers side by side.
+- **`gateway verify-audit`** — walks both audit chains against a cold backup without
+  booting the HTTP server.
+
+**Not built, stated plainly:**
+
+- **No geofencing and no online time-window rules.** Weekly windows exist only inside
+  offline grants and are evaluated by the *controller*, not the hub. There is no rule
+  object in the hub at all.
+- **No analytics endpoints.** The console has an Analytics screen; the hub does not serve
+  it. The data exists in the audit log; the aggregation API does not.
+- **No Google OAuth, email verification or password reset.** The console has routes for
+  these; the hub does not serve them.
+- **No per-access-point maintenance backend.** The console posts to routes that do not
+  exist; the hub returns fixed nulls.
+- **No outbound webhooks and no scoped API tokens.** Integrations authenticate as a user.
+- **No 2FA, and no in-band recovery for a lost sole instance-admin password.**
+
+The console↔hub drift above is at least mechanically tracked: `src/lib/__tests__/
+routeParity.test.ts` diffs every frontend call against the hub's real registered routes
+(extracted by `go run ./cmd/routegen`, AST-based) and lists the known-unavailable set
+explicitly. `npm run check:claims` does the same job for documentation claims.
+
+---
+
+## 10. Tech decisions
+
+| Decision | Choice | Why |
+| --- | --- | --- |
+| Hub language | **Go** | Single small static binary, ARM-friendly, `go:embed` console |
+| Database | **SQLite** (pure-Go driver) | Zero-dependency self-hosting; one file to back up; `CGO_ENABLED=0` cross-compiles to a Pi |
+| Console | **React 19 + Vite** | One build serves both the hub-embedded console and the Tauri shell |
+| Desktop | **Tauri v2** | Desktop from one codebase; a native HTTP plugin so the console can reach any hub without needing that hub's CORS allowlist |
+| Rust core | **Deliberately thin** | One IPC command today. The device engine may grow here; it has not started |
+| Controller deps | **Std-lib first** | The WebSocket client and the mDNS responder are hand-rolled to keep the gate agent dependency-free; BLE is the one exception |
+| Billing | **None** | Out of scope by design |
+| License | **MIT OR Apache-2.0** | The whole system is open — there is nothing else |

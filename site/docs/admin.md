@@ -1,7 +1,7 @@
 # Instance admin
 
 Every gateway has an operator: the person who runs the machine, sets the env, and
-answers the phone when something breaks. lintel gives that person a real seat —
+answers the phone when something breaks. Aql gives that person a real seat —
 the **instance admin** — with its own claim flow, its own surfaces, and its own audit
 trail. This chapter is how you claim it, what it lets you do, and exactly where its
 power stops.
@@ -30,7 +30,7 @@ A fresh gateway has no instance admin. The seat is claimed exactly once, using a
 token you set in the environment:
 
 1. Set `ADMIN_CLAIM_TOKEN` to a long random secret before starting the gateway
-   (see [Run a gateway](self-host.md)).
+   (see [Run a hub](self-host.md)).
 2. Sign up and sign in as an ordinary user — the claim promotes an existing,
    active user.
 3. Redeem the token, authenticated as that user:
@@ -184,7 +184,7 @@ is really recorded.
 
 ## Where this fits
 
-- [Run a gateway](self-host.md) — setting `ADMIN_CLAIM_TOKEN` and the install flow.
+- [Run a hub](self-host.md) — setting `ADMIN_CLAIM_TOKEN` and the install flow.
 - [Rate limits & quotas](limits.md) — what the four limits mean and how to tune them.
 - [Security](security.md) — the instance-admin trust model alongside the rest.
 - [Troubleshooting](troubleshooting.md) — claim token not working, suspended

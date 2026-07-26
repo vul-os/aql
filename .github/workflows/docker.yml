@@ -1,7 +1,11 @@
 name: Docker
 
 # Builds and publishes the gateway container image to GHCR:
-#   ghcr.io/<owner>/lintel-gateway  (docs reference ghcr.io/vul-os/lintel-gateway)
+#   ghcr.io/<owner>/aql-gateway  (docs reference ghcr.io/vul-os/aql-gateway)
+#
+# Note: the image's own runtime environment variables are still named LINTEL_*
+# (see gateway/Dockerfile). That is deliberate — they are a deployment contract
+# for gateways already in the field, and renaming them would break upgrades.
 #
 # Tag scheme:
 #   push to main  ->  latest
@@ -55,7 +59,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/lintel-gateway
+          images: ghcr.io/${{ github.repository_owner }}/aql-gateway
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}

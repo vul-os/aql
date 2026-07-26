@@ -22,9 +22,9 @@ The **WhatsApp Cloud API only speaks webhooks** — Meta's servers make an outbo
 `POST` to *your* gateway every time someone messages your number. There is no
 long-poll or socket alternative Meta offers; if you want WhatsApp, Meta must be able to
 reach a public HTTPS URL you control. That single fact is the entire reason a
-self-hosted lintel install might need a public endpoint at all.
+self-hosted Aql install might need a public endpoint at all.
 
-Nothing else in lintel requires this. Controllers dial **out** to the gateway
+Nothing else in Aql requires this. Controllers dial **out** to the gateway
 (WebSocket), so gate hardware never needs to be reachable. And two chat channels are
 designed to need no inbound connection whatsoever — see below.
 
@@ -40,7 +40,7 @@ These need nothing public at all — not a port, not a tunnel, not a domain:
 - **Telegram long-polling** — Telegram's Bot API supports `getUpdates` polling as an
   alternative to registering a webhook, entirely outbound, no public URL needed. It's
   the natural zero-ingress path for Telegram and is on the roadmap for this channel;
-  *today* lintel's Telegram integration (opens fully wired through the shared pipeline)
+  *today* Aql's Telegram integration (opens fully wired through the shared pipeline)
   receives updates via webhook (see [Chat channels](channels.md)), so it still needs a
   reachable URL for now.
 
@@ -93,7 +93,7 @@ loop besides the proxy — you own the whole path from Meta to your gateway.
 
 If your box has no public IP (home connection, CGNAT, a Pi behind a residential
 router), a tunnel forwards a public HTTPS endpoint to your local gateway port. Nothing
-about lintel is coupled to a specific tunnel — pick whichever you're already
+about Aql is coupled to a specific tunnel — pick whichever you're already
 comfortable operating:
 
 - **cloudflared** (standard mode), **Tailscale Funnel**, **ngrok**, or your own — run
@@ -107,7 +107,7 @@ comfortable operating:
   gateway, the same way you'd run any other tunnel here. It terminates the WSS tunnel
   locally and forwards plain HTTP to the gateway over loopback — the same pattern as
   the others. It's listed alongside them because it happens to exist and is a solid
-  option, not because lintel depends on it.
+  option, not because Aql depends on it.
 
 One thing this doesn't cover: a tunnel run in **raw TCP / SNI-passthrough** mode (e.g.
 `frp` configured for TCP passthrough rather than its HTTP proxy mode) forwards the
@@ -133,7 +133,7 @@ you can just as well run your own instead of using a hosted instance.
 - Costs: nothing if you self-host Ephor; whatever the operator charges if you use a
   hosted instance.
 - Trade-off: none technically — it's the same tunnel model as (b), just operated for
-  you. It's an *option*, never a requirement: lintel has no code path that assumes
+  you. It's an *option*, never a requirement: Aql has no code path that assumes
   Ephor exists, and every self-host guide in this repo works without it.
 
 ## Where this leaves each channel
@@ -150,12 +150,12 @@ you can just as well run your own instead of using a hosted instance.
 
 ## The suite rule this follows
 
-lintel has no hard runtime dependency on any Vulos product, ever — it is a
+Aql has no hard runtime dependency on any Vulos product, ever — it is a
 standalone, MIT-licensed system that runs to completion with nothing but a box and,
 optionally, your own channel credentials. Ephor shows up here strictly as one
 *feature-scoped* ingress option for a single channel (WhatsApp), competing on equal
 footing with cloudflared, frp, and a self-run `vulos-relayd`. Nothing breaks, degrades,
 or nags you if you never touch it.
 
-Full self-host walkthrough: [Run a gateway](self-host.md). Per-channel setup:
+Full self-host walkthrough: [Run a hub](self-host.md). Per-channel setup:
 [Chat channels](channels.md).

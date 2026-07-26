@@ -1,0 +1,133 @@
+# FAQ
+
+### What is Aql?
+
+Aql (Arabic عقل, "the mind") is an open-source **command centre for the physical world**:
+one self-hosted hub, on a box you own, meant to see and control everything physical
+around a home or a business — cameras, lights, mowers, IoT sensors, energy, security and
+cleaning bots — plus physical access control.
+
+The access-control half is finished and running. The wider device engine is not built.
+Both halves of that sentence matter.
+
+### What can it actually do today?
+
+Physical access control, end to end:
+
+- A resident texts `open` on WhatsApp, Slack or Telegram; the hub resolves who they are,
+  applies membership, rate limits and quotas, signs an Ed25519 command, and a paired
+  controller at the gate verifies it against a pinned key and pulses the relay.
+- A web console does the same thing without any chat platform, plus members, visitor
+  passes, devices, and a tamper-evident audit log.
+- An operator seat above every account, with runtime limit overrides and a cross-account
+  audit view.
+
+The hub is 60 HTTP routes and 183 Go tests; the controller agent is 45 more; the wire
+contracts have 61 conformance vectors (68 checks) that both sides are tested against.
+
+### What can't it do?
+
+No device drivers (Matter, MQTT, Zigbee, ONVIF, Modbus), no automations runtime, no
+energy metering, no camera pipeline, no robot control. No geofencing and no time-window
+rules for online opens. The offline emergency-access path works on the controller and the
+hub but **not on a phone** — nothing on a resident's device requests, holds or presents a
+grant, so that path does not run end to end. See
+[Devices, energy & automations](devices.md) and [Emergency access](emergency-access.md).
+
+### How is it different from Home Assistant?
+
+Same neighbourhood, different centre of gravity — and Home Assistant has a vast shipped
+integration ecosystem that Aql does not:
+
+| | Home Assistant | Aql |
+| --- | --- | --- |
+| Primary audience | Home | Home **and** business |
+| Shipped integrations | Thousands | One device class: gate/door/barrier controllers |
+| Access control | An integration among many | The finished core, with signed commands and a tamper-evident audit log |
+| Chat control | Add-on / notification-shaped | A first-class input surface with identity resolution, quotas and per-channel signature verification |
+| Model | One hub, huge integration ecosystem | One hub intended to own everything physical — cameras, energy, access, robots — under one control plane |
+| Packaging | Server-first (add-ons, HAOS) | One Go binary for the hub, plus a Tauri desktop console |
+
+Aql is not trying to out-integrate Home Assistant. It starts from a narrower, more
+opinionated shape — one hub, one authority, business and robots included from the start,
+with the access-control and audit path taken seriously — and grows outward.
+
+### Does it need the cloud?
+
+No. There is no Aql service, no account with us, no license check and no telemetry. The
+hub runs on your box and is the sole authority for every command; controllers verify
+signatures, not network position, so a hostile network cannot forge an open.
+
+**One honest exception:** if you use a chat channel, that chat platform is in the loop
+and sees the plaintext of every message. The hub must read the message to act on it. Use
+the web console for anything you don't want Meta, Slack or Telegram to see. Full detail
+in [Security](security.md) and the repository's
+[threat model](https://github.com/vul-os/aql/blob/main/docs/THREAT-MODEL.md).
+
+### Does it work offline?
+
+The controller keeps verifying and actuating while the hub is unreachable, and queues its
+events to reconcile later. The hub itself needs no internet for the console path. What
+does *not* work offline today is the phone-based emergency open — see above.
+
+### What hardware does it support?
+
+For access control: any gate, door or barrier motor with a dry-contact relay input, driven
+by a Pi-class board running the controller agent. **With one blunt caveat** — the GPIO
+relay driver is not implemented. The default build uses a mock relay that only logs, and
+the `-tags gpio` file is a stub that panics by design. Driving real hardware means
+writing that driver to the fail-safe specification first.
+
+For anything else: nothing yet. The goal is protocol-level breadth rather than a fixed
+compatibility list, with [Zana](https://github.com/vul-os/zana) hardware tuned to work
+best with Aql. That goal is not reflected in shipped code.
+
+### Is it production-ready?
+
+The access-control path is real, tested, and honest about its edges — but it is pre-1.0,
+the GPIO driver is unwritten, the BLE radio has never run on hardware, and there is no
+2FA and no recovery for a lost sole-admin password. Read [Security](security.md) and the
+threat model before you put it on a gate people depend on.
+
+**And a non-negotiable:** Aql must never be the only way out of a building. Fire and
+building codes require code-compliant fail-safe egress hardware regardless of what any
+access-control system does. Aql runs in parallel with that hardware, never in series and
+never as a replacement.
+
+### Can I run several properties on one hub?
+
+Yes. The hub is genuinely multi-account: accounts, locations, access points, members with
+roles, and an instance-admin seat above all of them. Tenant isolation is enforced by org
+scoping on every query, including the rate-limit and quota counters.
+
+### Is there a hosted version? What does it cost?
+
+No, and nothing. There is no hosted service and no billing code anywhere in the binaries.
+Your costs are your own hardware and, if you run a WhatsApp channel on your own number,
+Meta's per-conversation fees billed directly to you. Slack and Telegram cost nothing.
+
+### Why do some things still say "lintel"?
+
+Aql's access-control half shipped under the name *lintel* before the two projects merged.
+The environment variables (`LINTEL_*`), the SQLite filename (`lintel.db`) and the
+controller's mDNS service (`_lintel._tcp`) are a deployment and wire contract for hubs
+and controllers already in the field, so they were deliberately left alone. Renaming them
+would break upgrades and force re-pairing for no benefit.
+
+### What's Zana?
+
+[Zana](https://github.com/vul-os/zana) is Aql's companion open-hardware line — designs
+for the physical devices Aql is meant to control (mowers, sensor nodes, security and
+cleaning bots). Aql is the software half of the pair; Zana is the hardware half. Aql
+controls any hardware, and Zana devices are built to work best with Aql specifically.
+
+### What's VulOS?
+
+Aql is part of the [VulOS](https://vulos.org) ecosystem, which builds sovereign,
+self-hosted alternatives to cloud-dependent software. Aql applies that posture — your
+box, your data, no required cloud — to controlling the physical world.
+
+### License
+
+MIT OR Apache-2.0. Every line, including the hub, the controller agent and the wire
+contracts.

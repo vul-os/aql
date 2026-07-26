@@ -1,6 +1,6 @@
 # Emergency access
 
-The lintel app (desktop, iOS, Android — one Tauri codebase) is deliberately **not**
+The Aql app (desktop, iOS, Android — one Tauri codebase) is deliberately **not**
 the daily driver. It exists for two jobs: the admin console, and opening the gate when
 everything else is down — no internet, no gateway, no Meta.
 
@@ -33,13 +33,13 @@ internet down, at the gate: app ◄── mDNS / BLE ──► controller
 5. The audit event is queued on the controller and uploaded when connectivity returns.
    Offline opens are still audited opens.
 
-No step involves the internet, the gateway, or any lintel server. A recorded exchange
+No step involves the internet, the gateway, or any Aql server. A recorded exchange
 is useless later: the nonce makes every challenge unique.
 
 ## What's implemented
 
 The controller side of this path is **real and conformance-tested** in the reference
-agent ([`controller/`](https://github.com/vul-os/lintel/tree/main/controller)): the
+agent ([`controller/`](https://github.com/vul-os/aql/tree/main/controller)): the
 11-step offline-grant verification (signature, expiry, rights, single-use nonce,
 stale-clock handling), shared by both transports. **LAN/mDNS works today** — the agent
 advertises `_lintel._tcp` and serves grants over LAN HTTP. The **BLE** path's framing
@@ -49,14 +49,14 @@ its BlueZ glue compiles behind `-tags ble` on Linux but has not been exercised o
 hardware yet.
 
 **Gateway-side issuance is now real.** `POST /v1/offline-grants`
-([`gateway/internal/httpapi/offline_grants.go`](https://github.com/vul-os/lintel/blob/main/gateway/internal/httpapi/offline_grants.go))
+([`gateway/internal/httpapi/offline_grants.go`](https://github.com/vul-os/aql/blob/main/gateway/internal/httpapi/offline_grants.go))
 authenticates the caller, re-checks the exact same membership / account-suspended /
 user-disabled gates the live `/open` path enforces (all-or-nothing — a caller not
 currently entitled to every requested access point gets nothing, never a grant
 silently narrowed to a subset they didn't notice), and signs a `typ:"grant"` object
-with [`keys.SignGrant`](https://github.com/vul-os/lintel/blob/main/gateway/internal/keys/grant.go)
+with [`keys.SignGrant`](https://github.com/vul-os/aql/blob/main/gateway/internal/keys/grant.go)
 — the identical JCS/Ed25519 discipline `Envelope` uses, verified byte-for-byte against
-[`proto/vectors/grants.json`](https://github.com/vul-os/lintel/blob/main/proto/vectors/grants.json)'s
+[`proto/vectors/grants.json`](https://github.com/vul-os/aql/blob/main/proto/vectors/grants.json)'s
 `grant-redeem-valid` fixture. TTL is fixed at the proto default (7 days) and is not
 caller-extendable, and every issuance is written to the admin audit trail. The
 cross-module e2e test that exercises the LAN redemption path
@@ -84,25 +84,42 @@ gateway is now willing to hand one out.
 
 ## Revocation and expiry
 
-Grants are short-TTL and refreshed whenever the app opens with connectivity. Revoking a
-person therefore converges within the grant TTL at worst — and the normal, online path
-checks live permissions anyway. The trade is explicit: a few hours of worst-case grant
-validity buys you a gate that opens during a blackout.
+Grants are short-TTL — a fixed 7 days, not caller-extendable — and the design refreshes
+them whenever the app opens with connectivity. Revoking a person therefore converges
+within the grant TTL at worst; the normal, online path checks live permissions anyway.
+The trade is explicit: a bounded window of worst-case grant validity buys you a gate that
+opens during a blackout.
 
-Losing a phone is the same story as losing a controller: revoke the app's key in the
-portal; existing grants for it die at their expiry, new ones are never issued.
+**There is no revocation channel for an already-issued grant.** That is an accepted v0
+non-goal, stated in the code: a grant that has been minted stays valid until it expires.
+Every issuance is written to the admin audit trail so an operator can at least see what
+is outstanding.
+
+Losing a phone is the same story as losing a controller: revoke the device's key in the
+console; existing grants die at their expiry, new ones are never issued.
 
 ## Setting it up
 
-1. Install the lintel app and sign in to your gateway. On first run the app asks
-   *which gateway* — you enter your gateway's URL. That question is the
-   decentralization, made visible.
-2. Grants refresh silently from then on. You can see your current grant's expiry under
-   **App → Emergency access**.
-3. Near the gate with no internet, open the app — the emergency screen appears
-   automatically when the gateway is unreachable and a paired controller is in range.
+**You can't, yet — and that is the honest answer.** The steps below describe the intended
+flow, and none of them work today because the app has no emergency-access surface.
 
-Practical notes: BLE range is tens of meters — emergency access is a
-standing-at-the-gate feature, not an open-from-the-freeway feature (that's what chat
-is for). And the emergency path is for people, rate-limited by the controller; it is
-not an API.
+1. Install the Aql app and sign in to your hub. On first run the app asks *which hub* —
+   you enter your hub's URL. That question is the decentralization, made visible. **This
+   part works.**
+2. *(Planned)* Grants would refresh silently from then on, with the current grant's expiry
+   visible under **App → Emergency access**. **That screen does not exist.**
+3. *(Planned)* Near the gate with no internet, the emergency screen would appear
+   automatically when the hub is unreachable and a paired controller is in range.
+
+Practical notes for whoever builds it: BLE range is tens of metres — emergency access is a
+standing-at-the-gate feature, not an open-from-the-freeway feature (that's what chat is
+for). And the emergency path is for people, rate-limited by the controller; it is not an
+API.
+
+## What to rely on instead, today
+
+- **The web console** — unlimited opens, always available, no chat platform in the loop.
+- **A second chat channel** — Slack Socket Mode or Telegram, so one platform going down or
+  banning a number doesn't mean *no way to open the gate*.
+- **Your existing remotes and keypads** — the controller sits in parallel with them and
+  never in the way.

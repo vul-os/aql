@@ -1,7 +1,7 @@
 # Security
 
 A gate is the smallest serious piece of infrastructure in your day. This chapter is how
-lintel earns the right to open one — and it applies to every gateway alike, because
+Aql earns the right to open one — and it applies to every gateway alike, because
 there is only one binary.
 
 ## The layers
@@ -12,7 +12,7 @@ there is only one binary.
 | Pairing | Claim-token flow: admin creates a claim, the device redeems it once, keys are exchanged |
 | Emergency grants | Short-TTL signed capability bound to the app's keypair; nonce challenge-response — **controller-side verification and gateway-side issuance are both real and conformance-tested; the app doesn't request/present a grant yet, see below** |
 | Channel ingress | Per-channel verification (Meta HMAC, Slack signed-request scheme + replay window, Telegram secret-token header) — fail closed |
-| Tenancy | Tenant-isolated at the database layer — app-layer org scoping on every SQLite query in the Go gateway; the current Postgres reference enforces forced row-level security |
+| Tenancy | Tenant-isolated at the query layer — app-layer org scoping on every SQLite query in the Go hub, including the rate-limit and quota counters |
 | Transport | Plain HTTP — the binary has no TLS/ACME code at all. TLS is the operator's job: a reverse proxy or a TLS-terminating tunnel in front of the gateway. `-listen` refuses to bind a non-loopback address on its own — see [Ingress & reachability](ingress.md) |
 | Audit | Hash-chained, tamper-*evident* event log: every open, denial, pairing and config change, with append-only DB triggers and a verify command that works against a cold backup — see **Tamper-evident audit log** below for exactly what that does and doesn't guarantee |
 | Login | Per-IP and per-account brute-force throttles on login/register/refresh/admin-claim, fail-closed; live per-request session revocation; a "log out everywhere" endpoint — see **Login & session security** below |
@@ -31,16 +31,18 @@ once — at pairing — and pins it. The consequences are pleasant:
 - Each controller has its own keypair, generated on first boot; the private key never
   leaves the device. Losing one device never compromises another.
 
-Because the controller dials out and verifies content, not network position, lintel
+Because the controller dials out and verifies content, not network position, Aql
 doesn't need to trust the path — including any tunnel you put in front.
 
 ## Geofence safety
 
 **Status: designed, not implemented.** Nothing below runs yet — there is no
-geofencing code in either the Go gateway or the reference backend today. This section
+geofencing code in the hub today, and no time-window rule engine either (weekly
+windows exist only inside offline grants, and are evaluated by the controller). This
+section
 describes the intended design so operators know what's coming and implementers know
 the target; treat it as a spec, not a live control, until this notice is removed. See
-the [README](https://github.com/vul-os/lintel#features) for current, verified status.
+the [README](https://github.com/vul-os/aql#features) for current, verified status.
 
 A geofence stops people from opening your gate when they're nowhere near it. It's
 optional and per-location: off by default for houses, on by default for complexes.
@@ -83,9 +85,8 @@ presents a grant, so the path still doesn't run end-to-end for a resident — se
 Every open path — portal, API, WhatsApp, Slack, Telegram — funnels through one enforcement
 point that applies rate limits (cooldowns, hourly caps) and any admin-set quotas, so
 no channel can be picked to bypass them. Every denial is audit-logged with its
-reason, and the internal counters are tenant-isolated at the database layer (the
-current Postgres reference enforces this with forced row-level security) — tenants
-can neither inspect nor exhaust each other's counters. If the counter store itself fails, opens are allowed but tagged in the
+reason, and the internal counters are tenant-isolated by the same org scoping every
+other query runs under — tenants can neither inspect nor exhaust each other's counters. If the counter store itself fails, opens are allowed but tagged in the
 audit log (availability wins for a physical gate; visibility is preserved). The
 full design, defaults and tuning live in [Rate limits & quotas](limits.md).
 
@@ -187,7 +188,7 @@ deliberately narrow:
 
 ## What we deliberately don't claim
 
-- lintel is not end-to-end encrypted messaging — chat channels are WhatsApp's and
+- Aql is not end-to-end encrypted messaging — chat channels are WhatsApp's and
   Slack's infrastructure, and the gateway must read messages to act on them.
 - Your gateway is as secure as the machine it runs on. Back up your data directory —
   but know what's actually in it: alongside `lintel.db` it holds `gateway_ed25519.seed`
@@ -214,20 +215,18 @@ who can *trigger* an open; this is about what happens to the *hardware* when the
 and a security chapter that ignored the physical consequences of "the gate opened"
 would be dishonest.
 
-lintel must never be the only way out of a building. Fire and building codes in most
+Aql must never be the only way out of a building. Fire and building codes in most
 jurisdictions require code-compliant fail-safe mechanical or electrical release
-hardware on egress routes, regardless of what any access-control system does — lintel
+hardware on egress routes, regardless of what any access-control system does — Aql
 is designed to run **in parallel** with that hardware, never in series with it and
 never as a replacement for it. The reference controller's relay driver is specified
 fail-safe (normally-open output, line drops on process exit or panic), though the
 shipped `-tags gpio` driver is a documented scaffold, not yet hardware-validated —
 see [Controllers](controllers.md) and the
-[controller README](https://github.com/vul-os/lintel/blob/main/controller/README.md#what-is-real-vs-stubbed).
+[controller README](https://github.com/vul-os/aql/blob/main/controller/README.md#what-is-real-vs-stubbed).
 Compliance with local fire, building, safety and accessibility codes is the operator's
 responsibility. Full notice in
-[Safety](https://github.com/vul-os/lintel#safety) in the main README, and the safety
-addendum appended to
-[LICENSE](https://github.com/vul-os/lintel/blob/main/LICENSE).
+[Safety](https://github.com/vul-os/aql#safety) in the main README.
 
 ## Reporting
 

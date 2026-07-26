@@ -1,20 +1,33 @@
 # Chat channels
 
-Chat is the product. The gateway exposes a **channel seam** — a small interface that
-resolves a sender to an identity, turns a message into an intent (`open`, a picker
-reply, a visitor-pass request), and sends replies. Everything behind the seam (rules,
-signing, audit) is channel-agnostic.
+Chat is an **input surface** onto the hub, not the whole product. The hub exposes a
+**channel seam** — a small interface that resolves a sender to an identity, turns a
+message into an intent (`open`, a picker reply, a visitor-pass request), and sends
+replies. Everything behind the seam (the open-path checks, signing, audit) is
+channel-agnostic, and a channel decides how to ask and how to reply — never whether the
+gate may open.
+
+Today the only intent the seam resolves to is opening or closing an access point,
+because that is the only device class the hub drives. Texting a light or a mower is the
+design intent, not a shipped capability — see
+[Devices, energy & automations](devices.md). The full command surface is documented in
+[`docs/CHAT-COMMANDS.md`](https://github.com/vul-os/aql/blob/main/docs/CHAT-COMMANDS.md).
 
 Identity is keyed on `(channel, external id)` — not phone-number-only — so one person
-can be reachable on WhatsApp and Slack at once without being two people in your
-records.
+can be reachable on WhatsApp and Slack at once without being two people in your records.
 
 | Channel | Identity | Status | Self-host friction |
 | --- | --- | --- | --- |
-| WhatsApp | phone number | Shipped | **High** — verified Meta business + WABA + number |
-| Slack | member id | Shipped — Events API **and Socket Mode** | Minutes — an app manifest + signing secret |
-| Telegram | chat id | Shipped — opens wired through the shared pipeline | Minutes — a BotFather token + webhook secret |
-| Discord | user id | **Coming** | Minutes — a bot token |
+| WhatsApp | phone number | **Shipped** — Meta Cloud API | **High** — verified Meta business + WABA + number |
+| Slack | member id | **Shipped** — Events API **and** Socket Mode | Minutes — an app manifest + signing secret |
+| Telegram | chat id | **Shipped** — opens wired through the shared pipeline | Minutes — a BotFather token + webhook secret |
+| Discord | user id | **Not built** — roadmap, no code | Minutes — a bot token, once it exists |
+| DMTAP | keypair / `name@domain` | **Not built** — a `DialChannel` scaffold exists whose only transport implementation fails closed | — |
+
+> **Every chat channel puts a third party in the loop.** Meta, Slack and Telegram see
+> the plaintext of every message — the hub must read it to act on it. That is the
+> largest privacy exposure in the system and it is documented plainly in
+> [Security](security.md) and the repository's threat model.
 
 ## WhatsApp (Meta Cloud API)
 
@@ -37,19 +50,26 @@ alternative — see [Ingress & reachability](ingress.md) for the honest options 
 bind, any tunnel including a self-hosted `vulos-relayd`, or the hosted Ephor
 convenience).
 
-### Opt-in: a self-hosted bridge instead of the Cloud API
+### The non-conformant escape hatch: a self-hosted bridge
 
 `LINTEL_WHATSAPP_ENGINE=bridge` swaps the sender above for a self-hosted, **unofficial**
-WhatsApp Web bridge (Evolution API, fronting Baileys) — for operators who can't or
-won't do Meta's business-verification process. It is off by default and opt-in only;
-the trade is a real account-ban risk (Meta bans unofficial clients, commonly within
-weeks, not years, and tightened enforcement further on 2026-01-15), so the gateway logs
-a startup warning naming it every time `bridge` is selected.
+WhatsApp Web bridge (Evolution API, fronting Baileys). It is off by default, opt-in
+only, and **not an equal option to the Cloud API**: it violates KOTVA §26.8.2's
+unconditional *MUST NOT* on unofficial WhatsApp client libraries, and it puts your own
+WhatsApp number at real ban risk (Meta bans unofficial clients, commonly within weeks
+rather than years, and tightened enforcement further on 2026-01-15). The gateway logs a
+ban-risk warning on every boot whenever `bridge` is selected.
 
-**That warning's required fallback is the web portal and/or a second chat channel
-(Slack Socket Mode or Telegram below) — not the offline LAN/BLE grant path**, which
-is designed but not gateway-issued yet (see [Emergency access](emergency-access.md)).
-Full setup and the honest risk/fallback breakdown: [Linking WhatsApp](linking-whatsapp.md).
+It is documented rather than hidden because the code path exists
+(`gateway/internal/channels/send.go`) and pretending otherwise would be dishonest — not
+because it is recommended. **The official WABA path is the conformant one.** Full
+detail: [Linking WhatsApp](linking-whatsapp.md).
+
+**The required fallback whenever that engine is in use is the web console and/or a
+second chat channel** (Slack Socket Mode or Telegram, below) — **not** the offline
+LAN/BLE grant path. The hub does mint and sign real grants now, but nothing on a
+resident's phone can present one, so that path cannot save you (see
+[Emergency access](emergency-access.md)).
 
 ## Slack
 
@@ -61,11 +81,11 @@ The five-minute channel, and the recommended first channel for self-hosters:
 
    ```yaml
    display_information:
-     name: lintel
+     name: Aql
      description: Text your gate open
    features:
      bot_user:
-       display_name: lintel
+       display_name: Aql
        always_online: true
      shortcuts:
        - name: Open a gate
@@ -133,8 +153,7 @@ Slack replies support the same numbered pickers and quota warnings as WhatsApp.
 
 ## Telegram
 
-Telegram is wired to the **real open path** in the Go gateway — it exceeds the older
-Workers backend, where Telegram was an honest stub that only logged and acknowledged:
+Telegram is wired to the **real open path** in the hub:
 
 - **What works now** — the gateway receives updates on `/webhooks/telegram`,
   verifying the `X-Telegram-Bot-Api-Secret-Token` header against your configured
@@ -162,12 +181,12 @@ TELEGRAM_BOT_TOKEN=123456:ABC-…
 TELEGRAM_WEBHOOK_SECRET=…   # must match the secret_token you registered
 ```
 
-## Discord — coming
+## Discord — not built
 
-The Discord channel (bot token, identity by user id) is designed into the channel seam
-but **not shipped yet**. It is roadmap, not vaporware-in-fine-print: when it lands,
-setup will be a bot token and an invite link, mirroring Slack's minutes-not-days flow.
-Track progress on [GitHub](https://github.com/vul-os/lintel).
+The Discord channel (bot token, identity by user id) fits the channel seam but **does
+not exist in code** — there is no Discord source file in the hub. When it lands, setup
+will be a bot token and an invite link, mirroring Slack's minutes-not-days flow. Track
+progress on [GitHub](https://github.com/vul-os/aql).
 
 ## Trigger words and pickers
 

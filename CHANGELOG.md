@@ -1,13 +1,108 @@
 # Changelog
 
-All notable changes to lintel are documented in this file.
+All notable changes to Aql are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+> Entries before the fold (see Unreleased) describe this project under its former name,
+> **lintel**. They are left as written — rewriting history to say "Aql" would make the
+> record less accurate, not more.
+
 ---
 
 ## [Unreleased]
+
+### Changed — the fold: lintel becomes Aql's access + chat engine
+
+**lintel and Aql are now one repository and one product.** Aql is an open-source command
+centre for the physical world; lintel's chat-driven physical access control is the part
+of it that is finished, and it is now Aql's access and chat engine. Nothing was thrown
+away on the lintel side: the Go hub, the controller agent, the wire contracts, and every
+test came across intact.
+
+What moved the other way is smaller and worth stating plainly. **Aql's previous frontend
+— a Tauri + SvelteKit shell whose Overview / Devices / Energy / Automations screens
+rendered an in-memory demo dataset — has been deleted.** It was a UI with nothing behind
+it; the shipped console (React 19 + Vite, embedded in the hub) replaced it. Any image or
+document showing those four screens is from the retired prototype. The Tauri v2 desktop
+shell survives, now wrapping the real console, with a hub picker on first run.
+
+### Changed — documentation reconciled to the merged product
+
+- **Two doc sets, one rule.** `site/docs/` is **the manual** — the ordered, published set
+  a person reads to install, wire and operate Aql, and the only set `site/docs.html`
+  renders via `manifest.json`. `docs/` is **the deep reference** — threat model, KOTVA
+  alignment, chat-command reference, design system — read in the repo. The root holds
+  front matter, including the one canonical `ARCHITECTURE.md`. Stated in `docs/README.md`.
+- Aql's six standalone pages (`ARCHITECTURE`, `CONFIGURATION`, `FAQ`, `GETTING-STARTED`,
+  `SCREENSHOTS`, `THREAT-MODEL`) were folded into that structure rather than left
+  alongside lintel's fifteen: the first five were merged into the manual and removed;
+  `THREAT-MODEL.md` was rewritten and kept.
+- **Two new manual chapters**: `devices.md`, which states the unbuilt device/energy/
+  automation half honestly instead of implying it from a screenshot, and `faq.md`.
+- Rebranded lintel → Aql across the manual, **except** the identifiers that are a
+  deployment or wire contract: the `LINTEL_*` environment variables, the `lintel.db`
+  filename, and the controller's `_lintel._tcp` mDNS service. Those were deliberately left
+  alone — renaming them would break upgrades and force re-pairing for hardware already in
+  the field. `gateway/Dockerfile`'s `LINTEL_*` block is preserved for the same reason.
+- Merged `lintel/CONTRIBUTING.md` and `lintel/SECURITY.md` into the root files (the fold's
+  `git mv` had left them stranded behind same-named Aql scaffolds), rebranded, and pointed
+  both at the dual **MIT OR Apache-2.0** licence.
+
+### Fixed — honesty corrections found while merging
+
+Each of these was a doc claiming something the code does not do:
+
+- **The threat model claimed "no cloud broker sits between you and your devices" and
+  scoped multi-tenancy out.** Both were false. The hub is genuinely multi-account, and
+  every chat-initiated open routes through Meta, Slack or Telegram, who see the plaintext.
+  `docs/THREAT-MODEL.md` now leads with the chat rail's exposure and keeps the
+  genuinely-local claims (controller path, offline grants, no telemetry, no account)
+  visibly separate from it.
+- **The WhatsApp bridge engine was presented as a peer option.** It violates KOTVA
+  §26.8.2's unconditional MUST NOT on unofficial WhatsApp client libraries and risks the
+  operator's own number. It is documented — hiding a live code path would be its own
+  dishonesty — but no longer as an equal or recommended choice.
+- **"Rules engine" oversold the open path.** There is no rule object in the hub: no rules
+  table, no per-member schedules, no online time windows. What exists is one fixed
+  choke point plus numeric limits and visitor grants. Weekly windows live only inside
+  offline grants and are evaluated by the *controller*. Documented as such.
+- **The API reference claimed a 1,000 req/min soft token limit and that "opens are never
+  denied because of rate limits".** Neither is true; opens are limited exactly as chat is.
+- **The GPIO relay driver was described as a "scaffold".** It is a stub that panics by
+  design, and the default build only logs. No build in this repository has ever actuated
+  real hardware.
+- **The screenshots page captioned `/app/open` as an offline emergency-access screen.**
+  That screen does not exist. The Analytics screenshot's endpoints do not exist either;
+  both are now flagged in place.
+- **Several docs still described a `backend/` directory** (the retired Cloudflare Workers
+  + Postgres reference) as live. It has been deleted; those references are gone.
+- **`security.md` linked to a safety addendum "appended to LICENSE".** No such addendum is
+  in the file; the link now points only at the README's Safety section.
+- The licence is stated as **MIT OR Apache-2.0** everywhere, matching `LICENSE-MIT`,
+  `LICENSE-APACHE` and `package.json` — not the bare single-MIT `LICENSE` copy left by
+  Aql's scaffold.
+
+### Changed — CI
+
+- Moved the workflows out of the stranded `lintel/.github/` into the repository root.
+- **Removed the `backend` and `backend-integration` jobs.** They tested the Cloudflare
+  Workers backend that was deleted in the fold, and took the Postgres 16 service
+  container, the `DATABASE_URL` / `JWT_SECRET` env, and the `lintel_internal` role
+  bootstrap with them.
+- **Re-added a `rust` job** for the Tauri shell — WebKitGTK/GTK system deps, `cargo fmt
+  --check`, `clippy -D warnings`, `cargo check`, with a Vite build first because
+  `frontendDist` must exist before cargo can configure.
+- The `frontend` job now matches the real toolchain: npm + Vite + React (`npm run
+  typecheck`, `npm test`, `npm run build`), keeping the Go toolchain step the route-parity
+  test needs.
+- Dropped the "skip cleanly if the module isn't present" guards from the `gateway`,
+  `controller` and `e2e` jobs — all three modules exist now, so a missing module should
+  fail rather than pass silently.
+- `docker.yml` and `release.yml` publish `aql-gateway` / `aql-controller` / `aql_*.dmg`
+  artifacts. The image's own `LINTEL_*` runtime env block is untouched, and both files say
+  why.
 
 ## [0.1.0] — 2026-07-21
 
@@ -87,5 +182,5 @@ against each other.
 - Disclosure contact and secret-file guidance corrected (the Ed25519 signing
   key and JWT secret live in the data directory, not `.env`).
 
-[Unreleased]: https://github.com/vul-os/lintel/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/vul-os/lintel/releases/tag/v0.1.0
+[Unreleased]: https://github.com/vul-os/aql/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/vul-os/aql/releases/tag/v0.1.0

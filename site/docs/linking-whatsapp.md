@@ -1,6 +1,6 @@
 # Linking WhatsApp
 
-WhatsApp is lintel's primary channel — and the one with genuinely hard setup, because
+WhatsApp is Aql's primary channel — and the one with genuinely hard setup, because
 Meta gates it behind business verification. This chapter is what it takes to bring your
 own number to your gateway. (If you want to be texting your gate *today*, start with
 Slack — minutes, not days — and add WhatsApp when the WABA clears.)
@@ -37,10 +37,19 @@ the high-friction channel — budget an afternoon and some patience:
 
 One honest note for those who push through: Meta charges per-conversation fees on your
 WABA and bills you directly — those costs are between you and Meta, never routed
-through lintel. Slack takes minutes — see [Chat channels](channels.md) — and many
+through Aql. Slack takes minutes — see [Chat channels](channels.md) — and many
 gateways run Slack-first, WhatsApp later or never.
 
-## The alternative: a self-hosted bridge (opt-in, higher risk)
+## The non-conformant escape hatch: a self-hosted bridge
+
+> **Do not read this section as an equal option. It is not.** The official Meta Cloud
+> API above is the only conformant way to run a WhatsApp channel on Aql. The bridge
+> engine documented here exists in the code
+> ([`gateway/internal/channels/send.go:168`](https://github.com/vul-os/aql/blob/main/gateway/internal/channels/send.go#L168)),
+> it is opt-in, it is off by default — and using it **violates KOTVA §26.8.2's
+> unconditional MUST NOT on unofficial WhatsApp client libraries** and puts your own
+> WhatsApp number at real risk of being banned. It is documented here because hiding a
+> code path would be its own dishonesty, not because it is recommended.
 
 If the WABA process above is a dealbreaker, the gateway can instead talk to a
 self-hosted, **unofficial** WhatsApp Web bridge (target: Evolution API, which fronts
@@ -53,13 +62,23 @@ LINTEL_WHATSAPP_BRIDGE_API_KEY=…
 LINTEL_WHATSAPP_BRIDGE_INSTANCE=…
 ```
 
-This is opt-in only — leave `LINTEL_WHATSAPP_ENGINE` unset, misspell it, or use
-anything but the exact string `bridge`, and the gateway falls back to the official
-`cloud` engine. The reason it isn't the default: Meta actively detects and bans
-automated/unofficial clients, and tightened its terms further on 2026-01-15 —
-reported number survival on unofficial APIs is commonly **weeks, not years**.
-Selecting `bridge` logs a startup warning naming this risk every time the gateway
-starts.
+What you are accepting when you set that variable:
+
+- **A specification violation.** KOTVA §26.8.2 carries an unconditional *MUST NOT* on
+  integrating unofficial, reverse-engineered WhatsApp client libraries — Baileys and
+  everything fronting it. Selecting `bridge` puts your hub out of conformance, on
+  purpose. See [`docs/KOTVA-ALIGNMENT.md`](https://github.com/vul-os/aql/blob/main/docs/KOTVA-ALIGNMENT.md).
+- **A real ban risk to your own account.** Meta actively detects and bans automated and
+  unofficial clients, and tightened its terms further on 2026-01-15 — reported number
+  survival on unofficial APIs is commonly **weeks, not years**.
+- **A loud startup warning, every time.** Selecting `bridge` logs the ban-risk warning
+  on every boot ([`send.go:238`](https://github.com/vul-os/aql/blob/main/gateway/internal/channels/send.go#L238)).
+  That warning is deliberately not softened and must not be removed.
+
+The engine is opt-in only and fails closed toward the official path: leave
+`LINTEL_WHATSAPP_ENGINE` unset, misspell it, or use anything but the exact string
+`bridge`, and the gateway uses Meta's `cloud` engine
+([`ResolveWhatsAppEngine`, send.go:223](https://github.com/vul-os/aql/blob/main/gateway/internal/channels/send.go#L223)).
 
 **A banned number goes silent on WhatsApp, with no notice to residents.** The gateway
 does not have a working offline fallback for that moment: the LAN/BLE emergency-grant
@@ -75,8 +94,8 @@ it. What actually works today, right now:
   gate*, just one fewer way.
 
 Set one of those up and confirm it works **before** you turn `bridge` on. If neither is
-acceptable, stick with the official Cloud API above, slow business-verification
-process and all.
+acceptable, stick with the official Cloud API above, slow business-verification process
+and all — that is the recommendation, without qualification.
 
 ## Which number should residents see?
 
@@ -88,7 +107,7 @@ status, and the number should survive a change of trustees.
 
 - **Webhook verification never completes** — Meta must be able to reach your gateway's
   public URL over HTTPS. If you're behind NAT, set up a tunnel first
-  ([Run a gateway → Reachability](self-host.md)).
+  ([Run a hub → Reachability](self-host.md)).
 - **Messages arrive but are rejected** — check the app secret: the gateway fail-closes
   on webhook signature mismatch and logs `whatsapp: bad signature` to the audit log.
 - **The number won't register** — numbers already bound to a personal WhatsApp account

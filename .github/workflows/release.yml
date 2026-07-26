@@ -2,7 +2,7 @@ name: Release
 
 # On tag vX.Y.Z:
 #   - gateway binaries: linux/amd64, linux/arm64 (Pi), darwin/amd64, darwin/arm64
-#   - controller binaries: same matrix, only if controller/go.mod exists at run time
+#   - controller binaries: same matrix
 #   - Tauri desktop app on macos-latest (.dmg + .app.zip) — UNSIGNED: no Apple
 #     signing identity or notarization is configured; macOS Gatekeeper will
 #     warn on first launch (right-click > Open).
@@ -35,22 +35,6 @@ jobs:
           [ "$base" = "$ver" ] && [ "$base" = "$pkg" ] && [ "$base" = "$conf" ] || {
             echo "::error::Version mismatch — bump VERSION, package.json and src-tauri/tauri.conf.json to match the tag before pushing it"; exit 1; }
 
-  detect:
-    name: detect optional components
-    needs: version-guard
-    runs-on: ubuntu-latest
-    outputs:
-      controller: ${{ steps.check.outputs.controller }}
-    steps:
-      - uses: actions/checkout@v4
-      - id: check
-        run: |
-          if [ -f controller/go.mod ]; then
-            echo "controller=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "controller=false" >> "$GITHUB_OUTPUT"
-          fi
-
   gateway:
     name: gateway ${{ matrix.goos }}/${{ matrix.goarch }}
     needs: version-guard
@@ -75,11 +59,11 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: "0"
         run: |
-          name="lintel-gateway_${GITHUB_REF_NAME}_${GOOS}_${GOARCH}"
+          name="aql-gateway_${GITHUB_REF_NAME}_${GOOS}_${GOARCH}"
           mkdir -p dist
           go build -trimpath \
             -ldflags "-s -w -X main.Version=${GITHUB_REF_NAME}" \
-            -o "dist/${name}/lintel-gateway" ./cmd/gateway
+            -o "dist/${name}/aql-gateway" ./cmd/gateway
           tar -C dist -czf "dist/${name}.tar.gz" "${name}"
       - uses: actions/upload-artifact@v4
         with:
@@ -89,8 +73,7 @@ jobs:
 
   controller:
     name: controller ${{ matrix.goos }}/${{ matrix.goarch }}
-    needs: detect
-    if: needs.detect.outputs.controller == 'true'
+    needs: version-guard
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -111,7 +94,7 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: "0"
         run: |
-          name="lintel-controller_${GITHUB_REF_NAME}_${GOOS}_${GOARCH}"
+          name="aql-controller_${GITHUB_REF_NAME}_${GOOS}_${GOARCH}"
           mkdir -p "dist/${name}"
           if [ -d cmd ]; then
             for d in cmd/*/; do
@@ -122,7 +105,7 @@ jobs:
           else
             go build -trimpath \
               -ldflags "-s -w -X main.Version=${GITHUB_REF_NAME}" \
-              -o "dist/${name}/lintel-controller" .
+              -o "dist/${name}/aql-controller" .
           fi
           tar -C dist -czf "dist/${name}.tar.gz" "${name}"
       - uses: actions/upload-artifact@v4
@@ -155,12 +138,12 @@ jobs:
           mkdir -p dist-desktop
           found=0
           while IFS= read -r -d '' dmg; do
-            cp "$dmg" "dist-desktop/lintel_${GITHUB_REF_NAME}_macos_$(uname -m).dmg"
+            cp "$dmg" "dist-desktop/aql_${GITHUB_REF_NAME}_macos_$(uname -m).dmg"
             found=1
           done < <(find src-tauri/target -type f -name '*.dmg' -path '*/bundle/*' -print0)
           while IFS= read -r -d '' app; do
             ditto -c -k --keepParent "$app" \
-              "dist-desktop/lintel_${GITHUB_REF_NAME}_macos_$(uname -m).app.zip"
+              "dist-desktop/aql_${GITHUB_REF_NAME}_macos_$(uname -m).app.zip"
             found=1
           done < <(find src-tauri/target -type d -name '*.app' -path '*/bundle/*' -print0)
           if [ "$found" -eq 0 ]; then
@@ -175,12 +158,7 @@ jobs:
 
   release:
     name: publish GitHub release
-    needs: [detect, gateway, controller, desktop]
-    if: >-
-      ${{ !cancelled()
-          && needs.gateway.result == 'success'
-          && needs.desktop.result == 'success'
-          && (needs.controller.result == 'success' || needs.controller.result == 'skipped') }}
+    needs: [gateway, controller, desktop]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -195,7 +173,7 @@ jobs:
           files: dist/*
           generate_release_notes: true
           body: |
-            Container image: `ghcr.io/${{ github.repository_owner }}/lintel-gateway:${{ github.ref_name }}` (linux/amd64 + linux/arm64, published by the Docker workflow).
+            Container image: `ghcr.io/${{ github.repository_owner }}/aql-gateway:${{ github.ref_name }}` (linux/amd64 + linux/arm64, published by the Docker workflow).
 
             The macOS desktop app is **unsigned** (no Apple signing identity is configured): on first launch, right-click the app and choose Open.
 
