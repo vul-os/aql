@@ -14,7 +14,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/vul-os/lintel/gateway/internal/channels"
+	"github.com/vul-os/aql/gateway/internal/channels"
 )
 
 const testDMTAPKeyName = "correct-horse-battery-staple-one-two-three-four"

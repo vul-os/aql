@@ -11,7 +11,7 @@ pre-issued grants against its pinned gateway key.
 > (verification, framing, offline grants, event queue, transport) is real and
 > conformance-tested against `proto/vectors/`.
 
-This is its **own Go module** (`github.com/vul-os/lintel/controller`) so it
+This is its **own Go module** (`github.com/vul-os/aql/controller`) so it
 can be vendored onto devices without dragging in the gateway. It deliberately
 **copies** the small JCS + Ed25519 verify code from `gateway/internal/keys`
 rather than importing it — see [Code duplication](#code-duplication).
@@ -24,7 +24,7 @@ default builds have zero external dependencies.
 
 ```
 controller/
-  go.mod                         # module github.com/vul-os/lintel/controller (Go 1.22+)
+  go.mod                         # module github.com/vul-os/aql/controller (Go 1.22+)
   cmd/
     controller/                  # the agent binary
     controller-sim/              # interactive/scriptable simulator + demos

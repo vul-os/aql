@@ -63,7 +63,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vul-os/lintel/gateway/internal/store"
+	"github.com/vul-os/aql/gateway/internal/store"
 )
 
 // DMTAPIntent is one inbound, already-authenticated request from a DMTAP

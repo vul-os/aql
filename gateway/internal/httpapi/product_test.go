@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vul-os/lintel/gateway/internal/keys"
-	"github.com/vul-os/lintel/gateway/internal/store"
+	"github.com/vul-os/aql/gateway/internal/keys"
+	"github.com/vul-os/aql/gateway/internal/store"
 )
 
 // newTestServerWithStore is newTestServer but hands back the store too, for

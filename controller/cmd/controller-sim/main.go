@@ -27,16 +27,16 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/vul-os/lintel/controller/internal/agent"
-	"github.com/vul-os/lintel/controller/internal/blesession"
-	"github.com/vul-os/lintel/controller/internal/clock"
-	"github.com/vul-os/lintel/controller/internal/framing"
-	"github.com/vul-os/lintel/controller/internal/grants"
-	"github.com/vul-os/lintel/controller/internal/jcs"
-	"github.com/vul-os/lintel/controller/internal/lanserver"
-	"github.com/vul-os/lintel/controller/internal/relay"
-	"github.com/vul-os/lintel/controller/internal/vectorfile"
-	"github.com/vul-os/lintel/controller/internal/wire"
+	"github.com/vul-os/aql/controller/internal/agent"
+	"github.com/vul-os/aql/controller/internal/blesession"
+	"github.com/vul-os/aql/controller/internal/clock"
+	"github.com/vul-os/aql/controller/internal/framing"
+	"github.com/vul-os/aql/controller/internal/grants"
+	"github.com/vul-os/aql/controller/internal/jcs"
+	"github.com/vul-os/aql/controller/internal/lanserver"
+	"github.com/vul-os/aql/controller/internal/relay"
+	"github.com/vul-os/aql/controller/internal/vectorfile"
+	"github.com/vul-os/aql/controller/internal/wire"
 )
 
 func main() {

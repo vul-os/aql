@@ -9,9 +9,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/vul-os/lintel/controller/internal/pairing"
-	"github.com/vul-os/lintel/controller/internal/state"
-	"github.com/vul-os/lintel/controller/internal/vectorfile"
+	"github.com/vul-os/aql/controller/internal/pairing"
+	"github.com/vul-os/aql/controller/internal/state"
+	"github.com/vul-os/aql/controller/internal/vectorfile"
 )
 
 // fakeGateway implements /pair/redeem with single-use token burn.

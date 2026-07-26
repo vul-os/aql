@@ -1,4 +1,4 @@
-module github.com/vul-os/lintel/gateway
+module github.com/vul-os/aql/gateway
 
 go 1.25.6
 

@@ -14,11 +14,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vul-os/lintel/gateway/internal/channels"
-	"github.com/vul-os/lintel/gateway/internal/hub"
-	"github.com/vul-os/lintel/gateway/internal/keys"
-	"github.com/vul-os/lintel/gateway/internal/portal"
-	"github.com/vul-os/lintel/gateway/internal/store"
+	"github.com/vul-os/aql/gateway/internal/channels"
+	"github.com/vul-os/aql/gateway/internal/hub"
+	"github.com/vul-os/aql/gateway/internal/keys"
+	"github.com/vul-os/aql/gateway/internal/portal"
+	"github.com/vul-os/aql/gateway/internal/store"
 )
 
 // Config is what the server needs beyond its collaborators.

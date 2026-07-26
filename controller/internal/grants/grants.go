@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vul-os/lintel/controller/internal/clock"
-	"github.com/vul-os/lintel/controller/internal/wire"
+	"github.com/vul-os/aql/controller/internal/clock"
+	"github.com/vul-os/aql/controller/internal/wire"
 )
 
 // Grant is the gateway-signed statement of a member's rights.

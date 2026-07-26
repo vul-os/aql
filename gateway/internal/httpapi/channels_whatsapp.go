@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vul-os/lintel/gateway/internal/channels"
-	"github.com/vul-os/lintel/gateway/internal/store"
+	"github.com/vul-os/aql/gateway/internal/channels"
+	"github.com/vul-os/aql/gateway/internal/store"
 )
 
 // waPending is one rendered reply awaiting send (to = recipient wa id, no '+').

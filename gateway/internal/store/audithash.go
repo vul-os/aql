@@ -61,7 +61,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/vul-os/lintel/gateway/internal/keys"
+	"github.com/vul-os/aql/gateway/internal/keys"
 )
 
 // queryRower is satisfied by both *sql.DB and *sql.Tx — the hash-chain

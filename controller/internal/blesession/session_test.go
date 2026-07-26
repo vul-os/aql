@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/vul-os/lintel/controller/internal/blesession"
-	"github.com/vul-os/lintel/controller/internal/framing"
-	"github.com/vul-os/lintel/controller/internal/grants"
-	"github.com/vul-os/lintel/controller/internal/vectorfile"
-	"github.com/vul-os/lintel/controller/internal/wire"
+	"github.com/vul-os/aql/controller/internal/blesession"
+	"github.com/vul-os/aql/controller/internal/framing"
+	"github.com/vul-os/aql/controller/internal/grants"
+	"github.com/vul-os/aql/controller/internal/vectorfile"
+	"github.com/vul-os/aql/controller/internal/wire"
 )
 
 type memConn struct {

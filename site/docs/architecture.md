@@ -1,180 +1,138 @@
 # Architecture
 
-> [!NOTE]
-> Aql is early-stage. This document describes the **intended** architecture —
-> the shape the project is being built toward — and marks clearly what exists
-> today versus what is planned. Treat anything not marked "Built" as design
-> intent, not a shipped feature.
+A condensed tour of how lintel fits together. The long-form version lives in the
+repository's `ARCHITECTURE.md`.
 
-## What Aql is
+## No cloud center
 
-Aql is a self-hosted **command center for the physical world**: one hub,
-running on a box you own, that discovers and controls the devices around a
-home or business — cameras, lights, lawnmowers, IoT sensors, energy meters,
-locks, and autonomous bots (security, cleaning) — and lets you automate across
-all of it from a single console.
+lintel has no central service that everything depends on — and no hosted service at
+all. It is a network of independent **gateways**: anyone can run one, and every gateway
+is somebody's own. vulos.org/products/lintel is the project site (landing, docs,
+downloads), not a service. Every line of code is MIT-licensed and everything is free — there is no
+billing system.
 
-The closest reference point is Home Assistant, but the intended scope is
-broader on two axes:
+"Decentralized" here means neither federation nor P2P. It means **many independent
+gateways, each a full authority** over its own tenants, numbers, devices and audit log,
+with zero coordination between them. The app asks "which gateway?" on first run — that
+question is the decentralization, made visible.
 
-- **Business, not just home.** Zones, fleets, and automations are modeled so a
-  small business (multiple sites, shared circuits, patrol routes) fits the
-  same data model as a house.
-- **Autonomous bots as first-class devices.** Security and cleaning robots
-  aren't an afterthought integration — they're a device class alongside
-  cameras and sensors, with their own state machine (patrol, dock, charge).
+## The system at a glance
 
-## Layered model
-
-Aql is one binary with two halves that talk over the Tauri IPC bridge:
-
-| Layer | Role | Status |
-|---|---|---|
-| **Rust core** (`src-tauri/`) | Device/telemetry engine: discovery, driver adapters, state, automation runtime | Foundation only — one IPC command (`system_pulse`) exists; no drivers, no persistence, no automation engine yet |
-| **Svelte console** (`src/`) | Operations-console UI: fleet view, energy, automations, event log | Built for Overview / Devices / Energy / Automations, on an in-memory demo dataset |
-| **IPC bridge** | Tauri's `invoke`/command layer connecting the two | Built — `system_pulse` returns host OS/arch/core telemetry, proving the bridge end-to-end |
-
-The console never talks to hardware directly. Every device read or command is
-meant to flow through the Rust core, so the same UI works unmodified whether
-the core is backed by real drivers or (today) nothing at all. In the browser
-build, the console falls back to the in-memory demo dataset (`src/lib/data.ts`)
-when there's no Tauri backend to call — see [Getting Started](./GETTING-STARTED.md).
-
-```mermaid
-flowchart TB
-    subgraph shell["Aql — single codebase"]
-        direction TB
-
-        subgraph ui["Svelte console (SPA)"]
-            Overview
-            Devices
-            Energy
-            Automations
-            Security["Security (placeholder)"]
-            Bots["Bots (placeholder)"]
-            Settings["Settings (placeholder)"]
-        end
-
-        ipc(["Tauri IPC bridge<br/>invoke() / commands"])
-
-        subgraph core["Rust core"]
-            pulse["system_pulse<br/>(built)"]
-            disc["Discovery<br/>(planned)"]
-            state["Device state store<br/>(planned)"]
-            autom["Automation runtime<br/>(planned)"]
-            drivers["Driver / adapter seam<br/>(planned)"]
-        end
-
-        ui <--> ipc <--> core
-        disc --> state
-        state --> autom
-        drivers --> disc
-    end
-
-    subgraph hw["Physical world"]
-        matter["Matter"]
-        mqtt["MQTT"]
-        zigbee["Zigbee"]
-        onvif["ONVIF cameras"]
-        modbus["Modbus"]
-        webhook["Generic HTTP / webhook"]
-        zana["Zana open-hardware<br/>(mowers, sensor nodes, bots)"]
-    end
-
-    drivers -.-> matter
-    drivers -.-> mqtt
-    drivers -.-> zigbee
-    drivers -.-> onvif
-    drivers -.-> modbus
-    drivers -.-> webhook
-    drivers -.-> zana
-
-    demo[("In-memory demo dataset<br/>src/lib/data.ts<br/>(browser/PWA fallback)")]
-    ui -. "no Tauri backend?" .-> demo
+```
+resident ── "open" ──► WhatsApp / Slack / Telegram (Discord soon)
+                              │ webhook (signature-verified)
+                              ▼
+        ┌──────────── GATEWAY — one Go binary · SQLite ────────────┐
+        │  channel seam → rules engine → device hub → audit log    │
+        │  (rate limits · quotas)               (Ed25519 signing)  │
+        │  (geofence, time windows: designed, not built)           │
+        │  embedded portal + app API                               │
+        └───────────────────────┬──────────────────────────────────┘
+              outbound wss ⇦ dial-out (no inbound ports at the gate)
+                              │
+                     controller (Wi-Fi / GSM)
+                              │ verifies pinned-key signature
+                              ▼
+                     relay closes → 🚧 gate opens
 ```
 
-## The driver/adapter seam
+The app (Tauri) talks HTTPS to the gateway for admin — and, in an emergency, talks
+directly to the controller over LAN/BLE with an offline-verifiable grant
+([Emergency access](emergency-access.md)).
 
-"Works with any hardware" is a control-plane stance, not a promise that Aql
-ships every protocol on day one. The design is a single internal device
-abstraction — an ID, a kind, a zone, a state, and a set of commands/telemetry
-— that every driver maps onto. Concretely:
+## Components
 
-- **Discovery** finds devices on the network or bus (mDNS/SSDP, Zigbee pairing,
-  MQTT topic scanning, ONVIF probe, manual add).
-- **Drivers/adapters** translate a protocol's wire format into the internal
-  device shape and back. Each protocol is its own adapter behind a common
-  trait/interface in the Rust core — adding a protocol should not require
-  touching the console or the other adapters.
-- **The console only ever sees the internal shape.** It renders devices,
-  zones, and events generically; it has no protocol-specific code.
+| Component | What it is | Runs on | Stack |
+| --- | --- | --- | --- |
+| **gateway** | The entire server: channels, rules, portal, API, device hub, audit | Any VPS / Pi / server with a public URL | Go · SQLite · embedded portal |
+| **controller** | The unit wired to the gate relay; verifies signatures, drives the motor | Pi-class board, Wi-Fi or GSM | Go agent |
+| **app** | Admin console + emergency access | Desktop, iOS, Android | React 19 · Tauri v2 today (gateway picker shipped); a Svelte 5 rewrite is a longer-term target, not started |
+| **web** | vulos.org/products/lintel — landing, docs, downloads | Any static host | Static |
+| **proto** | The versioned wire contracts | — | Markdown + schemas |
 
-Planned protocol adapters, roughly in the order they unlock the most devices:
+### Two implementations, one target
 
-| Protocol | Covers | Status |
-|---|---|---|
-| Matter | Modern smart-home devices (lights, locks, sensors) | Planned |
-| MQTT | Broad IoT/DIY device ecosystem, Zana devices | Planned |
-| Zigbee | Battery sensors, switches, bulbs | Planned |
-| ONVIF | IP cameras (most brands) | Planned |
-| Modbus | Energy meters, industrial/building sensors | Planned |
-| Generic HTTP/webhook | Anything with an API — the catch-all escape hatch | Planned |
+The server exists in two forms. The **Go gateway** (`gateway/`) is the target and is now
+the primary implementation: it runs the product core today — auth, accounts, locations,
+access points, controller pairing and the WebSocket device hub, the Ed25519-signed open
+path, the admin console, rate limits, and the WhatsApp / Slack (Events API + Socket Mode)
+/ Telegram channels — on one Go binary with one SQLite file. The mature **Cloudflare
+Workers backend** (`backend/`) is the behavioural reference it was ported from, still
+running and still ahead on a few surfaces the gateway defers (phone-OTP verify, analytics,
+Google OAuth / email-verify / password-reset, meters, the real portal bundle). The
+**controller** (`controller/`) is a real reference Go agent, and a cross-module **e2e**
+harness boots both shipped binaries and proves they interoperate over the real wire —
+the money path (verdict → signed envelope → controller → ack) and the adversarial cases.
 
-None of these adapters exist in code yet. The Rust core currently exposes a
-single command, `system_pulse`, which returns host OS/arch/core-count
-telemetry — its purpose today is to prove the IPC bridge works, not to model
-devices.
+## The three access paths
 
-## Where Zana fits
+1. **Chat** — primary. Webhook → identity resolution → rules → signed command → in-thread
+   reply. See [Chat channels](channels.md).
+2. **App** — emergency. Short-TTL signed grants verified offline by the controller.
+3. **Portal** — fallback. Unlimited, served by the gateway itself.
 
-**[Zana](https://github.com/vul-os/zana)** is the companion open-hardware
-line — reference designs for mowers, sensor nodes, and security/cleaning bots
-built to work well with Aql. The relationship is one-directional by design:
-Aql controls *any* hardware that speaks a supported protocol; Zana devices are
-simply built to speak one of those protocols (most likely MQTT) out of the
-box, so they need no bespoke adapter. Zana is not required to use Aql, and Aql
-is not limited to Zana hardware.
+## The WABA reality
 
-## Desktop / mobile / PWA, one codebase
+Webhooks are easy; **the WhatsApp number is hard**. A WhatsApp channel needs a verified
+Meta Business portfolio + WABA + phone number — budget an afternoon and some patience —
+and Meta bills you directly, in your own Meta account, for the conversations on your
+own number. Slack is an app manifest and a signing secret, minutes not days, which is
+why many gateways run Slack-first ([Chat channels](channels.md)).
 
-Aql is built once and ships four ways from the same SvelteKit source:
+## Money is out of scope
 
-- **Desktop** (macOS/Windows/Linux) — `pnpm tauri dev` / `pnpm tauri build`,
-  native window, Rust core runs in-process.
-- **Mobile** (iOS/Android) — same Tauri v2 project, mobile targets; the Rust
-  core and console are unchanged, only the shell and IPC transport differ.
-- **PWA / browser** — `pnpm dev` / `pnpm build` produce a static SPA
-  (`adapter-static`, `fallback: index.html`) installable as a PWA. There is no
-  Rust core in this mode, so the console falls back to the in-memory demo
-  dataset for anything it would normally get over IPC.
-- **Self-hosted box** — the intended primary deployment: Aql desktop running
-  headless-ish on hardware in the home/business, console reached locally or
-  over the local network.
+There is no billing system anywhere in lintel — no tiers, no wallet, no checkout, and
+no code path that could collect money. Operators who want to charge their residents do
+so outside the system, however they like; lintel neither meters nor invoices anyone.
+Your real costs sit with your own providers: your hardware, and Meta's per-conversation
+fees on your own number if you run a WhatsApp channel (Slack costs nothing).
 
-This is why the console never imports Rust-specific APIs directly — it always
-goes through `invoke(...)`, wrapped in a try/catch that falls back to demo
-data when no Tauri backend answers (see `src/routes/+page.svelte`).
+## Reachability
 
-## Non-negotiables
+The gateway core is transport-agnostic — it binds a listener and speaks **plain HTTP**,
+full stop; it has no TLS or ACME code of its own. Three ways to be reachable, in
+increasing order of self-sufficiency:
 
-- **Local-first.** The hub is the source of truth. It runs on hardware you
-  control, not a vendor's cloud.
-- **You own your data.** Device state, event history, and automation config
-  live on your box, in formats you can read and back up yourself.
-- **No cloud dependency.** Aql must not require an internet connection or a
-  vendor account to function. Cloud services (remote access, backups) are
-  optional add-ons, never a requirement.
-- **Works offline.** Core control loops — reading a sensor, flipping a light,
-  running an automation — must keep working with no WAN link.
+1. **Direct** — a public IP or VPS, behind your own reverse proxy (Caddy, nginx,
+   Traefik) that holds the certificate and terminates TLS in front of the gateway. See
+   [Ingress & reachability](ingress.md) for a working Caddy example.
+2. **Any tunnel you already trust** — cloudflared, Tailscale Funnel, ngrok — run beside
+   the binary; these terminate TLS at their own edge or local agent and forward plain
+   HTTP to the gateway, so they work as-is. A tunnel run in raw TCP/SNI-passthrough
+   mode (e.g. `frp` TCP passthrough) doesn't, since the gateway has no TLS of its own
+   to terminate what it passes through — put a reverse proxy behind that instead.
+   Tunnels compose at the HTTP layer, so independence from any one provider is
+   structural, not a promise.
+3. **No public URL at all** — real today, not aspirational. Controllers dial out, and
+   Slack **Socket Mode ships**: with an `xapp-…` app-level token the gateway dials out
+   to Slack over an outbound WebSocket, so a LAN-only gateway with no reachable address
+   runs Slack end to end. Discord's bot gateway, when it lands, is outbound too. Only
+   WhatsApp webhooks, the Telegram webhook, and remote portal/app access need a public
+   URL; a Slack-only install on an estate LAN needs none.
 
-## What exists today vs. what's planned
+The full option-by-option breakdown — public bind, any tunnel (incl. self-hosted
+`vulos-relayd`), the hosted Ephor convenience, and which channels need zero
+ingress — is in [Ingress & reachability](ingress.md).
 
-| Area | Exists now | Planned |
-|---|---|---|
-| Console UI | Overview, Devices, Energy, Automations screens, dark ops-console styling | Security, Bots, Settings screens (currently placeholders) |
-| Data | In-memory demo dataset (`src/lib/data.ts`) | Real device state backed by the Rust core, persisted |
-| IPC | `system_pulse` (host telemetry) | Device discovery, read/command, event stream, automation CRUD |
-| Device integration | None | Matter, MQTT, Zigbee, ONVIF, Modbus, HTTP/webhook adapters |
-| Automation | Static demo rows in the UI | Real rule engine (trigger → condition → action) driven by device state |
-| Auth | None | Local account/session model for the console; no cloud auth |
-| Persistence | None (in-memory only) | Local embedded store on the box |
+## The contracts that must not break
+
+Deployed hardware is forever, so these wire contracts are versioned from day one:
+
+1. **Pairing** — claim-token redemption, key exchange, gateway-key pinning
+2. **Signed commands** — open/close/query; nonce + expiry semantics
+3. **Offline grants** — grant format, challenge-response, revocation semantics
+4. **Controller events** — upstream: button pressed, gate held open, tamper
+5. **Tunnel** — how a gateway attaches to a reachability provider
+
+Binaries can churn; these can only be extended.
+
+## Tech decisions
+
+| Decision | Choice | Why |
+| --- | --- | --- |
+| Gateway language | Go | Single small static binary, ARM-friendly, embedded portal |
+| Database | SQLite | Zero-dependency self-hosting; one file to back up |
+| Frontend | Svelte 5 (target) | One codebase → embedded portal + Tauri apps; small output. Today's shipped app is still React 19 — see [Components](#components) |
+| Apps | Tauri v2 | Desktop + iOS + Android from one codebase — the desktop shell (gateway picker) ships today |
+| Billing | None — no billing code at all | Everything is free; self-hosters pay their own providers directly |
+| License | MIT, everything | The whole system is the product; nothing is held back |

@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/vul-os/lintel/controller/internal/jcs"
+	"github.com/vul-os/aql/controller/internal/jcs"
 )
 
 // Version is the contract major version this implementation speaks.

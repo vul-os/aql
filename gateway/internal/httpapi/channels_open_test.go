@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vul-os/lintel/gateway/internal/channels"
-	"github.com/vul-os/lintel/gateway/internal/store"
+	"github.com/vul-os/aql/gateway/internal/channels"
+	"github.com/vul-os/aql/gateway/internal/store"
 )
 
 // TestPhoneOpenVisitorGrantAttributesRealSource proves a visitor grant open

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vul-os/lintel/gateway/internal/store"
+	"github.com/vul-os/aql/gateway/internal/store"
 )
 
 // Auth endpoints — the skeleton subset of backend/src/routes/auth.ts. Real

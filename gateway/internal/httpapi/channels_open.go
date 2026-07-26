@@ -11,7 +11,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/vul-os/lintel/gateway/internal/store"
+	"github.com/vul-os/aql/gateway/internal/store"
 )
 
 // chVerdict is the reply-layer view of a channel open: the choke point's

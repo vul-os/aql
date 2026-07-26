@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vul-os/lintel/gateway/internal/keys"
+	"github.com/vul-os/aql/gateway/internal/keys"
 )
 
 // ChallengeTTL is pairing.md's 30 s cnonce validity.

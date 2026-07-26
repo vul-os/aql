@@ -15,9 +15,9 @@ import (
 	"encoding/json"
 	"log/slog"
 
-	"github.com/vul-os/lintel/controller/internal/framing"
-	"github.com/vul-os/lintel/controller/internal/grants"
-	"github.com/vul-os/lintel/controller/internal/wire"
+	"github.com/vul-os/aql/controller/internal/framing"
+	"github.com/vul-os/aql/controller/internal/grants"
+	"github.com/vul-os/aql/controller/internal/wire"
 )
 
 // Conn is the minimal link the session needs: notify frames to the app

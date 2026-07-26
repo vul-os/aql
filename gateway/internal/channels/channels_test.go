@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vul-os/lintel/gateway/internal/store"
+	"github.com/vul-os/aql/gateway/internal/store"
 )
 
 func hmacHexT(secret, msg string) string {

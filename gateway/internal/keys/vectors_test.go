@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vul-os/lintel/gateway/internal/keys"
+	"github.com/vul-os/aql/gateway/internal/keys"
 )
 
 // ---------------------------------------------------------------- fixtures

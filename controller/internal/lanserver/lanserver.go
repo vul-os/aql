@@ -16,9 +16,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/vul-os/lintel/controller/internal/blesession"
-	"github.com/vul-os/lintel/controller/internal/grants"
-	"github.com/vul-os/lintel/controller/internal/mdns"
+	"github.com/vul-os/aql/controller/internal/blesession"
+	"github.com/vul-os/aql/controller/internal/grants"
+	"github.com/vul-os/aql/controller/internal/mdns"
 )
 
 // MaxBody bounds request bodies (a grant.open with a full grant is < 8 KiB,

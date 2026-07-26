@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vul-os/lintel/gateway/internal/channels"
+	"github.com/vul-os/aql/gateway/internal/channels"
 )
 
 var dmtapHelpWords = map[string]bool{

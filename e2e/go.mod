@@ -7,6 +7,6 @@
 // imports — see README.md ("Why subprocess, not in-process") for the reason
 // (Go's internal/ rule forbids a sibling module from importing either module's
 // packages). Everything here is standard library.
-module github.com/vul-os/lintel/e2e
+module github.com/vul-os/aql/e2e
 
 go 1.25.6

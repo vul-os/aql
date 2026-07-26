@@ -15,9 +15,9 @@ import (
 
 	"github.com/coder/websocket"
 
-	"github.com/vul-os/lintel/gateway/internal/hub"
-	"github.com/vul-os/lintel/gateway/internal/keys"
-	"github.com/vul-os/lintel/gateway/internal/store"
+	"github.com/vul-os/aql/gateway/internal/hub"
+	"github.com/vul-os/aql/gateway/internal/keys"
+	"github.com/vul-os/aql/gateway/internal/store"
 )
 
 // newLiveServer boots the router on a real listener (WS dialing needs one)

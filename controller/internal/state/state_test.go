@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/vul-os/lintel/controller/internal/state"
-	"github.com/vul-os/lintel/controller/internal/vectorfile"
+	"github.com/vul-os/aql/controller/internal/state"
+	"github.com/vul-os/aql/controller/internal/vectorfile"
 )
 
 func testPub(t *testing.T, name string) string {

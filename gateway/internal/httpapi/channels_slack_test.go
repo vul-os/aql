@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vul-os/lintel/gateway/internal/channels"
+	"github.com/vul-os/aql/gateway/internal/channels"
 )
 
 func slackEvent(user, text, ts string) []byte {

@@ -25,8 +25,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/vul-os/lintel/controller/internal/clock"
-	"github.com/vul-os/lintel/controller/internal/wire"
+	"github.com/vul-os/aql/controller/internal/clock"
+	"github.com/vul-os/aql/controller/internal/wire"
 )
 
 const (

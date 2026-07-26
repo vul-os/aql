@@ -22,8 +22,8 @@ package bleperiph
 import (
 	"errors"
 
-	"github.com/vul-os/lintel/controller/internal/blesession"
-	"github.com/vul-os/lintel/controller/internal/grants"
+	"github.com/vul-os/aql/controller/internal/blesession"
+	"github.com/vul-os/aql/controller/internal/grants"
 )
 
 // Service and characteristic UUIDs (proto/grants.md §BLE GATT).

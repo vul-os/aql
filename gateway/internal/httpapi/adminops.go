@@ -23,7 +23,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/vul-os/lintel/gateway/internal/store"
+	"github.com/vul-os/aql/gateway/internal/store"
 )
 
 // requireAdmin wraps a handler with the live platform-admin gate.

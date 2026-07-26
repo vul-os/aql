@@ -3,7 +3,7 @@ package clock_test
 import (
 	"testing"
 
-	"github.com/vul-os/lintel/controller/internal/clock"
+	"github.com/vul-os/aql/controller/internal/clock"
 )
 
 // TestStaleBothDirections covers the defect: a naive "elapsed > limit"

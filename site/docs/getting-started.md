@@ -1,81 +1,87 @@
-# Getting Started
+# Getting started
 
-> [!NOTE]
-> Aql is early-stage: the console runs on an in-memory demo dataset, and the
-> Rust core exposes a single IPC command (`system_pulse`) so far. There is no
-> real device integration, persistence, or auth yet. See
-> [ARCHITECTURE.md](./ARCHITECTURE.md) for what's built vs. planned.
+lintel gets you from "I'd like to text my gate open" to actually doing it in about an
+evening, assuming the controller hardware is mounted. Everything runs on your own
+gateway — there is no hosted service and nothing to sign up for. This chapter is the
+short path; [Run a gateway](self-host.md) has the full install, reachability and backup
+detail.
 
-## Prerequisites
+## What you'll need
 
-| Requirement | Notes |
-|---|---|
-| **Rust** (stable) | Install via [rustup](https://rustup.rs/) |
-| **Node.js 20+** | |
-| **pnpm** | `corepack enable` or `npm i -g pnpm` |
-| **Tauri system dependencies** | Platform-specific native libs (WebView, build tools). Follow the official [Tauri prerequisites guide](https://v2.tauri.app/start/prerequisites/) for your OS before running `tauri dev`/`tauri build` |
+- A gate, door or barrier with a **dry-contact relay input** (most motors have one).
+- A lintel controller, or a supported Pi-class board running the controller agent.
+- Somewhere for the gateway to live: a VPS, a Pi, any always-on box. Docker or a bare
+  binary — your call.
+- A chat channel to bring: a Slack workspace is the five-minute start; WhatsApp needs
+  your own Meta business number (a WABA) — see [Chat channels](channels.md).
+- Ten minutes of ladder time to wire the controller in parallel with your existing motor.
 
-The web/PWA build (`pnpm dev`) only needs Node + pnpm — the Rust toolchain and
-Tauri system deps are only required for the desktop/mobile app.
+## The six steps
 
-## Clone and install
+1. **Run the gateway.** One binary, one SQLite file, portal seam embedded. The Go
+   gateway in `gateway/` implements this today — build it from source:
 
-```bash
-git clone https://github.com/vul-os/aql.git
-cd aql
-pnpm install
-```
+   ```sh
+   git clone https://github.com/vul-os/lintel
+   cd lintel/gateway && go build ./cmd/gateway
+   ./gateway -data /var/lib/lintel -listen :8080
+   ```
 
-## Run the desktop app
+   > **Status.** The gateway runs the product core now (auth, accounts, locations,
+   > access points, controller pairing + hub, the signed open path, admin console,
+   > rate limits, and the WhatsApp/Slack/Telegram channels). Still deferred: phone-OTP
+   > verify, analytics, Google OAuth / email-verify / password-reset, meters, and the
+   > real portal bundle. A Docker image builds from the `Dockerfile` in `gateway/`; the
+   > `ghcr.io/vul-os/lintel-gateway` image is CI-built but not auto-published yet.
 
-```bash
-pnpm tauri dev
-```
+   Details, reachability options and backups in [Run a gateway](self-host.md).
+2. **Claim the admin account.** Open the portal and sign up — the first account you
+   create is the owner account. If you're also the person *running* the gateway,
+   claim the **instance admin** seat too: set `ADMIN_CLAIM_TOKEN` in the environment
+   before first boot, then redeem it exactly once against `POST /admin/claim`, as
+   described in [Instance admin](admin.md).
+3. **Name your location** — house, complex, building or other. Give it a name residents
+   will recognise, and optionally drop a map pin: this is where a geofence anchor would
+   attach if that feature ships (designed, not built — see
+   [Geofence safety](security.md#geofence-safety)). Then add an access point under
+   **Access points → New** — main gate, pedestrian gate, parking barrier; each gets its
+   own controller.
+4. **Pair a controller.** Portal → **Devices → Pair new** creates a claim token; the
+   controller redeems it and pins the gateway's signing key. Full walkthrough in
+   [Controllers](controllers.md).
+5. **Link a channel.** Slack first is the pragmatic order: an app manifest and a signing
+   secret, minutes not days ([Chat channels](channels.md)). WhatsApp when your WABA is
+   ready ([Linking WhatsApp](linking-whatsapp.md)).
+6. **Invite yourself as a member** under **Members**, then send your first `open` to
+   your gateway's number or Slack app. The reply tells you what happened, in plain
+   language.
 
-Builds the Rust core, launches the native window, and hot-reloads the Svelte
-frontend on save. First run will take longer while Cargo compiles
-dependencies.
+## Members and roles
 
-## Run in the browser (PWA mode)
+Members are people whose chat identity can text the gate. An identity is a
+`(channel, external id)` pair — a WhatsApp phone number, a Slack member id — so one
+person can be reachable on more than one channel.
 
-```bash
-pnpm dev
-```
+- **Owner** — the account holder. Account and danger-zone settings.
+- **Admin** — manages devices, members and policies for assigned locations.
+- **Member** — can open what they've been given. Can't change settings.
+- **Guest** — like a member, but time-bound. Contractors and weekend visitors live under
+  **Temp access** in the portal, and their access expires on its own.
 
-Starts a plain Vite dev server at `http://localhost:1420`. No Rust/Tauri
-toolchain is invoked. Because there's no Tauri IPC bridge available in a
-browser, the console falls back to the in-memory demo dataset in
-`src/lib/data.ts` for devices, events, automations, and energy circuits — this
-is the same fallback the production PWA build uses when it can't reach a
-native backend.
+A role on a complex applies to all access points within it unless overridden. Revoking is
+immediate: open the member, hit revoke, and the next message they send is declined. The
+audit log keeps the history — revocation is not deletion.
 
-## Regenerate screenshots
+## A note on trigger words
 
-```bash
-pnpm run screenshot
-```
+The default trigger is `open`, but the gateway accepts any phrase you configure per
+location. People text things like *oop*, *hey gate*, *buzz me in*, or a single 👍. If
+it's on your allow-list, it works. When a member has access to several access points,
+the reply is a numbered picker — they answer `1`, `2` or `3`.
 
-Drives a headless Chromium (Playwright) against the running console — starts
-its own `vite dev` server on `:1420` if one isn't already up — and captures
-each screen (Overview, Devices, Energy, Automations) via the `?view=` deep
-link. Output goes to `docs/screenshots/` and is mirrored into `assets/screens/`
-for the README/site. Uses the demo dataset, same as `pnpm dev`.
+## Next
 
-## Build installers
-
-```bash
-pnpm tauri build
-```
-
-Produces platform-native installers/bundles (`.app`/`.dmg`, `.msi`/`.exe`,
-`.deb`/`.AppImage`, depending on OS) under `src-tauri/target/release/bundle/`.
-Requires the Rust toolchain and Tauri system dependencies for the platform
-you're building on/for.
-
-## Other useful scripts
-
-| Command | Purpose |
-|---|---|
-| `pnpm build` | Static SPA build only (no Tauri packaging) — same output the desktop/mobile shell embeds |
-| `pnpm preview` | Preview the static build locally |
-| `pnpm check` | Type-check the Svelte/TypeScript sources |
+- [Run a gateway](self-host.md) — install options, reachability, backup and restore.
+- [Chat channels](channels.md) — Slack in minutes, the channel seam, Discord roadmap.
+- [Linking WhatsApp](linking-whatsapp.md) — bringing your own number and WABA.
+- [Controllers](controllers.md) — wiring and pairing.

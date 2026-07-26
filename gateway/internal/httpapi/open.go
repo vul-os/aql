@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vul-os/lintel/gateway/internal/store"
+	"github.com/vul-os/aql/gateway/internal/store"
 )
 
 var opSources = map[string]bool{"web": true, "whatsapp": true, "api": true}

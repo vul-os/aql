@@ -3,7 +3,7 @@
 //
 // DUPLICATION NOTE: this file is a copy/adaptation of
 // gateway/internal/keys/jcs.go. The controller is its own Go module
-// (github.com/vul-os/lintel/controller) so it can be vendored onto devices
+// (github.com/vul-os/aql/controller) so it can be vendored onto devices
 // without dragging in the gateway; the ~170 lines of JCS are deliberately
 // duplicated rather than imported. If a canonicalization bug is found, fix
 // it in BOTH places and re-run each module's conformance-vector tests

@@ -47,9 +47,9 @@ import (
 	"net/http"
 	"sort"
 
-	"github.com/vul-os/lintel/gateway/internal/hub"
-	"github.com/vul-os/lintel/gateway/internal/keys"
-	"github.com/vul-os/lintel/gateway/internal/store"
+	"github.com/vul-os/aql/gateway/internal/hub"
+	"github.com/vul-os/aql/gateway/internal/keys"
+	"github.com/vul-os/aql/gateway/internal/store"
 )
 
 // offlineGrantMaxAPs is a sanity cap on one request (not a security

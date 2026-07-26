@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vul-os/lintel/gateway/internal/hub"
-	"github.com/vul-os/lintel/gateway/internal/keys"
+	"github.com/vul-os/aql/gateway/internal/hub"
+	"github.com/vul-os/aql/gateway/internal/keys"
 )
 
 // ---------------------------------------------------------------------------

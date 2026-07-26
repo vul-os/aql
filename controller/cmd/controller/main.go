@@ -21,7 +21,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/vul-os/lintel/controller/internal/agent"
+	"github.com/vul-os/aql/controller/internal/agent"
 )
 
 const firmware = "0.1.0"

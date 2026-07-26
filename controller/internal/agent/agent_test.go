@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vul-os/lintel/controller/internal/agent"
-	"github.com/vul-os/lintel/controller/internal/events"
-	"github.com/vul-os/lintel/controller/internal/grants"
-	"github.com/vul-os/lintel/controller/internal/relay"
+	"github.com/vul-os/aql/controller/internal/agent"
+	"github.com/vul-os/aql/controller/internal/events"
+	"github.com/vul-os/aql/controller/internal/grants"
+	"github.com/vul-os/aql/controller/internal/relay"
 )
 
 func newTestAgent(t *testing.T) *agent.Agent {

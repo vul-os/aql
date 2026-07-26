@@ -12,8 +12,8 @@ import (
 
 	"github.com/coder/websocket"
 
-	"github.com/vul-os/lintel/gateway/internal/hub"
-	"github.com/vul-os/lintel/gateway/internal/store"
+	"github.com/vul-os/aql/gateway/internal/hub"
+	"github.com/vul-os/aql/gateway/internal/store"
 )
 
 // Devices + pairing + controller transport, porting backend

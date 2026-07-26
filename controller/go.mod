@@ -1,4 +1,4 @@
-module github.com/vul-os/lintel/controller
+module github.com/vul-os/aql/controller
 
 go 1.23.8
 

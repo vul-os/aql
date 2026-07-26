@@ -12,9 +12,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vul-os/lintel/gateway/internal/channels"
-	"github.com/vul-os/lintel/gateway/internal/keys"
-	"github.com/vul-os/lintel/gateway/internal/store"
+	"github.com/vul-os/aql/gateway/internal/channels"
+	"github.com/vul-os/aql/gateway/internal/keys"
+	"github.com/vul-os/aql/gateway/internal/store"
 )
 
 func newEngineTestServer(t *testing.T, chCfg channels.Config, logBuf *bytes.Buffer) *Server {

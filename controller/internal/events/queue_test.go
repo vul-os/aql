@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/vul-os/lintel/controller/internal/events"
+	"github.com/vul-os/aql/controller/internal/events"
 )
 
 func mustOpen(t *testing.T, dir string) *events.Queue {

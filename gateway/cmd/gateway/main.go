@@ -51,10 +51,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/vul-os/lintel/gateway/internal/channels"
-	"github.com/vul-os/lintel/gateway/internal/httpapi"
-	"github.com/vul-os/lintel/gateway/internal/keys"
-	"github.com/vul-os/lintel/gateway/internal/store"
+	"github.com/vul-os/aql/gateway/internal/channels"
+	"github.com/vul-os/aql/gateway/internal/httpapi"
+	"github.com/vul-os/aql/gateway/internal/keys"
+	"github.com/vul-os/aql/gateway/internal/store"
 )
 
 // Version is stamped via -ldflags "-X main.Version=..." at release time.

@@ -12,10 +12,10 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/vul-os/lintel/controller/internal/clock"
-	"github.com/vul-os/lintel/controller/internal/relay"
-	"github.com/vul-os/lintel/controller/internal/state"
-	"github.com/vul-os/lintel/controller/internal/wire"
+	"github.com/vul-os/aql/controller/internal/clock"
+	"github.com/vul-os/aql/controller/internal/relay"
+	"github.com/vul-os/aql/controller/internal/state"
+	"github.com/vul-os/aql/controller/internal/wire"
 )
 
 // Defaults for actuation config (overridable via the `config` command).

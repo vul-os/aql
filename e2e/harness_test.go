@@ -47,19 +47,19 @@ func buildAndRun(m *testing.M) (int, error) {
 	if err != nil {
 		return 1, fmt.Errorf("getwd: %w", err)
 	}
-	repo := filepath.Dir(wd) // .../lintel
+	repo := filepath.Dir(wd) // .../aql
 	gatewayDir := filepath.Join(repo, "gateway")
 	controllerDir := filepath.Join(repo, "controller")
 
-	binDir, err := os.MkdirTemp("", "lintel-e2e-bin-")
+	binDir, err := os.MkdirTemp("", "aql-e2e-bin-")
 	if err != nil {
 		return 1, fmt.Errorf("tempdir: %w", err)
 	}
 	defer os.RemoveAll(binDir)
 
-	gatewayBin = filepath.Join(binDir, "lintel-gateway")
-	controllerBin = filepath.Join(binDir, "lintel-controller")
-	simBin = filepath.Join(binDir, "lintel-controller-sim")
+	gatewayBin = filepath.Join(binDir, "aql-gateway")
+	controllerBin = filepath.Join(binDir, "aql-controller")
+	simBin = filepath.Join(binDir, "aql-controller-sim")
 
 	for _, b := range []struct{ dir, pkg, out string }{
 		{gatewayDir, "./cmd/gateway", gatewayBin},
@@ -368,7 +368,7 @@ type controller struct {
 // execController builds (does not start) a controller command. gatewayURL is
 // passed to -gateway verbatim; the controller appends /pair/redeem to it.
 func execController(gatewayURL, claimToken, accessPoints string, lanPort int, logs *logBuf) *exec.Cmd {
-	tmp, _ := os.MkdirTemp("", "lintel-ctl-state-")
+	tmp, _ := os.MkdirTemp("", "aql-ctl-state-")
 	cmd := exec.Command(controllerBin,
 		"-state", tmp,
 		"-gateway", gatewayURL,

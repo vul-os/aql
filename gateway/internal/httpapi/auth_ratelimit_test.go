@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/vul-os/lintel/gateway/internal/keys"
-	"github.com/vul-os/lintel/gateway/internal/store"
+	"github.com/vul-os/aql/gateway/internal/keys"
+	"github.com/vul-os/aql/gateway/internal/store"
 )
 
 // newAuthLimitTestServer is newTestServer but with caller-controlled
