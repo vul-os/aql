@@ -63,7 +63,7 @@ const ADMIN_ERROR_COPY: Record<string, string> = {
 };
 
 export function adminErrorMessage(err: unknown): string {
-  if (isUnavailable(err)) return "This isn't available on this gateway yet.";
+  if (isUnavailable(err)) return "This isn't available on this hub yet.";
   if (err instanceof ApiError) {
     return ADMIN_ERROR_COPY[err.code] ?? err.detail ?? err.code;
   }

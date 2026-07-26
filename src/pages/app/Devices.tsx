@@ -202,7 +202,7 @@ export default function DevicesPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <caption className="sr-only">
-                  Every device Aql can see. Rows marked &ldquo;Gateway&rdquo; are real hardware on
+                  Every device Aql can see. Rows marked &ldquo;Hub&rdquo; are real hardware on
                   your hub; rows marked &ldquo;Demo data&rdquo; come from a built-in fixture
                   dataset and read no hardware.
                 </caption>
@@ -393,7 +393,7 @@ function AccessDetail({ row }: { row: Extract<Row, { kind: 'Access' }> }) {
       </div>
       <InertNote className="mt-3">
         Opening, closing, maintenance and the audit trail all live on the access-point page — this
-        one is real hardware on your gateway.
+        one is real hardware on your hub.
       </InertNote>
     </>
   );

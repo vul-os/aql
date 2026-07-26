@@ -13,7 +13,7 @@ export default function GettingStarted() {
       <DocSection heading="What you'll need">
         <ul className="list-disc pl-6 space-y-2">
           <li>A gate, door or barrier with a <strong>dry-contact relay input</strong> (almost every motorised gate built since 2005 has one).</li>
-          <li>A <strong>controller</strong> that can pulse that relay from your gateway. The Aql ACC controller is <em>in development</em>, designed for standard dry-contact gate motors (Centurion, BFT, Came, Nice, ET Blue); vendor-specific integrations are on the roadmap.</li>
+          <li>A <strong>controller</strong> that can pulse that relay from your hub. The Aql ACC controller is <em>in development</em>, designed for standard dry-contact gate motors (Centurion, BFT, Came, Nice, ET Blue); vendor-specific integrations are on the roadmap.</li>
           <li>A <strong>WhatsApp number</strong> that you control (most setups use a fresh secondary line).</li>
           <li>About <strong>10 minutes of ladder time</strong> to wire the controller in parallel with your existing motor.</li>
           <li>Wi-Fi or LTE coverage at the gate.</li>
@@ -22,7 +22,7 @@ export default function GettingStarted() {
 
       <DocSection heading="The five steps">
         <ol className="list-decimal pl-6 space-y-3">
-          <li><Link to="/signup" className="underline underline-offset-4 decoration-terracotta">Create an account</Link> on your gateway. Free — Aql has no plans and no billing.</li>
+          <li><Link to="/signup" className="underline underline-offset-4 decoration-terracotta">Create an account</Link> on your hub. Free — Aql has no plans and no billing.</li>
           <li><Link to="/docs/linking-whatsapp" className="underline underline-offset-4 decoration-terracotta">Link your WhatsApp number</Link>. The dashboard walks you through verification.</li>
           <li><Link to="/docs/locations" className="underline underline-offset-4 decoration-terracotta">Create a Location</Link>. House, complex, building, or other.</li>
           <li><Link to="/docs/pairing-device" className="underline underline-offset-4 decoration-terracotta">Pair a Device</Link>. Scan the QR on the controller, name it, assign it to an access point.</li>
@@ -50,12 +50,12 @@ Aql 14:09   🔒 Front gate closing — Sunset Apartments`}</CodeBlock>
 
       <DocSection heading="What happens behind a single 'open'">
         <p>
-          Every message that reaches your gateway goes through the same five-step pipeline
+          Every message that reaches your hub goes through the same five-step pipeline
           before it sends a relay pulse:
         </p>
         <ol className="list-decimal pl-6 space-y-2">
           <li><strong>Verify the sender</strong>. The WhatsApp number must match a member or invited guest.</li>
-          <li><strong>Resolve the location</strong>. The gateway picks the right gate using your role.</li>
+          <li><strong>Resolve the location</strong>. The hub picks the right gate using your role.</li>
           <li><strong>Check the limits</strong>. Open cooldown, hourly caps, any admin-set daily quotas, and — for a phone that isn&rsquo;t a member — whether it holds an active, unexpired temporary access grant.</li>
           <li><strong>Pulse the relay</strong>. The controller fires for the configured contact time (250 ms default).</li>
           <li><strong>Audit + reply</strong>. Every event is logged and you get a one-line confirmation.</li>
@@ -74,7 +74,7 @@ Aql 14:09   🔒 Front gate closing — Sunset Apartments`}</CodeBlock>
           health checks:
         </p>
         <CodeBlock lang="bash" title="curl">{`# replace ap_ABC123 with your access point id and lintel_live_… with your token
-curl -X POST https://<your-gateway>/v1/access-points/ap_ABC123/open \\
+curl -X POST https://<your-hub>/v1/access-points/ap_ABC123/open \\
   -H "Authorization: Bearer lintel_live_xxxxxxxxxxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{"actor":{"phone":"+27825550144"}}'`}</CodeBlock>

@@ -158,7 +158,7 @@ export function TopNav() {
           </div>
 
           <p className="mt-auto pt-10 text-[11px] uppercase tracking-[0.22em] text-ink/45">
-            texts that open gates
+            one hub owns everything
           </p>
         </div>
       </div>

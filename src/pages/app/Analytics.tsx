@@ -89,10 +89,10 @@ export default function Analytics() {
         <p className="py-20 text-center text-ink/45 text-sm">Loading…</p>
       ) : unavailable ? (
         <Card className="p-6 sm:p-10 text-center">
-          <p className="font-display text-xl mb-2">Analytics aren&rsquo;t available on this gateway yet</p>
+          <p className="font-display text-xl mb-2">Analytics aren&rsquo;t available on this hub yet</p>
           <p className="text-sm text-ink/60 max-w-md mx-auto leading-relaxed">
             This view runs on the reference backend but hasn&rsquo;t shipped in the
-            self-hosted Go gateway. Every open, close and denial is still recorded in
+            self-hosted Go hub. Every open, close and denial is still recorded in
             your audit log — this chart just isn&rsquo;t wired up to read it yet.
           </p>
         </Card>

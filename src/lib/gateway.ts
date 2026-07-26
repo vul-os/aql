@@ -127,10 +127,10 @@ export async function testGatewayUrl(baseUrl: string, timeoutMs = 8000): Promise
       signal: ctrl.signal,
       headers: { Accept: 'application/json' },
     });
-    if (!res.ok) return { ok: false, message: `The gateway responded with HTTP ${res.status}.` };
+    if (!res.ok) return { ok: false, message: `The hub responded with HTTP ${res.status}.` };
     const j = (await res.json().catch(() => null)) as { ok?: boolean; env?: string } | null;
     if (j && j.ok === false) {
-      return { ok: false, message: 'The gateway is up but reports an unhealthy database.' };
+      return { ok: false, message: 'The hub is up but reports an unhealthy database.' };
     }
     return { ok: true, env: j?.env };
   } catch {
@@ -138,7 +138,7 @@ export async function testGatewayUrl(baseUrl: string, timeoutMs = 8000): Promise
       ok: false,
       message: ctrl.signal.aborted
         ? 'Timed out — no answer from that address.'
-        : 'Could not reach that address. Check the URL (and that the gateway allows this origin).',
+        : 'Could not reach that address. Check the URL (and that the hub allows this origin).',
     };
   } finally {
     clearTimeout(timer);

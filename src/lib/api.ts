@@ -101,7 +101,7 @@ export function isUnavailable(err: unknown): boolean {
 
 /** Friendly, ready-to-render message for any error apiFetch can throw. */
 export function friendlyApiError(err: unknown, fallback = 'Something went wrong.'): string {
-  if (isUnavailable(err)) return "This isn't available on this gateway yet.";
+  if (isUnavailable(err)) return "This isn't available on this hub yet.";
   if (err instanceof ApiError) return err.detail ?? err.code;
   if (err instanceof Error) return err.message;
   return fallback;

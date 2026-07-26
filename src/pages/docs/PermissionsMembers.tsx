@@ -34,7 +34,7 @@ export default function PermissionsMembers() {
       </DocSection>
 
       <DocSection heading="Programmatic invites">
-        <CodeBlock lang="bash">{`curl -X POST https://<your-gateway>/v1/accounts/acc_oak/invites \\
+        <CodeBlock lang="bash">{`curl -X POST https://<your-hub>/v1/accounts/acc_oak/invites \\
   -H "Authorization: Bearer lintel_live_xxxxxxxxxxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -51,7 +51,7 @@ export default function PermissionsMembers() {
           The accept token itself is never returned here — it&rsquo;s delivered straight
           to the invitee, never to the inviter. <code>email_sent</code>/
           <code>whatsapp_sent</code> report whether delivery is wired up on your
-          gateway; a half-configured install still creates the invite, it just can&rsquo;t
+          hub; a half-configured install still creates the invite, it just can&rsquo;t
           tell the invitee about it yet.
         </p>
       </DocSection>
@@ -63,13 +63,13 @@ export default function PermissionsMembers() {
           </p>
           <p className="mt-2 text-[15px] text-ink/80 leading-relaxed">
             There is currently no route to remove a member or revoke their access once
-            they&rsquo;ve accepted an invite — not in the gateway API, not in the
+            they&rsquo;ve accepted an invite — not in the hub API, not in the
             reference backend, not in the app. (Temporary access <em>grants</em> are
             different and do revoke instantly — <code>POST /v1/grants/{'{id}'}/revoke</code> —
             this gap is specifically about standing memberships.) Until member
             offboarding ships, pulling a phone number&rsquo;s access means asking your
             instance admin to edit the <code>account_members</code> row directly on the
-            gateway&rsquo;s own database.
+            hub&rsquo;s own database.
           </p>
         </div>
       </DocSection>

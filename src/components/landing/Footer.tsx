@@ -42,8 +42,8 @@ export function Footer() {
               <span className="font-display italic text-4xl sm:text-5xl leading-none">Aql</span>
             </Link>
             <p className="mt-5 sm:mt-6 text-paper/65 max-w-sm leading-relaxed">
-              A quieter way through the threshold. Built in Durban, deployed wherever
-              there&rsquo;s a gate that needs opening.
+              A command centre for the physical world &mdash; one hub, on a box you own. Built in
+              Durban, meant for anywhere with something worth controlling.
             </p>
             <p className="mt-5 inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-paper/55">
               <span aria-hidden className="text-base leading-none">🇿🇦</span>
@@ -82,7 +82,7 @@ export function Footer() {
         <div className="mt-12 sm:mt-16 pt-6 border-t border-paper/15 flex flex-wrap items-center gap-x-5 gap-y-2 text-[10px] sm:text-[11px] uppercase tracking-[0.22em] text-paper/55">
           <span>&copy; {new Date().getFullYear()} Aql</span>
           <span aria-hidden>&mdash;</span>
-          <span>texts that open gates</span>
+          <span>one hub owns everything</span>
           <span className="ml-auto">v 0.1 &middot; durban</span>
         </div>
       </div>

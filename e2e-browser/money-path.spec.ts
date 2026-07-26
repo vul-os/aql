@@ -38,8 +38,8 @@ test('sign up, sign in, create a location + access point, attempt an open, read 
   // first-run UX for the embedded portal, not a test seam, so it's driven
   // for real here rather than pre-seeding localStorage.
   await page.goto(gw.url('/signup'));
-  await expect(page.getByRole('heading', { name: 'Connect to your gateway' })).toBeVisible();
-  await page.getByLabel('Gateway URL', { exact: true }).fill(gw.baseUrl);
+  await expect(page.getByRole('heading', { name: 'Connect to your hub' })).toBeVisible();
+  await page.getByLabel('Hub URL', { exact: true }).fill(gw.baseUrl);
   await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Create your account' })).toBeVisible();
 

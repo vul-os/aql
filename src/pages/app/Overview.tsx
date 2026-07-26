@@ -268,7 +268,7 @@ export default function Overview() {
               </span>
             </p>
             <p className="text-[10px] sm:text-xs text-ink/55 mt-1 sm:mt-1.5 leading-snug">
-              {accessPoints.length} on your gateway · {demoDevices.length} demo
+              {accessPoints.length} on your hub · {demoDevices.length} demo
             </p>
           </Card>
 
@@ -432,7 +432,7 @@ export default function Overview() {
           </div>
           {summary === null ? (
             <p className="px-5 sm:px-6 py-6 text-ink/55 text-sm">
-              Recent activity isn&rsquo;t available on this gateway yet.
+              Recent activity isn&rsquo;t available on this hub yet.
             </p>
           ) : summary.recent_activity.length === 0 ? (
             <p className="px-5 sm:px-6 py-6 text-ink/55 text-sm">

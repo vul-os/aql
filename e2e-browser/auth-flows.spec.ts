@@ -29,7 +29,7 @@ async function connectAndSignUp(
   email: string,
 ): Promise<void> {
   await page.goto(gw.url('/signup'));
-  await page.getByLabel('Gateway URL', { exact: true }).fill(gw.baseUrl);
+  await page.getByLabel('Hub URL', { exact: true }).fill(gw.baseUrl);
   await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await page.getByLabel('Your name', { exact: true }).fill('Auth Flow Tester');
   await page.getByLabel('Email', { exact: true }).fill(email);

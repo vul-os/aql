@@ -44,11 +44,11 @@ function GatewaySection() {
   const custom = getStoredGatewayUrl() !== null;
   return (
     <Card>
-      <h2 className="font-display text-2xl">Gateway</h2>
+      <h2 className="font-display text-2xl">Hub</h2>
       <p className="text-sm text-ink/65 mt-1">
         {isTauri()
-          ? 'The Aql gateway this desktop app is connected to.'
-          : 'The Aql gateway this portal is connected to.'}
+          ? 'The Aql hub this desktop app is connected to.'
+          : 'The Aql hub this console is connected to.'}
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <code className="rounded-xl bg-paper-cool border border-ink/10 px-4 py-2.5 text-[13.5px] text-ink/85 break-all">
@@ -57,11 +57,11 @@ function GatewaySection() {
         <span className="text-xs text-ink/45">{custom ? 'custom' : 'default'}</span>
       </div>
       <p className="mt-3 text-sm text-ink/60">
-        Switching gateways signs you out here — your account stays on its gateway.
+        Switching hubs signs you out here — your account stays on its hub.
       </p>
       <div className="mt-4">
         <Button type="button" variant="outline" size="sm" onClick={openGatewayPicker}>
-          Change gateway
+          Change hub
         </Button>
       </div>
     </Card>
@@ -261,7 +261,7 @@ function ContactSection() {
       <Card>
         <h2 className="font-display text-2xl">Contact channels</h2>
         <p className="text-sm text-ink/65 mt-1">
-          WhatsApp and Slack linking aren&rsquo;t available on this gateway build yet.
+          WhatsApp and Slack linking aren&rsquo;t available on this hub build yet.
         </p>
       </Card>
     );

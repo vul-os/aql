@@ -14,8 +14,8 @@ const pillars = [
   },
   {
     n: '03',
-    title: 'Signed commands, one gateway key',
-    body: 'Every open your gateway sends is Ed25519-signed, nonce-protected and expires in 30 seconds; each controller pins that key at pairing and never trusts network position. What\'s not per-device: the signing key itself is one keypair for the whole install, plaintext on disk. Compromise it and every access point that gateway manages is forgeable until you rotate it.',
+    title: 'Signed commands, one hub key',
+    body: 'Every open your hub sends is Ed25519-signed, nonce-protected and expires in 30 seconds; each controller pins that key at pairing and never trusts network position. What\'s not per-device: the signing key itself is one keypair for the whole install, plaintext on disk. Compromise it and every access point that hub manages is forgeable until you rotate it.',
   },
   {
     n: '04',
@@ -35,10 +35,10 @@ const pillars = [
 ];
 
 const limitations = [
-  'The binary serves plain HTTP. There\'s no built-in TLS or ACME — that\'s a reverse proxy in front of the gateway, your job as the operator.',
-  'The data directory holds the database, the gateway\'s signing key, and the session-signing secret side by side, all unencrypted at mode 0600. A careless `tar czf backup.tgz ./data` captures all three — encrypt the archive, not just the folder permissions.',
-  'The offline emergency-access path is three of four pieces built: the contract, the controller-side check and the gateway\'s grant issuance are real and tested. The app that would hold and present a grant on a resident\'s phone isn\'t built yet, so the path doesn\'t run end-to-end for anyone today.',
-  'We deliberately don\'t claim end-to-end encrypted messaging — chat channels are WhatsApp\'s, Slack\'s and Telegram\'s infrastructure, and the gateway has to read a message to act on it.',
+  'The binary serves plain HTTP. There\'s no built-in TLS or ACME — that\'s a reverse proxy in front of the hub, your job as the operator.',
+  'The data directory holds the database, the hub\'s signing key, and the session-signing secret side by side, all unencrypted at mode 0600. A careless `tar czf backup.tgz ./data` captures all three — encrypt the archive, not just the folder permissions.',
+  'The offline emergency-access path is three of four pieces built: the contract, the controller-side check and the hub\'s grant issuance are real and tested. The app that would hold and present a grant on a resident\'s phone isn\'t built yet, so the path doesn\'t run end-to-end for anyone today.',
+  'We deliberately don\'t claim end-to-end encrypted messaging — chat channels are WhatsApp\'s, Slack\'s and Telegram\'s infrastructure, and the hub has to read a message to act on it.',
 ];
 
 export default function Security() {

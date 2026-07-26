@@ -126,7 +126,7 @@ function GatewayPicker({
   function normalizeOrFlag(): string | null {
     const n = normalizeGatewayUrl(url);
     if (!n) {
-      setInputError('Enter a gateway address like https://gate.example.com');
+      setInputError('Enter a hub address like https://hub.example.com');
       return null;
     }
     setInputError(null);
@@ -178,16 +178,16 @@ function GatewayPicker({
             {isTauri() ? 'Desktop' : 'Setup'}
           </span>
           <h1 className="font-display-tight text-[34px] sm:text-[40px] leading-[1.02] tracking-[-0.02em] text-ink">
-            Connect to your gateway
+            Connect to your hub
           </h1>
           <p className="mt-2 sm:mt-3 text-[15px] text-ink/65 leading-relaxed">
-            Your account and gates live on an Aql gateway. Enter its address — ask your
-            gateway operator if you&rsquo;re not sure.
+            Your account and your devices live on an Aql hub. Enter its address — ask
+            whoever runs it if you&rsquo;re not sure.
           </p>
 
           <form onSubmit={onConnect} className="mt-6 space-y-4" noValidate>
             <Field
-              label="Gateway URL"
+              label="Hub URL"
               value={url}
               onChange={(v) => {
                 setUrl(v);
@@ -195,7 +195,7 @@ function GatewayPicker({
                 setTest({ phase: 'idle' });
                 setOfferAnyway(false);
               }}
-              placeholder="https://gate.example.com"
+              placeholder="https://hub.example.com"
               inputMode="url"
               autoComplete="url"
               spellCheck={false}
@@ -207,7 +207,7 @@ function GatewayPicker({
             {test.phase === 'ok' && (
               <p className="text-sm text-ink/80" role="status">
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-moss mr-2 align-middle" aria-hidden />
-                Gateway is reachable{test.env ? ` · ${test.env}` : ''}.
+                Hub is reachable{test.env ? ` · ${test.env}` : ''}.
               </p>
             )}
             {test.phase === 'failed' && (
@@ -252,7 +252,7 @@ function GatewayPicker({
                   onClick={() => applyGatewayUrl(null)}
                   className="underline underline-offset-4 decoration-terracotta text-ink/85 hover:text-ink"
                 >
-                  Use the default gateway
+                  Use the default hub
                 </button>{' '}
                 <span className="text-ink/45">({defaultUrl})</span>
               </p>

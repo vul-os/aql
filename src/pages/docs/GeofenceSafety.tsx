@@ -14,7 +14,7 @@ export default function GeofenceSafety() {
           Status: designed, not implemented
         </p>
         <p className="mt-2 text-[15px] text-ink/80 leading-relaxed">
-          Nothing on this page runs today. There is no geofencing code in the Go gateway
+          Nothing on this page runs today. There is no geofencing code in the Go hub
           or the reference backend — no location field on the open path, no radius
           config, no <code>open.geofence_check</code> event. Everything below is the
           intended design, kept here so operators know what's coming and implementers
@@ -113,7 +113,7 @@ Aql 14:09   Sorry, you're 1.8 km from Sunset Apartments.
           benefit from a wider window. Neither the query below nor the
           <code> open.geofence_check</code> event kind exists yet:
         </p>
-        <CodeBlock lang="bash" title="proposed, not implemented">{`curl -G https://<your-gateway>/v1/events \\
+        <CodeBlock lang="bash" title="proposed, not implemented">{`curl -G https://<your-hub>/v1/events \\
   -H "Authorization: Bearer lintel_live_xxxxxxxxxxxxxxxx" \\
   --data-urlencode "location=loc_oak" \\
   --data-urlencode "kind=open.geofence_check" \\

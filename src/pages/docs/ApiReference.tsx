@@ -12,9 +12,9 @@ export default function ApiReference() {
       <DocSection heading="Base URL">
         <p>
           Aql is self-hosted, so the base URL is wherever <em>you</em> deployed the
-          gateway. Every example below uses a placeholder — substitute your own host.
+          hub. Every example below uses a placeholder — substitute your own host.
         </p>
-        <CodeBlock lang="plain">{`Your gateway   https://<your-gateway>/v1
+        <CodeBlock lang="plain">{`Your hub       https://<your-hub>/v1
 Local dev      http://localhost:8080/v1  (default -listen for ./gateway)`}</CodeBlock>
       </DocSection>
 
@@ -23,7 +23,7 @@ Local dev      http://localhost:8080/v1  (default -listen for ./gateway)`}</Code
           Tokens are scoped to specific locations and roles. Carry them in the{' '}
           <code>Authorization</code> header on every request. A{' '}
           <strong>Settings → API tokens</strong> screen in the dashboard is <em>planned</em> —
-          until it lands, tokens are provisioned on the gateway itself.
+          until it lands, tokens are provisioned on the hub itself.
         </p>
         <CodeBlock lang="http" title="every request">{`Authorization: Bearer lintel_live_xxxxxxxxxxxxxxxx
 Accept: application/json`}</CodeBlock>
@@ -33,7 +33,7 @@ Accept: application/json`}</CodeBlock>
         <ul className="list-disc pl-6 space-y-1">
           <li><code>lintel_live_</code> — production traffic, opens real gates.</li>
           <li><code>lintel_test_</code> — sandbox, never opens a real gate.</li>
-          <li><code>lintel_dev_</code> — device-to-gateway session token, cycles automatically.</li>
+          <li><code>lintel_dev_</code> — device-to-hub session token, cycles automatically.</li>
         </ul>
       </DocSection>
 
@@ -52,19 +52,19 @@ Accept: application/json`}</CodeBlock>
 404  not_found                  lookup miss for an event / resource id
 400  validation_error           shape doesn't match the schema (issues[] included)
 429  rate_limited               cool down + retry; never affects opens
-500  internal_error             check your gateway logs; the request id is in X-Request-Id`}</CodeBlock>
+500  internal_error             check your hub logs; the request id is in X-Request-Id`}</CodeBlock>
       </DocSection>
 
       <DocSection heading="Open an access point">
         <p>The bread-and-butter endpoint. Same code path as a WhatsApp <em>open</em>.</p>
-        <CodeBlock lang="bash" title="curl">{`curl -X POST https://<your-gateway>/v1/access-points/ap_ABC123/open \\
+        <CodeBlock lang="bash" title="curl">{`curl -X POST https://<your-hub>/v1/access-points/ap_ABC123/open \\
   -H "Authorization: Bearer lintel_live_xxxxxxxxxxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{
     "actor": { "phone": "+27825550144" }
   }'`}</CodeBlock>
         <CodeBlock lang="ts" title="TypeScript (fetch)">{`const r = await fetch(
-  'https://<your-gateway>/v1/access-points/ap_ABC123/open',
+  'https://<your-hub>/v1/access-points/ap_ABC123/open',
   {
     method: 'POST',
     headers: {
@@ -80,7 +80,7 @@ const event = await r.json();`}</CodeBlock>
         <CodeBlock lang="python" title="Python (requests)">{`import os, requests
 
 r = requests.post(
-    "https://<your-gateway>/v1/access-points/ap_ABC123/open",
+    "https://<your-hub>/v1/access-points/ap_ABC123/open",
     headers={"Authorization": f"Bearer {os.environ['LINTEL_TOKEN']}"},
     json={
         "actor": {"phone": "+27825550144"},
@@ -104,7 +104,7 @@ func openGate() (*http.Response, error) {
     })
     req, _ := http.NewRequest(
         "POST",
-        "https://<your-gateway>/v1/access-points/ap_ABC123/open",
+        "https://<your-hub>/v1/access-points/ap_ABC123/open",
         bytes.NewReader(body),
     )
     req.Header.Set("Authorization", "Bearer "+os.Getenv("LINTEL_TOKEN"))
@@ -124,7 +124,7 @@ func openGate() (*http.Response, error) {
           Read-only feed of everything that has happened on a location, paginated. Filterable by
           <code> kind</code>, <code>actor</code>, <code>since</code>, <code>until</code>.
         </p>
-        <CodeBlock lang="bash">{`curl -G https://<your-gateway>/v1/events \\
+        <CodeBlock lang="bash">{`curl -G https://<your-hub>/v1/events \\
   -H "Authorization: Bearer lintel_live_xxxxxxxxxxxxxxxx" \\
   --data-urlencode "location=loc_oak" \\
   --data-urlencode "since=2026-05-01" \\
@@ -146,7 +146,7 @@ func openGate() (*http.Response, error) {
 
       <DocSection heading="Webhooks (proposed, not implemented)">
         <p>
-          There is no outbound webhook/subscription system in the gateway today — nothing
+          There is no outbound webhook/subscription system in the hub today — nothing
           below can be configured or called yet. This is the intended design: subscribe to
           <code> open.succeeded</code>, <code>open.denied</code>,
           <code> device.offline</code>, <code>device.online</code>, and <code>member.revoked</code>,
@@ -209,7 +209,7 @@ Content-Type: application/json
         <CodeBlock lang="ts" title="lib/aql.ts">{`export class Aql {
   constructor(
     private token: string,
-    private base = 'https://<your-gateway>/v1',
+    private base = 'https://<your-hub>/v1',
   ) {}
 
   async open(accessPointId: string, body: OpenBody): Promise<OpenEvent> {

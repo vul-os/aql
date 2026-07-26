@@ -324,19 +324,6 @@ body {
   }
 }
 
-/* On SHORT phones the copy runs tall and its CTAs land at the same height as the
-   sun/moon, which sat just above the gate (the celestial body can't drop lower —
-   it would vanish behind the shut gate). So on short viewports we shrink the
-   whole backdrop toward its base: the gate stays fully visible and grounded, but
-   the sun/moon drop well below the buttons. Taller phones keep the full-bleed
-   scene. transform-origin bottom keeps the posts pinned to the ground line. */
-@media (max-width: 1023px) and (max-height: 740px) {
-  .hero-mobile-scene {
-    transform: scale(0.8);
-    transform-origin: bottom center;
-  }
-}
-
 /* ── Hero gate scene — open & sunlit by day, shut & locked by night ─── */
 
 .gate-scene {

@@ -52,7 +52,7 @@ export default function Login() {
           /v1/auth/google/start would just land on the SPA fallback. */}
       <div
         aria-disabled="true"
-        title="Google sign-in isn’t available on this gateway yet — use email + password."
+        title="Google sign-in isn’t available on this hub yet — use email + password."
         className="mt-5 sm:mt-7 flex items-center justify-center gap-3 h-11 rounded-full border border-ink/15 bg-paper-cool/40 opacity-45 cursor-not-allowed select-none"
       >
         <GoogleMark />
@@ -117,7 +117,7 @@ export default function Login() {
           this portal at a different gateway. Plain web deploys stay untouched. */}
       {(isTauri() || getStoredGatewayUrl() !== null) && (
         <p className="mt-3 text-xs text-ink/45">
-          Gateway: <span className="text-ink/60">{getApiBaseUrl()}</span>{' '}
+          Hub: <span className="text-ink/60">{getApiBaseUrl()}</span>{' '}
           <button
             type="button"
             onClick={openGatewayPicker}

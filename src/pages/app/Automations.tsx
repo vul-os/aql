@@ -162,7 +162,7 @@ export default function AutomationsPage() {
             <Link to="/app/grants" className="underline hover:text-ink/70">
               Temp access
             </Link>{' '}
-            issues real time-boxed grants your gateway enforces.
+            issues real time-boxed grants your hub enforces.
           </InertNote>
         </div>
       </Card>

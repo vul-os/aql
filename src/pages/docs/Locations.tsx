@@ -53,7 +53,7 @@ export default function LocationsDoc() {
           <code> kind</code>. <code>city</code> isn&rsquo;t its own field; put it inside
           <code> address</code> if you use one.
         </p>
-        <CodeBlock lang="bash">{`curl -X POST https://<your-gateway>/v1/locations \\
+        <CodeBlock lang="bash">{`curl -X POST https://<your-hub>/v1/locations \\
   -H "Authorization: Bearer lintel_live_xxxxxxxxxxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{

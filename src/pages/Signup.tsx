@@ -175,7 +175,7 @@ export default function Signup() {
       asideKicker={step === 'location' ? 'Almost there' : 'Get started'}
       asideTitle={
         step === 'auth'
-          ? 'Your gate, your gateway.'
+          ? 'Your hub, your rules.'
           : step === 'kind'
             ? 'Personal or business?'
             : 'Name your first place.'
@@ -183,7 +183,7 @@ export default function Signup() {
       asideBody={
         <p>
           {step === 'auth' &&
-            "Your account lives on this gateway — nobody else's cloud. Three quick steps and you'll be ready to pair a device."}
+            "Your account lives on this hub — nobody else's cloud. Three quick steps and you'll be ready to pair a device."}
           {step === 'kind' &&
             "It's only for dashboard hints — you can change it later in settings."}
           {step === 'location' &&
@@ -211,7 +211,7 @@ export default function Signup() {
             <>
               <h1 className="font-display-tight text-2xl sm:text-3xl text-ink">Create your account</h1>
               <p className="mt-1 text-sm text-ink/60">
-                {isInviteSignup ? 'Create your profile to accept this invite.' : 'Two minutes. Your account, on this gateway.'}
+                {isInviteSignup ? 'Create your profile to accept this invite.' : 'Two minutes. Your account, on this hub.'}
               </p>
 
               {!isInviteSignup && (
@@ -221,7 +221,7 @@ export default function Signup() {
                       googleStartUrl doc comment). */}
                   <div
                     aria-disabled="true"
-                    title="Google sign-in isn’t available on this gateway yet — use email + password."
+                    title="Google sign-in isn’t available on this hub yet — use email + password."
                     className="mt-3 flex items-center justify-center gap-3 h-10 rounded-full border border-ink/15 bg-paper-cool/40 opacity-45 cursor-not-allowed select-none"
                   >
                     <GoogleMark />
