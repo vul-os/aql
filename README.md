@@ -109,6 +109,7 @@ Prerequisites (Rust stable, Node 20+/pnpm, Tauri system deps) are in [docs/GETTI
 Everything runs on your box. Devices feed one Rust core; the core owns local state and speaks to the Svelte console over the Tauri IPC bridge. The same frontend ships as desktop, mobile, and PWA. The only network endpoints are the ones **you** add — your cameras, your sensors, your box. No cloud in the middle.
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-monospace, SFMono-Regular, Menlo, monospace','primaryColor':'transparent','primaryBorderColor':'#14b8a6','primaryTextColor':'#8f969e','lineColor':'#8a8f98','nodeBorder':'#5f8f8a','edgeLabelBackground':'transparent','clusterBorder':'#3f8f86','clusterBkg':'transparent'}}}%%
 flowchart LR
     subgraph box["your box — home or business"]
         direction LR
