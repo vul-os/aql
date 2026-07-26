@@ -1,13 +1,13 @@
 {
-  "name": "lintel",
+  "name": "aql",
   "private": true,
   "version": "0.1.0",
-  "description": "Texts that open gates — decentralized chat-driven physical access control (portal app + static site/)",
+  "description": "Open-source command centre for the physical world — one hub for devices, energy, automations and physical access control (portal app + static site/)",
   "license": "MIT OR Apache-2.0",
   "author": "imranparuk",
   "repository": {
     "type": "git",
-    "url": "https://github.com/vul-os/lintel"
+    "url": "https://github.com/vul-os/aql"
   },
   "type": "module",
   "scripts": {
