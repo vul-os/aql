@@ -74,7 +74,7 @@ func (s *Server) processTGMessage(ctx contextT, msg *channels.TGMessage) {
 
 	if profileID == "" {
 		s.tgSendText(ctx, msg.Chat.ID, chatID, strings.Join([]string{
-			"This Telegram account isn't linked to a lintel member yet.",
+			"This Telegram account isn't linked to an Aql member yet.",
 			"Ask your admin to add Telegram id " + userKey + " in the dashboard, then send \"menu\".",
 		}, "\n"))
 		return

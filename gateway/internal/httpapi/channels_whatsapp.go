@@ -217,14 +217,14 @@ func (s *Server) waNoAccessReply(ctx contextT, to, chatID, from string, location
 	}
 	if !linked {
 		return text(to, chatID, strings.Join([]string{
-			"Hello! This WhatsApp number isn't linked to a lintel account yet.",
+			"Hello! This WhatsApp number isn't linked to an Aql account yet.",
 			"Create your account here: " + channels.SignupLinkForPhone(s.channelPublicURL(), from),
 			"After signup, we'll ask if you want to connect this number.",
 		}, "\n\n"))
 	}
 	if len(locations) == 0 {
 		return text(to, chatID, strings.Join([]string{
-			"Welcome to lintel. Your number is connected.",
+			"Welcome to Aql. Your number is connected.",
 			"You don't have a location set up yet. Open the dashboard to add Home, HQ, or your first site.",
 			base + "/app",
 		}, "\n\n"))

@@ -17,7 +17,7 @@ func TestDefaultBuildServesPlaceholder(t *testing.T) {
 	h := Handler()
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
-	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "lintel gateway") {
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Aql hub") {
 		t.Fatalf("placeholder: %d %s", rec.Code, rec.Body)
 	}
 	if spaFallback {

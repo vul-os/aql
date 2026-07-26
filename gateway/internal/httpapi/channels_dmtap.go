@@ -57,7 +57,7 @@ func (s *Server) handleDMTAPIntent(ctx contextT, intent channels.DMTAPIntent) {
 
 	if profileID == "" {
 		s.dmtapReply(ctx, chatID, intent.GroupID, strings.Join([]string{
-			"This DMTAP identity isn't linked to a lintel member yet.",
+			"This DMTAP identity isn't linked to an Aql member yet.",
 			"Ask your admin to add key-name " + intent.MemberKeyName + " in the dashboard, then send \"menu\".",
 		}, "\n"))
 		return

@@ -77,7 +77,7 @@ type SlackAction struct {
 
 // SlackMenu is the help/greeting text — backend slackMenu.
 func SlackMenu(profileName string) string {
-	hello := "Welcome to lintel."
+	hello := "Welcome to Aql."
 	if profileName != "" {
 		hello = "Hi " + profileName + "."
 	}

@@ -99,8 +99,8 @@ func TestPortalPlaceholderServed(t *testing.T) {
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	// Build-agnostic: the default build serves the static/ placeholder, the
-	// -tags portal build serves dist/index.html — both contain "lintel".
-	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "lintel") {
+	// -tags portal build serves dist/index.html — both contain "Aql".
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "Aql") {
 		t.Errorf("portal root: %d", rec.Code)
 	}
 }

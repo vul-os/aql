@@ -104,7 +104,7 @@ func TelegramGatePicker(prompt string, gates []store.AvailableAP, publicURL stri
 
 // TelegramMenu is the help/greeting text.
 func TelegramMenu(profileName string) string {
-	hello := "Welcome to lintel."
+	hello := "Welcome to Aql."
 	if profileName != "" {
 		hello = "Hi " + profileName + "."
 	}

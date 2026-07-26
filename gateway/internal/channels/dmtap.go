@@ -246,7 +246,7 @@ func (d *DMTAP) serveOnce(ctx context.Context) error {
 // carries no verb, which is how a reply to a "close" question used to be read
 // as an open. There is no default verb; the copy has to ask for one.
 func DMTAPMenu(profileName string) string {
-	hello := "Welcome to lintel."
+	hello := "Welcome to Aql."
 	if profileName != "" {
 		hello = "Hi " + profileName + "."
 	}
