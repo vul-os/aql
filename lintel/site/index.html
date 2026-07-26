@@ -577,7 +577,8 @@ p{margin:0}
       </div>
 
       <div class="reveal">
-        <div class="phone" role="img" aria-label="A chat conversation: a resident texts 'open', picks the main entrance from a numbered list, and the gate opens.">
+        <span class="wa-tag">Interactive demo &middot; runs in your browser</span>
+        <div class="phone wa-live">
           <div class="phone-screen">
             <div class="phone-head">
               <span class="avatar" aria-hidden="true">
@@ -585,34 +586,48 @@ p{margin:0}
               </span>
               <div class="who"><b>lintel &middot; Stellar Heights</b><span><i></i>gateway online</span></div>
             </div>
-            <div class="chat-body">
+            <div class="chat-body" id="wa-thread" role="log" aria-live="polite" aria-label="Chat with the lintel gateway">
               <span class="day-chip">today</span>
-              <div class="msg msg-out">open<span class="t">17:42 ✓✓</span></div>
-              <div class="picker" aria-hidden="true">
-                <div class="p-head">You have <b style="font-weight:600">3 access points</b> here. Which one?</div>
-                <button type="button" tabindex="-1"><span class="n">1</span> Main entrance</button>
-                <button type="button" tabindex="-1"><span class="n">2</span> Pedestrian gate</button>
-                <button type="button" tabindex="-1"><span class="n">3</span> Parking barrier</button>
-              </div>
-              <div class="msg msg-out">1<span class="t">17:42 ✓✓</span></div>
-              <div class="msg msg-in msg-ok">
-                <span class="ok-line">
-                  <span class="ok-badge" aria-hidden="true">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  </span>
-                  <span><b style="font-weight:600">Gate opened</b> — Main entrance &middot; 1.8&thinsp;s</span>
-                </span>
-                <span class="meta">signed &middot; controller SH-G1 &middot; audit a3f9c2</span>
-                <span class="t">17:42</span>
-              </div>
-              <span class="typing">delivered ✓✓</span>
+              <div class="msg msg-in">Hi Amara — text <b style="font-weight:600">open</b> to unlock a gate.<span class="t">17:41</span></div>
             </div>
+            <div class="wa-chips" id="wa-chips" aria-label="Quick messages">
+              <button type="button" class="wa-chip" data-say="open">open</button>
+              <button type="button" class="wa-chip" data-say="status">status</button>
+              <button type="button" class="wa-chip" data-say="help">help</button>
+            </div>
+            <form class="wa-compose" id="wa-form" autocomplete="off">
+              <input class="wa-input" id="wa-input" name="msg" aria-label="Type a message to the gateway" placeholder="Message…" maxlength="60" />
+              <button class="wa-send" type="submit" aria-label="Send message">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+              </button>
+            </form>
           </div>
         </div>
       </div>
     </div>
   </div>
 </section>
+
+<style>
+/* Interactive chat demo — client-only, no network, no storage. */
+.wa-live .chat-body{max-height:400px;min-height:400px;overflow-y:auto;scroll-behavior:smooth}
+.wa-live .picker button{cursor:pointer;transition:background .15s,color .15s}
+.wa-live .picker button:hover:not(:disabled){background:var(--paper-warm);color:var(--terracotta)}
+.wa-live .picker button:disabled{opacity:.55;cursor:default}
+.wa-live .picker button:focus-visible{outline:2px solid var(--terracotta);outline-offset:-2px}
+.wa-chips{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px 0}
+.wa-chip{font:inherit;font-size:12px;font-weight:500;color:var(--ink-soft);background:var(--paper);border:1px solid var(--paper-edge);border-radius:999px;padding:6px 12px;cursor:pointer;transition:border-color .15s,color .15s}
+.wa-chip:hover{border-color:var(--terracotta);color:var(--terracotta)}
+.wa-chip:focus-visible{outline:2px solid var(--terracotta);outline-offset:1px}
+.wa-compose{display:flex;gap:8px;align-items:center;padding:10px 12px 12px}
+.wa-input{flex:1;min-width:0;height:40px;padding:0 15px;border-radius:999px;border:1px solid var(--paper-edge);background:var(--paper);color:var(--ink);font:inherit;font-size:13.5px}
+.wa-input:focus-visible{outline:2px solid var(--terracotta);outline-offset:1px}
+.wa-send{flex:none;width:40px;height:40px;border-radius:999px;border:0;background:var(--terracotta);color:#fff;cursor:pointer;display:grid;place-items:center;transition:background .15s}
+.wa-send:hover{background:var(--terracotta-deep)}
+.wa-send:focus-visible{outline:2px solid var(--terracotta);outline-offset:2px}
+.wa-tag{display:inline-flex;align-items:center;gap:6px;margin-top:14px;font-family:var(--font-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
+.wa-tag::before{content:"";width:7px;height:7px;border-radius:999px;background:var(--signal)}
+</style>
 
 <!-- ————————————————— how it works ————————————————— -->
 <section class="section" id="how">
@@ -1187,6 +1202,124 @@ cloudflared tunnel --url localhost:8080   <span class="c"># or frp, tailscale fu
     }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
     Array.prototype.forEach.call(els, function(el){ io.observe(el); });
   }
+})();
+</script>
+
+<script>
+/* ============================================================================
+ * Interactive chat demo — a scripted lintel conversation. 100% client-side:
+ * no network, no storage, no dependencies. Type (or tap a chip) "open" → pick a
+ * gate → get a signed "gate opened" reply, exactly like the real flow.
+ * ========================================================================== */
+(function () {
+  var thread = document.getElementById('wa-thread');
+  var form = document.getElementById('wa-form');
+  var input = document.getElementById('wa-input');
+  var chips = document.getElementById('wa-chips');
+  if (!thread || !form || !input) return;
+
+  var GATES = [
+    { n: 1, name: 'Main entrance',  ctl: 'SH-G1' },
+    { n: 2, name: 'Pedestrian gate', ctl: 'SH-G2' },
+    { n: 3, name: 'Parking barrier', ctl: 'SH-B1' }
+  ];
+  var awaitingPick = false;
+  var busy = false;
+
+  function now() { var d = new Date(); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+  function scroll() { thread.scrollTop = thread.scrollHeight; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  function outBubble(text) {
+    var el = document.createElement('div');
+    el.className = 'msg msg-out';
+    el.innerHTML = esc(text) + '<span class="t">' + now() + ' ✓✓</span>';
+    thread.appendChild(el); scroll();
+  }
+  function inBubble(html, cls) {
+    var el = document.createElement('div');
+    el.className = 'msg msg-in' + (cls ? ' ' + cls : '');
+    el.innerHTML = html + '<span class="t">' + now() + '</span>';
+    thread.appendChild(el); scroll(); return el;
+  }
+  function withTyping(cb) {
+    busy = true;
+    var t = document.createElement('span');
+    t.className = 'typing'; t.textContent = 'typing…';
+    thread.appendChild(t); scroll();
+    setTimeout(function () { t.remove(); cb(); busy = false; }, 620);
+  }
+  function retirePickers() {
+    thread.querySelectorAll('.picker button:not(:disabled)').forEach(function (b) { b.disabled = true; });
+    awaitingPick = false;
+  }
+  function showPicker() {
+    retirePickers();
+    var p = document.createElement('div');
+    p.className = 'picker';
+    var h = '<div class="p-head">You have <b style="font-weight:600">3 access points</b> here. Which one?</div>';
+    GATES.forEach(function (g) { h += '<button type="button" data-pick="' + g.n + '"><span class="n">' + g.n + '</span> ' + g.name + '</button>'; });
+    p.innerHTML = h;
+    thread.appendChild(p); scroll();
+    p.querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () { if (b.disabled) return; send(b.getAttribute('data-pick')); });
+    });
+    awaitingPick = true;
+  }
+  function resolvePick(n) {
+    retirePickers();
+    var g = GATES[n - 1] || GATES[0];
+    withTyping(function () {
+      var audit = Math.random().toString(16).slice(2, 8);
+      var secs = (1.2 + Math.random() * 1.3).toFixed(1);
+      inBubble(
+        '<span class="ok-line"><span class="ok-badge" aria-hidden="true">' +
+        '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
+        '</span><span><b style="font-weight:600">Gate opened</b> — ' + esc(g.name) + ' &middot; ' + secs + ' s</span></span>' +
+        '<span class="meta">signed &middot; controller ' + g.ctl + ' &middot; audit ' + audit + '</span>',
+        'msg-ok'
+      );
+    });
+  }
+  function respond(text) {
+    var low = text.toLowerCase().trim();
+    if (awaitingPick) {
+      var n = parseInt(low, 10);
+      if (n >= 1 && n <= 3) { resolvePick(n); return; }
+      withTyping(function () { inBubble('Pick a number — <b style="font-weight:600">1</b>, 2 or 3 — or text <b style="font-weight:600">cancel</b>.'); });
+      return;
+    }
+    if (low === 'open' || low === 'unlock') { withTyping(showPicker); return; }
+    if (low === 'status') {
+      withTyping(function () { inBubble('All controllers <b style="font-weight:600">online</b>. 3 gates · last open 17:38 · you have <b style="font-weight:600">resident</b> access.'); });
+      return;
+    }
+    if (low === 'help') {
+      withTyping(function () { inBubble('Text <b style="font-weight:600">open</b> to unlock, <b style="font-weight:600">status</b> to check the gateway. Your identity is your channel handle — no app to install.'); });
+      return;
+    }
+    if (low === 'cancel' || low === 'close') {
+      withTyping(function () { inBubble('Nothing pending — text <b style="font-weight:600">open</b> when you need a gate.'); });
+      return;
+    }
+    withTyping(function () { inBubble('I didn’t catch that. Text <b style="font-weight:600">open</b> to unlock a gate.'); });
+  }
+  function send(text) {
+    text = (text || '').trim();
+    if (!text || busy) return;
+    outBubble(text);
+    respond(text);
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var v = input.value;
+    input.value = '';
+    send(v);
+  });
+  if (chips) chips.querySelectorAll('.wa-chip').forEach(function (c) {
+    c.addEventListener('click', function () { send(c.getAttribute('data-say')); input.focus(); });
+  });
 })();
 </script>
 </body>
