@@ -6,12 +6,12 @@ export default function ApiReference() {
       <DocLead
         kicker="03 · Reference"
         title="API reference"
-        intro="The HTTP API isn't required to use lintel — most users only ever touch the WhatsApp interface. But if you're integrating with property management software, building a kiosk, or wiring a Slack bot, this is for you. JSON in, JSON out, REST-shaped, no GraphQL."
+        intro="The HTTP API isn't required to use Aql — most users only ever touch the WhatsApp interface. But if you're integrating with property management software, building a kiosk, or wiring a Slack bot, this is for you. JSON in, JSON out, REST-shaped, no GraphQL."
       />
 
       <DocSection heading="Base URL">
         <p>
-          lintel is self-hosted, so the base URL is wherever <em>you</em> deployed the
+          Aql is self-hosted, so the base URL is wherever <em>you</em> deployed the
           gateway. Every example below uses a placeholder — substitute your own host.
         </p>
         <CodeBlock lang="plain">{`Your gateway   https://<your-gateway>/v1
@@ -155,7 +155,7 @@ func openGate() (*http.Response, error) {
         </p>
         <CodeBlock lang="ts" title="Verify a webhook (Node / Hono)">{`import { createHmac, timingSafeEqual } from 'node:crypto';
 
-export function verifyLintelWebhook(rawBody: string, signature: string, secret: string) {
+export function verifyAqlWebhook(rawBody: string, signature: string, secret: string) {
   const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
   const a = Buffer.from(signature, 'hex');
   const b = Buffer.from(expected, 'hex');
@@ -163,7 +163,7 @@ export function verifyLintelWebhook(rawBody: string, signature: string, secret: 
 }`}</CodeBlock>
         <CodeBlock lang="python" title="Verify a webhook (Python / Flask)">{`import hmac, hashlib
 
-def verify_lintel_webhook(raw_body: bytes, signature: str, secret: str) -> bool:
+def verify_aql_webhook(raw_body: bytes, signature: str, secret: str) -> bool:
     expected = hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, signature)`}</CodeBlock>
         <CodeBlock lang="json" title="open.succeeded payload">{`{
@@ -187,7 +187,7 @@ def verify_lintel_webhook(raw_body: bytes, signature: str, secret: str) -> bool:
           chat channel, so no path can be picked to bypass it. A denied open returns{' '}
           <code>429</code> with a <code>Retry-After</code> header; the reason lands in{' '}
           <code>error</code>. See <a
-            href="https://github.com/vul-os/lintel/blob/main/site/docs/limits.md"
+            href="https://github.com/vul-os/aql/blob/main/site/docs/limits.md"
             className="underline underline-offset-4 decoration-terracotta"
           >Rate limits &amp; quotas</a> for the exact defaults. A separate, generic
           per-token throttle across the rest of the HTTP API (with <code>X-RateLimit-*</code>{' '}
@@ -206,7 +206,7 @@ Content-Type: application/json
           A first-party TypeScript SDK is planned. Until it lands in npm, the recommended path is
           a small wrapper around <code>fetch</code>:
         </p>
-        <CodeBlock lang="ts" title="lib/lintel.ts">{`export class Lintel {
+        <CodeBlock lang="ts" title="lib/aql.ts">{`export class Aql {
   constructor(
     private token: string,
     private base = 'https://<your-gateway>/v1',

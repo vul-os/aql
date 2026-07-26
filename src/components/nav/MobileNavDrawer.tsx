@@ -3,7 +3,12 @@ import { Link, NavLink } from 'react-router-dom';
 import { ArchMark } from '@/components/illustrations/ArchMark';
 import { ThemeToggle } from './ThemeToggle';
 import { cn } from '@/lib/cn';
-import { ADMIN_NAV_ITEM, APP_NAV_ITEMS } from './items';
+import {
+  ADMIN_NAV_ITEM,
+  APP_NAV_ITEMS,
+  PREVIEW_NAV_ITEMS,
+  PREVIEW_NAV_LABEL,
+} from './items';
 import { useAuth } from '@/lib/auth';
 
 export function MobileNavDrawer({
@@ -42,7 +47,7 @@ export function MobileNavDrawer({
             <span className="grid h-8 w-8 place-items-center rounded-md bg-ink text-paper">
               <ArchMark className="h-5 w-5" />
             </span>
-            <span className="font-display italic text-lg">lintel</span>
+            <span className="font-display italic text-lg">Aql</span>
           </Link>
           <button
             type="button"
@@ -74,6 +79,26 @@ export function MobileNavDrawer({
                   isActive
                     ? 'bg-ink text-paper'
                     : 'text-ink/75 hover:bg-ink/5 hover:text-ink',
+                )
+              }
+            >
+              {it.label}
+            </NavLink>
+          ))}
+
+          {/* Demo-only screens, fenced off from the gateway-backed nav above. */}
+          <p className="px-3 mt-4 mb-1 text-[10px] uppercase tracking-[0.22em] text-ink/40">
+            {PREVIEW_NAV_LABEL}
+          </p>
+          {PREVIEW_NAV_ITEMS.map((it) => (
+            <NavLink
+              key={it.to}
+              to={it.to}
+              onClick={onClose}
+              className={({ isActive }) =>
+                cn(
+                  'px-3 py-2.5 rounded-lg text-sm transition-colors',
+                  isActive ? 'bg-ink text-paper' : 'text-ink/75 hover:bg-ink/5 hover:text-ink',
                 )
               }
             >

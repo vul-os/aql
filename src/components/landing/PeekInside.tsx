@@ -27,7 +27,7 @@ export function PeekInside() {
               <span className="h-2.5 w-2.5 rounded-full bg-gold" />
               <span className="h-2.5 w-2.5 rounded-full bg-moss" />
               <span className="ml-3 text-[11px] sm:text-xs text-ink/45 font-mono truncate">
-                app.lintel.io / oakridge
+                aql.local / oakridge
               </span>
             </div>
 

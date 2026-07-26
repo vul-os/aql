@@ -47,8 +47,8 @@ function GatewaySection() {
       <h2 className="font-display text-2xl">Gateway</h2>
       <p className="text-sm text-ink/65 mt-1">
         {isTauri()
-          ? 'The lintel gateway this desktop app is connected to.'
-          : 'The lintel gateway this portal is connected to.'}
+          ? 'The Aql gateway this desktop app is connected to.'
+          : 'The Aql gateway this portal is connected to.'}
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <code className="rounded-xl bg-paper-cool border border-ink/10 px-4 py-2.5 text-[13.5px] text-ink/85 break-all">
@@ -169,7 +169,7 @@ function ProfileSection() {
     <Card>
       <h2 className="font-display text-xl mb-1">Your profile</h2>
       <p className="text-sm text-ink/55 mb-5">
-        How you appear inside lintel. Avatar can be any https URL — Google picture, Gravatar,
+        How you appear inside Aql. Avatar can be any https URL — Google picture, Gravatar,
         a hosted image, anywhere.
       </p>
 

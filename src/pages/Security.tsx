@@ -5,7 +5,7 @@ const pillars = [
   {
     n: '01',
     title: 'Channel-verified, not phone-verified',
-    body: 'Every WhatsApp, Slack and Telegram message is checked against that platform\'s own signature (Meta HMAC, Slack\'s signing secret, Telegram\'s secret token) before we read it — fail closed. lintel doesn\'t independently verify who owns a phone number; that\'s deferred, not shipped. An unrecognized sender isn\'t silently ignored either — they get a signup link back, so an unknown number is visible, not dropped.',
+    body: 'Every WhatsApp, Slack and Telegram message is checked against that platform\'s own signature (Meta HMAC, Slack\'s signing secret, Telegram\'s secret token) before we read it — fail closed. Aql doesn\'t independently verify who owns a phone number; that\'s deferred, not shipped. An unrecognized sender isn\'t silently ignored either — they get a signup link back, so an unknown number is visible, not dropped.',
   },
   {
     n: '02',
@@ -25,7 +25,7 @@ const pillars = [
   {
     n: '05',
     title: 'Geofencing: an honest non-feature',
-    body: 'There is no geofencing code in lintel today — no radius check, no denied-outside-range verdict. A location shared over chat is asserted by the sender\'s device and trivially spoofable, so if we ever ship it, it\'ll be an advisory signal recorded for review, never a reason to deny an open on its own.',
+    body: 'There is no geofencing code in Aql today — no radius check, no denied-outside-range verdict. A location shared over chat is asserted by the sender\'s device and trivially spoofable, so if we ever ship it, it\'ll be an advisory signal recorded for review, never a reason to deny an open on its own.',
   },
   {
     n: '06',
@@ -55,7 +55,7 @@ export default function Security() {
           A gate is the smallest <em className="italic text-terracotta">serious</em> piece of infrastructure in your day.
         </h1>
         <p className="mt-6 sm:mt-8 max-w-xl text-ink/70 text-base sm:text-lg leading-relaxed">
-          Here&rsquo;s how lintel earns the right to open one.
+          Here&rsquo;s how Aql earns the right to open one.
         </p>
       </section>
 

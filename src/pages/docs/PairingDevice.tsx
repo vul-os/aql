@@ -11,7 +11,7 @@ export default function PairingDevice() {
 
       <DocSection heading="What you'll see in the box">
         <ul className="list-disc pl-6 space-y-2">
-          <li>The lintel ACC controller — a sealed box about the size of a deck of cards (IP65).</li>
+          <li>The Aql ACC controller — a sealed box about the size of a deck of cards (IP65).</li>
           <li>A short pigtail with two bare leads for the relay output.</li>
           <li>A QR-code sticker on the back of the controller.</li>
           <li>A 12 V power adapter — most installs share the gate motor&rsquo;s 12 V supply instead.</li>

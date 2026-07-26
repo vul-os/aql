@@ -21,7 +21,7 @@ export default function GeofenceSafety() {
           know the target. Read it as a spec, not a live control, until this notice is
           removed. Current, verified status lives in the{' '}
           <a
-            href="https://github.com/vul-os/lintel#features"
+            href="https://github.com/vul-os/aql#features"
             className="underline underline-offset-4 decoration-terracotta"
           >
             README
@@ -37,7 +37,7 @@ export default function GeofenceSafety() {
         </p>
         <ul className="list-disc pl-6 space-y-2">
           <li>A WhatsApp <strong>shared location</strong> attached to the open message.</li>
-          <li>A <strong>live-location ping</strong> the user has shared with lintel within the last 5 minutes.</li>
+          <li>A <strong>live-location ping</strong> the user has shared with Aql within the last 5 minutes.</li>
         </ul>
         <p>
           If the lat/lng is outside the configured radius, the plan is to return a polite
@@ -85,10 +85,10 @@ export default function GeofenceSafety() {
         <p className="text-ink/55 text-[14px]">
           Illustrative only — no such reply exists today since nothing triggers it.
         </p>
-        <CodeBlock lang="plain" title="WhatsApp (mockup, not sent by lintel today)">{`lintel 14:02   Hi Yusuf — share your location and try again.
+        <CodeBlock lang="plain" title="WhatsApp (mockup, not sent by Aql today)">{`Aql 14:02   Hi Yusuf — share your location and try again.
                  (we need it once per 5 min while geofence is on)
 
-lintel 14:09   Sorry, you're 1.8 km from Sunset Apartments.
+Aql 14:09   Sorry, you're 1.8 km from Sunset Apartments.
                  Geofence radius is 200 m. Try again when you're closer.`}</CodeBlock>
         <p>
           The plan is for both lines to be templated and translatable per location, with

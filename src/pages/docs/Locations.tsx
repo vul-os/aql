@@ -7,7 +7,7 @@ export default function LocationsDoc() {
       <DocLead
         kicker="02 · Concepts"
         title="Creating a Location"
-        intro="A Location is the physical place lintel protects. Everything else — access points, devices, members — hangs off it. Most accounts have one; estates have several with nested children."
+        intro="A Location is the physical place Aql protects. Everything else — access points, devices, members — hangs off it. Most accounts have one; estates have several with nested children."
       />
 
       <DocSection heading="The four kinds">

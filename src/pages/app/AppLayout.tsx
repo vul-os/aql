@@ -72,6 +72,13 @@ export default function AppLayout() {
               /auth/me/slack routes — see api.ts's doc comments), so they
               could never succeed and would have nagged on every page load
               forever. Reinstate once those routes exist server-side. */}
+          {/* Children come from routes.tsx. Two kinds live under this shell:
+              gateway-backed pages (dashboard, access points, devices, members,
+              grants, analytics, settings, admin), and the /app/preview/*
+              command-center screens, which run on a hard-coded demo dataset and
+              each declare that with <DemoBanner /> — see
+              src/pages/app/preview/. Nothing under preview/ makes a network
+              call; don't wire one until the device engine exists. */}
           <Outlet />
         </main>
       </div>

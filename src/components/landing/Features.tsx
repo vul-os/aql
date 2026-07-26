@@ -226,7 +226,7 @@ function OpenSourceVisual() {
       <circle cx="38" cy="26" r="3" fill="#f4ede2" opacity="0.5" />
       <g fontFamily="JetBrains Mono" fontSize="10" fill="#f4ede2">
         <text x="14" y="48" opacity="0.85">
-          git clone lintel
+          git clone aql
         </text>
         <text x="14" y="64" fill="#d6624d">
           LICENSE &middot; MIT

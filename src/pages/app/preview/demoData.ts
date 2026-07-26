@@ -1,0 +1,99 @@
+// DEMO DATASET — not live, not fetched, not persisted.
+//
+// Ported verbatim (shapes and values) from Aql's pre-fold SvelteKit console
+// (`src/lib/data.ts` at commit bf99a4d). There is no device engine behind any
+// of this: ROADMAP Phase 1 ("Rust device/telemetry engine", "driver-adapter
+// seam", "device discovery replacing the demo dataset") is not built. Nothing
+// in this file talks to a gateway, a controller, or a socket.
+//
+// Every screen that reads from here MUST say so in the UI — see <DemoBanner />
+// in ./shared.tsx. Do not wire these shapes to endpoints that do not exist; the
+// real engine will replace this module behind the same types.
+
+export type DeviceState = 'live' | 'warn' | 'alert' | 'off';
+
+export interface Device {
+  id: string;
+  name: string;
+  kind: string;
+  zone: string;
+  state: DeviceState;
+  read: string;
+  detail: string;
+  seen: string;
+}
+
+export const devices: Device[] = [
+  { id: 'cam-gate',   name: 'Front Gate Camera', kind: 'Camera',    zone: 'Perimeter', state: 'live',  read: '1080p · 24fps',  detail: 'H.264 · motion zones armed', seen: 'now' },
+  { id: 'cam-yard',   name: 'Yard Camera',       kind: 'Camera',    zone: 'Exterior',  state: 'live',  read: '1080p · 24fps',  detail: 'H.264 · night mode', seen: 'now' },
+  { id: 'lights-grd', name: 'Garden Lights',     kind: 'Lighting',  zone: 'Exterior',  state: 'live',  read: '62% · warm',     detail: 'Zigbee group · 6 fixtures', seen: '2m' },
+  { id: 'mower-m1',   name: 'Mower — Zana M1',   kind: 'Robot',     zone: 'Lawn',      state: 'warn',  read: 'charging · 81%', detail: 'docked · next cut 06:00', seen: '4m' },
+  { id: 'thermostat', name: 'Thermostat',        kind: 'Climate',   zone: 'Interior',  state: 'live',  read: '21.5°C',         detail: 'heat · schedule active', seen: 'now' },
+  { id: 'secbot-3',   name: 'Security Bot',      kind: 'Robot',     zone: 'Sector 3',  state: 'live',  read: 'patrol',         detail: 'route B · 74% battery', seen: 'now' },
+  { id: 'cleanbot',   name: 'Cleaning Bot',      kind: 'Robot',     zone: 'Interior',  state: 'off',   read: 'docked',         detail: 'idle · next run 09:00', seen: '1h' },
+  { id: 'solar',      name: 'Solar Array',       kind: 'Energy',    zone: 'Roof',      state: 'live',  read: '3.10 kW',        detail: '12 panels · MPPT nominal', seen: 'now' },
+  { id: 'meter',      name: 'Energy Meter',      kind: 'Energy',    zone: 'Utility',   state: 'live',  read: '2.41 kW',        detail: 'grid import · 230V', seen: 'now' },
+  { id: 'tank',       name: 'Water Tank',        kind: 'Sensor',    zone: 'Utility',   state: 'alert', read: 'level 12%',      detail: 'below threshold · pump off', seen: '6m' },
+  { id: 'gate-lock',  name: 'Gate Lock',         kind: 'Access',    zone: 'Perimeter', state: 'live',  read: 'locked',         detail: 'last opened 12:04', seen: '2h' },
+  { id: 'door-lock',  name: 'Front Door',        kind: 'Access',    zone: 'Interior',  state: 'live',  read: 'locked',         detail: 'auto-lock armed', seen: '3h' },
+];
+
+export interface Automation {
+  name: string;
+  when: string;
+  then: string;
+  enabled: boolean;
+  runs: number;
+  last: string;
+}
+
+export const automations: Automation[] = [
+  { name: 'Dusk lights', when: 'sunset − 15m',              then: 'Garden Lights → 60% warm',      enabled: true,  runs: 214, last: 'today' },
+  { name: 'Away arm',    when: 'everyone leaves',           then: 'Cameras + Security Bot patrol', enabled: true,  runs: 88,  last: '2d' },
+  { name: 'Morning mow', when: 'weekday 06:00 · dry',       then: 'Mower → cut lawn',              enabled: true,  runs: 41,  last: 'today' },
+  { name: 'Peak shave',  when: 'grid > 3kW & battery >50%', then: 'Draw from battery',             enabled: true,  runs: 132, last: 'today' },
+  { name: 'Tank refill', when: 'water level < 20%',         then: 'Notify + open valve',           enabled: false, runs: 7,   last: '6m' },
+  { name: 'Night lock',  when: '23:00',                     then: 'Lock all doors + gate',         enabled: true,  runs: 190, last: 'yesterday' },
+];
+
+export interface Circuit {
+  name: string;
+  kw: number;
+  max: number;
+}
+
+export const circuits: Circuit[] = [
+  { name: 'HVAC',       kw: 0.92, max: 2.0 },
+  { name: 'Kitchen',    kw: 0.61, max: 3.0 },
+  { name: 'Water pump', kw: 0.0,  max: 1.5 },
+  { name: 'Lighting',   kw: 0.18, max: 0.8 },
+  { name: 'EV charger', kw: 0.44, max: 7.2 },
+  { name: 'Robots',     kw: 0.26, max: 1.0 },
+];
+
+/** Build an SVG path from a 0..1 series across a viewbox. */
+export function path(seriesValues: number[], w: number, h: number): string {
+  const step = w / (seriesValues.length - 1);
+  return seriesValues
+    .map((v, i) => `${i === 0 ? 'M' : 'L'}${(i * step).toFixed(1)} ${((1 - v) * h).toFixed(1)}`)
+    .join(' ');
+}
+
+/**
+ * Deterministic seeded series — the same numbers on every render, so the
+ * preview screens are stable for screenshots and never look like a live feed
+ * that happens to be still.
+ */
+export function series(n: number, seed = 1, amp = 0.3, base = 0.5): number[] {
+  const out: number[] = [];
+  let s = seed;
+  for (let i = 0; i < n; i++) {
+    s = (s * 9301 + 49297) % 233280;
+    const r = s / 233280;
+    out.push(Math.max(0.05, Math.min(0.95, base + Math.sin(i / 3.3) * amp * 0.6 + (r - 0.5) * amp)));
+  }
+  return out;
+}
+
+/** Full-scale of the energy chart's single shared axis, in kW. */
+export const ENERGY_AXIS_MAX_KW = 4;

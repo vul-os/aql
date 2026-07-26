@@ -2,7 +2,7 @@
 //
 // The portal historically baked the backend origin in at build time via
 // VITE_API_BASE_URL. The desktop (Tauri) build must be able to connect to ANY
-// lintel gateway, so the effective base URL is now resolved at call time:
+// Aql gateway, so the effective base URL is now resolved at call time:
 //
 //   1. localStorage 'lintel.gateway_url'  — the user's explicit choice
 //   2. VITE_API_BASE_URL                    — build-time default (web deploys)

@@ -7,7 +7,7 @@ const items = [
   },
   {
     q: 'What happens if WhatsApp is down or my phone has no signal?',
-    a: 'Most controllers can fall back to a local PIN keypad or a physical override. lintel isn\'t the only way in — it\'s the fastest, most pleasant way in. The gateway also queues commands for up to 30 seconds across brief network blips.',
+    a: 'Most controllers can fall back to a local PIN keypad or a physical override. Aql isn\'t the only way in — it\'s the fastest, most pleasant way in. The gateway also queues commands for up to 30 seconds across brief network blips.',
   },
   {
     q: 'How does the geofence work?',

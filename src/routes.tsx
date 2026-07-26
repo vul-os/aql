@@ -62,6 +62,25 @@ const routes: RouteObject[] = [
       { path: 'analytics', element: wrap(() => import('@/pages/app/Analytics')), errorElement },
       { path: 'grants', element: wrap(() => import('@/pages/app/Grants')), errorElement },
       { path: 'settings', element: wrap(() => import('@/pages/app/Settings')), errorElement },
+      // Aql command-center screens. Demo dataset only — no device engine exists
+      // (ROADMAP Phase 1), so they are namespaced under /app/preview/* and each
+      // renders a <DemoBanner />. Keep them off the un-prefixed paths: '/app/devices'
+      // is the real, gateway-backed controller list and must stay that way.
+      {
+        path: 'preview/devices',
+        element: wrap(() => import('@/pages/app/preview/PreviewDevices')),
+        errorElement,
+      },
+      {
+        path: 'preview/energy',
+        element: wrap(() => import('@/pages/app/preview/PreviewEnergy')),
+        errorElement,
+      },
+      {
+        path: 'preview/automations',
+        element: wrap(() => import('@/pages/app/preview/PreviewAutomations')),
+        errorElement,
+      },
       {
         path: 'admin',
         element: wrap(() => import('@/pages/app/admin/AdminLayout')),

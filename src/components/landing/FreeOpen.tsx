@@ -1,6 +1,6 @@
 import { LinkButton } from '@/components/ui/Button';
 
-// lintel costs nothing: there is no hosted service and no billing code —
+// Aql costs nothing: there is no hosted service and no billing code —
 // every gateway is one somebody runs themselves. This section is a
 // statement, not a plan table.
 const pillars = [
@@ -41,7 +41,7 @@ export function FreeOpen() {
             </h2>
           </div>
           <p className="col-span-12 lg:col-span-5 text-ink/70 leading-relaxed">
-            lintel is fully open source under the MIT license. The gateway, the controllers,
+            Aql is fully open source under the MIT license. The gateway, the controllers,
             this very portal — you run all of it yourself. Same code, every feature, no editions.
           </p>
         </div>
@@ -103,7 +103,7 @@ export function FreeOpen() {
 
         <p className="mt-10 text-sm text-ink/55 text-center max-w-md mx-auto">
           Want to charge your residents? That&rsquo;s your business — literally. Nothing in
-          lintel does billing. The only bills are your own hardware and your own server.
+          Aql does billing. The only bills are your own hardware and your own server.
         </p>
       </div>
     </section>

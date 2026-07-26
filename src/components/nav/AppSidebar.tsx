@@ -2,7 +2,12 @@ import { Link, NavLink } from 'react-router-dom';
 import { ArchMark } from '@/components/illustrations/ArchMark';
 import { cn } from '@/lib/cn';
 import { useAuth } from '@/lib/auth';
-import { ADMIN_NAV_ITEM, APP_NAV_ITEMS } from './items';
+import {
+  ADMIN_NAV_ITEM,
+  APP_NAV_ITEMS,
+  PREVIEW_NAV_ITEMS,
+  PREVIEW_NAV_LABEL,
+} from './items';
 
 export function AppSidebar() {
   const { user } = useAuth();
@@ -12,7 +17,7 @@ export function AppSidebar() {
         <span className="grid h-8 w-8 place-items-center rounded-md bg-ink text-paper">
           <ArchMark className="h-5 w-5" />
         </span>
-        <span className="font-display italic text-lg">lintel</span>
+        <span className="font-display italic text-lg">Aql</span>
       </Link>
 
       <nav className="flex flex-col gap-0.5">
@@ -34,6 +39,27 @@ export function AppSidebar() {
           </NavLink>
         ))}
       </nav>
+
+      {/* Demo-only screens, fenced off from the gateway-backed nav above. */}
+      <div className="mt-6 pt-4 border-t border-ink/10">
+        <p className="px-3 mb-1 text-[10px] uppercase tracking-[0.22em] text-ink/40">
+          {PREVIEW_NAV_LABEL}
+        </p>
+        {PREVIEW_NAV_ITEMS.map((it) => (
+          <NavLink
+            key={it.to}
+            to={it.to}
+            className={({ isActive }) =>
+              cn(
+                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
+                isActive ? 'bg-ink text-paper' : 'text-ink/70 hover:bg-ink/5 hover:text-ink',
+              )
+            }
+          >
+            {it.label}
+          </NavLink>
+        ))}
+      </div>
 
       {user?.is_platform_admin && (
         <div className="mt-6 pt-4 border-t border-ink/10">

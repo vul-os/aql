@@ -2,7 +2,7 @@ import { LinkButton } from '@/components/ui/Button';
 import { HeroGateDayNight } from '@/components/illustrations/HeroGateDayNight';
 import { HeroGateDayNightMobile } from '@/components/illustrations/HeroGateDayNightMobile';
 
-// Gate-motor brands whose standard dry-contact inputs lintel is designed
+// Gate-motor brands whose standard dry-contact inputs Aql is designed
 // around — used as a quiet trust band below the fold. Stays restrained: small
 // caps, ink/45 colour, no logo files (just wordmarks) so the page feels
 // owned-and-considered rather than like a partnerships salad. These are

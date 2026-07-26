@@ -1,15 +1,16 @@
 [package]
-name = "lintel"
+name = "aql"
 version = "0.1.0"
-description = "lintel desktop portal — texts that open gates"
+description = "Aql desktop console — command center for the physical world"
 authors = ["imranparuk"]
 license = "MIT"
 edition = "2021"
 rust-version = "1.77.2"
 
 # The binary would collide with the lib name if we ever add one; keep explicit.
+# Kept in sync with tauri.conf.json productName ("Aql").
 [[bin]]
-name = "lintel"
+name = "aql"
 path = "src/main.rs"
 
 [build-dependencies]

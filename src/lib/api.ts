@@ -1,4 +1,4 @@
-// Lightweight API client for the lintel backend.
+// Lightweight API client for the Aql gateway.
 // Handles base URL, bearer auth, JSON, and one-shot refresh-on-401.
 //
 // IMPORTANT — this targets the Go gateway (gateway/internal/httpapi), which

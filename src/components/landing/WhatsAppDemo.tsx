@@ -132,7 +132,7 @@ export function WhatsAppDemo() {
                     <ArchMark className="h-5 w-5 text-[#1A1F36]" />
                   </div>
                   <div className="leading-tight">
-                    <div className="text-[14px] font-medium">lintel · Stellar Heights</div>
+                    <div className="text-[14px] font-medium">Aql · Stellar Heights</div>
                     <div className="text-[11px] text-white/70">online</div>
                   </div>
                   <div className="ml-auto flex items-center gap-2 text-white/80">
