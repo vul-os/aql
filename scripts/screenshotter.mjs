@@ -98,6 +98,7 @@ function buildMockRoutes({ admin = false } = {}) {
     },
     { method: 'GET', re: /^\/accounts\/[^/]+\/locations$/, body: () => loadFixture('locations.json') },
     { method: 'GET', re: /^\/accounts\/[^/]+\/members$/, body: () => loadFixture('members.json') },
+    { method: 'GET', re: /^\/devices(\?.*)?$/, body: () => loadFixture('devices.json') },
     { method: 'GET', re: /^\/access-points$/, body: () => loadFixture('access-points.json') },
     { method: 'GET', re: /^\/access-points\/[^/]+$/, body: () => loadFixture('access-points.json'), pick: 'first-access-point' },
     { method: 'GET', re: /^\/access-points\/[^/]+\/maintenance$/, body: () => loadFixture('maintenance.json') },
@@ -335,6 +336,11 @@ async function main() {
 
     const desktopShots = [
       { path: '/', file: 'landing-hero.png', settleMs: 1_400, expectText: 'Aql' },
+      { path: '/app/devices', file: 'portal-devices.png', expectText: 'Front Gate Camera' },
+      // NB: DemoStat labels are CSS-uppercased and innerText follows text-transform,
+      // so assert on untransformed prose (same trap as the admin shot below).
+      { path: '/app/energy', file: 'portal-energy.png', expectText: 'per-circuit load' },
+      { path: '/app/automations', file: 'portal-automations.png', expectText: 'Dusk lights' },
       { path: '/docs', file: 'docs.png' },
       { path: '/security', file: 'security.png' },
       { path: '/app', file: 'portal-dashboard.png', expectText: 'Recent activity' },

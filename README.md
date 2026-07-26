@@ -163,17 +163,28 @@ platform at all. Both halves are documented up front in the
 ## Screenshots
 
 The shipped web console — real captures of the real UI, with the hub's API responses
-replaced by fixtures. Full annotated tour, including which screens are ahead of their
-backend: **[site/docs/screenshots.md](site/docs/screenshots.md)**.
+replaced by fixtures. Every screen marks its own data: panels backed by your hub are
+unmarked, anything from the built-in demo dataset carries a chip. Full annotated tour,
+including which screens are ahead of their backend:
+**[site/docs/screenshots.md](site/docs/screenshots.md)**.
 
 <table>
   <tr>
-    <td width="50%"><img src="site/screenshots/portal-dashboard.png" alt="Console dashboard"><br><sub><em>Dashboard — recent activity, controller health, today's opens</em></sub></td>
-    <td width="50%"><img src="site/screenshots/portal-locations.png" alt="Access points and controllers"><br><sub><em>Access points — each with its paired controller and online state</em></sub></td>
+    <td width="50%"><img src="site/screenshots/portal-dashboard.png" alt="Overview"><br><sub><em>Overview — the whole site at a glance. Opens today is live; power draw and alerts are chipped as demo</em></sub></td>
+    <td width="50%"><img src="site/screenshots/portal-devices.png" alt="Devices"><br><sub><em>Devices — one list across all seven kinds, each row saying whether it came from your hub or the demo dataset</em></sub></td>
   </tr>
   <tr>
+    <td width="50%"><img src="site/screenshots/portal-energy.png" alt="Energy"><br><sub><em>Energy — draw, generation and per-circuit load. Fixture data until meter ingestion lands (Phase 4)</em></sub></td>
+    <td width="50%"><img src="site/screenshots/portal-automations.png" alt="Automations"><br><sub><em>Automations — rules as when → do. The screen is real; the engine behind it is not built (Phase 3)</em></sub></td>
+  </tr>
+</table>
+
+Access control is the one module that runs end to end, and it has the depth to match:
+
+<table>
+  <tr>
+    <td width="50%"><img src="site/screenshots/portal-locations.png" alt="Access points and controllers"><br><sub><em>Access points — each with its paired controller and online state</em></sub></td>
     <td width="50%"><img src="site/screenshots/portal-admin.png" alt="Instance admin"><br><sub><em>Instance admin — totals, opens, denial breakdown, cross-account audit</em></sub></td>
-    <td width="50%"><img src="site/screenshots/security.png" alt="Security page"><br><sub><em>The security page the hub serves to residents and trustees</em></sub></td>
   </tr>
 </table>
 

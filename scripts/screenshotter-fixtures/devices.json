@@ -1,0 +1,44 @@
+{
+  "devices": [
+    {
+      "id": "dev_01hy8k3m2n4p5q6r7s8t9u0v",
+      "location_id": "loc_silveroaks",
+      "label": "Main gate controller",
+      "status": "active",
+      "paired_at": 1753500000,
+      "last_seen_at": 1753567800,
+      "claim_expires_at": null,
+      "created_at": 1753499400
+    },
+    {
+      "id": "dev_01hy8k4n3p5q6r7s8t9u0v1w",
+      "location_id": "loc_silveroaks",
+      "label": "Clubhouse door controller",
+      "status": "active",
+      "paired_at": 1753412000,
+      "last_seen_at": 1753567740,
+      "claim_expires_at": null,
+      "created_at": 1753411600
+    },
+    {
+      "id": "dev_01hy8k5p4q6r7s8t9u0v1w2x",
+      "location_id": "loc_protea",
+      "label": "Visitor door controller",
+      "status": "unpaired",
+      "paired_at": null,
+      "last_seen_at": null,
+      "claim_expires_at": 1753571400,
+      "created_at": 1753567200
+    },
+    {
+      "id": "dev_01hy8k6q5r7s8t9u0v1w2x3y",
+      "location_id": "loc_umhlanga",
+      "label": "Reception barrier controller",
+      "status": "offline",
+      "paired_at": 1753150000,
+      "last_seen_at": 1753398000,
+      "claim_expires_at": null,
+      "created_at": 1753149600
+    }
+  ]
+}
