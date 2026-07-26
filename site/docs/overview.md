@@ -20,7 +20,7 @@ to sign up for, no account, no telemetry, and no billing code anywhere in the bi
 >
 > **Built and running:** the hub (a single Go binary, SQLite inside), the rules and quota
 > engine, the tamper-evident audit log, the embedded web console, controller pairing with
-> hub-key pinning, Ed25519-signed commands, and hub-side offline-grant issuance — i.e.
+> pinning of the hub key, Ed25519-signed commands, and hub-side offline-grant issuance — i.e.
 > the whole **access** kind, from the message to the motor.
 >
 > **Not built:** the device engine that would drive the other six kinds (no Matter, MQTT,

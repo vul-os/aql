@@ -139,7 +139,7 @@ Deployed hardware is forever, so these wire contracts are versioned from day one
 covered by 61 conformance vectors (68 checks) in `proto/vectors/`, consumed by both the
 hub and the controller:
 
-1. **Pairing** — claim-token redemption, key exchange, hub-key pinning
+1. **Pairing** — claim-token redemption, key exchange, pinning of the hub key
 2. **Signed commands** — open/close; nonce + expiry semantics
 3. **Offline grants** — grant format, challenge-response, window evaluation
 4. **Controller events** — upstream: button pressed, gate held open, tamper

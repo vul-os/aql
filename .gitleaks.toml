@@ -1,14 +1,25 @@
 [extend]
 useDefault = true
 
-# Conformance test vectors are fixtures, not credentials. The `claim_token` in
-# proto/vectors/ base64url-decodes to the literal string
-# "test-claim-token-123ABCDEFGHIJKL" and is asserted byte-for-byte by both the
-# gateway and controller suites (61 vectors / 68 checks), so it cannot be
-# rewritten without invalidating the vectors it exists to pin.
+# Two narrowly-scoped allowlists for the `generic-api-key` rule. Both are
+# verified false positives. Keep them exact — a broad pattern here would mask a
+# real credential, which is the only thing this scanner exists to catch.
 [[rules]]
 id = "generic-api-key"
 [rules.allowlist]
 regexTarget = "match"
-regexes = ['''dGVzdC1jbGFpbS10b2tlbi0xMjNBQkNERUZHSElKS0w''']
-paths = ['''proto/vectors/(pairing\.json|generate\.mjs)''']
+regexes = [
+  # 1. Conformance test vectors are fixtures, not credentials. The `claim_token`
+  #    in proto/vectors/ base64url-decodes to the literal string
+  #    "test-claim-token-123ABCDEFGHIJKL" and is asserted byte-for-byte by both
+  #    the hub's and the controller's suites (61 vectors / 68 checks), so it
+  #    cannot be rewritten without invalidating the vectors it exists to pin.
+  '''dGVzdC1jbGFpbS10b2tlbi0xMjNBQkNERUZHSElKS0w''',
+
+  # 2. English prose in the manual. The rule fires on the word "key" adjacent to
+  #    a hyphenated token: "hub-key pinning, Ed25519-signed commands". Entropy
+  #    3.52 — it is a sentence. The working tree now reads "pinning of the hub
+  #    key", but the phrase survives in history at 57864fe, which is what a
+  #    history scan sees.
+  '''hub-key pinning, Ed25519-signed''',
+]
