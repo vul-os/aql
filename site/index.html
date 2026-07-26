@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Aql — one hub owns everything</title>
-<meta name="description" content="Aql is an open-source command centre for the physical world: cameras, lights, mowers, sensors, meters and bots under one hub you run yourself. No cloud broker, no account, no telemetry. Gates and doors work end to end today; the rest of the device engine is next.">
+<meta name="description" content="Aql is an open-source command centre for the physical world: cameras, lighting, robots, climate, energy, sensors and access control under one hub you run yourself. No cloud broker, no account, no telemetry. Access control is the first module that runs end to end today.">
 <meta name="author" content="Aql">
 <meta name="application-name" content="Aql">
 <meta name="color-scheme" content="light dark">
@@ -236,7 +236,10 @@ code{font-family:var(--font-mono);font-size:.88em}
 .stat-row dd{margin:6px 0 0;font-family:var(--font-display);font-variation-settings:"SOFT" 100;font-size:26px;line-height:1}
 .stat-row dd small{font-size:13px;color:var(--ink-faint);font-family:var(--font-sans);letter-spacing:0;white-space:nowrap}
 
-/* ————————————————————————— the hub constellation ————————————————————————— */
+/* ————————————————————————— the hub constellation —————————————————————————
+   One hub at the centre, the seven device kinds on one orbit. Every kind is
+   drawn at the same weight — they are all what Aql is for. The single live
+   accent marks the module that runs end to end today. */
 .hero-visual{position:relative}
 .hero-visual .corner{position:absolute;width:16px;height:16px;border-color:var(--ink-faint);display:none}
 @media(min-width:1024px){.hero-visual .corner{display:block}}
@@ -246,16 +249,18 @@ code{font-family:var(--font-mono);font-size:.88em}
 .drift{animation:drift 9s ease-in-out infinite}
 @keyframes drift{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 .hub-svg{display:block;width:100%;height:auto}
-.hub-node{fill:var(--paper-cool);stroke:var(--ink-faint);stroke-opacity:.32;stroke-width:1.6;stroke-dasharray:3 4}
-.hub-node-live{fill:var(--signal-wash);stroke:var(--terracotta);stroke-width:2;stroke-dasharray:none}
-.hub-ic{fill:none;stroke:var(--ink-faint);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.hub-ic-live{stroke:var(--terracotta)}
-.hub-wire{stroke:var(--ink-faint);stroke-opacity:.3;stroke-width:1.6;stroke-dasharray:2 6;stroke-linecap:round}
-.hub-wire-live{stroke:var(--terracotta);stroke-width:2;stroke-linecap:round;opacity:.8}
-.wire-pulse{stroke:var(--terracotta);stroke-width:3.4;stroke-linecap:round;stroke-dasharray:9 95;animation:wirepulse 2.8s linear infinite}
-@keyframes wirepulse{from{stroke-dashoffset:104}to{stroke-dashoffset:0}}
-.hub-label{font-family:var(--font-sans);font-size:19px;font-weight:500;fill:var(--ink);opacity:.6}
-.hub-label-live{opacity:1}
+.hub-orbit{fill:none;stroke:var(--ink-faint);stroke-opacity:.17;stroke-width:1.2}
+.hub-halo{fill:none;stroke:var(--ink-faint);stroke-opacity:.15;stroke-width:1.2;stroke-dasharray:2 5}
+.hub-node{fill:var(--paper-cool);stroke:var(--ink-faint);stroke-opacity:.45;stroke-width:1.7}
+.hub-node-live{fill:var(--signal-wash);stroke:var(--terracotta);stroke-opacity:1;stroke-width:2.4}
+.hub-ic{fill:none;stroke:var(--ink-soft);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;opacity:.72}
+.hub-ic-live{stroke:var(--terracotta);opacity:1}
+.hub-wire{stroke:var(--ink-faint);stroke-opacity:.36;stroke-width:1.6;stroke-linecap:round}
+.hub-wire-live{stroke:var(--terracotta);stroke-width:2.2;stroke-linecap:round;opacity:.85}
+.wire-pulse{stroke:var(--terracotta);stroke-width:3.6;stroke-linecap:round;stroke-dasharray:8 82;animation:wirepulse 2.6s linear infinite}
+@keyframes wirepulse{from{stroke-dashoffset:90}to{stroke-dashoffset:0}}
+.hub-label{font-family:var(--font-sans);font-size:19px;font-weight:500;fill:var(--ink);opacity:.78}
+.hub-label-live{opacity:1;font-weight:600}
 .hub-sub{font-family:var(--font-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;fill:var(--terracotta)}
 @media(max-width:1023px){.hub-label{font-size:22px}.hub-sub{font-size:14px}}
 .fig-caption{margin-top:14px;display:flex;justify-content:space-between;gap:6px 12px;flex-wrap:wrap;font-family:var(--font-mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint)}
@@ -298,6 +303,19 @@ code{font-family:var(--font-mono);font-size:.88em}
 .dev h3{font-family:var(--font-display);font-variation-settings:"SOFT" 30;font-size:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .dev p{margin-top:8px;font-size:14px;line-height:1.65;color:var(--ink-faint)}
 .dev .d-proto{margin-top:auto;padding-top:18px;font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);opacity:.8}
+/* the seventh kind — access control — spans the row and links to its own section */
+.dev-wide{grid-column:1/-1}
+@media(min-width:768px){
+  .dev-wide{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:start;gap:0 26px;padding:28px 30px}
+  .dev-wide .d-ic{margin-bottom:0;margin-top:-2px}
+  .dev-wide .d-body{min-width:0}
+  .dev-wide .d-proto{margin-top:12px;padding-top:0}
+  .dev-wide .dev-go{align-self:center}
+}
+.dev-wide p{max-width:56rem}
+.dev-go{display:inline-flex;align-items:center;gap:8px;margin-top:16px;font-size:13.5px;font-weight:500;color:var(--terracotta);text-decoration:none;white-space:nowrap}
+@media(min-width:768px){.dev-go{margin-top:0}}
+.dev-go:hover{color:var(--terracotta-deep)}
 
 /* chat demo */
 .chat-grid{display:grid;gap:56px;align-items:center}
@@ -464,7 +482,7 @@ code{font-family:var(--font-mono);font-size:.88em}
       </a>
       <nav class="nav" aria-label="Primary">
         <a href="#hub">The hub</a>
-        <a href="#how">How it works</a>
+        <a href="#access">Access control</a>
         <a href="#selfhost">Self-host</a>
         <a href="#status">What's real</a>
         <a href="docs.html">Docs</a>
@@ -488,7 +506,7 @@ code{font-family:var(--font-mono);font-size:.88em}
     </div>
     <nav class="mobile-nav" id="mobileNav" aria-label="Mobile">
       <a href="#hub">The hub</a>
-      <a href="#how">How it works</a>
+      <a href="#access">Access control</a>
       <a href="#selfhost">Self-host</a>
       <a href="#status">What's real</a>
       <a href="docs.html">Docs</a>
@@ -529,16 +547,17 @@ code{font-family:var(--font-mono);font-size:.88em}
           </span>
         </h1>
         <p class="hero-tag">
-          Aql is an open-source <b>command centre for the physical world</b>. Cameras, lights,
-          mowers, sensors, energy meters, security and cleaning bots — one control plane for
-          a home or a business. The reach of a smart-home hub, pushed wider: autonomous
-          robots and business fleets, not just consumer gadgets.
+          <b>Aql</b> (Arabic <span lang="ar">عقل</span> — <em>the mind</em>) is the software
+          brain for your physical space. Cameras, lighting, robot mowers, IoT sensors, energy
+          meters, climate, security and cleaning bots — and access control. The reach of a
+          smart-home hub, pushed wider: autonomous robots and business fleets, under
+          <b>one hub that owns everything</b>.
         </p>
         <p class="hero-sub">
-          It runs on your machine. No cloud broker, no account, no telemetry. One device class
-          is real end to end today — gates and doors, on a signed, conformance-tested path.
-          The rest of the device engine is designed and not built, and this page says so
-          every time it comes up.
+          You own the box. It runs on your own machine — no cloud broker, no account, no
+          telemetry. Access control is the first module that runs end to end today; the
+          <a href="#status" style="color:inherit;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--terracotta)">status ledger</a>
+          names every other line, built and unbuilt, without rounding up.
         </p>
         <div class="cta-row">
           <a class="btn btn-ink" href="docs.html#/self-host">Run your hub</a>
@@ -559,83 +578,97 @@ code{font-family:var(--font-mono);font-size:.88em}
       <div class="hero-visual">
         <div class="hub-figure">
         <div class="drift">
-          <!-- The control plane: one hub, the device classes around it.
-               Solid + terracotta = shipped. Dashed = designed, not built. -->
-          <svg class="hub-svg" viewBox="-40 26 630 500" role="img" aria-labelledby="hubT hubD">
-            <title id="hubT">Aql's control plane</title>
-            <desc id="hubD">One hub at the centre, connected to six device classes. Gates and doors are drawn solid, in terracotta, because that path ships today; cameras, lights, sensors, mowers and bots, and energy meters are drawn as dashed outlines because they are planned.</desc>
+          <!-- One hub, the seven device kinds on one orbit. Every kind is drawn at the
+               same weight — the hub is for all of them. The terracotta accent marks the
+               one module that runs end to end today; it is a state, not a hierarchy. -->
+          <svg class="hub-svg" viewBox="-30 20 680 520" role="img" aria-labelledby="hubT hubD">
+            <title id="hubT">One hub, seven device kinds</title>
+            <desc id="hubD">The Aql hub sits at the centre of a single orbit carrying seven device kinds — cameras, lighting, sensors, climate, energy, robots and access — each drawn at the same weight because the hub is built to own all of them. Access carries a terracotta accent and a travelling pulse to mark it as the one module that runs end to end today.</desc>
 
-            <!-- wires -->
+            <!-- the orbit every kind sits on, and the hub's standoff halo -->
+            <circle class="hub-orbit" cx="310" cy="268" r="180"/>
+            <circle class="hub-halo" cx="310" cy="268" r="68"/>
+
+            <!-- spokes: hub → each kind, all equal -->
             <g fill="none">
-              <path class="hub-wire" d="M310 216 V126"/>
-              <path class="hub-wire" d="M355 242 L433 197"/>
-              <path class="hub-wire" d="M355 294 L433 339"/>
-              <path class="hub-wire" d="M265 294 L187 339"/>
-              <path class="hub-wire" d="M265 242 L187 197"/>
-              <path class="hub-wire-live" d="M310 320 V410"/>
-              <path class="wire-pulse" d="M310 320 V410"/>
+              <path class="hub-wire" d="M310 200 L310 118"/>
+              <path class="hub-wire" d="M363.2 225.6 L427.3 174.5"/>
+              <path class="hub-wire" d="M376.3 283.1 L456.2 301.4"/>
+              <path class="hub-wire" d="M339.5 329.3 L375.1 403.2"/>
+              <path class="hub-wire" d="M280.5 329.3 L244.9 403.2"/>
+              <path class="hub-wire" d="M243.7 283.1 L163.8 301.4"/>
+              <path class="hub-wire-live" d="M256.8 225.6 L192.7 174.5"/>
+              <path class="wire-pulse" d="M256.8 225.6 L192.7 174.5"/>
             </g>
 
-            <!-- nodes -->
+            <!-- the seven kinds -->
             <g>
               <!-- cameras -->
-              <circle class="hub-node" cx="310" cy="90" r="30"/>
-              <g class="hub-ic" transform="translate(310 90)">
+              <circle class="hub-node" cx="310" cy="88" r="30"/>
+              <g class="hub-ic" transform="translate(310 88)">
                 <rect x="-9" y="-5.5" width="18" height="12" rx="2.5"/>
                 <circle cx="0" cy="0.5" r="3.2"/>
                 <path d="M-4.6 -5.5 l1.5 -2.6 h6.2 l1.5 2.6"/>
               </g>
-              <text class="hub-label" x="310" y="44" text-anchor="middle">Cameras</text>
+              <text class="hub-label" x="310" y="42" text-anchor="middle">Cameras</text>
 
-              <!-- lights -->
-              <circle class="hub-node" cx="464" cy="179" r="30"/>
-              <g class="hub-ic" transform="translate(464 179)">
+              <!-- lighting -->
+              <circle class="hub-node" cx="450.7" cy="155.8" r="30"/>
+              <g class="hub-ic" transform="translate(450.7 155.8)">
                 <path d="M-4.6 2.6a5.6 5.6 0 1 1 9.2 0 c-1 1.3-1.4 2.2-1.5 3.5h-6.2c-.1-1.3-.5-2.2-1.5-3.5Z"/>
                 <path d="M-2.6 8.8h5.2"/>
               </g>
-              <text class="hub-label" x="502" y="184" text-anchor="start">Lights</text>
+              <text class="hub-label" x="488" y="161" text-anchor="start">Lighting</text>
 
               <!-- sensors -->
-              <circle class="hub-node" cx="464" cy="357" r="30"/>
-              <g class="hub-ic" transform="translate(464 357)">
+              <circle class="hub-node" cx="485.5" cy="308.1" r="30"/>
+              <g class="hub-ic" transform="translate(485.5 308.1)">
                 <circle cx="0" cy="5" r="1.7"/>
                 <path d="M-3.6 1.4a5.2 5.2 0 0 1 7.2 0"/>
                 <path d="M-6.8 -1.8a9.6 9.6 0 0 1 13.6 0"/>
               </g>
-              <text class="hub-label" x="502" y="362" text-anchor="start">Sensors</text>
+              <text class="hub-label" x="523" y="313" text-anchor="start">Sensors</text>
 
-              <!-- gates & doors — the live one -->
-              <circle class="hub-node-live" cx="310" cy="446" r="30"/>
-              <g class="hub-ic hub-ic-live" transform="translate(310 446) scale(.44) translate(-32 -32)">
-                <path d="M14 50 V32 a18 18 0 0 1 36 0 V50 H40 V32 a8 8 0 0 0 -16 0 V50 Z" stroke-width="3.6"/>
+              <!-- climate -->
+              <circle class="hub-node" cx="388.1" cy="430.2" r="30"/>
+              <g class="hub-ic" transform="translate(388.1 430.2)">
+                <path d="M-2.6 2.6V-6.4a2.6 2.6 0 0 1 5.2 0v9a4.4 4.4 0 1 1-5.2 0Z"/>
+                <path d="M0 -1.4v5"/>
               </g>
-              <text class="hub-label hub-label-live" x="310" y="500" text-anchor="middle">Gates &amp; doors</text>
-              <text class="hub-sub" x="310" y="519" text-anchor="middle">signed &middot; tested</text>
+              <text class="hub-label" x="388" y="490" text-anchor="middle">Climate</text>
 
-              <!-- mowers & bots -->
-              <circle class="hub-node" cx="156" cy="357" r="30"/>
-              <g class="hub-ic" transform="translate(156 357)">
+              <!-- energy -->
+              <circle class="hub-node" cx="231.9" cy="430.2" r="30"/>
+              <g class="hub-ic" transform="translate(231.9 430.2)">
+                <path d="M-8.4 4.2a8.4 8.4 0 0 1 16.8 0"/>
+                <path d="M0 4.2 L4.8 -1.4"/>
+                <circle cx="0" cy="4.2" r="1.3"/>
+              </g>
+              <text class="hub-label" x="232" y="490" text-anchor="middle">Energy</text>
+
+              <!-- robots -->
+              <circle class="hub-node" cx="134.5" cy="308.1" r="30"/>
+              <g class="hub-ic" transform="translate(134.5 308.1)">
                 <rect x="-8.5" y="-4" width="17" height="8.5" rx="2.6"/>
                 <circle cx="-4.2" cy="7.2" r="2.1"/>
                 <circle cx="4.2" cy="7.2" r="2.1"/>
                 <path d="M-3.4 -4 v-3.4 M3.4 -4 v-3.4"/>
               </g>
-              <text class="hub-label" x="118" y="362" text-anchor="end">Mowers &amp; bots</text>
+              <text class="hub-label" x="97" y="313" text-anchor="end">Robots</text>
 
-              <!-- energy meters -->
-              <circle class="hub-node" cx="156" cy="179" r="30"/>
-              <g class="hub-ic" transform="translate(156 179)">
-                <path d="M-8.4 4.2a8.4 8.4 0 0 1 16.8 0"/>
-                <path d="M0 4.2 L4.8 -1.4"/>
-                <circle cx="0" cy="4.2" r="1.3"/>
+              <!-- access — the module that runs end to end today -->
+              <circle class="hub-node-live" cx="169.3" cy="155.8" r="30"/>
+              <g class="hub-ic hub-ic-live" transform="translate(169.3 155.8) scale(.44) translate(-32 -32)">
+                <path d="M14 50 V32 a18 18 0 0 1 36 0 V50 H40 V32 a8 8 0 0 0 -16 0 V50 Z" stroke-width="3.6"/>
               </g>
-              <text class="hub-label" x="118" y="184" text-anchor="end">Energy meters</text>
+              <text class="hub-label hub-label-live" x="131" y="156" text-anchor="end">Access</text>
+              <text class="hub-sub" x="131" y="175" text-anchor="end">signed &middot; tested</text>
             </g>
 
-            <!-- the hub -->
+            <!-- the hub itself: the box you own -->
             <g>
-              <rect x="266" y="224" width="88" height="88" rx="20" fill="var(--band)"/>
-              <g transform="translate(310 268) scale(.86) translate(-32 -32)" fill="none">
+              <rect x="264" y="222" width="92" height="92" rx="24" fill="var(--band)"/>
+              <g transform="translate(310 268) scale(.9) translate(-32 -32)" fill="none">
                 <path d="M14 50 V32 a18 18 0 0 1 36 0 V50 H40 V32 a8 8 0 0 0 -16 0 V50 Z"
                       stroke="var(--band-text)" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
                 <circle cx="32" cy="42" r="3.2" fill="var(--terracotta)"/>
@@ -646,8 +679,8 @@ code{font-family:var(--font-mono);font-size:.88em}
         <span class="corner corner-tl" aria-hidden="true"></span>
         <span class="corner corner-br" aria-hidden="true"></span>
         <div class="fig-caption" aria-hidden="true">
-          <span>fig. 01 — the control plane</span>
-          <span>solid = shipped &middot; dashed = planned</span>
+          <span>fig. 01 — one hub, seven kinds</span>
+          <span>&#9670; access runs end to end today</span>
         </div>
         </div>
       </div>
@@ -674,64 +707,83 @@ code{font-family:var(--font-mono);font-size:.88em}
         <h2 class="display-tight">One hub owns<br><em>everything</em>.</h2>
       </div>
       <p class="lede">
-        A house or a whole facility, under one roof: one internal device model, one audit
-        log, one place to look. Underneath sits a driver-adapter seam — pluggable protocol
-        adapters over a single model — so a new class of hardware is a driver, not a rewrite.
-        <b style="font-weight:600;color:var(--ink-soft)">One of the six below is live today.</b>
+        A house or a whole facility under one roof: seven device kinds, one internal model,
+        one audit log, one place to look. Underneath sits a driver-adapter seam — pluggable
+        protocol adapters over a single model — so a new class of hardware is a driver, not
+        a rewrite. Access control is the kind that runs end to end today; the engine behind
+        the other six is designed and not written, and the
+        <a href="#status" style="color:var(--terracotta)">ledger</a> spells that out line by line.
       </p>
     </div>
 
     <div class="dev-grid">
-      <div class="dev dev-live reveal">
-        <span class="d-ic" aria-hidden="true">
-          <svg width="19" height="19" viewBox="0 0 64 64" fill="none"><path d="M14 50 V32 a18 18 0 0 1 36 0 V50 H40 V32 a8 8 0 0 0 -16 0 V50 Z" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </span>
-        <h3>Gates, doors &amp; barriers <span class="tag tag-shipped">shipped</span></h3>
-        <p>The flagship case, real end to end: a paired controller pulses the relay on an
-        Ed25519-signed command carrying a nonce and a short expiry, verified against a key
-        the controller pinned at pairing. Open, hold, close, lockdown, lift, ping, config
-        and key-rotation are all in the signed contract, with conformance vectors.</p>
-        <div class="d-proto">controller agent &middot; conformance-tested</div>
-      </div>
-
       <div class="dev reveal">
         <span class="d-ic" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="12" rx="2.5"/><circle cx="12" cy="13" r="3.4"/><path d="M8 7l1.6-2.6h4.8L16 7"/></svg></span>
         <h3>Cameras <span class="tag tag-planned">planned</span></h3>
         <p>Live view, recording and event-driven alerting from IP cameras, feeding the same
-        rules the rest of the hub uses. Designed against the driver seam; no code yet.</p>
+        rules and the same audit log as everything else on the hub. Designed against the
+        driver seam; no code yet.</p>
         <div class="d-proto">onvif &middot; rtsp</div>
       </div>
 
       <div class="dev reveal">
         <span class="d-ic" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 12.5a6 6 0 1 1 9 0c-1.1 1.4-1.6 2.4-1.7 3.8h-5.6c-.1-1.4-.6-2.4-1.7-3.8Z"/><path d="M9.7 19.4h4.6"/></svg></span>
-        <h3>Lights &amp; switches <span class="tag tag-planned">planned</span></h3>
-        <p>The bread-and-butter smart-home surface — on, off, dim, scene — behind the same
-        one device model as everything else, so an automation can't tell them apart.</p>
+        <h3>Lighting <span class="tag tag-planned">planned</span></h3>
+        <p>The bread-and-butter surface — on, off, dim, scene, groups — behind the same one
+        device model as everything else, so an automation can't tell a fixture from a fleet.</p>
         <div class="d-proto">matter &middot; zigbee &middot; mqtt</div>
+      </div>
+
+      <div class="dev reveal">
+        <span class="d-ic" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8.5" width="17" height="8.5" rx="2.6"/><circle cx="8" cy="19.5" r="2.1"/><circle cx="16" cy="19.5" r="2.1"/><path d="M8.5 8.5V5.4M15.5 8.5V5.4"/></svg></span>
+        <h3>Robots <span class="tag tag-planned">planned</span></h3>
+        <p>Mowers, security patrol and cleaning bots as first-class fleet members with status,
+        tasking and run history — the part a consumer smart-home hub never reaches for, and
+        the reason this project exists.</p>
+        <div class="d-proto">zana native &middot; generic http</div>
+      </div>
+
+      <div class="dev reveal">
+        <span class="d-ic" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.4 13.6V4.8a2.6 2.6 0 0 1 5.2 0v8.8a4.8 4.8 0 1 1-5.2 0Z"/><path d="M12 9.4v4.8"/></svg></span>
+        <h3>Climate <span class="tag tag-planned">planned</span></h3>
+        <p>Thermostats, valves, humidity and ventilation — setpoints and schedules that answer
+        to the same rules engine as the lights and the gate, not to four vendor apps.</p>
+        <div class="d-proto">matter &middot; mqtt &middot; modbus</div>
+      </div>
+
+      <div class="dev reveal">
+        <span class="d-ic" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 16.5a8.4 8.4 0 0 1 16.8 0"/><path d="M12 16.5 17 10"/><circle cx="12" cy="16.5" r="1.3"/></svg></span>
+        <h3>Energy <span class="tag tag-planned">planned</span></h3>
+        <p>Meter and inverter ingestion, historical rollups and a source mix of solar, grid
+        and battery — measured off real readings, not estimated. Nothing here is built yet.</p>
+        <div class="d-proto">modbus &middot; inverter apis</div>
       </div>
 
       <div class="dev reveal">
         <span class="d-ic" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="16.5" r="1.8"/><path d="M8 13a5.6 5.6 0 0 1 8 0"/><path d="M4.8 9.6a10.4 10.4 0 0 1 14.4 0"/></svg></span>
         <h3>Sensors <span class="tag tag-planned">planned</span></h3>
-        <p>Motion, contact, temperature, humidity, water, tamper — the inputs an automations
-        runtime needs before it is worth having. Discovery and live state are Phase 1 work.</p>
+        <p>Motion, contact, temperature, humidity, water level, tamper — the inputs an
+        automations runtime needs before it is worth having. Discovery and live state sit in
+        the same engine phase.</p>
         <div class="d-proto">matter &middot; mqtt &middot; zigbee &middot; http</div>
       </div>
 
-      <div class="dev reveal">
-        <span class="d-ic" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8.5" width="17" height="8.5" rx="2.6"/><circle cx="8" cy="19.5" r="2.1"/><circle cx="16" cy="19.5" r="2.1"/><path d="M8.5 8.5V5.4M15.5 8.5V5.4"/></svg></span>
-        <h3>Mowers &amp; bots <span class="tag tag-planned">planned</span></h3>
-        <p>Robot mowers, security patrol and cleaning bots as first-class fleet members with
-        status, tasking and run history — the part a consumer smart-home hub never reaches for.</p>
-        <div class="d-proto">zana native &middot; generic http</div>
-      </div>
-
-      <div class="dev reveal">
-        <span class="d-ic" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 16.5a8.4 8.4 0 0 1 16.8 0"/><path d="M12 16.5 17 10"/><circle cx="12" cy="16.5" r="1.3"/></svg></span>
-        <h3>Energy meters <span class="tag tag-planned">planned</span></h3>
-        <p>Real meter and inverter ingestion, historical rollups and a source mix of
-        solar, grid and battery — measured, not estimated. Nothing here is built yet.</p>
-        <div class="d-proto">modbus &middot; inverter apis</div>
+      <div class="dev dev-live dev-wide reveal">
+        <span class="d-ic" aria-hidden="true">
+          <svg width="19" height="19" viewBox="0 0 64 64" fill="none"><path d="M14 50 V32 a18 18 0 0 1 36 0 V50 H40 V32 a8 8 0 0 0 -16 0 V50 Z" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <div class="d-body">
+          <h3>Access <span class="tag tag-shipped">runs end to end</span></h3>
+          <p>Gates, doors and barriers — the seventh kind, and the first one that is real all
+          the way down: a paired controller pulses the relay on an Ed25519-signed command,
+          verified against a key it pinned itself. It is the proof the rest of the hub is
+          built against, not the whole of what the hub is for.</p>
+          <div class="d-proto">controller agent &middot; conformance-tested</div>
+        </div>
+        <a class="dev-go" href="#access">
+          See the module
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </a>
       </div>
     </div>
   </div>
@@ -745,16 +797,25 @@ code{font-family:var(--font-mono);font-size:.88em}
         <span class="eyebrow kicker">Chat as an input surface</span>
         <h2 class="display">Text a channel.<br><em>Act on a device.</em></h2>
         <p style="margin-top:22px;max-width:29rem;color:var(--ink-faint);line-height:1.7">
-          Chat isn't the product — it's the input surface with the lowest possible friction.
-          Nobody installs anything; people message the hub from WhatsApp, Slack or Telegram,
-          the hub resolves who they are, runs your rules, and signs a command. Opening a gate
-          is the verb that works today, and it's the one the demo runs.
+          Chat isn't the product — it's the input surface across the hub with the lowest
+          possible friction. Nobody installs anything: someone messages a channel they
+          already have open, the hub resolves who they are, runs your rules, and signs a
+          command. Opening a gate is the verb that works today, because access is the module
+          that's real; reaching the other six kinds this way is device-engine work.
+        </p>
+        <p style="margin-top:16px;max-width:29rem;color:var(--ink-faint);line-height:1.7;font-size:14px">
+          The channel rails themselves are moving out of Aql and into
+          <a href="https://github.com/vul-os/ephor" rel="noopener" style="color:var(--terracotta)">Ephor</a>,
+          a separate, swappable component you run or point at. That move is in progress — so
+          the honest line is the resident-facing one: text a channel, a device acts. Aql's
+          side of it is fixed either way: the hub authorises and signs, and it is the only
+          thing that decides.
         </p>
         <ul class="tick-list">
-          <li>Identity is <code>(channel, sender)</code> — one person, reachable on several channels, counted once.</li>
-          <li>Rate limits and quotas are checked before anything physical moves.</li>
-          <li>Every action <em>and</em> every denial lands in an append-only audit log, in the same second.</li>
-          <li>The hub is the only authority — the channel is a transport, never a permission.</li>
+          <li><span>The hub is the only authority — a channel is a transport, never a permission.</span></li>
+          <li><span>A sender resolves to a membership before anything physical is considered.</span></li>
+          <li><span>Rate limits and quotas are checked before anything physical moves.</span></li>
+          <li><span>Every action <em>and</em> every denial lands in an append-only audit log, in the same second.</span></li>
         </ul>
       </div>
 
@@ -815,18 +876,20 @@ code{font-family:var(--font-mono);font-size:.88em}
 .wa-tag::before{content:"";width:7px;height:7px;border-radius:999px;background:var(--signal)}
 </style>
 
-<!-- ————————————————— how it works ————————————————— -->
-<section class="section" id="how">
+<!-- ————————————————— access control: the first real module ————————————————— -->
+<section class="section" id="access">
   <div class="wrap">
     <div class="section-head reveal">
       <div>
-        <span class="eyebrow kicker">How it works</span>
-        <h2 class="display-tight">Three moments,<br><em>two seconds</em>.</h2>
+        <span class="eyebrow kicker">The first module that's real</span>
+        <h2 class="display-tight">Access control,<br><em>end to end</em>.</h2>
       </div>
       <p class="lede">
-        Between the intent and the motor sit your rules — and an Ed25519 signature nothing on
-        the network can forge. The transport is irrelevant to validity: only the signature,
-        the expiry and the nonce decide.
+        One of the seven kinds is finished: gates, doors and barriers, from the intent all the
+        way to the relay. It earns the space below by being real — a paired controller, signed
+        commands, an audit chain and an offline path, all conformance-tested. Between the
+        intent and the motor sit your rules, and an Ed25519 signature nothing on the network
+        can forge: only the signature, the expiry and the nonce decide.
       </p>
     </div>
 
@@ -891,10 +954,9 @@ code{font-family:var(--font-mono);font-size:.88em}
       <li class="reveal">
         <div class="step-top"><span class="n">01</span><span class="dot"></span><span class="line"></span></div>
         <h3>An intent arrives</h3>
-        <p>Someone texts <code>open</code>, or taps it in the portal. Chat arrives as a
-        channel webhook whose per-channel signature — Meta HMAC, Slack's signed-request
-        scheme with a replay window, Telegram's secret-token header — is checked before
-        anything else happens.</p>
+        <p>Someone texts <code>open</code>, or taps it in the console. However it arrives, the
+        transport authenticates itself first and the hub trusts none of it on its own — an
+        intent is a request, and it is about to be judged.</p>
       </li>
       <li class="reveal">
         <div class="step-top"><span class="n">02</span><span class="dot"></span><span class="line"></span></div>
@@ -921,7 +983,7 @@ code{font-family:var(--font-mono);font-size:.88em}
   <div class="wrap">
     <div class="section-head reveal">
       <div>
-        <span class="eyebrow kicker">When the internet is down</span>
+        <span class="eyebrow kicker">Access control &middot; when the line is down</span>
         <h2 class="display-tight">The gate still<br><em>opens</em>.</h2>
       </div>
       <p class="lede">
@@ -1009,17 +1071,19 @@ code{font-family:var(--font-mono);font-size:.88em}
           <li>
             <span class="pt-ic" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 8.7 8.7 0 0 1-4-.9L3 20l1.2-5.2a8 8 0 0 1-.7-3.3A8.4 8.4 0 0 1 12 3.2a8.4 8.4 0 0 1 9 8.3Z"/></svg></span>
             <div><b>Bring your own channel</b>
-            <span>Slack takes minutes — an app manifest and a signing secret. Telegram is a
-            BotFather token. WhatsApp needs a verified Meta business number, and Meta bills
-            you directly for conversations on it. Discord is not built.</span></div>
+            <span>Chat is a component you point the hub at, not a service we run — and the
+            rails are moving to <a href="https://github.com/vul-os/ephor" rel="noopener" style="color:var(--terracotta-soft)">Ephor</a>
+            while this lands. Whichever side carries them, the accounts and credentials are
+            yours: your workspace, your bot token, your business number. Nobody bills you
+            through us, because there is no us in the path.</span></div>
           </li>
           <li>
             <span class="pt-ic" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13.5V3.5M8.5 7 12 3.5 15.5 7"/><path d="M5 12v6a2.5 2.5 0 0 0 2.5 2.5h9A2.5 2.5 0 0 0 19 18v-6"/></svg></span>
             <div><b>No public URL? Still a full install</b>
-            <span>Slack Socket Mode dials <em>out</em> over one WebSocket, and controllers dial
-            out unconditionally. A Pi on the LAN with no public URL is a complete
-            installation. Only WhatsApp webhooks, Telegram (until long-polling lands) and
-            reaching the portal from outside need a URL.</span></div>
+            <span>Controllers dial <em>out</em> to the hub unconditionally, so a Pi on the LAN
+            with no inbound port is a complete access installation — CGNAT and a closed
+            router are non-issues. What needs a URL is reaching the console from outside, and
+            whichever chat rails you run that receive webhooks rather than dialling out.</span></div>
           </li>
           <li>
             <span class="pt-ic" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
@@ -1053,7 +1117,7 @@ cd aql/gateway &amp;&amp; go build -o ../aql-hub ./cmd/gateway
 <span class="c"># TLS is yours: a reverse proxy, or any tunnel you trust</span>
 caddy reverse-proxy --to 127.0.0.1:8080
 
-<span class="g">✓ hub up</span>        portal + API on <span class="o">127.0.0.1:8080</span>
+<span class="g">✓ hub up</span>        console + API on <span class="o">127.0.0.1:8080</span>
 <span class="g">✓ signing key</span>   ./data <span class="c">(ed25519, 0600, first boot)</span>
 <span class="g">✓ audit log</span>     ./data <span class="c">(sqlite, one file to back up)</span></code></pre>
         </div>
@@ -1073,40 +1137,43 @@ caddy reverse-proxy --to 127.0.0.1:8080
         <span class="eyebrow kicker">What's real</span>
         <h2 class="display-tight">The whole truth,<br><em>on one page</em>.</h2>
       </div>
-      <p class="lede">
-        Aql is early, and early projects that oversell are how people end up with a gate
-        that doesn't open. So here is the ledger: what is built and tested, and what is
-        still only a design. Nothing anywhere on this page is called shipped unless it
-        appears in the left column here.
+        <p class="lede">
+        Aql is early, and early projects that oversell are how people end up with a gate that
+        doesn't open. So here is the ledger: what is built and tested, and what is still only
+        a design. One of the seven device kinds is finished and the engine behind the other
+        six has not started — that is the whole shape of the project right now. Nothing
+        anywhere on this page is called real unless it appears in the left column.
       </p>
     </div>
 
     <div class="ledger">
       <div class="ledger-col reveal">
-        <h3>Built &amp; tested <span class="tag tag-shipped">shipped</span></h3>
+        <h3>Built &amp; tested <span class="tag tag-shipped">real</span></h3>
         <ul>
-          <li><i class="i-yes"></i><span><b>The hub binary.</b> Go, one process, one SQLite file: accounts, members, invites, locations, access points, device pairing and the controller hub.</span></li>
-          <li><i class="i-yes"></i><span><b>Chat channels.</b> WhatsApp (Meta Cloud API), Slack (Events API and Socket Mode) and Telegram, all funnelled through the same choke point.</span></li>
-          <li><i class="i-yes"></i><span><b>Signed commands.</b> Ed25519 envelopes with nonce and expiry; the controller pins the hub key at pairing and verifies fail-closed, checked against conformance vectors.</span></li>
-          <li><i class="i-yes"></i><span><b>The reference controller.</b> A real agent that dials out, verifies, and drives the relay — with GPIO and the BLE radio still needing hardware validation.</span></li>
-          <li><i class="i-yes"></i><span><b>Offline-grant issuance and verification.</b> Both ends built and conformance-tested; LAN/mDNS works today.</span></li>
-          <li><i class="i-yes"></i><span><b>Rules and audit.</b> Open cooldown, hourly caps, chat-flood throttle, optional per-location quotas — and an append-only log of every open, denial, pairing and config change.</span></li>
+          <li><i class="i-yes"></i><span><b>The hub.</b> One Go binary, one SQLite file: accounts, members, invites, locations, access points, device pairing and the controller registry — 60 HTTP routes, 183 tests green across 8 packages.</span></li>
+          <li><i class="i-yes"></i><span><b>Signed commands.</b> Ed25519 envelopes carrying a nonce and an expiry capped at 60 seconds. The controller pins the hub's key at pairing and verifies fail-closed, in a fixed order.</span></li>
+          <li><i class="i-yes"></i><span><b>The reference controller.</b> Its own Go module, 45 tests green: dials out, pins the hub's key, verifies in a fixed order. The last inch is not proven — the GPIO relay driver is still a stub, and no build in this repo has driven real hardware.</span></li>
+          <li><i class="i-yes"></i><span><b>Offline-grant issuance.</b> The hub issues a signed 7-day grant through the same authorization gates as a live open, and the controller's eleven-step verification is built and tested.</span></li>
+          <li><i class="i-yes"></i><span><b>Conformance vectors.</b> 61 vectors and 68 checks in <code>proto/</code>, consumed by both implementations and by an independent verifier that trusts neither.</span></li>
+          <li><i class="i-part"></i><span><b>Chat as an input surface.</b> A message resolves to a member, passes the open path and becomes a signed command — and the per-channel rails are moving out to <a href="https://github.com/vul-os/ephor" rel="noopener" style="color:var(--terracotta)">Ephor</a>. That move is in progress, so read this as the behaviour being real, not as a claim about which binary carries an adapter this week.</span></li>
+          <li><i class="i-yes"></i><span><b>Rules and audit.</b> Open cooldown, hourly caps, optional per-location quotas — and a SHA-256 hash-chained, append-only log of every open, denial, pairing and config change, verifiable from a cold backup.</span></li>
           <li><i class="i-yes"></i><span><b>Temporary access grants.</b> A dated window for a named person, with an optional use cap, revocable, refunded on a rate-limit denial.</span></li>
-          <li><i class="i-yes"></i><span><b>A cross-module test harness.</b> Boots real hub and controller binaries and proves the open path over the wire.</span></li>
+          <li><i class="i-yes"></i><span><b>A cross-module test harness.</b> Boots the real hub and controller binaries and drives the open path over the wire, adversarial cases included.</span></li>
         </ul>
       </div>
 
       <div class="ledger-col reveal">
         <h3>Not built yet <span class="tag tag-planned">planned</span></h3>
         <ul>
-          <li><i class="i-no"></i><span><b>The device engine.</b> The driver-adapter seam and every adapter behind it — Matter, MQTT, Zigbee, ONVIF, Modbus, generic HTTP — is designed, not written.</span></li>
-          <li><i class="i-no"></i><span><b>The automations runtime.</b> No <em>when &rarr; do</em> rules execute against live devices yet.</span></li>
-          <li><i class="i-no"></i><span><b>Energy metering.</b> No meter or inverter ingestion, no rollups, no source mix.</span></li>
-          <li><i class="i-no"></i><span><b>Cameras and bots.</b> No live view, no recording pipeline, no robot tasking.</span></li>
-          <li><i class="i-no"></i><span><b>Offline access in the app.</b> The app does not request, store or present a grant — the one gap between a tested protocol and a working feature.</span></li>
+          <li><i class="i-no"></i><span><b>The device engine.</b> The driver-adapter seam and every adapter behind it — Matter, MQTT, Zigbee, ONVIF, Modbus, generic HTTP — is designed, not written. No protocol driver of any kind exists in the repo.</span></li>
+          <li><i class="i-no"></i><span><b>The automations runtime.</b> No <em>when &rarr; do</em> rule executes against live device state. Where the engine even lands — the Go hub or the Rust core — is not committed.</span></li>
+          <li><i class="i-no"></i><span><b>Energy metering.</b> No meter or inverter ingestion, no historical rollups, no source mix.</span></li>
+          <li><i class="i-no"></i><span><b>The camera pipeline.</b> No live view, no recording, no camera-driven alerting.</span></li>
+          <li><i class="i-no"></i><span><b>Lighting, climate, sensors and robot tasking.</b> Six of the seven kinds have status in the design and nothing underneath them.</span></li>
+          <li><i class="i-no"></i><span><b>The phone half of offline access.</b> The app does not request, store or present a grant — the one gap between a tested protocol and a working feature.</span></li>
           <li><i class="i-no"></i><span><b>Geofencing and recurring windows.</b> Documented designs, no code. The cleaner-every-Tuesday case is not solved yet.</span></li>
           <li><i class="i-no"></i><span><b>One-time PIN and QR passes.</b> Designed. Today's temporary access needs to know who you're granting it to.</span></li>
-          <li><i class="i-no"></i><span><b>Discord, mobile builds, first-class Zana support.</b> All on the roadmap, none of them in the binary.</span></li>
+          <li><i class="i-no"></i><span><b>Mobile builds and first-class Zana support.</b> On the roadmap, in no binary.</span></li>
         </ul>
       </div>
     </div>
@@ -1184,22 +1251,35 @@ caddy reverse-proxy --to 127.0.0.1:8080
         <summary>Isn't this just Home Assistant?<span class="plus">+</span></summary>
         <p class="a">Same instinct — your devices, your box, nothing in the middle — and Home
         Assistant is a mature project with hundreds of integrations working <em>today</em>,
-        which Aql very much is not. The difference in intent is the reach: Aql treats
-        autonomous robots and business fleets as first-class citizens rather than consumer
-        gadgets, and every actuation is a signed envelope a device verifies against a key it
-        pinned itself — so the hub can command hardware across a network it doesn't trust.
-        If you want a full smart home working this weekend, use Home Assistant. If the
-        signed-command model and the robot/fleet side is what you're after, this is that
-        project, early.</p>
+        which Aql very much is not. The difference in intent is the reach: the reach of a
+        smart-home hub pushed wider, so autonomous robots and business fleets are first-class
+        citizens rather than consumer gadgets, and every actuation is a signed envelope a
+        device verifies against a key it pinned itself — which is what lets a hub command
+        hardware across a network it doesn't trust. If you want a full smart home working this
+        weekend, use Home Assistant. If that wider reach and the signed-command model are what
+        you're after, this is that project, early.</p>
       </details>
       <details>
         <summary>What actually works today?<span class="plus">+</span></summary>
-        <p class="a">One device class, end to end: gates, doors and barriers. A message on
-        WhatsApp, Slack or Telegram (or a click in the portal) resolves to a member, passes
-        your rate limits and quotas, and becomes an Ed25519-signed command that a paired
-        controller verifies against a pinned key and acts on — with every verdict audited.
-        Everything else — the drivers, the automations runtime, energy, cameras, bots — is
-        designed and unbuilt. The <a href="#status">ledger above</a> is the complete list, both columns.</p>
+        <p class="a">One of the seven device kinds, end to end: access — gates, doors and
+        barriers. A chat message or a click in the console resolves to a member, passes your
+        rate limits and quotas, and becomes an Ed25519-signed command that a paired controller
+        verifies against a pinned key and acts on, with every verdict audited. The engine
+        behind the other six kinds — the drivers, the automations runtime, energy, cameras,
+        robot tasking — is designed and unbuilt. The <a href="#status">ledger above</a> is
+        the complete list, both columns.</p>
+      </details>
+      <details>
+        <summary>So when do the other six kinds work?<span class="plus">+</span></summary>
+        <p class="a">There are no dates, because none of it is scheduled — this is an
+        open-source project being built in the open, not a product with a release plan. What
+        the shape does tell you: access control was finished first because it is the case
+        where getting it wrong is worst, and the pieces it forced into existence — one device
+        model, a pairing ceremony, signed commands, an append-only audit chain, a controller
+        that trusts nothing — are the same pieces every other kind needs. The device engine is
+        the next phase, and the honest state of it is: not started.
+        <a href="https://github.com/vul-os/aql/blob/main/ROADMAP.md" rel="noopener">The roadmap</a>
+        is phase-by-phase and says so.</p>
       </details>
       <details>
         <summary>Do I need an account, or a cloud?<span class="plus">+</span></summary>
@@ -1207,8 +1287,9 @@ caddy reverse-proxy --to 127.0.0.1:8080
         and your hardware. You run the binary; it keeps its state in one SQLite file on your
         disk and generates its own signing key on first boot. Nothing phones home, and there
         is no billing code in the binary at all. The one outside dependency is optional and
-        yours: if you want chat as an input, that's your Slack workspace, your bot token, or
-        your own WhatsApp business number — and Meta bills you, not us.</p>
+        yours: if you want chat as an input surface, the workspace, the bot token or the
+        business number behind it is your own account with that provider, billed by them,
+        never by us.</p>
       </details>
       <details>
         <summary>What happens when the internet is down?<span class="plus">+</span></summary>
@@ -1240,9 +1321,10 @@ caddy reverse-proxy --to 127.0.0.1:8080
         <p class="a">The core is built to be: Ed25519-signed commands with a nonce and an
         expiry no wider than 60 seconds, verified fail-closed in a fixed order against a key
         the controller pinned at pairing — so a hostile network, a hijacked DNS record or a
-        malicious tunnel can't forge an open. Channel webhooks are signature-verified per
-        channel, tenancy is scoped in the database layer, the audit log is append-only, and
-        the binary refuses to bind a public interface in cleartext. It is also young code
+        malicious tunnel can't forge an open. Every inbound transport authenticates before it
+        is read, tenancy is scoped in the database layer, the audit log is hash-chained and
+        append-only, and the binary refuses to bind a public interface in cleartext. It is
+        also young code
         that has not been externally audited; read the
         <a href="docs.html#/security">security chapter</a> and decide for yourself.</p>
       </details>
@@ -1282,7 +1364,7 @@ caddy reverse-proxy --to 127.0.0.1:8080
           <h4>Product</h4>
           <ul>
             <li><a href="#hub">The hub</a></li>
-            <li><a href="#how">How it works</a></li>
+            <li><a href="#access">Access control</a></li>
             <li><a href="#status">What's real</a></li>
             <li><a href="docs.html#/security">Security</a></li>
           </ul>
