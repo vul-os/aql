@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aql — docs</title>
+<meta name="description" content="Aql documentation: the open-source, self-hosted command center for the physical world. Getting started, architecture, configuration, threat model, FAQ.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="assets/brand/favicon.svg">
+<style>
+  @font-face { font-family:'Bricolage'; src:url('assets/fonts/bricolage-700.woff2') format('woff2'); font-weight:700; font-display:swap; }
+  @font-face { font-family:'Bricolage'; src:url('assets/fonts/bricolage-500.woff2') format('woff2'); font-weight:500; font-display:swap; }
+  @font-face { font-family:'PlexMono'; src:url('assets/fonts/plexmono-400.woff2') format('woff2'); font-weight:400; font-display:swap; }
+  @font-face { font-family:'PlexMono'; src:url('assets/fonts/plexmono-500.woff2') format('woff2'); font-weight:500; font-display:swap; }
+  @font-face { font-family:'PlexMono'; src:url('assets/fonts/plexmono-600.woff2') format('woff2'); font-weight:600; font-display:swap; }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --ink-950:#08090a;--ink-900:#0b0c0e;--ink-850:#101214;--ink-800:#16181b;--ink-700:#23272c;
+    --line:rgba(233,228,218,.09);--line-strong:rgba(233,228,218,.16);
+    --bone:#ece7dc;--bone-dim:#9c978b;--bone-faint:#63605a;
+    --signal:#f2a72c;--signal-hi:#ffc35a;--glow:rgba(242,167,44,.35);
+    --disp:'Bricolage','Trebuchet MS',system-ui,sans-serif;--mono:'PlexMono',ui-monospace,Menlo,monospace;
+    --radius:14px;--max:1220px;
+  }
+  html{scroll-behavior:smooth}
+  body{background:var(--ink-950);color:var(--bone);font-family:var(--mono);font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(120% 70% at 80% -10%,rgba(242,167,44,.07),transparent 55%),radial-gradient(90% 60% at -10% 10%,rgba(109,182,216,.03),transparent 50%)}
+  a{color:inherit;text-decoration:none}
+  img{max-width:100%;display:block}
+  .wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+  .disp{font-family:var(--disp);font-weight:700;letter-spacing:-.02em}
+
+  nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(10px);background:rgba(8,9,10,.78);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;align-items:center;gap:18px;height:60px}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand svg{width:26px;height:26px}
+  .brand b{font-family:var(--disp);font-size:19px;letter-spacing:.14em}
+  .nav-spacer{flex:1}
+  .nlinks{display:flex;gap:22px;align-items:center;font-size:13px;color:var(--bone-dim)}
+  .nlinks a:hover{color:var(--bone)}
+  .btn{border:1px solid var(--line-strong);padding:8px 16px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--bone);transition:.15s;white-space:nowrap}
+  .btn:hover{border-color:var(--signal);color:var(--signal-hi)}
+  @media(max-width:640px){.nlinks a.hidem{display:none}}
+
+  .docs-shell{display:grid;grid-template-columns:236px 1fr;gap:36px;align-items:start;padding:30px 0 80px}
+  @media(max-width:860px){.docs-shell{grid-template-columns:1fr;padding-top:18px}}
+  .docs-nav{position:sticky;top:78px;border:1px solid var(--line);border-radius:var(--radius);background:var(--ink-850);padding:14px}
+  .docs-nav .label{font-size:10.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--bone-faint);padding:6px 10px 10px}
+  .docs-nav a{display:block;padding:8px 11px;border-radius:8px;color:var(--bone-dim);font-size:13.5px;font-weight:500;transition:.15s;border-left:2px solid transparent}
+  .docs-nav a:hover{background:rgba(255,255,255,.03);color:var(--bone)}
+  .docs-nav a.active{background:color-mix(in srgb,var(--signal) 12%, transparent);color:var(--bone);border-left-color:var(--signal)}
+  @media(max-width:860px){.docs-nav{position:static}}
+  .docs-main{min-width:0}
+  .docs-title{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-faint);margin-bottom:8px}
+
+  .markdown{font-size:15.5px}
+  .markdown>*:first-child{margin-top:0}
+  .markdown h1{font-family:var(--disp);font-weight:700;font-size:32px;letter-spacing:-.02em;margin:.2em 0 .5em;border-bottom:1px solid var(--line);padding-bottom:.35em;color:var(--bone)}
+  .markdown h2{font-family:var(--disp);font-weight:700;font-size:22px;letter-spacing:-.01em;margin:1.6em 0 .6em;border-bottom:1px solid var(--line);padding-bottom:.3em;color:var(--bone)}
+  .markdown h3{font-family:var(--disp);font-weight:500;font-size:17px;margin:1.4em 0 .5em;color:var(--bone)}
+  .markdown h4{font-size:13px;margin:1.3em 0 .4em;color:var(--bone-dim);text-transform:uppercase;letter-spacing:.06em}
+  .markdown p,.markdown li{color:var(--bone-dim)}
+  .markdown strong{color:var(--bone)}
+  .markdown a{color:var(--signal);text-decoration:none}
+  .markdown a:hover{text-decoration:underline;color:var(--signal-hi)}
+  .markdown code{font-family:var(--mono);font-size:.88em;background:rgba(255,255,255,.06);padding:2px 6px;border-radius:5px;color:var(--bone)}
+  .markdown pre{background:var(--ink-900);border:1px solid var(--line-strong);border-radius:10px;padding:16px 18px;overflow:auto}
+  .markdown pre code{background:none;padding:0;font-size:13px;line-height:1.7;color:var(--bone-dim)}
+  .markdown blockquote{margin:1em 0;padding:.4em 1em;border-left:3px solid var(--signal);background:rgba(255,255,255,.02);color:var(--bone-dim);border-radius:0 8px 8px 0}
+  .markdown blockquote p{color:inherit}
+  .markdown blockquote .callout-label{font-family:var(--disp);font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--signal);margin-bottom:.5em}
+  .markdown table{border-collapse:collapse;width:100%;margin:1.2em 0;font-size:13.5px;display:block;overflow:auto}
+  .markdown th,.markdown td{border:1px solid var(--line-strong);padding:9px 12px;text-align:left;color:var(--bone-dim)}
+  .markdown th{background:var(--ink-850);font-weight:600;color:var(--bone)}
+  .markdown img{border-radius:10px;margin:1em 0;border:1px solid var(--line)}
+  .markdown hr{border:none;border-top:1px solid var(--line);margin:2em 0}
+  .markdown .mermaid{background:var(--ink-850);border:1px solid var(--line);border-radius:10px;padding:18px;margin:1.2em 0;text-align:center;overflow:auto}
+  .docs-error{color:#f3b3a6;background:rgba(220,80,38,.08);border:1px solid rgba(220,80,38,.25);padding:14px 16px;border-radius:10px}
+
+  footer{border-top:1px solid var(--line);padding:32px 0;text-align:center;color:var(--bone-faint);font-size:12px}
+  .foot{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;text-align:left}
+  .foot a{color:var(--bone-dim)}
+  .foot a:hover{color:var(--signal)}
+</style>
+<script src="./assets/vendor/marked.umd.js"></script>
+<script src="./assets/vendor/mermaid.min.js"></script>
+</head>
+<body>
+<nav><div class="wrap">
+  <a class="brand" href="./index.html">
+    <svg viewBox="0 0 40 40" fill="none"><path d="M20 3 L37 20 L20 37 L3 20 Z" stroke="#f2a72c" stroke-width="2.2"/><circle cx="20" cy="20" r="3.6" fill="#f2a72c"/><path d="M20 9v4M20 27v4M9 20h4M27 20h4" stroke="#f2a72c" stroke-width="2.2" stroke-linecap="round"/></svg>
+    <b>AQL</b>
+  </a>
+  <div class="nav-spacer"></div>
+  <div class="nlinks">
+    <a class="hidem" href="./index.html#screens">Screens</a>
+    <a class="hidem" href="./index.html#how">How it works</a>
+    <a href="https://github.com/vul-os/aql" target="_blank" rel="noopener">GitHub</a>
+    <a class="btn" href="https://github.com/vul-os/aql#quick-start" target="_blank" rel="noopener">Get started</a>
+  </div>
+</div></nav>
+
+<div class="wrap docs-shell">
+  <aside class="docs-nav">
+    <div class="label">Aql docs</div>
+    <a data-slug="getting-started" href="#getting-started">Getting started</a>
+    <a data-slug="architecture" href="#architecture">Architecture</a>
+    <a data-slug="configuration" href="#configuration">Configuration</a>
+    <a data-slug="threat-model" href="#threat-model">Threat model</a>
+    <a data-slug="faq" href="#faq">FAQ</a>
+    <a data-slug="screenshots" href="#screenshots">Screenshots</a>
+  </aside>
+  <main class="docs-main">
+    <div class="docs-title" id="crumb"></div>
+    <article class="markdown" id="content">Loading…</article>
+  </main>
+</div>
+
+<footer><div class="wrap foot">
+  <div><a href="https://vulos.org" target="_blank" rel="noopener"><b>vulos</b></a> — open by design · Aql is MIT-licensed</div>
+  <div><a href="https://github.com/vul-os/aql" target="_blank" rel="noopener">github.com/vul-os/aql</a></div>
+</div></footer>
+
+<script>
+const REPO_BLOB_BASE = 'https://github.com/vul-os/aql/blob/main/docs/';
+const DOCS = [
+  {"slug":"getting-started","title":"Getting started","path":"./docs/getting-started.md"},
+  {"slug":"architecture","title":"Architecture","path":"./docs/architecture.md"},
+  {"slug":"configuration","title":"Configuration","path":"./docs/configuration.md"},
+  {"slug":"threat-model","title":"Threat model","path":"./docs/threat-model.md"},
+  {"slug":"faq","title":"FAQ","path":"./docs/faq.md"},
+  {"slug":"screenshots","title":"Screenshots","path":"./docs/screenshots.md"}
+];
+const bySlug = Object.fromEntries(DOCS.map(d=>[d.slug,d]));
+const byFile = Object.fromEntries(DOCS.map(d=>[d.path.split('/').pop().toLowerCase(),d]));
+const content = document.getElementById('content');
+const crumb = document.getElementById('crumb');
+let mermaidReady = false;
+try { mermaid.initialize({ startOnLoad:false, theme:'dark', securityLevel:'loose', themeVariables:{ fontFamily:'var(--mono)', primaryColor:'#16181b', primaryBorderColor:'#f2a72c', lineColor:'#63605a' } }); mermaidReady = true; } catch(e){}
+
+if (window.marked && marked.setOptions) marked.setOptions({ gfm:true, breaks:false });
+
+function setActive(slug){
+  document.querySelectorAll('.docs-nav a').forEach(a=>a.classList.toggle('active', a.dataset.slug===slug));
+}
+
+async function renderMermaid(){
+  if(!mermaidReady) return;
+  const blocks = [...content.querySelectorAll('code.language-mermaid')];
+  blocks.forEach(code=>{
+    const div = document.createElement('div');
+    div.className='mermaid';
+    div.textContent = code.textContent;
+    code.closest('pre').replaceWith(div);
+  });
+  const nodes = content.querySelectorAll('.mermaid');
+  if(nodes.length){ try { await mermaid.run({ nodes }); } catch(e){ console.warn('mermaid', e); } }
+}
+
+async function load(slug){
+  const doc = bySlug[slug] || DOCS[0];
+  setActive(doc.slug);
+  crumb.textContent = doc.title;
+  content.innerHTML = 'Loading…';
+  try {
+    const res = await fetch(doc.path, {cache:'no-cache'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const md = await res.text();
+    content.innerHTML = marked.parse(md);
+    // GitHub-style callouts (> [!NOTE] etc.) — marked renders these as a
+    // plain blockquote with the literal marker; turn the marker into a label.
+    content.querySelectorAll('blockquote').forEach(bq=>{
+      const p = bq.querySelector('p');
+      if(!p) return;
+      const m = p.innerHTML.match(/^\[!(NOTE|WARNING|TIP|IMPORTANT|CAUTION)\]\s*/i);
+      if(m){
+        p.innerHTML = p.innerHTML.slice(m[0].length);
+        const label = document.createElement('div');
+        label.className = 'callout-label';
+        label.textContent = m[1].toUpperCase();
+        bq.insertBefore(label, bq.firstChild);
+      }
+    });
+    content.querySelectorAll('img').forEach(img=>{
+      const s=img.getAttribute('src')||'';
+      if(/^https?:/i.test(s)) return;
+      const m=s.match(/(?:\.\.\/)*(?:docs\/)?screenshots\/(.+)$/);
+      if(m) img.setAttribute('src','./screenshots/'+m[1]);
+    });
+    // Cross-doc links to another curated doc become sidebar navigation;
+    // anything else (external, or escaping docs/ to another repo file)
+    // is left alone or opened in a new tab, never left dead.
+    content.querySelectorAll('a[href]').forEach(a=>{
+      const h=a.getAttribute('href')||'';
+      if(/^(https?:|#|mailto:)/i.test(h)) return;
+      const m=h.match(/^\.?\/?([A-Za-z0-9_-]+\.md)(#.*)?$/i);
+      const target = m && byFile[m[1].toLowerCase()];
+      if(target){ a.setAttribute('href','#'+target.slug); return; }
+      try {
+        a.setAttribute('href', new URL(h, REPO_BLOB_BASE).href);
+        a.target='_blank'; a.rel='noopener';
+      } catch(e){}
+    });
+    content.querySelectorAll('a[href^="http"]').forEach(a=>{a.target='_blank';a.rel='noopener';});
+    await renderMermaid();
+    window.scrollTo({top:0});
+  } catch(err){
+    content.innerHTML = '<div class="docs-error">Could not load <code>'+doc.path.split('/').pop()+'</code> — '+err.message+'</div>';
+  }
+}
+
+function current(){ return (location.hash||'').replace('#','') || DOCS[0].slug; }
+window.addEventListener('hashchange', ()=>load(current()));
+load(current());
+</script>
+</body>
+</html>
