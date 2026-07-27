@@ -1,3 +1,4 @@
+import TwoFactorSection from '@/components/settings/TwoFactorSection';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from './AppLayout';
@@ -31,6 +32,7 @@ export default function Settings() {
         <ContactSection />
         <LocationsSection />
         {hasPassword ? <PasswordSection /> : <SignInIdentitySection />}
+        <TwoFactorSection />
         <GatewaySection />
       </div>
     </>

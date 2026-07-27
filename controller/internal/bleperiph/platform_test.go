@@ -1,6 +1,7 @@
 package bleperiph
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -63,7 +64,10 @@ func TestExactlyOneBackendIsLinked(t *testing.T) {
 	// What is worth asserting is that the UNSUPPORTED path returns the sentinel
 	// rather than something a caller cannot recognise, since agent.go branches
 	// on exactly that to degrade instead of failing the controller.
-	err := Start(t.Context(), Config{})
+	// context.Background() rather than t.Context(): this module targets go1.23
+	// and t.Context() landed in 1.24. `go test` hid it — the package was cached
+	// from before this file existed — and only `go vet` caught it.
+	err := Start(context.Background(), Config{})
 	if err == nil {
 		t.Skip("a real GATT-server backend is linked and started on this host")
 	}
