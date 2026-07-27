@@ -438,7 +438,10 @@ async function main() {
 
     const desktopShots = [
       { path: '/', file: 'landing-hero.png', settleMs: 1_400, expectText: 'Aql' },
-      { path: '/app/devices', file: 'portal-devices.png', expectText: 'Front Gate Camera' },
+      // settleMs, because every row on this page now comes from a fetch. The
+      // demo fixture used to paint at first frame, so the shot could be taken
+      // immediately; a live page has nothing on it until the engine answers.
+      { path: '/app/devices', file: 'portal-devices.png', settleMs: 1_200, expectText: 'Main incomer' },
       // Energy and Automations are wired to LIVE hub data now (energy/automations
       // fixtures below), not the src/lib/demoData.ts fixture they used to read —
       // so these two used to assert on demo-only strings ('per-circuit load',
@@ -496,7 +499,7 @@ async function main() {
     const mobileShots = [
       // No Tauri app exists yet: the tap-to-open gate view at phone size is the
       // closest real "app" surface, standing in for the emergency/open flow.
-      { path: '/app/open', file: 'app-emergency.png', expectText: 'Main gate' },
+      { path: '/app/open', file: 'app-open.png', expectText: 'Main gate' },
     ];
 
     const contexts = [

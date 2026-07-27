@@ -11,17 +11,20 @@
 //                     /v1/engine/devices: real devices found by whichever
 //                     drivers the operator configured. Their controls send
 //                     real verbs, and the hub decides what each one means.
-//   Demo (fixture)  — src/lib/demoData.ts. Read no hardware, sent nowhere.
-//                     Kept because a hub with no device config has no engine
-//                     at all, and because these show the shape of a fleet.
 //
-// No blanket banner: a banner over a mixed list would be false about most of
-// it. Per-row chips instead — see src/components/demo/DemoMarks.tsx.
+// No demo fixture here anymore — every row on this page is either real or
+// honestly says why the list is short. No blanket banner either: a banner
+// over a mixed list would be false about most of it. Per-row chips instead —
+// see src/components/demo/DemoMarks.tsx.
 //
 // The one page-level statement that IS made: when the engine is absent, or the
 // hub is too old to serve it, or the request failed, the screen says which of
 // those three happened. An empty list would be indistinguishable from a broken
-// fetch, and silently showing the fixture in its place would be a lie.
+// fetch, and there is no fixture left to silently show in its place.
+//
+// Controller discovery (below, in the right column) is a separate honesty
+// problem: mDNS is unauthenticated by construction, so a browse result is an
+// address to check, never a device to trust. See ControllerDiscoveryCard.
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
@@ -31,7 +34,6 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { DevicePairing } from '@/components/illustrations/DevicePairing';
 import {
-  DemoChip,
   EngineChip,
   InertNote,
   LiveChip,
@@ -58,14 +60,16 @@ import { cn } from '@/lib/cn';
 import {
   ApiError,
   api,
+  friendlyApiError,
   type AccessPointDetail,
   type DeviceCreateResponse,
   type DeviceRow,
+  type DiscoveredController,
   type EngineDevice,
   type EngineReading,
   type LocationRow,
 } from '@/lib/api';
-import { demoDevices, type Device as DemoDevice, type DeviceState } from '@/lib/demoData';
+import type { DeviceState } from '@/lib/demoData';
 import { fromUnix } from '@/lib/time';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -96,14 +100,12 @@ function relativeTime(sec: number | null): string {
 type Row =
   | { source: 'gateway'; kind: 'Access'; id: string; name: string; zone: string; state: DeviceState; read: string; ap: AccessPointDetail }
   | { source: 'gateway'; kind: 'Controller'; id: string; name: string; zone: string; state: DeviceState; read: string; device: DeviceRow }
-  | { source: 'engine'; kind: string; id: string; name: string; zone: string; state: DeviceState; read: string; engine: EngineDevice }
-  | { source: 'demo'; kind: string; id: string; name: string; zone: string; state: DeviceState; read: string; demo: DemoDevice };
+  | { source: 'engine'; kind: string; id: string; name: string; zone: string; state: DeviceState; read: string; engine: EngineDevice };
 
 /** The chip that says where a row came from. Every row carries exactly one. */
 function SourceChip({ source }: { source: Row['source'] }) {
   if (source === 'gateway') return <LiveChip />;
-  if (source === 'engine') return <EngineChip />;
-  return <DemoChip />;
+  return <EngineChip />;
 }
 
 /** Map a paired-controller status onto the shared four-state vocabulary. */
@@ -182,9 +184,9 @@ export default function DevicesPage() {
       read: STATUS_LABEL[d.status] ?? d.status,
       device: d,
     }));
-    // Engine devices are real. They sit between the hub's own rows and the
-    // fixture, chipped "Engine", using the same kind labels so the kind filters
-    // put a live lamp and a fixture lamp under the same button.
+    // Engine devices are real, chipped "Engine" beside the hub's own rows,
+    // using the same kind labels so the kind filters put a hub row and an
+    // engine row of the same kind under the same button.
     const engineRows: Row[] = (engine?.devices ?? []).map((d) => ({
       source: 'engine',
       kind: kindLabel(d.kind),
@@ -195,17 +197,7 @@ export default function DevicesPage() {
       read: summaryLine(d),
       engine: d,
     }));
-    const demoRows: Row[] = demoDevices.map((d) => ({
-      source: 'demo',
-      kind: d.kind,
-      id: d.id,
-      name: d.name,
-      zone: d.zone,
-      state: d.state,
-      read: d.read,
-      demo: d,
-    }));
-    return [...apRows, ...ctlRows, ...engineRows, ...demoRows];
+    return [...apRows, ...ctlRows, ...engineRows];
   }, [accessPoints, controllers, engine, locationName]);
 
   const kinds = useMemo(() => ['All', ...new Set(rows.map((r) => r.kind))], [rows]);
@@ -253,8 +245,7 @@ export default function DevicesPage() {
         ))}
         <span className="ml-auto text-[11px] text-ink/45">
           {hubCount} on your hub
-          {engineCount > 0 && ` · ${engineCount} from the device engine`} ·{' '}
-          {demoDevices.length} from the demo dataset
+          {engineCount > 0 && ` · ${engineCount} from the device engine`}
         </span>
       </div>
 
@@ -290,8 +281,7 @@ export default function DevicesPage() {
                 <caption className="sr-only">
                   Every device Aql can see. Rows marked &ldquo;Hub&rdquo; are real hardware on
                   your hub; rows marked &ldquo;Engine&rdquo; are real devices reported by your
-                  hub&rsquo;s device engine; rows marked &ldquo;Demo data&rdquo; come from a
-                  built-in fixture dataset and read no hardware.
+                  hub&rsquo;s device engine.
                 </caption>
                 <thead className="bg-paper-warm/50">
                   <tr>
@@ -375,6 +365,8 @@ export default function DevicesPage() {
         <div className="lg:col-span-4 flex flex-col gap-6">
           {selected && <DetailPanel row={selected} onPairedRefresh={refresh} />}
 
+          {currentAccount && <ControllerDiscoveryCard accountId={currentAccount.id} />}
+
           <Card tone="cream">
             <p className="text-[11px] uppercase tracking-[0.22em] text-ink/55">Pair a new one</p>
             <h3 className="font-display text-2xl mt-2">It takes 60 seconds</h3>
@@ -429,7 +421,6 @@ function DetailPanel({ row, onPairedRefresh }: { row: Row; onPairedRefresh: () =
           <ControllerDetail row={row} onPairedRefresh={onPairedRefresh} />
         )}
         {row.source === 'engine' && <EngineDetail key={row.id} row={row} />}
-        {row.source === 'demo' && <DemoDetail row={row} />}
       </div>
     </Card>
   );
@@ -738,62 +729,148 @@ function EngineDetail({ row }: { row: Extract<Row, { source: 'engine' }> }) {
   );
 }
 
-function DemoDetail({ row }: { row: Extract<Row, { source: 'demo' }> }) {
-  const { demo } = row;
+// ── controller discovery (real: LAN mDNS browse) ─────────────────────────────
+//
+// hub/internal/httpapi/discovery.go / hub/internal/discovery/mdns.go. A browse
+// is a POST, not a page-load fetch: it puts multicast on the operator's
+// network and takes a couple of seconds, so it sits behind an explicit button
+// rather than firing on mount or on every refresh.
+//
+// The one rule this component exists to protect: mDNS is unauthenticated by
+// construction. Anything on the LAN can answer a browse, so a result here is
+// an address to check, never a device to trust — there is no button that
+// pairs what was found. Pairing still means creating a device in the card
+// below and typing the claim token into the controller itself.
+
+type DiscoverState =
+  | { status: 'idle' }
+  | { status: 'scanning' }
+  | { status: 'found'; controllers: DiscoveredController[]; note: string }
+  /** 503 discovery_unavailable: multicast couldn't be sent — a different fact
+   *  from "no controllers answered", and the hub's `detail` says why. */
+  | { status: 'unavailable'; detail: string }
+  /** 403 — discovery is admin-only. Its own state, not a generic error: a
+   *  member hitting this should be told why, not shown a broken page. */
+  | { status: 'forbidden' }
+  | { status: 'error'; message: string };
+
+function ControllerDiscoveryCard({ accountId }: { accountId: string }) {
+  const [state, setState] = useState<DiscoverState>({ status: 'idle' });
+
+  async function scan() {
+    setState({ status: 'scanning' });
+    try {
+      const res = await api.discoverControllers(accountId);
+      setState({ status: 'found', controllers: res.controllers, note: res.note });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        setState({ status: 'forbidden' });
+      } else if (err instanceof ApiError && err.status === 503 && err.code === 'discovery_unavailable') {
+        setState({
+          status: 'unavailable',
+          detail: err.detail ?? "Multicast couldn't be sent on this hub.",
+        });
+      } else {
+        setState({ status: 'error', message: friendlyApiError(err, 'Could not browse the network.') });
+      }
+    }
+  }
+
   return (
-    <>
-      {/*
-        The pre-fold Svelte screen rendered a fake camera viewport here — a
-        blinking red REC dot, a "LIVE" caption and animated scanlines over an
-        empty box. That reads as a working stream to anyone glancing at it, and
-        there is no camera pipeline (ONVIF/RTSP is ROADMAP Phase 5). Replaced
-        with a placeholder that says so. Do not reinstate it.
-      */}
-      {demo.kind === 'Camera' ? (
-        <div className="mt-5 h-32 rounded-2xl border border-dashed border-ink/15 bg-paper-warm/40 grid place-items-center px-6 text-center">
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.18em] text-ink/45">No stream</p>
-            <p className="mt-2 text-sm text-ink/60 leading-relaxed">
-              Camera live-view is ROADMAP Phase 5 — there is no video pipeline behind this panel.
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="mt-5 h-32 rounded-2xl border border-ink/8 bg-paper-warm/40 grid place-items-center px-6">
-          <span className="font-display numeral text-4xl text-ink text-center leading-none">
-            {demo.read}
-          </span>
-        </div>
+    <Card tone="cream">
+      <p className="text-[11px] uppercase tracking-[0.22em] text-ink/55">Find controllers</p>
+      <h3 className="font-display text-2xl mt-2">Scan the network</h3>
+      <p className="text-ink/65 text-sm mt-3 leading-relaxed">
+        Browses the LAN for controllers advertising themselves over mDNS — a couple of seconds of
+        multicast traffic, nothing more, and nothing sent automatically. mDNS has no
+        authentication: anything on this network can answer a browse, so what comes back is
+        addresses to check, not devices to trust. There is no one-click add here — pairing still
+        means creating a device below and typing its claim token into the controller itself.
+      </p>
+
+      <button
+        type="button"
+        onClick={() => void scan()}
+        disabled={state.status === 'scanning'}
+        className="mt-4 h-9 px-4 rounded-full text-sm border border-ink/15 text-ink/75 hover:border-ink/35 hover:text-ink transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {state.status === 'scanning' ? 'Scanning…' : 'Scan the network for controllers'}
+      </button>
+
+      {state.status === 'forbidden' && (
+        <p className="mt-4 text-sm text-terracotta-deep leading-relaxed">
+          This account doesn&rsquo;t allow you to browse the network — discovery is admin-only,
+          because the result is a map of what&rsquo;s on it. Ask an owner or admin to run it.
+        </p>
       )}
 
-      <Rows
-        items={[
-          { k: 'Status', v: demo.detail },
-          { k: 'Last seen', v: demo.seen, mono: true },
-          { k: 'Device ID', v: demo.id, mono: true },
-        ]}
-      />
+      {state.status === 'unavailable' && (
+        <p className="mt-4 text-sm text-terracotta-deep leading-relaxed">
+          Multicast couldn&rsquo;t be sent from this hub: {state.detail} That is a different
+          answer from &ldquo;no controllers are here&rdquo; — it means this host or network can&rsquo;t
+          carry the query, not that nothing would have answered it.
+        </p>
+      )}
 
-      <div className="mt-5 flex flex-wrap gap-2">
-        {['Open', 'Automate', 'Logs'].map((label) => (
-          <button
-            key={label}
-            type="button"
-            disabled
-            title="A fixture row — there is no device behind this control."
-            className="h-9 px-4 rounded-full text-sm border border-ink/15 text-ink/40 cursor-not-allowed"
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <InertNote className="mt-3">
-        A fixture row: nothing here was read from hardware, and these controls are disabled
-        because there is no device behind them to send anything to. A real one of these appears
-        in the list above chipped &ldquo;Engine&rdquo; once a driver on your hub reports it, and
-        its controls do work.
-      </InertNote>
-    </>
+      {state.status === 'error' && (
+        <p className="mt-4 text-sm text-terracotta-deep leading-relaxed">{state.message}</p>
+      )}
+
+      {state.status === 'found' && (
+        <div className="mt-4">
+          {/* Said on every response, including a full one — this is the
+              sentence that explains why there is no button beside a row that
+              just says "add". */}
+          <p className="text-xs text-ink/55 leading-relaxed">{state.note}</p>
+
+          {state.controllers.length === 0 ? (
+            <p className="mt-3 text-sm text-ink/65">
+              Nothing answered. That can mean there are no controllers on this network, or that
+              one hasn&rsquo;t finished booting — mDNS is best-effort, so a second scan sometimes
+              finds what the first missed.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {state.controllers.map((c) => {
+                // A real controller always advertises its device id in the TXT
+                // record. An empty one is not a quieter version of normal — it
+                // is the one signal this list has that something answering
+                // isn't what it looks like.
+                const suspect = c.device_id === '';
+                return (
+                  <li
+                    key={`${c.instance}-${c.addr}`}
+                    className={cn(
+                      'rounded-xl border px-3 py-2.5',
+                      suspect ? 'border-terracotta/40 bg-terracotta/5' : 'border-ink/10',
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-medium truncate">{c.instance || '(unnamed)'}</span>
+                      <span className="font-mono text-xs text-ink/55 shrink-0">{c.addr}</span>
+                    </div>
+                    <p
+                      className={cn(
+                        'mt-1 text-xs font-mono truncate',
+                        suspect ? 'text-terracotta-deep' : 'text-ink/55',
+                      )}
+                    >
+                      {suspect ? 'no device id advertised' : c.device_id}
+                    </p>
+                    {suspect && (
+                      <p className="mt-1.5 text-xs text-terracotta-deep leading-relaxed">
+                        A real controller always advertises a device id. Treat this responder as
+                        unverified — do not assume it is one of yours.
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }
 

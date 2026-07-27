@@ -2,14 +2,14 @@
 // (`src/routes/+page.svelte` at commit bf99a4d) and merged with the real,
 // gateway-backed dashboard that replaced it.
 //
-// Three kinds of thing share this screen on purpose: what your gateway
-// reports (opens today, access points, recent activity, locations), what the
-// device engine reports (live device tiles, chipped "Engine"), and what the
-// built-in demo dataset still stands in for (power draw, alerts, the event
-// log, and fleet tiles for kinds no driver on this hub serves). Each is
-// marked where it sits — <DemoChip /> on the fixture panels, <EngineChip />
-// on engine-backed ones, nothing on the gateway's own. See
-// src/components/demo/DemoMarks.tsx.
+// Everything on this screen now traces to a live source: what your gateway
+// reports directly (opens today, access points, recent activity, locations),
+// what the device engine reports (live device tiles, chipped "Engine"), and
+// what the energy meter reports (power draw). None of it is fixture data —
+// see src/components/demo/engineState.ts and src/components/demo/liveState.ts
+// for how each source's ABSENCE (no engine configured, no meter, a forbidden
+// read, a broken fetch) is told apart from an empty-but-live answer, and
+// printed as a verbatim notice rather than collapsed into a blank panel.
 //
 // Deliberately NOT ported from the Svelte original: its "Live signal" wave,
 // which re-randomised on a 1s interval. A chart that moves is a chart that
@@ -20,7 +20,7 @@ import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/Card';
 import { AccessPointAction } from '@/components/access/AccessPointAction';
 import { CreateAccessPointModal } from '@/components/access/CreateAccessPointModal';
-import { DemoChip, EngineChip, InertNote, StateDot } from '@/components/demo/DemoMarks';
+import { EngineChip, InertNote, StateDot } from '@/components/demo/DemoMarks';
 import {
   availabilityState,
   engineFleet,
@@ -29,6 +29,7 @@ import {
   summaryLine,
   type EngineFleet,
 } from '@/components/demo/engineState';
+import { bucketCaveat, energyNotice, energyState, type EnergyState } from '@/components/demo/liveState';
 import { useAuth } from '@/lib/auth';
 import {
   api,
@@ -36,7 +37,6 @@ import {
   type AccountSummary,
   type LocationRow,
 } from '@/lib/api';
-import { DEMO_POWER_DRAW_KW, demoDevices, events as demoEvents } from '@/lib/demoData';
 import { fromUnix } from '@/lib/time';
 import { cn } from '@/lib/cn';
 
@@ -86,10 +86,6 @@ type QuotaWatchEntry = {
   cap: number;
 };
 
-// Fixture-derived headline figures, computed once (never on an interval).
-const DEMO_ALERTS = demoDevices.filter((d) => d.state === 'alert').length;
-const DEMO_REPORTING = demoDevices.filter((d) => d.state !== 'off').length;
-
 export default function Overview() {
   const { user, currentAccount } = useAuth();
   const [summary, setSummary] = useState<AccountSummary | null>(null);
@@ -98,6 +94,9 @@ export default function Overview() {
   // The device engine, or the honest reason there isn't one. Never throws and
   // never blocks the dashboard — see engineFleet().
   const [engine, setEngine] = useState<EngineFleet | null>(null);
+  // The energy meter, or the honest reason there isn't one. Never throws
+  // either — see energyState() in components/demo/liveState.ts.
+  const [energy, setEnergy] = useState<EnergyState | null>(null);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCreateAp, setShowCreateAp] = useState(false);
@@ -119,6 +118,10 @@ export default function Overview() {
     if (!currentAccount) return;
     setDataLoaded(false);
     void engineFleet().then(setEngine);
+    // Latest hour's mean draw is enough for a headline "power draw" figure —
+    // a full series belongs to a dedicated energy screen, not this one.
+    // Non-blocking and never throws, same reasoning as engineFleet() above.
+    void energyState(currentAccount.id, { grain: 'hour' }).then(setEnergy);
     try {
       // Summary isn't available on every gateway (see isRealSummary above) —
       // its absence must never block locations/access points from loading,
@@ -178,9 +181,20 @@ export default function Overview() {
   const engineReporting = engineDevices.filter(
     (d) => availabilityState(d.availability) === 'live',
   ).length;
-  const fleetTotal = accessPoints.length + engineDevices.length + demoDevices.length;
-  const fleetReporting = accessPoints.length + engineReporting + DEMO_REPORTING;
+  const fleetTotal = accessPoints.length + engineDevices.length;
+  const fleetReporting = accessPoints.length + engineReporting;
   const engineLine = engine ? engineNotice(engine) : null;
+
+  // Power draw. Only the latest bucket matters for a headline figure — take
+  // it as-is rather than averaging across the window, and never treat a null
+  // mean_kw as zero: it means the hour went unmeasured, not that nothing drew
+  // power. `energyLine` covers every case with no number to show (no meter,
+  // forbidden, unsupported hub, failed fetch, or a live meter with an empty
+  // window) — printed verbatim, never paraphrased.
+  const energyBuckets = energy?.status === 'live' ? energy.series.buckets : [];
+  const latestBucket = energyBuckets.length > 0 ? energyBuckets[energyBuckets.length - 1] : null;
+  const latestCaveat = latestBucket ? bucketCaveat(latestBucket) : null;
+  const energyLine = energy ? energyNotice(energy) : null;
 
   // Wait for data before deciding which screen to show — avoids flash.
   if (!dataLoaded) {
@@ -217,8 +231,8 @@ export default function Overview() {
   // Regular dashboard — user has at least one access point.
   return (
     <>
-      {/* No min-height stretch here: Overview continues below with the fleet,
-          event log and activity, so the quick-access row sizes to content. */}
+      {/* No min-height stretch here: Overview continues below with the fleet
+          and recent activity, so the quick-access row sizes to content. */}
       <div className="flex flex-col gap-3 sm:gap-4">
         <header className="flex items-end justify-between gap-3 flex-wrap">
           <h1 className="font-display-tight text-2xl sm:text-3xl lg:text-[36px] leading-tight tracking-[-0.02em] min-w-0">
@@ -271,10 +285,11 @@ export default function Overview() {
           </div>
         )}
 
-        {/* Readouts. Card 1 is your gateway's own count; cards 2–4 are the
-            estate at large, which the demo dataset stands in for until the
-            device engine lands — each says so on the card. */}
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+        {/* Readouts. Card 1 is your gateway's own count; cards 2–3 are the
+            device engine and the energy meter — each already knows how to say
+            "not configured" instead of pretending to zero, so the card just
+            renders whatever it says. */}
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
           <Card className="bg-ink text-paper p-4 sm:p-5">
             <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-paper/55">Opens today</p>
             <p className="font-display text-3xl sm:text-4xl mt-1.5 sm:mt-2 leading-none tabular-nums">
@@ -293,44 +308,30 @@ export default function Overview() {
             </p>
             <p className="text-[10px] sm:text-xs text-ink/55 mt-1 sm:mt-1.5 leading-snug">
               {accessPoints.length} on your hub
-              {engineDevices.length > 0 && ` · ${engineDevices.length} engine`} ·{' '}
-              {demoDevices.length} demo
+              {engineDevices.length > 0 && ` · ${engineDevices.length} engine`}
             </p>
           </Card>
 
           <Card className="p-4 sm:p-5">
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-ink/55">Power draw</p>
-              <DemoChip label="Demo" />
-            </div>
+            <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-ink/55">Power draw</p>
             <p className="font-display text-3xl sm:text-4xl mt-1.5 sm:mt-2 leading-none tabular-nums">
-              {DEMO_POWER_DRAW_KW.toFixed(2)}
+              {latestBucket?.mean_kw != null ? latestBucket.mean_kw.toFixed(2) : '—'}
               <span className="text-sm text-ink/40 ml-1.5">kW</span>
             </p>
             <p className="text-[10px] sm:text-xs text-ink/55 mt-1 sm:mt-1.5 truncate">
-              fixed figure · no meter attached
-            </p>
-          </Card>
-
-          <Card className={cn('p-4 sm:p-5', DEMO_ALERTS > 0 && 'border-terracotta/30')}>
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-ink/55">Alerts</p>
-              <DemoChip label="Demo" />
-            </div>
-            <p
-              className={cn(
-                'font-display text-3xl sm:text-4xl mt-1.5 sm:mt-2 leading-none tabular-nums',
-                DEMO_ALERTS > 0 && 'text-terracotta',
-              )}
-            >
-              {DEMO_ALERTS}
-              <span className="text-sm text-ink/40 ml-1.5">open</span>
-            </p>
-            <p className="text-[10px] sm:text-xs text-ink/55 mt-1 sm:mt-1.5 truncate">
-              from fixture devices only
+              {latestBucket
+                ? latestBucket.mean_kw != null
+                  ? `mean over the latest ${latestBucket.grain}${latestCaveat ? ` · ${latestCaveat}` : ''}`
+                  : (latestCaveat ?? 'unmeasured this period')
+                : 'no meter attached'}
             </p>
           </Card>
         </section>
+
+        {/* The one sentence a screen can print for a non-live meter, verbatim
+            — see energyNotice()'s doc comment. Silent when the meter is live
+            and its latest bucket has a real figure. */}
+        {energyLine && <InertNote>{energyLine}</InertNote>}
 
         <section className="flex flex-col gap-3">
           <div className="flex items-end justify-between gap-3">
@@ -352,15 +353,18 @@ export default function Overview() {
         </section>
       </div>
 
-      {/* Fleet — the whole estate in one grid, exactly as the pre-fold console
-          laid it out. Access tiles are your real access points; the rest are
-          fixtures and carry a chip saying so. */}
-      <section className="mt-10 sm:mt-14 grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-2 p-0 overflow-hidden">
+      {/* Fleet — access points from your gateway plus whatever the device
+          engine reports. No filler rows: a hub with a small fleet just shows
+          a small grid, which is the honest shape of "no devices" rather than
+          a fixture padding it out to look fuller than it is. */}
+      <section className="mt-10 sm:mt-14">
+        <Card className="p-0 overflow-hidden">
           <div className="flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-ink/8">
             <div>
               <p className="text-[10px] uppercase tracking-[0.18em] text-ink/55">Fleet</p>
-              <p className="text-[11px] text-ink/45 mt-0.5">{fleetTotal} devices · 7 kinds</p>
+              <p className="text-[11px] text-ink/45 mt-0.5">
+                {fleetTotal} device{fleetTotal === 1 ? '' : 's'}
+              </p>
             </div>
             <Link to="/app/devices" className="text-sm text-ink/60 hover:text-ink shrink-0">
               All devices →
@@ -408,68 +412,13 @@ export default function Overview() {
                 </p>
               </li>
             ))}
-            {demoDevices
-              .slice(0, Math.max(0, 9 - Math.min(accessPoints.length, 3) - Math.min(engineDevices.length, 6)))
-              .map((d) => (
-              <li key={d.id} className={cn('bg-paper-cool p-4', d.state === 'off' && 'opacity-60')}>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-2 min-w-0">
-                    <StateDot state={d.state} />
-                    <span className="text-[10px] uppercase tracking-[0.16em] text-ink/45 truncate">
-                      {d.kind}
-                    </span>
-                  </span>
-                  <DemoChip label="Demo" />
-                </div>
-                <p className="mt-1.5 text-sm text-ink truncate">{d.name}</p>
-                <p className="mt-1.5 font-mono text-[11px] text-ink/55 truncate">{d.read}</p>
-              </li>
-            ))}
           </ul>
           <div className="px-5 sm:px-6 py-4 border-t border-ink/8 space-y-2">
             <InertNote>
               Access tiles are live — they open a real gate. Tiles chipped &ldquo;Engine&rdquo;
-              are live too: real devices your hub&rsquo;s device engine reported. Tiles chipped
-              &ldquo;Demo&rdquo; are fixture rows and read no hardware.
+              are live too: real devices your hub&rsquo;s device engine reported.
             </InertNote>
             {engineLine && <InertNote>{engineLine}</InertNote>}
-          </div>
-        </Card>
-
-        <Card className="p-0 overflow-hidden">
-          <div className="flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-ink/8">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-ink/55">Event log</p>
-            <DemoChip />
-          </div>
-          <ul className="divide-y divide-ink/8">
-            {demoEvents.map((e) => (
-              <li key={e.t} className="flex items-baseline gap-3 px-5 sm:px-6 py-3 text-[13px]">
-                <span className="font-mono text-[11px] text-ink/45 shrink-0">{e.t}</span>
-                <span
-                  className={cn(
-                    'text-[9px] uppercase tracking-[0.14em] w-14 shrink-0',
-                    e.sev === 'alert'
-                      ? 'text-terracotta'
-                      : e.sev === 'warn'
-                        ? 'text-gold'
-                        : 'text-moss',
-                  )}
-                >
-                  {e.tag}
-                </span>
-                <span className="text-ink/70 min-w-0 truncate">{e.msg}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="px-5 sm:px-6 py-4 border-t border-ink/8">
-            <InertNote>
-              Five fixed lines that never change. Your real access log — every open, close and
-              denial — is under{' '}
-              <Link to="/app/analytics" className="underline hover:text-ink/70">
-                Analytics
-              </Link>
-              .
-            </InertNote>
           </div>
         </Card>
       </section>

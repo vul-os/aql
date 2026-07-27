@@ -94,8 +94,8 @@ theme one click away.
 | <img src="site/screenshots/portal-devices.png" alt="Aql devices" /> | <img src="site/screenshots/portal-energy.png" alt="Aql energy" /> |
 | **Automations** — when → do, with the tier ceiling shown | **Access points** — gates, doors and barriers |
 | <img src="site/screenshots/portal-automations.png" alt="Aql automations" /> | <img src="site/screenshots/portal-locations.png" alt="Aql access points" /> |
-| **Analytics** — opens, denials and who | **Emergency access** — a grant on a phone, offline |
-| <img src="site/screenshots/portal-analytics.png" alt="Aql analytics" /> | <img src="site/screenshots/app-emergency.png" alt="Aql offline emergency access" /> |
+| **Analytics** — opens, denials and who | **Open** — one tap, from a phone |
+| <img src="site/screenshots/portal-analytics.png" alt="Aql analytics" /> | <img src="site/screenshots/app-open.png" alt="Aql open gate, mobile" /> |
 
 **Light & dark** — every screen ships both:
 

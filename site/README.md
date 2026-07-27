@@ -14,5 +14,5 @@ and self-contained.
   by `docs.html` (so relative URLs inside chapters resolve from the site root).
 - `screenshots/` + `screenshots/dark/` — PNGs land here from `npm run screenshotter`
   (portal-dashboard, portal-locations, portal-analytics, portal-limits, security,
-  app-emergency, landing-hero, docs). The landing degrades gracefully if any are
+  app-open, landing-hero, docs). The landing degrades gracefully if any are
   missing.

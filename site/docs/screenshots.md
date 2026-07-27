@@ -84,9 +84,9 @@ rate-limited, quota, suspended — with accounts, users, limits and audit a tab 
 The console's own open path — pick an access point, open it, see the result. This is the
 fallback that always works when a chat channel is down.
 
-![Opening a gate from the console](screenshots/app-emergency.png)
+![Opening a gate from the console](screenshots/app-open.png)
 
-[Dark variant](screenshots/dark/app-emergency.png)
+[Dark variant](screenshots/dark/app-open.png)
 
 > This is **not** an offline emergency-access screen. That screen does not exist: no
 > build of the app requests, stores or presents an offline grant. See
