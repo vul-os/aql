@@ -6,42 +6,61 @@
 // so the page stays a view and the rules live somewhere testable.
 
 import { ApiError, api, type AccessPointDetail } from '../api';
-import { getApiBaseUrl, isTauri } from '../gateway';
+import { gatewayFetch, getApiBaseUrl, isTauri } from '../gateway';
 import {
   evaluate,
   isExpired,
   needsRefresh,
   parseGrant,
+  parseStoredGrant,
   secondsUntilExpiry,
   type Grant,
   type Verdict,
 } from './grant';
 import { DEFAULT_LAN_PORT, redeemOverLan, type RedeemOutcome } from './redeem';
 import {
+  HubKeyChangedError,
+  assertHubKeyUnchanged,
   checkSupport,
   ensureAppKey,
+  isHubPubkey,
+  loadAllGrantRecords,
   loadAppKey,
   loadGrantRecord,
-  pruneRecords,
   rememberAddress,
   saveGrantRecord,
   signerFor,
-  deleteGrantRecord,
+  forgetHub,
   forgetEverything,
   recordId,
   type AppKey,
   type GrantAccessPoint,
   type GrantRecord,
+  type HeldGrant,
   type Support,
 } from './vault';
+
+export type { HeldGrant };
 
 export type OfflineState = {
   support: Support;
   key: AppKey | null;
-  record: GrantRecord | null;
-  grant: Grant | null;
-  /** Something was wrong with what was stored, and it was discarded. */
-  problem: string | null;
+  /**
+   * Every hub this device holds a usable grant from — home AND the friend's
+   * office, side by side, newest fetch first. Each entry is self-describing
+   * (its own pinned hub key, its own member id at that hub, its own gates);
+   * nothing here is scoped to whichever hub the admin console happens to be
+   * pointed at.
+   */
+  held: HeldGrant[];
+  /**
+   * The entry for the hub the console is currently pointed at, matched on the
+   * stored address hint and member id, or null when the console's hub is one
+   * this device holds no grant from. Never used to decide what to keep.
+   */
+  current: HeldGrant | null;
+  /** What was discarded and why. Shown to the user — nothing is dropped silently. */
+  problems: string[];
 };
 
 const nowSec = () => Math.floor(Date.now() / 1000);
@@ -49,26 +68,71 @@ const nowSec = () => Math.floor(Date.now() / 1000);
 /**
  * Read everything this feature knows, and prune anything stale on the way
  * through. Never throws: at a gate, an exception is a blank screen.
+ *
+ * Reads EVERY hub's record, not just the console's. `memberId` is only used
+ * to work out which of them the console is currently looking at — the app is
+ * signed in to at most one hub's console and simply does not know its member
+ * id at the others, which is why each record carries its own.
  */
 export async function loadState(memberId: string): Promise<OfflineState> {
-  const gatewayUrl = getApiBaseUrl();
   const support = await checkSupport();
   if (!support.ok) {
-    return { support, key: null, record: null, grant: null, problem: null };
+    return { support, key: null, held: [], current: null, problems: [] };
   }
   const now = nowSec();
-  await pruneRecords({ gatewayUrl, memberId }, now);
+  const { held, problems } = await loadAllGrantRecords(now);
   const key = await loadAppKey();
-  const loaded = await loadGrantRecord(gatewayUrl, memberId, now);
-  if (loaded.record === null) {
-    return { support, key, record: null, grant: null, problem: loaded.problem };
-  }
-  return { support, key, record: loaded.record, grant: loaded.grant, problem: null };
+  const gatewayUrl = getApiBaseUrl();
+  const current =
+    held.find((h) => h.record.gatewayUrl === gatewayUrl && h.record.memberId === memberId) ?? null;
+  return { support, key, held, current, problems };
 }
 
 export type EnrollOutcome =
   | { ok: true; record: GrantRecord; grant: Grant }
-  | { ok: false; message: string };
+  | { ok: false; message: string; code?: string };
+
+/**
+ * Ask an address which hub it is: GET /v1/gateway/key, the same Ed25519
+ * public key the controllers at that hub pin
+ * (gateway/internal/keys.PublicKeyB64, served by handleGatewayKey).
+ *
+ * Trust-on-first-use, and it says so: a first fetch cannot be authenticated,
+ * because the only thing available to authenticate it with is the hub itself.
+ * What pinning buys is everything AFTER the first: the same hub is one record
+ * whether reached over the LAN or from outside, and an address that starts
+ * answering with a different key is refused instead of quietly re-enrolled.
+ */
+async function fetchHubPubkey(
+  baseUrl: string,
+): Promise<{ ok: true; hubPubkey: string } | { ok: false; message: string }> {
+  let res: Response;
+  try {
+    res = await gatewayFetch(`${baseUrl}/v1/gateway/key`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    });
+  } catch (err) {
+    return {
+      ok: false,
+      message: `Could not ask the hub which hub it is: ${err instanceof Error ? err.message : 'no answer'}.`,
+    };
+  }
+  if (!res.ok) {
+    return { ok: false, message: `The hub answered HTTP ${res.status} when asked for its key.` };
+  }
+  const body = (await res.json().catch(() => null)) as {
+    alg?: unknown;
+    public_key?: unknown;
+  } | null;
+  if (!body || body.alg !== 'ed25519' || !isHubPubkey(body.public_key)) {
+    return {
+      ok: false,
+      message: 'That address did not return a usable Ed25519 hub key, so it cannot be pinned.',
+    };
+  }
+  return { ok: true, hubPubkey: body.public_key };
+}
 
 /**
  * Ask the hub for a grant covering `accessPoints`, and store it.
@@ -87,6 +151,21 @@ export async function requestGrant(
   const keyRes = await ensureAppKey();
   if (!keyRes.ok) return { ok: false, message: keyRes.support.message };
   const key = keyRes.key;
+
+  // Establish WHICH hub this is before asking it for anything, so a grant is
+  // never minted only to be refused, and so a changed key is caught here
+  // rather than after a record has been written.
+  const gatewayUrl = getApiBaseUrl();
+  const hubKey = await fetchHubPubkey(gatewayUrl);
+  if (!hubKey.ok) return { ok: false, message: hubKey.message };
+  try {
+    await assertHubKeyUnchanged(gatewayUrl, hubKey.hubPubkey);
+  } catch (err) {
+    if (err instanceof HubKeyChangedError) {
+      return { ok: false, message: err.message, code: err.code };
+    }
+    return { ok: false, message: 'The stored hub pinning could not be checked, so nothing was changed.' };
+  }
 
   let raw: unknown;
   try {
@@ -115,10 +194,10 @@ export async function requestGrant(
     };
   }
 
-  const gatewayUrl = getApiBaseUrl();
-  const previous = await loadGrantRecord(gatewayUrl, memberId, nowSec());
+  const previous = await loadGrantRecord(hubKey.hubPubkey, memberId, nowSec());
   const record: GrantRecord = {
-    id: recordId(gatewayUrl, memberId),
+    id: recordId(hubKey.hubPubkey, memberId),
+    hubPubkey: hubKey.hubPubkey,
     gatewayUrl,
     memberId,
     grantRaw: JSON.stringify(raw),
@@ -180,14 +259,19 @@ function issuanceError(err: unknown, accessPoints: AccessPointDetail[]): string 
  * never widens a grant on its own, and a failure leaves the existing (still
  * valid) grant alone — losing working emergency access because the hub was
  * briefly unreachable would be the wrong failure.
+ *
+ * Only ever the CURRENT hub's grant: refreshing needs that hub's session, and
+ * this app holds at most one. Every other hub's record is left exactly as it
+ * is until the console is pointed back at it.
  */
 export async function refreshIfDue(
   memberId: string,
   state: OfflineState,
 ): Promise<EnrollOutcome | null> {
-  if (!state.record || !state.grant) return null;
-  if (!needsRefresh(state.grant, nowSec())) return null;
-  const aps: AccessPointDetail[] = state.record.accessPoints.map(
+  const current = state.current;
+  if (!current) return null;
+  if (!needsRefresh(current.grant, nowSec())) return null;
+  const aps: AccessPointDetail[] = current.record.accessPoints.map(
     (a) =>
       ({
         id: a.id,
@@ -199,11 +283,22 @@ export async function refreshIfDue(
   return requestGrant(memberId, aps);
 }
 
-export async function forgetGrant(memberId: string): Promise<void> {
-  await deleteGrantRecord(getApiBaseUrl(), memberId);
+/**
+ * Drop ONE hub's emergency access — identified by its pinned key, not its
+ * address, so "forget the office" cannot reach the home hub's record even if
+ * both were once on the same URL.
+ */
+export async function forgetGrant(hubPubkey: string): Promise<void> {
+  await forgetHub(hubPubkey);
 }
 
-/** Sign-out / "this is not my device any more": key and grants both go. */
+/**
+ * "This is not my device any more": every hub's grant and the app key.
+ *
+ * Deliberately all-hubs, and deliberately NOT the ordinary sign-out path —
+ * signing out of one hub's console must not destroy emergency access at a
+ * hub the person never signed out of. Use forgetGrant for that.
+ */
 export async function forgetAll(): Promise<void> {
   await forgetEverything();
 }
@@ -227,6 +322,26 @@ export type PresentOptions = {
  * own refusal when it can already tell the controller would say no.
  */
 export async function presentAtGate(opts: PresentOptions): Promise<RedeemOutcome> {
+  // Structural isolation (multi-hub §2.5 rule 1): everything presented is
+  // taken out of ONE record — the bytes that go on the wire, the access
+  // points, the addresses and the key binding. The parsed grant is re-derived
+  // from that record's own blob rather than trusted from the caller, so a
+  // caller that paired one hub's record with another hub's grant judges the
+  // wrong document locally and is refused here.
+  //
+  // This is defence in depth, not the boundary: the controller verifies every
+  // grant against its own pinned hub key and answers `bad_sig` to a foreign
+  // one (controller/internal/grants/grants.go, step 3). What this buys is an
+  // honest refusal on this device instead of a confusing denial at the gate.
+  const own = parseStoredGrant(opts.record.grantRaw);
+  if (!own.ok || own.grant.grant_id !== opts.grant.grant_id) {
+    return {
+      kind: 'refused',
+      code: 'record_mismatch',
+      message:
+        'That grant does not belong to the hub record it was presented with. Nothing was sent.',
+    };
+  }
   const ap = opts.record.accessPoints.find((a) => a.id === opts.accessPointId);
   const baseUrl = normalizeControllerAddress(opts.address);
   if (!baseUrl) {
@@ -239,7 +354,7 @@ export async function presentAtGate(opts: PresentOptions): Promise<RedeemOutcome
   const outcome = await redeemOverLan({
     baseUrl,
     grantRaw: opts.record.grantRaw,
-    grant: opts.grant,
+    grant: own.grant,
     accessPointId: opts.accessPointId,
     appPubkey: opts.key.publicKeyB64u,
     deviceId: ap?.deviceId ?? null,
@@ -314,6 +429,13 @@ export function lanTransportAvailable(): boolean {
 }
 
 export type GateStatus = {
+  /**
+   * The hub this gate belongs to — its pinned key. Access-point ids are
+   * hub-local (randomly generated, so collision is improbable — but
+   * improbable is not a boundary), so every UI map over gates must be keyed
+   * on the composite `(hubPubkey, accessPoint.id)`, never on the id alone.
+   */
+  hubPubkey: string;
   accessPoint: GrantAccessPoint;
   verdict: Verdict;
   address: string;
@@ -321,7 +443,12 @@ export type GateStatus = {
   addressKnown: boolean;
 };
 
-/** Per-gate presentation status for the UI, in one place. */
+/**
+ * Per-gate presentation status for the UI, in one place.
+ *
+ * A gate's hub is never inferred: it is the record the gate was read out of.
+ * No step here consults another record.
+ */
 export function gateStatuses(
   record: GrantRecord,
   grant: Grant,
@@ -331,6 +458,7 @@ export function gateStatuses(
   return record.accessPoints.map((ap) => {
     const known = ap.deviceId ? record.addresses[ap.deviceId] : undefined;
     return {
+      hubPubkey: record.hubPubkey,
       accessPoint: ap,
       verdict: evaluate({
         grant,
@@ -343,6 +471,68 @@ export function gateStatuses(
       addressKnown: Boolean(known),
     };
   });
+}
+
+/**
+ * The unified gate list across every hub — home and the friend's office in
+ * one list, because the moment this is used is the worst possible moment to
+ * make someone answer "which hub is this gate on?" first.
+ *
+ * Provenance is carried, not inferred: each entry keeps the `hubPubkey` of the
+ * record it came out of, so the UI can group under a hub heading and key its
+ * maps on the composite without any global index over hub-local ids.
+ */
+export function allGateStatuses(
+  held: HeldGrant[],
+  appPubkey: string | null,
+  now: number,
+): GateStatus[] {
+  return held.flatMap((h) => gateStatuses(h.record, h.grant, appPubkey, now));
+}
+
+export type Freshness = {
+  /** Unix seconds when this hub last confirmed the grant. */
+  confirmedAt: number;
+  ageSec: number;
+  /**
+   * True when this device has NOT been able to ask the hub since the grant
+   * was past half-life. The grant is still cryptographically valid until its
+   * exp — but the app does not know whether the hub has withdrawn it, and
+   * must say both.
+   */
+  unconfirmed: boolean;
+  /**
+   * Wording that never renders staleness as validity. There is no green
+   * "Valid" here on purpose: nothing this device can do offline re-verifies a
+   * stored grant against the hub's current view of the holder.
+   */
+  message: string;
+};
+
+/**
+ * What may honestly be said about one hub's grant right now.
+ *
+ * The two facts are different and both must be shown: the grant is valid
+ * until `exp` (this device can check that), and the hub may have withdrawn it
+ * since `fetchedAt` (this device cannot check that at all while offline).
+ */
+export function freshness(held: HeldGrant, now: number): Freshness {
+  const confirmedAt = held.record.fetchedAt ?? 0;
+  const ageSec = Math.max(0, now - confirmedAt);
+  const unconfirmed = needsRefresh(held.grant, now);
+  const until = new Date(held.grant.exp * 1000).toISOString().slice(0, 10);
+  return {
+    confirmedAt,
+    ageSec,
+    unconfirmed,
+    message: unconfirmed
+      ? `Not confirmed with this hub since ${new Date(confirmedAt * 1000)
+          .toISOString()
+          .slice(0, 10)}. It will still open these gates until ${until} unless the hub has withdrawn it — this device has not been able to ask. Connect when you can.`
+      : `Confirmed with this hub on ${new Date(confirmedAt * 1000)
+          .toISOString()
+          .slice(0, 10)}. Opens these gates until ${until}.`,
+  };
 }
 
 export { isExpired, needsRefresh, secondsUntilExpiry };
