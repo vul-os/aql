@@ -88,9 +88,22 @@ fallback that always works when a chat channel is down.
 
 [Dark variant](screenshots/dark/app-open.png)
 
-> This is **not** an offline emergency-access screen. That screen does not exist: no
-> build of the app requests, stores or presents an offline grant. See
-> [Emergency access](emergency-access.md).
+> This is the ordinary **online** open path, not emergency access. The emergency screen is
+> separate — see below and [Emergency access](emergency-access.md).
+
+## Emergency access
+
+Where you set up an offline grant, and where you present one at a gate. Captured on the
+mobile viewport because that is where it is used.
+
+![Emergency access](screenshots/app-emergency.png)
+
+[Dark variant](screenshots/dark/app-emergency.png)
+
+> Requesting and holding a grant works in any build. **Presenting one does not work from a
+> browser tab**: it talks straight to the controller on the LAN, which sets no CORS headers
+> and is not a web API, so that leg needs the desktop or packaged app. The screen says so
+> itself rather than failing at the gate.
 
 ## The website
 

@@ -49,6 +49,36 @@ const NOT_A_HUB_CODE = new Map<string, string>([
   ['gateway_route_unavailable', 'client-side sentinel — see UNAVAILABLE_CODE in api.ts'],
 ]);
 
+/**
+ * Codes the APP itself mints, which are legitimate to branch on and are not the
+ * hub's to emit.
+ *
+ * `src/lib/offline/` raises its own errors — a stored hub key that no longer
+ * matches, a grant window the device believes has closed — and a screen must be
+ * able to branch on those. They look identical to hub codes and come from a
+ * different authority entirely, which is the distinction this file exists to
+ * police in the other direction.
+ *
+ * They are collected from source rather than listed by hand, so adding one
+ * cannot silently widen what this test accepts: it has to actually exist in the
+ * app's own code.
+ */
+function appMintedCodes(): Set<string> {
+  const codes = new Set<string>();
+  for (const file of tsFilesUnder(path.join(repo, 'src/lib'))) {
+    const src = readFileSync(file, 'utf-8');
+    // `readonly code = 'x'` on an app error class, and `code: 'x'` in a
+    // returned result object.
+    for (const m of src.matchAll(/\breadonly\s+code\s*=\s*['"]([a-z][a-z0-9_]*)['"]/g)) {
+      codes.add(m[1]);
+    }
+    for (const m of src.matchAll(/\bcode:\s*['"]([a-z][a-z0-9_]*)['"]/g)) {
+      codes.add(m[1]);
+    }
+  }
+  return codes;
+}
+
 /** Every error code any hub handler can put in an `error` field. */
 function goEmittedCodes(): Set<string> {
   const codes = new Set<string>();
@@ -115,6 +145,18 @@ function tsBranchedCodes(): Map<string, string> {
       )) {
         branched.set(m[1], `${path.relative(repo, file)}:${i + 1}`);
       }
+      // A comparison against a NAMED CONSTANT is invisible to the literal scan
+      // above, so `err.code === SOME_CODE` slips through entirely. That is not
+      // hypothetical — it is how a screen worked around this test rather than
+      // resolving what it flagged, which is the failure mode a drift alarm has
+      // to be hardest against: the workaround is easier than the fix and leaves
+      // no trace. Resolve single-file constants and check them too.
+      for (const m of line.matchAll(/(?:\.code|\berror)\s*===\s*([A-Z][A-Z0-9_]*)\b/g)) {
+        const decl = new RegExp(
+          `\\b${m[1]}\\b[^=]*=\\s*['"\`]([a-z][a-z0-9_]*)['"\`]`,
+        ).exec(src);
+        if (decl) branched.set(decl[1], `${path.relative(repo, file)}:${i + 1}`);
+      }
     });
   }
   return branched;
@@ -137,11 +179,14 @@ function tsFilesUnder(dir: string): string[] {
 describe('error code parity', () => {
   it('every error code the console branches on is one the hub can emit', () => {
     const emitted = goEmittedCodes();
+    const app = appMintedCodes();
     const branched = tsBranchedCodes();
 
     const dead: string[] = [];
     for (const [code, where] of branched) {
       if (emitted.has(code)) continue;
+      // Minted by the app itself — see appMintedCodes.
+      if (app.has(code)) continue;
       if (NOT_A_HUB_CODE.has(code)) continue;
       dead.push(`  ✗ ${code}  (${where} — no hub handler emits this code)`);
     }

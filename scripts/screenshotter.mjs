@@ -500,6 +500,14 @@ async function main() {
       // No Tauri app exists yet: the tap-to-open gate view at phone size is the
       // closest real "app" surface, standing in for the emergency/open flow.
       { path: '/app/open', file: 'app-open.png', expectText: 'Main gate' },
+      // The real emergency-access screen. Captured on the MOBILE viewport
+      // because that is where it is used — at a gate, in the dark, on a phone.
+      {
+        path: '/app/emergency',
+        file: 'app-emergency.png',
+        settleMs: 1_200,
+        expectText: 'before you need it',
+      },
     ];
 
     const contexts = [

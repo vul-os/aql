@@ -78,7 +78,7 @@ flowchart LR
 | 🚪 **Access control, end to end** | Ed25519-signed commands, a controller that pins your hub's key at pairing, per-member time windows, geofence rules, temporary grants, and **offline emergency access** that works with the network down. |
 | 💬 **Open the gate from chat** | WhatsApp, Telegram, Slack and Discord, on your own accounts. Every rail declares [what it costs, what it can do, and who reads your messages](#what-the-chat-rails-actually-cost-you) — the platform included. |
 | 📓 **A trail you can check** | Every open and every admin action is hash-chained. `aql-hub verify-audit` checks the chain against a cold backup, independently of the running server. |
-| 🖥️ **Console, desktop and phone** | A React console served by the hub itself, a Tauri desktop app that points at any hub you own, and a phone that stores and presents offline grants. |
+| 🖥️ **Console, desktop and phone** | A React console served by the hub itself, and a Tauri desktop app that points at any hub you own. Emergency grants are requested and held in any build; presenting one at a gate talks straight to the controller on the LAN, so that leg needs the app rather than a browser tab. |
 | 🔑 **Run it your way** | Scoped API tokens, outbound webhooks, two-factor auth, and a REST API for all of it. Nothing is hosted for you, ever. |
 
 ---
@@ -94,8 +94,8 @@ theme one click away.
 | <img src="site/screenshots/portal-devices.png" alt="Aql devices" /> | <img src="site/screenshots/portal-energy.png" alt="Aql energy" /> |
 | **Automations** — when → do, with the tier ceiling shown | **Access points** — gates, doors and barriers |
 | <img src="site/screenshots/portal-automations.png" alt="Aql automations" /> | <img src="site/screenshots/portal-locations.png" alt="Aql access points" /> |
-| **Analytics** — opens, denials and who | **Open** — one tap, from a phone |
-| <img src="site/screenshots/portal-analytics.png" alt="Aql analytics" /> | <img src="site/screenshots/app-open.png" alt="Aql open gate, mobile" /> |
+| **Analytics** — opens, denials and who | **Emergency access** — set up before you need it |
+| <img src="site/screenshots/portal-analytics.png" alt="Aql analytics" /> | <img src="site/screenshots/app-emergency.png" alt="Aql emergency access, mobile" /> |
 
 **Light & dark** — every screen ships both:
 

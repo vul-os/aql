@@ -80,6 +80,28 @@ export const FEATURES = [
   // for the full three-of-four picture. A single shipped/planned binary
   // entry can't say "some of this is real, some isn't" honestly, so this is
   // split into the two claims the docs now actually make.
+  // ── the app half, added 2026-07-27. The LIBRARY had existed for a while and
+  // nothing imported it, which is a component being complete and unreachable —
+  // the sixth instance of that shape found in this repo. The claim worth
+  // tracking is not "the code exists" but "a person can get to it".
+  {
+    id: 'offline-grant-app-half',
+    label: 'The app can request, hold and present an offline grant (a routed screen, not just a library)',
+    docStatus: 'shipped',
+    docRefs: [
+      'README.md § Access control — offline emergency access',
+      'site/docs/emergency-access.md',
+      'site/docs/screenshots.md § Emergency access',
+    ],
+    // Both halves: the library AND a routed screen that imports it. Evidence on
+    // the library alone would have passed for weeks while no user could reach
+    // it, which is exactly what happened.
+    evidence: [
+      { root: 'src/lib/offline', pattern: 'export async function requestGrant|export async function presentAtGate' },
+      { file: 'src/pages/app/EmergencyAccess.tsx', pattern: "from '@/lib/offline/service'" },
+      { file: 'src/routes.tsx', pattern: 'EmergencyAccess' },
+    ],
+  },
   {
     id: 'offline-grant-issuance',
     label: 'Gateway-side minting/issuance of offline LAN/BLE grants (POST /v1/offline-grants)',
