@@ -36,7 +36,7 @@ can be reachable on WhatsApp and Slack at once without being two people in your 
 | WhatsApp | phone number | **Shipped** — Meta Cloud API | **High** — verified Meta business + WABA + number |
 | Slack | member id | **Shipped** — Events API **and** Socket Mode | Minutes — an app manifest + signing secret |
 | Telegram | chat id | **Shipped** — opens wired through the shared pipeline | Minutes — a BotFather token + webhook secret |
-| Discord | user id | **In progress** — the adapter is written, nothing registers it yet, so no message reaches a gate | Minutes — a bot token, once it is wired |
+| Discord | user id | **Shipped** — Gateway WebSocket, outbound-only like Slack Socket Mode | Minutes — a bot token, the MESSAGE CONTENT intent, and no Interactions Endpoint URL |
 | DMTAP | keypair / `name@domain` | **Not built** — a `DialChannel` scaffold exists whose only transport implementation fails closed | — |
 
 > **Every chat channel puts a third party in the loop.** Meta, Slack and Telegram see
@@ -52,9 +52,15 @@ Two things there are worth knowing before you pick a rail:
 
 - **Every rail is inbound-triggered.** The hub cannot message a resident who has never
   messaged it. There is no rail on which Aql can cold-call.
-- **Slack Socket Mode is the only rail needing no public endpoint.** WhatsApp and Telegram
-  both arrive by webhook, so they need a reachable HTTPS address; Socket Mode holds an
-  outbound WebSocket and works behind CGNAT with no hostname at all.
+- **Two rails need no public endpoint at all.** Slack Socket Mode and Discord both hold
+  an outbound WebSocket and work behind CGNAT with no hostname. WhatsApp arrives by
+  webhook and has no alternative — Meta's Cloud API only speaks webhooks — so it is the
+  one rail that genuinely requires ingress. Telegram is webhook today with an opt-in
+  long-polling engine.
+
+  One Discord footgun worth knowing before you set it up: leave the **Interactions
+  Endpoint URL unset**. Setting it turns button taps into webhooks, which puts the rail
+  back into needing ingress and undoes the reason to pick it.
 
 ## WhatsApp (Meta Cloud API)
 

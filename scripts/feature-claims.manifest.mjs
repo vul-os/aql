@@ -131,17 +131,19 @@ export const FEATURES = [
   },
   {
     id: 'discord-channel',
-    // Split from "is Discord a working channel", which grep cannot answer. The
-    // adapter code exists; nothing registers it, so no resident can text a
-    // Discord message and open a gate. The label says which of those two this
-    // claim tracks, in capitals, so nobody reads 'shipped' as 'usable'.
-    label: 'Discord adapter code exists (NOT that it is registered or reachable — nothing wires it into the hub yet)',
+    label: 'Discord as a working chat channel — registered, env-configured, reaching the shared open path',
     docStatus: 'shipped',
     docRefs: [
-      'README.md — Discord listed as in progress: adapter written, not wired',
-      'site/docs/channels.md — the channel table',
+      'site/docs/channels.md — the channel table lists Discord as shipped',
     ],
-    evidence: [{ root: 'gateway/internal/channels', pattern: 'KindDiscord|type Discord struct', flags: 'i' }],
+    // Three separate things, because "the file exists" was never the claim: the
+    // adapter, the env read that lets an operator turn it on, and the
+    // registration without which no message reaches a gate.
+    evidence: [
+      { root: 'gateway/internal/channels', pattern: 'KindDiscord', flags: 'i' },
+      { file: 'gateway/internal/channels/channels.go', pattern: 'DISCORD_BOT_TOKEN' },
+      { file: 'gateway/internal/httpapi/server.go', pattern: 's\\.wireDiscord\\(\\)' },
+    ],
   },
   {
     id: 'tauri-mobile',
