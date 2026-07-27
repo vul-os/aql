@@ -144,10 +144,25 @@ describe('route coverage', () => {
     for (const r of routes) {
       const key = `${r.method} ${r.path}`;
       if (NO_CLIENT_NEEDED.has(key)) continue;
-      // Path-level, not method-level. A route family the console reaches at
-      // all is reachable; asserting per-method would flag a DELETE that no
-      // screen happens to offer yet, which is a UI decision rather than an
-      // unreachable feature.
+      // Path-level, not method-level — and that is a REAL limitation with a
+      // known cost, not a simplification worth glossing over.
+      //
+      // It let one through. `POST /accounts/{id}/automations` and
+      // `PUT /accounts/{id}/automations/{ruleID}` had no client at all for
+      // weeks, and this test stayed green the whole time because the GET on the
+      // same path was called. The console could list, toggle and delete rules
+      // and could not create or edit one.
+      //
+      // Method-level checking was tried and NOT kept: extracting a call's HTTP
+      // method reliably needs a TypeScript AST, and the regex version reported
+      // twenty-five pairs of which most were false — `GET /accounts/{id}/members`
+      // among them, which plainly has a client. An inventory that cries wolf is
+      // one people learn to silence, which would cost more than the gap it
+      // closes.
+      //
+      // So the limitation stands, and is written down instead: this test proves
+      // a route FAMILY is reachable, never that every verb on it is. A new
+      // method on an existing path is not covered by anything here.
       if (called.has(r.path)) continue;
       unreachable.push(`  ✗ ${key}`);
     }

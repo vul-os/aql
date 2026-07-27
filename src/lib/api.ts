@@ -779,6 +779,29 @@ export const api = {
       `/accounts/${accountId}/automations/runs${limit ? `?limit=${limit}` : ''}`,
     ),
 
+  /**
+   * Create a rule.
+   *
+   * Every safety property lives in the ENGINE, not here — the tier ceiling, the
+   * cooldown, the failure breaker. A rule whose action resolves above
+   * `MaxActionTier` is refused on this path with the engine's own reason
+   * string, and no request can raise that ceiling. Do not re-derive any of it
+   * client-side; render what comes back.
+   */
+  automationCreate: (accountId: string, body: AutomationRuleInput) =>
+    apiFetch<AutomationRule>(`/accounts/${accountId}/automations`, { method: 'POST', body }),
+
+  /**
+   * Replace a rule. A full replace, not a patch — a rule is a small object read
+   * as a whole, and a partial update of a trigger or an action is how you end
+   * up with a coherent-looking rule nobody meant to write.
+   */
+  automationUpdate: (accountId: string, ruleId: string, body: AutomationRuleInput) =>
+    apiFetch<AutomationRule>(
+      `/accounts/${accountId}/automations/${encodeURIComponent(ruleId)}`,
+      { method: 'PUT', body },
+    ),
+
   automationSetEnabled: (accountId: string, ruleId: string, enabled: boolean) =>
     apiFetch<AutomationRule>(
       `/accounts/${accountId}/automations/${encodeURIComponent(ruleId)}/enabled`,
@@ -1734,4 +1757,21 @@ export type DiscoveredController = {
   /** TXT keys this hub did not recognise, carried through so a newer
    *  controller's extra metadata is visible rather than dropped. */
   extra?: Record<string, string>;
+};
+
+/**
+ * What the hub accepts when creating or replacing a rule.
+ *
+ * Deliberately NOT `AutomationRule` — a caller does not send the resolved
+ * `action_tier`, the run history, or the breaker state. Those are the engine's
+ * to determine, and a request that appeared to set them would be a request that
+ * appeared to move the safety ceiling.
+ */
+export type AutomationRuleInput = {
+  name: string;
+  enabled: boolean;
+  trigger: AutomationRule['trigger'];
+  conditions: AutomationRule['conditions'];
+  action: AutomationRule['action'];
+  min_interval_seconds: number;
 };
