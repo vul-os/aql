@@ -768,7 +768,12 @@ safety-critical work stay where their tests are.
 The constraint is absolute: **the product must never sit in a state where chat is simply gone.**
 Every step below leaves a working system.
 
-**Step 0 — Aql declares the four §26 fields, with no Ephor involved.**
+**Step 0 — Aql declares the four §26 fields, with no Ephor involved. — DONE (2026-07-27).**
+`hub/internal/channels/disclosure.go` declares all four for WhatsApp, Telegram, Slack and
+Discord, per-direction where asymmetric; `GET /v1/rails/disclosure` serves them
+unauthenticated. In Go rather than markdown on purpose — a disclosure table is exactly the
+prose that goes stale, and tests now fail if a rail is added without one, if an exposure
+claims privacy the rail does not have, or if a rail declares it can cold-initiate.
 Documentation and product UI only, per §26.3's node-mode allowance
 (`kotva/26-legacy-adapters.md:105-108`). This is KOTVA-ALIGNMENT work-list item 1
 (`docs/KOTVA-ALIGNMENT.md:601-605`), it discharges ADAPT-2/ADAPT-11 and most of ADAPT-6, and it

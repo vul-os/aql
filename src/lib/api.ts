@@ -582,6 +582,20 @@ export const api = {
   engineHealth: () => apiFetch<EngineHealthResponse>('/engine/health'),
 
   /**
+   * The four KOTVA §26.3 fields per chat rail.
+   *
+   * Unauthenticated by design: the fields exist so someone can compare rails
+   * BEFORE choosing one, and nothing in them is account-specific.
+   *
+   * Render `note` alongside the table, always. The four fields cannot express
+   * the thing most likely to be misread — self-hosting removes the middleman
+   * operator, not the platform. Meta reads every WhatsApp message whoever runs
+   * the hub.
+   */
+  railDisclosures: () =>
+    apiFetch<{ rails: RailDisclosure[]; note: string; spec: string }>('/rails/disclosure'),
+
+  /**
    * Sign out of every session, everywhere.
    *
    * The hub has served this since sessions were built and nothing called it,
@@ -1662,4 +1676,30 @@ export type AccountRow = {
   country_code: string;
   role?: string;
   created_at: UnixSeconds;
+};
+
+/** One rail's KOTVA §26.3 declaration. */
+export type RailDisclosure = {
+  rail: string;
+  platform: string;
+  /** Field 2. `webhook` needs a reachable HTTPS endpoint; the rest do not. */
+  inbound_transport: 'hardware-local' | 'outbound-persistent' | 'webhook' | 'listener' | string;
+  inbound: RailDirection;
+  outbound: RailDirection;
+  self_hostable: boolean;
+  self_host_note: string;
+  /** Derived by the hub from inbound_transport — never re-derive it here, or
+   *  the console can disagree with the declaration it is rendering. */
+  runs_behind_cgnat: boolean;
+  can_initiate: boolean;
+};
+
+export type RailDirection = {
+  /** Field 1. `inbound-triggered` means this rail cannot cold-contact anyone. */
+  initiation: 'freely-initiating' | 'inbound-triggered' | string;
+  /** Field 3, per DIRECTION — WhatsApp differs each way. */
+  price: 'metered' | 'flat' | 'free' | string;
+  /** Field 4: who sees plaintext. Never "nobody" on any of these rails. */
+  exposure: string;
+  note?: string;
 };

@@ -322,6 +322,11 @@ func (s *Server) Router() http.Handler {
 	// and a resident refused at the gate needs to be able to see why. Note
 	// that this is a convenience, not a security control — the position it
 	// tests is client-supplied and unverified (store/geofence.go).
+	// Rail disclosures (see disclosure.go). Deliberately unauthenticated: the
+	// four §26.3 fields exist so someone can compare adapters BEFORE choosing
+	// one, and there is nothing account-specific in what the platforms do.
+	mux.HandleFunc("GET /v1/rails/disclosure", s.handleRailDisclosures)
+
 	// Automation rules (see automations.go). Admin-only including reads: a
 	// rule says what the household's hardware does unattended, which is closer
 	// to the audit trail than to a meter reading. Every safety property lives
