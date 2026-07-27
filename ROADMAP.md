@@ -83,7 +83,7 @@ green**:
 > in-memory demo dataset driving Overview / Devices / Energy / Automations. The fold
 > replaced that shell with the access module's React console and ported the demo dataset
 > into it verbatim, so the same four screens survive with real access data mixed in. The
-> SvelteKit app itself is gone. Any screenshot in `assets/screens/` predates the fold and
+> SvelteKit app itself is gone. Screenshots of that shell were removed from the repository (and its history) rather than left to mislead; the current console is captured in `site/screenshots/`. The old set
 > shows the retired shell.
 
 ### Finishing Phase 0

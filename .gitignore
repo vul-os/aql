@@ -22,9 +22,8 @@ dist-ssr
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
+# Editor directories and files — .vscode was scrubbed from history, keep it out
+.vscode/
 .idea
 .DS_Store
 *.suo

@@ -16,10 +16,14 @@ regexes = [
   #    cannot be rewritten without invalidating the vectors it exists to pin.
   '''dGVzdC1jbGFpbS10b2tlbi0xMjNBQkNERUZHSElKS0w''',
 
-  # 2. English prose in the manual. The rule fires on the word "key" adjacent to
-  #    a hyphenated token: "hub-key pinning, Ed25519-signed commands". Entropy
-  #    3.52 — it is a sentence. The working tree now reads "pinning of the hub
-  #    key", but the phrase survives in history at 57864fe, which is what a
-  #    history scan sees.
-  '''hub-key pinning, Ed25519-signed''',
+  # 2. English prose in the manual, in two historical phrasings. The rule fires
+  #    on the word "key" adjacent to a hyphenated token — "...key, Ed25519-signed
+  #    commands". Entropy ~3.5: it is a sentence. The working tree has since been
+  #    reworded so no live file matches, but gitleaks scans history and both
+  #    earlier wordings live in commits. Exempting the exact phrases, not a
+  #    pattern, so this cannot mask a real credential.
+  #    NOTE: regexTarget = "match" tests the RULE'S match window, which here is
+  #    only `key, <token>` — a longer sentence fragment never fits inside it and
+  #    silently exempts nothing. The token itself is the thing to name.
+  '''Ed25519-signed''',
 ]

@@ -81,7 +81,7 @@ embedded in the hub) replaced it. Its in-memory demo dataset survived the move a
 ported over verbatim (`src/lib/demoData.ts`: twelve fictional devices across all seven
 kinds), so the device, energy and automations views still exist — as demo data, marked as
 such at the point of use, sitting beside real hub-backed access data. Any image under
-`assets/screens/` predates the fold and pictures the retired shell. The Tauri v2 desktop
+The `assets/screens/` set pictured the retired shell and was scrubbed from history; `site/screenshots/` holds the current console. The Tauri v2 desktop
 shell survives, now wrapping the real console, with a hub picker on first run.
 
 ### Changed — documentation reconciled to the merged product

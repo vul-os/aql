@@ -19,9 +19,10 @@ to sign up for, no account, no telemetry, and no billing code anywhere in the bi
 > sensor and **access**. Exactly one of them is real end to end.
 >
 > **Built and running:** the hub (a single Go binary, SQLite inside), the rules and quota
-> engine, the tamper-evident audit log, the embedded web console, controller pairing with
-> pinning of the hub key, Ed25519-signed commands, and hub-side offline-grant issuance — i.e.
-> the whole **access** kind, from the message to the motor.
+> engine, the tamper-evident audit log, the embedded web console, pairing in which the
+> controller permanently pins the hub's signing key, Ed25519 command signing, and
+> hub-side offline-grant issuance — i.e. the whole **access** kind, from the message to
+> the motor.
 >
 > **Not built:** the device engine that would drive the other six kinds (no Matter, MQTT,
 > Zigbee, ONVIF or Modbus driver exists), the automations runtime, energy metering, the
