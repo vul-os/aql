@@ -43,6 +43,47 @@ func errorsAs(err error, target *invalidError) bool {
 //
 // Safe for concurrent use: the hub is a live HTTP server and a driver's
 // background telemetry loop refreshes the index while requests read it.
+//
+// # Why there is no devices table, and why that is the answer rather than a gap
+//
+// This registry is entirely IN MEMORY. It is rebuilt at every start from the
+// drivers, which are built from the device config file, and nothing about a
+// device is written to SQLite. The roadmap carried "persistence" as an open
+// item for a long time; this is the decision, recorded here because this is
+// where someone would be standing when they were tempted to add the table.
+//
+// The config file is the source of truth. A devices table would be a SECOND
+// one, and two sources of truth for the same fleet disagree the first time
+// somebody edits the file while the hub is down — at which point the console
+// shows a device the drivers cannot reach, or hides one they can. Deriving the
+// index at every start means that cannot happen: what you configured is what
+// exists.
+//
+// What might have argued for a table, and why each does not:
+//
+//   - "History across restarts." Availability is deliberately reset to
+//     AvailUnknown at start, and that is correct: the engine genuinely has not
+//     heard from anything yet, and reporting a remembered `online` would be
+//     asserting something nobody checked.
+//   - "Energy readings would be orphaned." They are not. energy_channels is
+//     deliberately NOT foreign-keyed to any device table and carries its own
+//     label, so a meter's history survives that meter leaving the config and
+//     stays readable and named. That was designed for exactly this.
+//   - "A device disappearing should be visible." True, and a roster would tell
+//     you — but it cannot distinguish a device deliberately removed from one
+//     lost to a bad edit, so it would report both identically. An alert that
+//     fires on every intentional change is one people learn to ignore, which
+//     costs more than it buys. The config file's own version history answers
+//     this question properly, and a hub has no business duplicating it.
+//   - "Operator overrides — a renamed device, a moved zone." Those live in the
+//     config too. Storing them here would mean an operator editing the file and
+//     finding their change silently overridden by a database row they cannot
+//     see.
+//
+// Automations and energy DO persist, and the difference is worth naming: those
+// hold state the hub itself created and nothing else knows — a rule someone
+// wrote, a reading nobody else recorded. A device list is not that. It is a
+// restatement of a file.
 type Registry struct {
 	mu      sync.RWMutex
 	drivers map[string]Driver

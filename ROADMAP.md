@@ -7,9 +7,18 @@
 
 Aql is an open-source command centre for the physical world: one hub that owns the devices
 around a home or a business. The device model has seven kinds — **camera, lighting, robot,
-climate, energy, sensor and access**. Exactly one of them, **access**, is driven end to end
-today. The engine that would drive the other six does not exist yet. That is the whole
-shape of this roadmap.
+climate, energy, sensor and access**.
+
+**Access** is the one driven end to end, against a real controller. The engine for the
+other six exists now — one device model, a driver seam, and four drivers wired into the
+binary (MQTT, which also reaches Zigbee and Z-Wave through a bridge; Modbus TCP; ONVIF;
+generic HTTP) — with automations and energy metering on top of it.
+
+The line that matters is no longer "built or not". It is **hardware**: not one of those
+drivers has read a real meter, driven a real lamp, or seen a real camera. They are tested
+against fakes, loopback servers and an in-process Modbus TCP server, which proves the code
+agrees with the protocol as written and proves nothing about the devices in your house.
+That is the whole shape of this roadmap now.
 
 ---
 
@@ -144,18 +153,28 @@ hub's issuance endpoint):
 
 ---
 
-## Phase 1 — Device engine (not built)
+## Phase 1 — Device engine (built, unproven against hardware)
 
-Where "one hub owns everything" stops being a sentence. Nothing here exists in code — no
-protocol driver of any kind is present in this repository.
+Where "one hub owns everything" stops being a sentence. This section described an empty
+repository for a long time; it is not one now. Four drivers ship, wired into the binary,
+and none has met physical hardware.
 
-- [ ] Decide where it lives: the Go hub (which already owns persistence, audit and the
-      always-on box) or the Rust core in `src-tauri/` (currently one IPC command). The hub
-      is the likely answer; it has not been committed
+- [x] Decide where it lives — the Go hub (`hub/internal/devices`), which already owns
+      persistence, audit and the always-on box. The Rust core in `src-tauri/` was the
+      alternative and is not used for this
+- [x] Persistence: **deliberately none**, and that is the answer rather than an unfinished
+      item. The registry is rebuilt at every start from the device config file, because a
+      devices table would be a second source of truth that disagrees with the file the
+      moment somebody edits it while the hub is down. Automations and energy DO persist —
+      they hold state the hub itself created; a device list is a restatement of a file. The
+      full reasoning, including why a "device disappeared" roster was rejected, is in
+      `hub/internal/devices/registry.go` beside the type it governs
 - [x] One internal device model — id, kind, zone, state, commands, telemetry — that the
       console renders generically, with no protocol-specific code
-- [ ] Driver/adapter seam so a protocol can be added without touching the console:
-  - [ ] Matter
+- [x] Driver/adapter seam so a protocol can be added without touching the console. Every
+      driver below satisfies one `Driver` interface and the console renders all of them
+      with no protocol-specific code:
+  - [ ] Matter — needs a certified device and a stack to develop against
   - [x] MQTT — wired into the binary as `-device-drivers mqtt`
   - [x] Zigbee / Z-Wave via a bridge (`zigbee2mqtt`, `zwave-js-ui`) over MQTT. No radio
         in the hub; a per-metric JSON field selector reads the bridge's per-device object.
@@ -231,7 +250,7 @@ protocol driver of any kind is present in this repository.
 
 ---
 
-## Phase 5 — Security & bots (not built)
+## Phase 5 — Security & bots (camera reachability built; pixels are not)
 
 - [x] ONVIF discovery and stream-address resolution (`hub/internal/devices/camera/`)
 - [x] RTSP reachability probe (`VerifyStream`) — DESCRIBE, digest/basic auth, SDP parse, so
