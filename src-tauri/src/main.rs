@@ -34,7 +34,7 @@ fn main() {
     tauri::Builder::default()
         // Native fetch for the webview — gateways enforce a CORS allowlist that
         // can never include the Tauri origin, so all API traffic goes through
-        // this plugin (see src/lib/gateway.ts). Do not remove.
+        // this plugin (see src/lib/hub.ts). Do not remove.
         .plugin(tauri_plugin_http::init())
         .invoke_handler(tauri::generate_handler![system_pulse])
         .run(tauri::generate_context!())

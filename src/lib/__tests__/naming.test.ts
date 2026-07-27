@@ -90,7 +90,11 @@ describe('the backend has one name', () => {
     // gateway/internal/portal/dist long after the rename — so `make portal`
     // copied the console into a directory that no longer existed. Build files
     // have no extension at all, which is exactly why they get skipped.
-    for (const file of walk(repo, /\.(ts|tsx|mjs|js|go|json|ya?ml|toml)$|^Makefile$|^Dockerfile$/)) {
+    // .rs included: src-tauri/ is a real part of this repo and its comments
+    // pointed at src/lib/gateway.ts for several commits after that file was
+    // renamed. The Rust CI job passes either way — fmt, check and clippy do not
+    // read comments — so nothing would ever have said so.
+    for (const file of walk(repo, /\.(ts|tsx|mjs|js|go|rs|json|ya?ml|toml)$|^Makefile$|^Dockerfile$/)) {
       const rel = path.relative(repo, file);
       // This file names the thing it forbids.
       if (rel.endsWith('naming.test.ts')) continue;

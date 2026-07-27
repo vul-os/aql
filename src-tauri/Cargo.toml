@@ -20,7 +20,7 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 # Native fetch for the webview: gateways enforce a strict CORS allowlist that
 # can never include the Tauri origin, so all API traffic goes through this
-# plugin (see src/lib/gateway.ts).
+# plugin (see src/lib/hub.ts).
 tauri-plugin-http = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
