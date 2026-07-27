@@ -6,10 +6,17 @@
       "enabled": true,
       "trigger": {
         "kind": "schedule",
-        "schedule": { "minute_of_day": 1080, "days": 127, "tz": "Africa/Johannesburg" }
+        "schedule": {
+          "minute_of_day": 1080,
+          "days": 127,
+          "tz": "Africa/Johannesburg"
+        }
       },
       "conditions": [],
-      "action": { "zone": "perimeter", "verb": "on" },
+      "action": {
+        "zone": "perimeter",
+        "verb": "on"
+      },
       "min_interval_seconds": 3600,
       "created_at": "{{now-200d}}",
       "updated_at": "{{now-14d}}",
@@ -28,14 +35,22 @@
       "enabled": true,
       "trigger": {
         "kind": "threshold",
-        "threshold": { "device_key": "soil-sensor-1", "metric": "soil_moisture_pct", "op": "<", "value": 28 }
+        "threshold": {
+          "device_key": "soil-sensor-1",
+          "metric": "soil_moisture_pct",
+          "op": "<",
+          "value": 28
+        }
       },
       "conditions": [],
-      "action": { "device_key": "sprinkler-zone-1", "verb": "start" },
+      "action": {
+        "device_key": "sprinkler-zone-1",
+        "verb": "start"
+      },
       "min_interval_seconds": 21600,
       "created_at": "{{now-140d}}",
       "updated_at": "{{now-9d}}",
-      "action_tier": "reversible",
+      "action_tier": "consequential",
       "max_action_tier": "reversible",
       "created_by": "usr_sipho",
       "created_by_snapshot": "Sipho Dlamini",
@@ -50,10 +65,18 @@
       "enabled": false,
       "trigger": {
         "kind": "threshold",
-        "threshold": { "device_key": "pool-pump-1", "metric": "runtime_minutes", "op": ">", "value": 180 }
+        "threshold": {
+          "device_key": "pool-pump-1",
+          "metric": "runtime_minutes",
+          "op": ">",
+          "value": 180
+        }
       },
       "conditions": [],
-      "action": { "device_key": "pool-pump-1", "verb": "off" },
+      "action": {
+        "device_key": "pool-pump-1",
+        "verb": "off"
+      },
       "min_interval_seconds": 3600,
       "created_at": "{{now-60d}}",
       "updated_at": "{{now-2d}}",
@@ -66,9 +89,9 @@
       "last_occurrence_at": "{{now-2d}}",
       "consecutive_failures": 3,
       "disabled_at": "{{now-2d}}",
-      "disabled_reason": "3 consecutive failures — the device stopped acknowledging commands"
+      "disabled_reason": "3 consecutive failures \u2014 the device stopped acknowledging commands"
     }
   ],
-  "max_action_tier": "reversible",
+  "max_action_tier": "consequential",
   "scheduler_running": true
 }

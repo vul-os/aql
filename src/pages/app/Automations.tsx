@@ -6,10 +6,11 @@
 // endpoint, and the tier figures are the hub's own numbers, not a copy kept
 // here. What this page does NOT do, on purpose:
 //
-//   - Create or edit rules. The engine has no rule editor yet, so "New rule"
-//     stays disabled — the shape of the feature is real, the authoring UI is
-//     not, and pretending otherwise with a form that goes nowhere would be
-//     worse than a disabled button with an honest tooltip.
+//   - Judge a rule before the hub does. The editor offers every verb without
+//     filtering by tier, because the ceiling is a compile-time constant checked
+//     twice in the engine and a second copy in this form is a copy that can
+//     drift from the one actually enforcing it. A refusal comes back from the
+//     hub, in the hub's own vocabulary, and is rendered rather than predicted.
 //   - Decide anything about safety. The tier ceiling (`max_action_tier`) is a
 //     compile-time constant in the engine; this page only ever prints the
 //     number the hub sends alongside each rule's resolved `action_tier`. An
@@ -44,6 +45,8 @@ import {
 } from '@/components/demo/liveState';
 import { InertNote } from '@/components/demo/DemoMarks';
 import { fromUnix } from '@/lib/time';
+import RuleEditor from '@/components/automations/RuleEditor';
+import { engineFleet, type EngineFleet } from '@/components/demo/engineState';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -107,6 +110,15 @@ function outcomeLine(r: AutomationRule): string {
 
 export default function AutomationsPage() {
   const { currentAccount } = useAuth();
+  // null = closed; { rule: null } = creating; { rule } = editing that one.
+  const [editing, setEditing] = useState<{ rule: AutomationRule | null } | null>(null);
+  // The editor's device and metric pickers read the engine's fleet. Fetched
+  // here rather than inside the editor so opening the form is instant — and so
+  // an absent engine does not look like a broken editor.
+  const [fleet, setFleet] = useState<EngineFleet | null>(null);
+  useEffect(() => {
+    void engineFleet().then(setFleet);
+  }, []);
   const [state, setState] = useState<AutomationsState | null>(null);
   const [pending, setPending] = useState<Set<string>>(new Set());
 
@@ -202,8 +214,13 @@ export default function AutomationsPage() {
           <Button
             variant="outline"
             size="sm"
-            disabled
-            title="The rule engine exists and these rules are real — but there is no rule editor yet. Rules can only be created directly on the hub today."
+            onClick={() => setEditing({ rule: null })}
+            disabled={state?.status !== 'live'}
+            title={
+              state?.status === 'live'
+                ? 'Write a new when → do rule'
+                : 'There is no rule engine on this hub to save a rule to.'
+            }
           >
             New rule
           </Button>
@@ -281,6 +298,18 @@ export default function AutomationsPage() {
                     )}
                   </div>
 
+                  {/* Edit loads the whole rule into the form and sends a full
+                      replace. A rule is a small object read as a whole, and a
+                      partial update of a trigger or an action is how you end up
+                      with a coherent-looking rule nobody meant to write. */}
+                  <button
+                    type="button"
+                    onClick={() => setEditing({ rule: r })}
+                    className="shrink-0 self-start text-xs text-ink/55 underline underline-offset-4 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink rounded"
+                  >
+                    Edit
+                  </button>
+
                   <div className="flex sm:flex-col items-baseline sm:items-end gap-2 sm:gap-0.5 shrink-0 text-right">
                     <span className="text-[11px] text-ink/55">{outcomeLine(r)}</span>
                     {r.consecutive_failures > 0 && (
@@ -306,6 +335,33 @@ export default function AutomationsPage() {
           </InertNote>
         </div>
       </Card>
+
+      {editing && currentAccount && (
+        <RuleEditor
+          accountId={currentAccount.id}
+          rule={editing.rule}
+          // An absent engine yields an empty list, which is honest: the pickers
+          // simply offer no suggestions and a device key can still be typed.
+          devices={fleet?.status === 'live' ? fleet.devices : []}
+          onClose={() => setEditing(null)}
+          onSaved={(saved) => {
+            setEditing(null);
+            // Merge in place rather than refetching: the hub has just returned
+            // the authoritative rule, including the tier IT resolved, and a
+            // refetch would only risk showing something older.
+            setState((prev) =>
+              prev?.status === 'live'
+                ? {
+                    ...prev,
+                    rules: prev.rules.some((r) => r.id === saved.id)
+                      ? prev.rules.map((r) => (r.id === saved.id ? saved : r))
+                      : [...prev.rules, saved],
+                  }
+                : prev,
+            );
+          }}
+        />
+      )}
     </>
   );
 }
