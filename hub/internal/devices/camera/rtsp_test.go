@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/md5"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"net"
@@ -25,6 +26,16 @@ type fakeRTSP struct {
 	ln net.Listener
 
 	mu sync.Mutex
+	// Media knobs. rtpPackets > 0 makes SETUP/PLAY succeed and stream that many
+	// interleaved RTP packets; 0 makes them succeed and send nothing, which is
+	// the failure the media probe exists to catch.
+	rtpPackets  int
+	rtpPayload  byte
+	setupStatus int
+	playStatus  int
+	sawSetup    bool
+	sawPlay     bool
+	sawTeardown bool
 	// knobs
 	requireAuth string // "", "digest", "basic"
 	user, pass  string
@@ -138,6 +149,16 @@ func (f *fakeRTSP) serve(c net.Conn) {
 			continue
 		}
 
+		// The media methods. Handled after auth so the probe's per-method
+		// digest is exercised on SETUP and PLAY too, not only on DESCRIBE.
+		if m := strings.Fields(req); len(m) > 0 {
+			switch m[0] {
+			case "SETUP", "PLAY", "TEARDOWN":
+				f.serveMedia(c, m[0], cseq)
+				continue
+			}
+		}
+
 		if status != 200 {
 			fmt.Fprintf(c, "RTSP/1.0 %d Nope\r\nCSeq: %s\r\n\r\n", status, cseq)
 			continue
@@ -161,7 +182,11 @@ func digestOK(auth, user, pass, requestLine string) bool {
 	}
 	h := func(s string) string { x := md5.Sum([]byte(s)); return hex.EncodeToString(x[:]) }
 	ha1 := h(user + ":" + p["realm"] + ":" + pass)
-	ha2 := h("DESCRIBE:" + p["uri"])
+	// The METHOD from the request line, not a hardcoded DESCRIBE. Digest covers
+	// method and URI, so a header computed for one cannot be replayed for
+	// another — and this validator was written when DESCRIBE was the only
+	// method, which made every correctly-signed SETUP look like a bad password.
+	ha2 := h(parts[0] + ":" + p["uri"])
 	var want string
 	if p["qop"] != "" {
 		want = h(ha1 + ":" + p["nonce"] + ":" + p["nc"] + ":" + p["cnonce"] + ":auth:" + ha2)
@@ -377,5 +402,202 @@ func TestSDPParsingIgnoresWhatItDoesNotKnow(t *testing.T) {
 	}
 	if media[0].Codec != "H265" || media[0].Control != "trackID=1" {
 		t.Errorf("parsed %+v", media[0])
+	}
+}
+
+// serveMedia answers SETUP/PLAY/TEARDOWN and, on PLAY, writes real interleaved
+// RTP frames: `$<channel><len16><12-byte RTP header + payload>`.
+//
+// The framing and the header are written from RFC 2326 §10.12 and RFC 3550 §5.1
+// rather than copied from the client, so the counter is parsing a layout this
+// file decided independently. That is as close to a cross-implementation check
+// as is available without a camera — and it is why this probe stops at counting
+// packets: the layers below here are specified tightly enough to serve
+// faithfully, and H.264 depacketization is not.
+func (f *fakeRTSP) serveMedia(c net.Conn, method, cseq string) {
+	f.mu.Lock()
+	n, pt := f.rtpPackets, f.rtpPayload
+	setupStatus, playStatus := f.setupStatus, f.playStatus
+	switch method {
+	case "SETUP":
+		f.sawSetup = true
+	case "PLAY":
+		f.sawPlay = true
+	case "TEARDOWN":
+		f.sawTeardown = true
+	}
+	f.mu.Unlock()
+
+	if pt == 0 {
+		pt = 96
+	}
+	switch method {
+	case "SETUP":
+		if setupStatus != 0 && setupStatus != 200 {
+			fmt.Fprintf(c, "RTSP/1.0 %d No\r\nCSeq: %s\r\n\r\n", setupStatus, cseq)
+			return
+		}
+		fmt.Fprintf(c, "RTSP/1.0 200 OK\r\nCSeq: %s\r\nSession: 12345678;timeout=60\r\n"+
+			"Transport: RTP/AVP/TCP;unicast;interleaved=0-1\r\n\r\n", cseq)
+	case "TEARDOWN":
+		fmt.Fprintf(c, "RTSP/1.0 200 OK\r\nCSeq: %s\r\n\r\n", cseq)
+	case "PLAY":
+		if playStatus != 0 && playStatus != 200 {
+			fmt.Fprintf(c, "RTSP/1.0 %d No\r\nCSeq: %s\r\n\r\n", playStatus, cseq)
+			return
+		}
+		fmt.Fprintf(c, "RTSP/1.0 200 OK\r\nCSeq: %s\r\nSession: 12345678\r\n\r\n", cseq)
+		for i := 0; i < n; i++ {
+			payload := make([]byte, 12+20)
+			payload[0] = 0x80 // version 2
+			payload[1] = pt   // marker clear, payload type
+			binary.BigEndian.PutUint16(payload[2:4], uint16(i))
+			binary.BigEndian.PutUint32(payload[4:8], uint32(i*3000))
+			binary.BigEndian.PutUint32(payload[8:12], 0xDEADBEEF)
+
+			frame := make([]byte, 0, 4+len(payload))
+			frame = append(frame, '$', 0)
+			frame = binary.BigEndian.AppendUint16(frame, uint16(len(payload)))
+			frame = append(frame, payload...)
+			if _, err := c.Write(frame); err != nil {
+				return
+			}
+			// One RTCP frame on channel 1, which must NOT be counted as media.
+			if i == 0 {
+				rtcp := []byte{'$', 1, 0, 8, 0x80, 200, 0, 1, 0, 0, 0, 0}
+				_, _ = c.Write(rtcp)
+			}
+		}
+	}
+}
+
+// ── media-flow probe ────────────────────────────────────────────────────────
+
+// The failure this whole probe exists to catch: a camera that DESCRIBES a
+// perfectly good stream and then sends nothing. A dead encoder, a transport it
+// will not really do, a firewall permitting control and dropping media. The
+// operator's symptom is a black player and DESCRIBE told them all was well.
+func TestACameraThatDescribesButNeverStreamsIsCaught(t *testing.T) {
+	srv := newFakeRTSP(t)
+	srv.set(func(f *fakeRTSP) { f.rtpPackets = 0 })
+
+	info, flow, err := ProbeMedia(context.Background(), srv.url("/cam"),
+		Credential{}, time.Second, 300*time.Millisecond)
+	if err != nil {
+		t.Fatalf("ProbeMedia: %v", err)
+	}
+	if flow.Flowing() {
+		t.Fatalf("reported media from a camera that sent none: %+v", flow)
+	}
+	// The description must survive — "described H264 and sent nothing" is the
+	// diagnosis, and dropping half of it throws away the useful half.
+	if info.VideoCodec() != "H264" {
+		t.Errorf("the description was lost: %+v", info)
+	}
+	if !strings.Contains(flow.Summary(), "no media") {
+		t.Errorf("summary = %q", flow.Summary())
+	}
+}
+
+func TestMediaFlowCountsRealInterleavedFrames(t *testing.T) {
+	srv := newFakeRTSP(t)
+	srv.set(func(f *fakeRTSP) { f.rtpPackets = 25; f.rtpPayload = 96 })
+
+	_, flow, err := ProbeMedia(context.Background(), srv.url("/cam"),
+		Credential{}, 2*time.Second, 600*time.Millisecond)
+	if err != nil {
+		t.Fatalf("ProbeMedia: %v", err)
+	}
+	if flow.Packets != 25 {
+		t.Errorf("counted %d packets, want 25", flow.Packets)
+	}
+	// 12-byte header excluded from the byte total.
+	if flow.Bytes != 25*20 {
+		t.Errorf("counted %d payload bytes, want %d", flow.Bytes, 25*20)
+	}
+	if len(flow.PayloadTypes) != 1 || flow.PayloadTypes[0] != 96 {
+		t.Errorf("payload types = %v, want [96]", flow.PayloadTypes)
+	}
+	if len(flow.SSRCs) != 1 {
+		t.Errorf("SSRCs = %v, want exactly one source", flow.SSRCs)
+	}
+}
+
+// RTCP on channel 1 is not media. Counting sender reports would inflate the
+// answer and could make a silent stream look alive.
+func TestRTCPIsNotCountedAsMedia(t *testing.T) {
+	srv := newFakeRTSP(t)
+	srv.set(func(f *fakeRTSP) { f.rtpPackets = 10 })
+
+	_, flow, err := ProbeMedia(context.Background(), srv.url("/cam"),
+		Credential{}, 2*time.Second, 600*time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The fake emits one RTCP frame alongside the first RTP packet.
+	if flow.Packets != 10 {
+		t.Fatalf("counted %d; an RTCP frame was counted as media", flow.Packets)
+	}
+}
+
+// A leaked session takes a slot from whatever is actually watching, and cheap
+// cameras support very few.
+func TestTheProbeAlwaysTearsDown(t *testing.T) {
+	srv := newFakeRTSP(t)
+	srv.set(func(f *fakeRTSP) { f.rtpPackets = 5 })
+
+	if _, _, err := ProbeMedia(context.Background(), srv.url("/cam"),
+		Credential{}, 2*time.Second, 300*time.Millisecond); err != nil {
+		t.Fatal(err)
+	}
+	srv.set(func(f *fakeRTSP) {
+		if !f.sawSetup || !f.sawPlay {
+			t.Error("the probe never set up or played")
+		}
+		if !f.sawTeardown {
+			t.Error("the probe did not TEARDOWN; the session would be held until " +
+				"the camera timed it out, taking a slot from a real viewer")
+		}
+	})
+}
+
+// A camera that describes a track and refuses to stream it over TCP is a
+// specific, actionable failure — not a generic error.
+func TestARefusedSetupSaysSo(t *testing.T) {
+	srv := newFakeRTSP(t)
+	srv.set(func(f *fakeRTSP) { f.setupStatus = 461 }) // unsupported transport
+
+	info, flow, err := ProbeMedia(context.Background(), srv.url("/cam"),
+		Credential{}, time.Second, 300*time.Millisecond)
+	if err == nil {
+		t.Fatal("a refused SETUP was reported as success")
+	}
+	if !strings.Contains(err.Error(), "will not stream it over TCP") {
+		t.Errorf("error does not identify the transport refusal: %v", err)
+	}
+	if info.VideoCodec() == "" {
+		t.Error("the description was discarded on a SETUP failure")
+	}
+	if flow.Flowing() {
+		t.Error("reported flow after a failed SETUP")
+	}
+}
+
+// Digest covers the method and URI, so a DESCRIBE header cannot be replayed for
+// SETUP. A probe that tried would be refused and would report it as a
+// credential problem, which it is not.
+func TestEachMethodAuthenticatesOnItsOwn(t *testing.T) {
+	srv := newFakeRTSP(t)
+	srv.set(func(f *fakeRTSP) {
+		f.requireAuth, f.user, f.pass, f.rtpPackets = "digest", "admin", "pw", 5
+	})
+
+	_, flow, err := ProbeMedia(context.Background(), srv.url("/cam"),
+		Credential{Username: "admin", Password: "pw"}, 2*time.Second, 400*time.Millisecond)
+	if err != nil {
+		t.Fatalf("an authenticated media probe failed: %v", err)
+	}
+	if !flow.Flowing() {
+		t.Error("no media over an authenticated session")
 	}
 }

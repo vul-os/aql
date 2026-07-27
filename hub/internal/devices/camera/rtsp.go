@@ -42,11 +42,13 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"net"
 	"net/textproto"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -488,4 +490,336 @@ func rtspHostPort(u *url.URL) string {
 		return net.JoinHostPort(u.Hostname(), "322")
 	}
 	return net.JoinHostPort(u.Hostname(), "554")
+}
+
+// ── media-flow probe: SETUP, PLAY, count, TEARDOWN ──────────────────────────
+//
+// # Why this exists when DESCRIBE already passed
+//
+// A DESCRIBE proves the camera ANSWERS and says what it intends to stream. It
+// does not prove anything comes out. A camera that describes a perfectly good
+// H.264 profile and then sends nothing is an ordinary failure — a dead encoder,
+// a transport the camera will not actually do, a firewall that permits the
+// control connection and drops the media. The operator's symptom is a black
+// player, and DESCRIBE told them everything was fine.
+//
+// So this takes the next step and stops immediately after it: SETUP the video
+// track over interleaved TCP, PLAY, count what arrives for a second or two,
+// TEARDOWN.
+//
+// # The line, and why it is exactly here
+//
+// It counts PACKETS. It does not decode one.
+//
+// RTP framing and the RTP header are fully specified and small — a 4-byte
+// interleaved prefix and a 12-byte header — so a test can serve them faithfully
+// and this code can be trusted against it. H.264 DEPACKETIZATION is not that: FU-A
+// fragmentation, STAP-A aggregation and the parameter-set handling vary between
+// real cameras in ways a fake written from the same RFC would simply agree with.
+// Writing that blind produces code that passes its own tests and fails on
+// contact, which is the trap this package's doc comment already names.
+//
+// Everything above the packet counter therefore stays unbuilt until there is a
+// camera to develop against. What this buys without one is the honest answer to
+// "is media actually flowing", which is the question a black player raises.
+//
+// # It holds a session, so it is opt-in and it always tears down
+//
+// Unlike Describe, this occupies an RTSP session. Cheap cameras support very few
+// concurrent ones, and a probe that leaked a session would take a slot from
+// whatever is genuinely watching. TEARDOWN is sent on every exit path.
+
+// MediaFlow is what a short PLAY observed.
+type MediaFlow struct {
+	// Packets is how many RTP packets arrived in the window.
+	Packets int
+	// Bytes is their total payload size, header excluded.
+	Bytes int
+	// PayloadTypes are the distinct RTP payload types seen, sorted. A stream
+	// carrying a type the SDP did not advertise is worth seeing.
+	PayloadTypes []int
+	// SSRCs are the distinct synchronisation sources seen. More than one on a
+	// single track means something is multiplexing, which a viewer will not
+	// expect.
+	SSRCs []uint32
+	// Window is how long the probe listened.
+	Window time.Duration
+}
+
+// Flowing reports whether any media arrived at all.
+//
+// The distinction the whole probe exists for: describing a stream and sending
+// one are different claims, and only this one answers the second.
+func (m MediaFlow) Flowing() bool { return m.Packets > 0 }
+
+// Summary renders the observation for an operator.
+func (m MediaFlow) Summary() string {
+	if m.Packets == 0 {
+		return "no media in " + m.Window.String()
+	}
+	rate := float64(m.Packets) / m.Window.Seconds()
+	return fmt.Sprintf("%d packets in %s (~%.0f/s, %d bytes)",
+		m.Packets, m.Window, rate, m.Bytes)
+}
+
+// ProbeMedia runs DESCRIBE, then SETUP and PLAY on the first video track, and
+// counts RTP packets for window.
+//
+// The StreamInfo is returned even when no media arrives, because "the camera
+// described H264 and sent nothing" is the diagnosis, and discarding the
+// description would throw away half of it.
+func ProbeMedia(ctx context.Context, rawURL string, cred Credential,
+	timeout, window time.Duration) (StreamInfo, MediaFlow, error) {
+	if timeout <= 0 {
+		timeout = DefaultRTSPTimeout
+	}
+	if window <= 0 {
+		window = 2 * time.Second
+	}
+
+	u, err := parseRTSPURL(rawURL)
+	if err != nil {
+		return StreamInfo{}, MediaFlow{}, err
+	}
+	if u.User != nil {
+		pass, _ := u.User.Password()
+		cred = Credential{Username: u.User.Username(), Password: pass}
+		u.User = nil
+	}
+	safeURL := u.String()
+
+	d := net.Dialer{Timeout: timeout}
+	conn, err := d.DialContext(ctx, "tcp", rtspHostPort(u))
+	if err != nil {
+		return StreamInfo{}, MediaFlow{}, fmt.Errorf("camera: rtsp dial %s: %w", safeURL, err)
+	}
+	defer conn.Close()
+	_ = conn.SetDeadline(time.Now().Add(timeout + window))
+
+	br := bufio.NewReader(conn)
+	seq := &cseqCounter{n: 0}
+
+	info, auth, err := describeOn(conn, br, safeURL, cred, seq)
+	if err != nil {
+		return StreamInfo{}, MediaFlow{}, err
+	}
+
+	track := videoTrack(info)
+	if track == nil {
+		return info, MediaFlow{}, fmt.Errorf(
+			"camera: rtsp %s: described no video track to play", safeURL)
+	}
+	setupURL := absoluteControl(safeURL, track.Control)
+
+	// Interleaved TCP, not UDP. It is the transport that works through the
+	// connection already open — no second socket, no NAT hole, no port range to
+	// negotiate — and for a probe whose whole job is answering "does anything
+	// come out", removing the transport as a variable is the point.
+	resp, err := rtspExchangeExtra(conn, br, "SETUP", setupURL, seq.next(),
+		authFor(auth, "SETUP", setupURL, cred), "Transport: RTP/AVP/TCP;unicast;interleaved=0-1")
+	if err != nil {
+		return info, MediaFlow{}, err
+	}
+	if resp.status != 200 {
+		return info, MediaFlow{}, fmt.Errorf(
+			"camera: rtsp %s: SETUP returned %d %s — it described this track but will "+
+				"not stream it over TCP", safeURL, resp.status, resp.reason)
+	}
+	session := sessionID(resp.header.Get("Session"))
+	// TEARDOWN on every exit from here. A leaked session takes a slot from
+	// whatever is actually watching, and cheap cameras have very few.
+	defer func() {
+		// A fresh deadline: the read window above has by then consumed the
+		// original, and a TEARDOWN written to an expired connection is a
+		// TEARDOWN that never happens.
+		_ = conn.SetDeadline(time.Now().Add(timeout))
+		_, _ = rtspExchangeExtra(conn, br, "TEARDOWN", safeURL, seq.next(),
+			authFor(auth, "TEARDOWN", safeURL, cred), "Session: "+session)
+	}()
+
+	resp, err = rtspExchangeExtra(conn, br, "PLAY", safeURL, seq.next(),
+		authFor(auth, "PLAY", safeURL, cred), "Session: "+session)
+	if err != nil {
+		return info, MediaFlow{}, err
+	}
+	if resp.status != 200 {
+		return info, MediaFlow{}, fmt.Errorf("camera: rtsp %s: PLAY returned %d %s",
+			safeURL, resp.status, resp.reason)
+	}
+
+	flow := countInterleaved(conn, br, window)
+	flow.Window = window
+	return info, flow, nil
+}
+
+// countInterleaved reads `$<channel><len16><data>` frames and counts the RTP
+// ones, without interpreting a single payload byte.
+func countInterleaved(conn net.Conn, br *bufio.Reader, window time.Duration) MediaFlow {
+	var flow MediaFlow
+	types := map[int]bool{}
+	ssrcs := map[uint32]bool{}
+	deadline := time.Now().Add(window)
+	// Bound the READ by the window, not by the connection's own deadline. A
+	// silent camera otherwise blocks here until the whole-request timeout, and
+	// the deferred TEARDOWN is then written to a connection whose deadline has
+	// already passed — so the probe holds the session it promised to release,
+	// on exactly the cameras (silent ones) it was built to diagnose.
+	_ = conn.SetReadDeadline(deadline)
+
+	for time.Now().Before(deadline) {
+		b, err := br.ReadByte()
+		if err != nil {
+			break
+		}
+		if b != '$' {
+			// An RTSP response interleaved with media — an announcement, or a
+			// keepalive reply. Skip its line and keep going rather than
+			// treating it as a framing error.
+			_, _ = br.ReadString('\n')
+			continue
+		}
+		var hdr [3]byte
+		if _, err := readFull(br, hdr[:]); err != nil {
+			break
+		}
+		channel := int(hdr[0])
+		length := int(binary.BigEndian.Uint16(hdr[1:3]))
+		if length <= 0 || length > 65535 {
+			break
+		}
+		payload := make([]byte, length)
+		if _, err := readFull(br, payload); err != nil {
+			break
+		}
+		// Channel 1 is RTCP under the interleaved=0-1 asked for above. Sender
+		// reports are not media and counting them would inflate the answer.
+		if channel != 0 || len(payload) < 12 {
+			continue
+		}
+		flow.Packets++
+		flow.Bytes += len(payload) - 12
+		types[int(payload[1]&0x7F)] = true
+		ssrcs[binary.BigEndian.Uint32(payload[8:12])] = true
+	}
+
+	for t := range types {
+		flow.PayloadTypes = append(flow.PayloadTypes, t)
+	}
+	sort.Ints(flow.PayloadTypes)
+	for s := range ssrcs {
+		flow.SSRCs = append(flow.SSRCs, s)
+	}
+	sort.Slice(flow.SSRCs, func(i, j int) bool { return flow.SSRCs[i] < flow.SSRCs[j] })
+	return flow
+}
+
+// ── small helpers the two probes share ──────────────────────────────────────
+
+type cseqCounter struct{ n int }
+
+func (c *cseqCounter) next() int { c.n++; return c.n }
+
+// describeOn runs the DESCRIBE handshake on an already-open connection and
+// returns the parsed stream plus the challenge, so later requests on the same
+// session can authenticate without a second round trip.
+func describeOn(conn net.Conn, br *bufio.Reader, url string, cred Credential,
+	seq *cseqCounter) (StreamInfo, string, error) {
+	resp, err := rtspExchange(conn, br, "DESCRIBE", url, seq.next(), "")
+	if err != nil {
+		return StreamInfo{}, "", err
+	}
+	challenge := ""
+	authUsed := "none"
+	if resp.status == 401 {
+		challenge = resp.header.Get("WWW-Authenticate")
+		hdr, scheme, aerr := authorization(challenge, "DESCRIBE", url, cred)
+		if aerr != nil {
+			return StreamInfo{}, "", fmt.Errorf("camera: rtsp %s: %w", url, aerr)
+		}
+		authUsed = scheme
+		resp, err = rtspExchange(conn, br, "DESCRIBE", url, seq.next(), hdr)
+		if err != nil {
+			return StreamInfo{}, "", err
+		}
+	}
+	if resp.status == 401 {
+		return StreamInfo{}, "", fmt.Errorf(
+			"camera: rtsp %s: the camera rejected these credentials on the media leg", url)
+	}
+	if resp.status < 200 || resp.status > 299 {
+		return StreamInfo{}, "", fmt.Errorf("camera: rtsp %s: DESCRIBE returned %d %s",
+			url, resp.status, resp.reason)
+	}
+	info := StreamInfo{
+		URL: url, ServerHeader: resp.header.Get("Server"),
+		AuthUsed: authUsed, Media: parseSDP(resp.body),
+	}
+	if len(info.Media) == 0 {
+		return info, challenge, fmt.Errorf(
+			"camera: rtsp %s: the camera answered but described no media streams", url)
+	}
+	return info, challenge, nil
+}
+
+// authFor rebuilds an Authorization header for one method+URI. Digest covers
+// both, so the DESCRIBE header cannot be replayed for SETUP.
+func authFor(challenge, method, uri string, cred Credential) string {
+	if challenge == "" {
+		return ""
+	}
+	hdr, _, err := authorization(challenge, method, uri, cred)
+	if err != nil {
+		return ""
+	}
+	return hdr
+}
+
+func rtspExchangeExtra(conn net.Conn, br *bufio.Reader, method, url string, cseq int,
+	auth, extra string) (rtspResponse, error) {
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s %s RTSP/1.0\r\n", method, url)
+	fmt.Fprintf(&b, "CSeq: %d\r\n", cseq)
+	b.WriteString("User-Agent: aql-hub\r\n")
+	if auth != "" {
+		fmt.Fprintf(&b, "Authorization: %s\r\n", auth)
+	}
+	if extra != "" {
+		b.WriteString(extra + "\r\n")
+	}
+	b.WriteString("\r\n")
+	if _, err := conn.Write([]byte(b.String())); err != nil {
+		return rtspResponse{}, fmt.Errorf("camera: rtsp write: %w", err)
+	}
+	return readRTSPResponse(br)
+}
+
+func videoTrack(info StreamInfo) *MediaDescription {
+	for i := range info.Media {
+		if info.Media[i].Kind == "video" {
+			return &info.Media[i]
+		}
+	}
+	return nil
+}
+
+// absoluteControl resolves an SDP control attribute, which may be absolute, a
+// bare track id, or "*".
+func absoluteControl(base, control string) string {
+	c := strings.TrimSpace(control)
+	switch {
+	case c == "" || c == "*":
+		return base
+	case strings.HasPrefix(c, "rtsp://"), strings.HasPrefix(c, "rtsps://"):
+		return c
+	case strings.HasSuffix(base, "/"):
+		return base + c
+	default:
+		return base + "/" + c
+	}
+}
+
+// sessionID strips the timeout parameter cameras append to a Session header.
+func sessionID(raw string) string {
+	id, _, _ := strings.Cut(strings.TrimSpace(raw), ";")
+	return id
 }

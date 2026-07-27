@@ -33,6 +33,8 @@ type Driver struct {
 	allowForeignHost bool
 	streamTTL        time.Duration
 	verifyStream     bool
+	verifyMediaFlow  bool
+	mediaWindow      time.Duration
 	rtspTimeout      time.Duration
 	ownClient        bool
 	now              func() time.Time
@@ -126,7 +128,9 @@ func New(cfg Config) (*Driver, error) {
 		requireHTTPS:     cfg.RequireHTTPS,
 		allowForeignHost: cfg.AcceptForeignServiceAddress,
 		streamTTL:        ttl,
-		verifyStream:     cfg.VerifyStream,
+		verifyStream:     cfg.VerifyStream || cfg.VerifyMediaFlow,
+		verifyMediaFlow:  cfg.VerifyMediaFlow,
+		mediaWindow:      cfg.MediaFlowWindow,
 		rtspTimeout:      timeout,
 		now:              time.Now,
 		cams:             map[string]*cameraState{},
@@ -392,7 +396,16 @@ func (d *Driver) Read(ctx context.Context, deviceID string) ([]devices.Reading, 
 	// and "that URL streams H264" — and cameras routinely want different
 	// credentials on the media leg than on the device service, which is
 	// precisely the failure an operator otherwise discovers in VLC.
-	info, perr := Describe(ctx, uri, cred, d.rtspTimeout)
+	var (
+		info StreamInfo
+		flow MediaFlow
+		perr error
+	)
+	if d.verifyMediaFlow {
+		info, flow, perr = ProbeMedia(ctx, uri, cred, d.rtspTimeout, d.mediaWindow)
+	} else {
+		info, perr = Describe(ctx, uri, cred, d.rtspTimeout)
+	}
 	if perr != nil {
 		// DEGRADED, not offline. The camera answered ONVIF and named a stream;
 		// the stream is what did not work. Collapsing that to offline would
@@ -403,7 +416,27 @@ func (d *Driver) Read(ctx context.Context, deviceID string) ([]devices.Reading, 
 		return readings, nil
 	}
 
-	d.observe(deviceID, devices.AvailOnline, "streaming "+info.Summary())
+	summary := "streaming " + info.Summary()
+	if d.verifyMediaFlow {
+		if !flow.Flowing() {
+			// Described a stream, sent nothing. DEGRADED rather than online:
+			// the camera is demonstrably reachable and demonstrably not
+			// delivering, and "online" would tell an operator to look
+			// elsewhere.
+			d.observe(deviceID, devices.AvailDegraded,
+				"described "+info.Summary()+" but sent no media in "+flow.Window.String())
+			readings = append(readings,
+				devices.Reading{DeviceID: deviceID, Metric: "stream_ok", Value: 1, At: at},
+				devices.Reading{DeviceID: deviceID, Metric: "media_flowing", Value: 0, At: at})
+			return readings, nil
+		}
+		summary = info.Summary() + " · " + flow.Summary()
+		readings = append(readings,
+			devices.Reading{DeviceID: deviceID, Metric: "media_flowing", Value: 1, At: at},
+			devices.Reading{DeviceID: deviceID, Metric: "media_packets", Value: float64(flow.Packets), At: at})
+	}
+
+	d.observe(deviceID, devices.AvailOnline, summary)
 	readings = append(readings,
 		devices.Reading{DeviceID: deviceID, Metric: "stream_ok", Value: 1, At: at},
 		devices.Reading{DeviceID: deviceID, Metric: "stream_codec", Text: info.VideoCodec(), At: at},

@@ -254,15 +254,20 @@ and none has met physical hardware.
 
 - [x] ONVIF discovery and stream-address resolution (`hub/internal/devices/camera/`)
 - [x] RTSP reachability probe (`VerifyStream`) — DESCRIBE, digest/basic auth, SDP parse, so
-      the hub reports what a camera actually streams instead of an address it never touched.
-      Tested against an in-process RTSP server; never run against a real camera
+      the hub reports what a camera actually streams instead of an address it never touched
+- [x] RTSP media-flow probe (`VerifyMediaFlow`) — SETUP over interleaved TCP, PLAY, count
+      RTP packets, TEARDOWN. Catches the camera that describes a good stream and sends
+      nothing, which DESCRIBE cannot. Counts packets and decodes none; holds a session, so
+      it is opt-in and always tears down. Both tested against an in-process RTSP server
+      that streams real interleaved framing; neither has met a real camera
 - [x] The retention design — [`docs/CAMERA-RETENTION.md`](docs/CAMERA-RETENTION.md). Where
       clips live, how long they last, who may watch, what a full disk does, and what a
       resident is told when retention drops the evening they cared about. Design only; no
       code implements it
-- [ ] Camera live view and recording — no SETUP, no PLAY, no frame is ever received. The
-      remaining blocker is genuinely hardware: an RTSP media client and an fMP4 writer both
-      need a real camera to develop against. The retention worker, the `camera:view`
+- [ ] Camera live view and recording — packets are counted, never decoded. The remaining
+      blocker is genuinely hardware: H.264 depacketization (FU-A, STAP-A, parameter sets)
+      and an fMP4 writer both need a real camera, because a fake written from the same RFC
+      would agree with whatever this code assumed. The retention worker, the `camera:view`
       permission and the viewer do not — but building a retention policy for footage that
       does not exist yet is the wrong order
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row

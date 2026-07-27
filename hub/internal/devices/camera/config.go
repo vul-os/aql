@@ -77,6 +77,26 @@ type Config struct {
 	// It never receives media, holds no session, and does not decode anything.
 	VerifyStream bool
 
+	// VerifyMediaFlow goes one step further: SETUP the video track over
+	// interleaved TCP, PLAY, count RTP packets briefly, TEARDOWN. It answers a
+	// question VerifyStream cannot — whether anything actually comes out.
+	//
+	// A camera that describes a good stream and sends nothing is an ordinary
+	// failure (dead encoder, a transport it will not really do, a firewall that
+	// permits control and drops media), and the operator's symptom is a black
+	// player after being told everything was fine.
+	//
+	// Costlier than VerifyStream and off by default for a stronger reason than
+	// cost: it OCCUPIES an RTSP session for the length of the window. Cheap
+	// cameras support very few, so a hub polling this on every refresh would
+	// compete with whoever is actually watching. It always tears down.
+	//
+	// It counts packets and decodes none. Implies VerifyStream.
+	VerifyMediaFlow bool
+
+	// MediaFlowWindow is how long VerifyMediaFlow listens. Default 2s.
+	MediaFlowWindow time.Duration
+
 	// AcceptForeignServiceAddress lets a camera name a media service, or return
 	// a stream address, on a host other than its own. See DiscoveryConfig for
 	// the same switch applied to discovery, and for what it gives up.

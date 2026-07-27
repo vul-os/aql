@@ -238,8 +238,8 @@ servers, and none has touched a real meter, relay board, radio or gate. Wiring o
 up is the first time anyone finds out whether it's right.
 
 **Some of it isn't built.** Matter, Modbus RTU, and camera live view and recording
-are open — the camera driver probes a stream and reports what it carries, and
-never receives a frame. Recording is a data-retention policy with a UI attached,
+are open — the camera driver probes a stream, reports what it carries, and can
+count the packets coming out of it, but decodes none of them. Recording is a data-retention policy with a UI attached,
 so the policy is written down first:
 [docs/CAMERA-RETENTION.md](docs/CAMERA-RETENTION.md) settles where clips live,
 how long they last, who may watch, and what a full disk does.

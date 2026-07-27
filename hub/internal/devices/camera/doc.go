@@ -25,11 +25,24 @@
 // ffmpeg, no CGO, no external dependency of any kind — every byte of this
 // package is standard library.
 //
-// There IS an RTSP client, and it does exactly one thing: DESCRIBE (rtsp.go).
-// It opens the connection, authenticates — digest, or basic where a camera
-// offers nothing else — asks the camera what the stream is, parses the SDP, and
-// disconnects. It never sends SETUP or PLAY, never negotiates a transport,
-// never receives a frame, and holds no session.
+// There IS an RTSP client (rtsp.go), and it does two things, both bounded.
+//
+// DESCRIBE: open, authenticate — digest, or basic where a camera offers nothing
+// else — ask what the stream is, parse the SDP, disconnect. Holds no session.
+//
+// And, opt-in, a MEDIA-FLOW probe: SETUP the video track over interleaved TCP,
+// PLAY, count RTP packets for a couple of seconds, TEARDOWN. It answers what
+// DESCRIBE cannot — whether anything actually comes out — because a camera that
+// describes a good stream and sends nothing is an ordinary failure whose only
+// symptom is a black player. It always tears down: cheap cameras support very
+// few sessions and one held by a health check competes with a real viewer.
+//
+// It COUNTS packets. It decodes none. That line is exactly where it is because
+// RTP framing and the RTP header are specified tightly enough that a test can
+// serve them faithfully, and H.264 depacketization is not: FU-A fragmentation,
+// STAP-A aggregation and parameter-set handling vary between real cameras in
+// ways a fake written from the same RFC would simply agree with. Everything
+// above the packet counter waits for a camera to develop against.
 //
 // That one request is the difference between "ONVIF handed us a URL" and "that
 // URL streams H264 and these credentials work on it", which is the question

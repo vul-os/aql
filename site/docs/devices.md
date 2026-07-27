@@ -161,8 +161,23 @@ address of a chosen encoder profile.
 There is also an RTSP client, and it does exactly one thing: **DESCRIBE**. Turn it on with
 `VerifyStream` and the driver follows the address it resolved — authenticating with digest,
 or basic where a camera offers nothing else — asks what the stream is, and reports the
-answer: `H264 video · digest auth`. It never sends SETUP or PLAY, never receives a frame,
-and holds no session.
+answer: `H264 video · digest auth`. It holds no session.
+
+Turn on `VerifyMediaFlow` and it goes one step further — SETUP the video track over
+interleaved TCP, PLAY, count RTP packets for a couple of seconds, TEARDOWN — answering what
+`DESCRIBE` cannot: whether anything actually **comes out**. A camera that describes a
+perfectly good stream and sends nothing is an ordinary failure (a dead encoder, a transport
+it will not really do, a firewall permitting control and dropping media), and the only
+symptom is a black player after the product said all was well. Such a camera reports as
+**degraded**, not online.
+
+That probe occupies an RTSP session, so it is opt-in and always tears down: cheap cameras
+support very few, and one held by a health check competes with whoever is watching.
+
+It counts packets and **decodes none** — that line is deliberate. RTP framing and the RTP
+header are specified tightly enough to serve faithfully in a test; H.264 depacketization is
+not, and a fake written from the same RFC would simply agree with whatever the code
+assumed.
 
 That one request is the difference between "ONVIF handed us a URL" and "that URL streams,
 and these credentials work on it". Cameras routinely want a different account on the media
