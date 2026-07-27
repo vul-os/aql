@@ -122,9 +122,8 @@ finished. The engine behind the other six is not built.**
   radio; the GATT peripheral glue exists only for **Linux/BlueZ** behind `-tags ble` and has
   **never been validated on hardware**. On every other platform the peripheral returns
   `ErrUnsupported`.
-- **Geofencing, online time-window rules, analytics endpoints, Google OAuth, 2FA.** Some
-  of these have console screens the hub does not serve; the drift is tracked mechanically
-  by a route-parity test.
+- **Geofencing, Google OAuth, 2FA.** Some of these have console screens the hub does not
+  serve; the drift is tracked mechanically by a route-parity test.
 
   Three things that used to be on this list are not gaps any more, and are called out
   because a "not built" list rots toward pessimism and nobody re-reads it. **Password
@@ -133,9 +132,13 @@ finished. The engine behind the other six is not built.**
   the time of use. **Outbound webhooks** are served and fire: HMAC-signed, with the
   target re-validated against SSRF immediately before every delivery, because DNS belongs
   to whoever owns the name and a webhook configured innocently in January is a
-  request-forgery primitive in March. **Email verification** is not a gap either — it was
-  removed on purpose, because an email address resolves through DNS to someone else's
-  server and this hub depends on nobody.
+  request-forgery primitive in March. **Online time-window rules** are enforced on the
+  open path — a member who may only enter on weekday mornings no longer gets in at 3am,
+  which the offline grant path has always enforced and the online one never did.
+  **Analytics endpoints** are served, read-only over the hash-chained audit rows.
+  **Email verification** is not a gap either — it was removed on purpose, because an
+  email address resolves through DNS to someone else's server and this hub depends on
+  nobody.
 
 Phase-by-phase status: **[ROADMAP.md](ROADMAP.md)**. Adversarial view:
 **[docs/THREAT-MODEL.md](docs/THREAT-MODEL.md)**.

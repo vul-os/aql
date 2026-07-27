@@ -120,14 +120,27 @@ export const FEATURES = [
   },
   {
     id: 'recurring-time-windows',
-    label: 'Recurring per-location access windows (e.g. "every Tuesday 08:00-12:00")',
-    docStatus: 'planned',
+    label: 'Recurring per-member/per-location access windows enforced on the ONLINE open path',
+    docStatus: 'shipped',
     docRefs: [
-      'README.md — "Recurring per-location time windows ... designed, not started (🔨)"',
-      'ARCHITECTURE.md §8 — "Designed, not started: ... recurring access windows"',
-      'site/index.html — "Time windows <span class=soon>planned</span>"',
+      'README.md — online time-window rules no longer listed as a gap',
+      'ROADMAP.md — the console-screens-ahead-of-backend list',
     ],
-    evidence: [{ root: 'gateway/internal', pattern: 'recurring|RRULE|rrule', flags: 'i' }],
+    // The old pattern was /recurring|rrule/ and matched neither the schema nor
+    // the code, because the implementation reuses keys.GrantWindow's vocabulary
+    // rather than inventing an RFC 5545 one — deliberately, so the product has
+    // one window format instead of two. It also tripped on the IDENTIFIER
+    // MaxWindowsPerRule ("...erRule..."), which is the kind of accidental match
+    // that makes a tripwire look like it works when it does not.
+    //
+    // Three pieces: the table, the check inside the open-path choke point, and
+    // the route that lets an operator create one. A rule nobody can create and
+    // a check nothing calls are both just code.
+    evidence: [
+      { file: 'gateway/internal/store/migrations/0014_time_windows.sql', pattern: 'CREATE TABLE time_window_rules' },
+      { file: 'gateway/internal/store/openpath.go', pattern: 'CheckTimeWindows' },
+      { file: 'gateway/internal/httpapi/server.go', pattern: 'time-windows' },
+    ],
   },
   {
     id: 'discord-channel',
@@ -176,8 +189,11 @@ export const FEATURES = [
   },
   {
     id: 'gateway-analytics',
+    // Shipped. Read-only over the hash-chained audit rows: three endpoints,
+    // account-scoped, 90-day cap, and a day with no rows carries JSON null
+    // rather than a zero that would be drawn as a bar.
     label: 'Analytics endpoints in the Go gateway (backend/ Workers reference still has these; gateway defers them)',
-    docStatus: 'planned',
+    docStatus: 'shipped',
     docRefs: [
       'README.md — "still ahead on a few deferred surfaces: OTP verify, analytics, OAuth, meters"',
       'site/docs/self-host.md — "Still deferred ... analytics endpoints"',

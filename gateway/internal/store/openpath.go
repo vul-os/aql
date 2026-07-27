@@ -219,7 +219,10 @@ type LogAccessArgs struct {
 // LogAccessResult is the verdict. Every attempt — allowed or denied — leaves
 // an access_logs row (LogID); on denial Reason is one of the backend's exact
 // vocabulary: rate_limited | quota_exceeded | account_suspended |
-// user_disabled.
+// user_disabled — plus this gateway's three time-window reasons
+// (outside_time_window | time_window_invalid | time_window_unavailable, see
+// timewindows.go), kept as separate strings precisely so an operator can tell
+// a schedule lockout from a throttle in the audit trail.
 type LogAccessResult struct {
 	Allowed     bool
 	Reason      string
@@ -231,8 +234,10 @@ type LogAccessResult struct {
 
 // LogAccess runs the full verdict + audit for one gate command:
 // access-point resolution, account-suspension check, live user-status check,
-// rate limits + quotas (open only — 'close' is the safe direction and is
-// never limited), then the audit row. Denials are audit-logged with
+// time-window rules, rate limits + quotas (open only — 'close' is the safe
+// direction and is never limited, never quota-denied and never
+// window-restricted: someone who got in must be able to get out, whatever the
+// hour), then the audit row. Denials are audit-logged with
 // success=0 and error=reason; the caller translates the verdict per channel
 // (429 + Retry-After over HTTP, honest chat replies on channels).
 //
@@ -278,6 +283,30 @@ func (s *Store) LogAccess(ctx context.Context, envCfg RateLimitConfig, args LogA
 				args.UserID = ""
 			}
 			return deny("user_disabled", 0, "")
+		}
+	}
+
+	// Time-window rules: WHEN this member may open (timewindows.go). Placed
+	// HERE, and the position is the whole design:
+	//
+	//   - AFTER account_suspended and user_disabled, because those are
+	//     statements about whether this person may open AT ALL. An operator
+	//     reading the audit row for a disabled user must see 'user_disabled',
+	//     not 'outside_time_window' — the narrower reason would be true and
+	//     useless.
+	//   - BEFORE the limit block, because that block CONSUMES counters and
+	//     claims the cooldown. A denial that ran after it would either burn an
+	//     open the member never got, or force a hand-back path that does not
+	//     exist here — and it would break the invariant the limit code states
+	//     outright: denials never consume, counters exactly equal successful
+	//     opens.
+	//
+	// Nothing above or below was reordered or weakened. With no rule stored
+	// this is one indexed read that returns nothing and allows — an install
+	// that does not use windows behaves exactly as it did before.
+	if args.Command == "open" && args.UserID != "" {
+		if d := s.CheckTimeWindows(ctx, ap.AccountID, args.UserID, ap.ID, ap.LocationID, 0); !d.Allowed {
+			return deny(d.Reason, d.RetryAfterS, "")
 		}
 	}
 

@@ -268,6 +268,22 @@ func (s *Server) Router() http.Handler {
 	// of the emergency no-internet path; controller/internal/grants verifies.
 	mux.Handle("POST /v1/offline-grants", s.requireAuth(s.handleOfflineGrantIssue))
 
+	// Time-window rules (see timewindows.go): when a given member may open a
+	// given door. Writes are admin-only; the list is readable by any member,
+	// but an ordinary member sees only the rules that name them.
+	mux.Handle("GET /v1/accounts/{id}/time-windows", s.requireAuth(s.handleTimeWindowsList))
+	mux.Handle("POST /v1/accounts/{id}/time-windows", s.requireAuth(s.handleTimeWindowCreate))
+	mux.Handle("DELETE /v1/accounts/{id}/time-windows/{ruleID}", s.requireAuth(s.handleTimeWindowDelete))
+
+	// analytics (see analytics.go) — READ-ONLY summaries over the append-only,
+	// hash-chained audit rows. Session-auth only, member-gated per subject,
+	// and every window is bounded (store.AnalyticsMaxWindowDays): an
+	// unbounded scan over years of audit rows would be a denial of service
+	// against a hub whose other job is opening gates.
+	mux.Handle("GET /v1/analytics/accounts/{id}/summary", s.requireAuth(s.handleAnalyticsAccountSummary))
+	mux.Handle("GET /v1/analytics/accounts/{id}/insights", s.requireAuth(s.handleAnalyticsAccountInsights))
+	mux.Handle("GET /v1/analytics/locations/{id}/summary", s.requireAuth(s.handleAnalyticsLocationSummary))
+
 	// Outbound webhooks. Admin-only: a webhook is a standing instruction to POST
 	// a signed record of every gate opening to an address of the configurer's
 	// choosing.

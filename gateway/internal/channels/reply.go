@@ -20,6 +20,24 @@ func DenialMessage(reason string, retryAfterS int64, publicURL string) string {
 		return "Your Aql user has been disabled by the hub operator — the gate cannot be opened. Contact your operator for help."
 	case "quota_exceeded":
 		return "Daily limit reached for this location — contact your admin. The web portal: " + trimURL(publicURL) + "/app"
+	case "outside_time_window":
+		// Distinct from a rate limit on purpose. The retry-after is the same
+		// shape, but "too many opens" would tell a resident they tried too
+		// often when the truth is that they are not allowed in at this hour —
+		// a wrong reason sends someone to argue with the wrong person.
+		mins := (retryAfterS + 59) / 60
+		if mins < 1 {
+			return "Your access to this gate is not open right now. Contact your admin if that looks wrong."
+		}
+		if mins < 90 {
+			return fmt.Sprintf("Your access to this gate is not open right now — it opens again in ~%d min.", mins)
+		}
+		return fmt.Sprintf("Your access to this gate is not open right now — it opens again in ~%d h.", (mins+59)/60)
+	case "time_window_invalid", "time_window_unavailable":
+		// The schedule could not be evaluated, so the open was refused rather
+		// than let through. Say that it is a configuration fault and not the
+		// resident's, because otherwise they will keep trying.
+		return "This gate's access schedule could not be checked, so the gate was not opened. This is a setup problem — contact your admin."
 	default: // rate_limited
 		mins := (retryAfterS + 59) / 60
 		if mins < 1 {
