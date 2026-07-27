@@ -46,3 +46,11 @@ src-tauri/gen/
 gateway/gateway
 controller/controller
 controller/controller-sim
+
+# Built binaries. `make -C hub build-portal` writes hub/bin/aql-hub, which is a
+# ~15 MB artifact that `git add -A` would happily commit — `dist` being ignored
+# is not the same thing, and `git check-ignore a b` exits 0 when only ONE of
+# them matches, which is an easy way to convince yourself otherwise.
+hub/bin/
+controller/bin/
+e2e/bin/
