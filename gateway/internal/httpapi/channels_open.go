@@ -30,9 +30,44 @@ func (s *Server) finishOpen(ctx context.Context, command string, res *store.LogA
 		return chVerdict{}
 	}
 	if !res.Allowed {
+		s.emitAccessWebhook(EventAccessDenied, command, res)
 		return chVerdict{Reason: res.Reason, RetryAfterS: res.RetryAfterS}
 	}
-	return chVerdict{Allowed: true, Delivery: s.dispatchCommand(ctx, command, res)}
+	v := chVerdict{Allowed: true, Delivery: s.dispatchCommand(ctx, command, res)}
+	s.emitAccessWebhook(EventAccessOpened, command, res)
+	return v
+}
+
+// emitAccessWebhook notifies subscribers that an access attempt happened.
+//
+// It is called AFTER the verdict and after dispatch, never before, and it
+// returns immediately — webhookDispatcher.Dispatch does its work on its own
+// goroutine. A webhook is a notification about something that has already
+// happened and already been audited, so nothing here may delay or influence
+// whether a gate opens. A receiver that takes ten seconds must not add ten
+// seconds to a resident standing at a gate.
+//
+// Denials are emitted too, and deliberately: an operator watching for someone
+// repeatedly failing to get in wants that more than they want the successes.
+//
+// The payload carries no member identity beyond the audit row's own id. A
+// webhook target is an address on someone's network, and "who tried to open
+// the gate at 3am" is not something to post to it by default.
+func (s *Server) emitAccessWebhook(event, command string, res *store.LogAccessResult) {
+	if s.webhooks == nil || res == nil || res.AP == nil {
+		return
+	}
+	payload := map[string]any{
+		"event":        event,
+		"command":      command,
+		"access_point": res.AP.ID,
+		"location":     res.AP.LocationID,
+		"log_id":       res.LogID,
+	}
+	if !res.Allowed {
+		payload["reason"] = res.Reason
+	}
+	s.webhooks.Dispatch(res.AP.AccountID, event, payload)
 }
 
 // phoneOpen resolves a phone's authority for an access point (any phone-

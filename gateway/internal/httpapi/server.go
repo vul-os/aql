@@ -69,6 +69,11 @@ type Server struct {
 	hub   *hub.Hub
 	log   *slog.Logger
 
+	// webhooks delivers outbound notifications. Never nil in production; a
+	// nil dispatcher simply emits nothing, which is what tests that do not
+	// care about webhooks get.
+	webhooks *webhookDispatcher
+
 	// devices is the device engine, or nil when no driver was configured.
 	// Nil is the DEFAULT and is not an error: a hub with no device config has
 	// an empty fleet, which is different from a failure. Every handler in
@@ -113,6 +118,7 @@ func New(cfg Config, st *store.Store, ks *keys.Keys, log *slog.Logger) *Server {
 		cfg.Channels.PublicURL = cfg.PublicURL
 	}
 	s := &Server{cfg: cfg, store: st, keys: ks, hub: hub.New(), log: log, devices: cfg.Devices}
+	s.webhooks = newWebhookDispatcher(st, log)
 	ch := cfg.Channels
 	s.wa = channels.WhatsApp{AppSecret: ch.WhatsAppAppSecret, VerifyToken: ch.WhatsAppVerifyToken, PublicURL: ch.PublicURL}
 	s.slack = channels.Slack{SigningSecret: ch.SlackSigningSecret}
@@ -261,6 +267,13 @@ func (s *Server) Router() http.Handler {
 	// offline grants (spec: proto/grants.md) — the gateway-side issuance half
 	// of the emergency no-internet path; controller/internal/grants verifies.
 	mux.Handle("POST /v1/offline-grants", s.requireAuth(s.handleOfflineGrantIssue))
+
+	// Outbound webhooks. Admin-only: a webhook is a standing instruction to POST
+	// a signed record of every gate opening to an address of the configurer's
+	// choosing.
+	mux.Handle("GET /v1/accounts/{id}/webhooks", s.requireAuth(s.handleWebhooksList))
+	mux.Handle("POST /v1/accounts/{id}/webhooks", s.requireAuth(s.handleWebhookCreate))
+	mux.Handle("DELETE /v1/accounts/{id}/webhooks/{webhookID}", s.requireAuth(s.handleWebhookDelete))
 
 	// Device engine (internal/devices). Read paths are open to any authenticated
 	// member; execute is an actuation and carries the tier ceiling and the
