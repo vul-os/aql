@@ -133,8 +133,16 @@ export default function Login() {
 
 function toMessage(err: unknown): string {
   if (err instanceof ApiError) {
+    // The hub collapses every login failure into invalid_credentials — wrong
+    // password, unknown username, disabled account, no password set. That is
+    // deliberate (gateway/internal/httpapi/auth.go): distinguishing them is an
+    // account-state and user-enumeration oracle.
+    //
+    // So there is no `account_not_active` branch here any more. There used to
+    // be, and it could never match; it read like a handled case while a
+    // disabled user was told their password was wrong. If that copy is worth
+    // showing, the hub has to be willing to say so first — and it is not.
     if (err.code === 'invalid_credentials') return 'That username and password don’t match.';
-    if (err.code === 'account_not_active') return 'This account isn’t active — ask whoever runs this hub to reactivate it.';
     return err.detail ?? err.code;
   }
   if (err instanceof Error) return err.message;

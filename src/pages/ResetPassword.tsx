@@ -36,14 +36,19 @@ export default function ResetPassword() {
       await api.resetPassword(token, password);
       setDone(true);
     } catch (err) {
+      // One code, on purpose. authrecovery.go's header says it outright:
+      // "EVERY FAILURE IS THE SAME FAILURE" — unknown selector, wrong
+      // verifier, expired, already consumed, invalidated by a newer request or
+      // by a password change, malformed input. All of them are 400
+      // invalid_token, so that a probe learns nothing about which.
+      //
+      // The token_used and token_expired branches that used to be here were
+      // dead from the day they were written. The copy below covers the whole
+      // set without claiming to know which one happened.
       const msg =
         err instanceof ApiError && err.code === 'invalid_token'
-          ? 'This reset link is invalid or has been replaced.'
-          : err instanceof ApiError && err.code === 'token_used'
-            ? 'This reset link has already been used. Request a new one.'
-            : err instanceof ApiError && err.code === 'token_expired'
-              ? 'This reset link has expired. Request a new one.'
-              : friendlyApiError(err);
+          ? 'This reset link is invalid, expired, or has already been used. Request a new one.'
+          : friendlyApiError(err);
       setErrorMsg(msg);
       setSubmitting(false);
     }

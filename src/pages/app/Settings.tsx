@@ -763,14 +763,17 @@ function PasswordSection() {
       setNext('');
       setConfirm('');
     } catch (err) {
+      // update-password answers with invalid_credentials (the current password
+      // was wrong), weak_password, unauthorized or rate_limited — see
+      // authrecovery.go. It has never emitted invalid_current_password,
+      // same_password or no_password_set, so the three branches that used to be
+      // here matched nothing and quietly fell through to the generic message.
       const msg =
-        err instanceof ApiError && err.code === 'invalid_current_password'
+        err instanceof ApiError && err.code === 'invalid_credentials'
           ? 'Current password is incorrect.'
-          : err instanceof ApiError && err.code === 'same_password'
-            ? 'New password must be different from the current one.'
-            : err instanceof ApiError && err.code === 'no_password_set'
-              ? 'This account uses Google sign-in. Set a password from the security flow.'
-              : friendlyApiError(err, 'Could not update password.');
+          : err instanceof ApiError && err.code === 'weak_password'
+            ? 'That password is too short. Use at least 8 characters.'
+            : friendlyApiError(err, 'Could not update password.');
       setErrorMsg(msg);
     } finally {
       setSubmitting(false);
