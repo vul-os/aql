@@ -432,11 +432,12 @@ func run(cfg config, log *slog.Logger) error {
 // actually start?" is answerable without binding a port — which is how the
 // everything-off default is held to account in the tests.
 type hub struct {
-	energy *energy.Store
-	log    *slog.Logger
-	store  *store.Store
-	keys   *keys.Keys
-	srv    *httpapi.Server
+	energy      *energy.Store
+	automations *automations.Engine
+	log         *slog.Logger
+	store       *store.Store
+	keys        *keys.Keys
+	srv         *httpapi.Server
 	// reg is the device engine. nil unless -device-drivers named a driver
 	// this binary could build: no device config, no registry, no behaviour.
 	reg *devices.Registry
@@ -494,15 +495,19 @@ func buildHub(cfg config, log *slog.Logger) (*hub, error) {
 	h := &hub{log: log, store: st, keys: ks}
 	h.wireDevices(cfg)
 	h.energy = h.newEnergyStore(cfg)
+	h.automations = h.newAutomationsEngine()
 
 	srv := httpapi.New(httpapi.Config{
-		Devices:         h.reg,
-		Energy:          h.energy,
-		Version:         Version,
-		Env:             envOr("LINTEL_ENV", "self-hosted"),
-		PublicURL:       cfg.publicURL,
-		AdminClaimToken: cfg.claimToken,
-		JWTSecret:       secret,
+		Devices:     h.reg,
+		Energy:      h.energy,
+		Automations: h.automations,
+		// True only when the scheduler will actually be started below.
+		AutomationsScheduler: cfg.automations && h.automations != nil,
+		Version:              Version,
+		Env:                  envOr("LINTEL_ENV", "self-hosted"),
+		PublicURL:            cfg.publicURL,
+		AdminClaimToken:      cfg.claimToken,
+		JWTSecret:            secret,
 		// Rate-limit env layer (db overrides via PATCH /v1/admin/limits sit on
 		// top; see store.ResolveRateLimitConfig).
 		RateLimits: store.ParseRateLimitConfig(os.Getenv),
@@ -877,14 +882,27 @@ func (h *hub) wireEnergy(cfg config) {
 // the execution path, and no flag, env var or config file in this binary can
 // raise it. A rule fires with nobody watching; the set of things it may do is
 // not an operator preference.
-func (h *hub) wireAutomations(cfg config) {
-	if !cfg.automations {
-		return
-	}
+// newAutomationsEngine builds the rule engine, separately from the scheduler
+// and BEFORE the HTTP server, so the management API is bound to it at
+// construction rather than back-filled.
+//
+// It is built whenever there is a device registry, even with -automations off.
+// The two are genuinely different things: the engine validates and stores
+// rules, the scheduler fires them. An operator setting a hub up wants to write
+// the rules first and turn the scheduler on once they are happy.
+//
+// The obvious hazard in that — rules that exist and quietly never fire — is
+// answered by reporting it rather than by preventing it: the list response
+// carries scheduler_running, so a console can say so plainly. Refusing to store
+// a rule because the scheduler is off would be the worse trade, since it makes
+// the setup order load-bearing for no safety gain.
+//
+// Nil when there is no registry. Not an error: a rule that cannot resolve a
+// device is a rule that cannot be saved, so an engine without one would accept
+// nothing and mislead about why.
+func (h *hub) newAutomationsEngine() *automations.Engine {
 	if h.reg == nil {
-		h.log.Error("-automations is set but no device driver is running, " +
-			"so no rule could resolve a device; the rule scheduler stays off")
-		return
+		return nil
 	}
 	// Same bare-handle rule as the metering engine, and here it is load
 	// bearing: the engine writes its trail ONLY through the store's
@@ -896,7 +914,22 @@ func (h *hub) wireAutomations(cfg config) {
 		Audit:    h.store,
 	})
 	if err != nil {
-		h.log.Error("rule engine not started; the rule scheduler stays off", "err", err)
+		h.log.Error("rule engine not started; automation rules cannot be "+
+			"managed or fired on this hub", "err", err)
+		return nil
+	}
+	return eng
+}
+
+func (h *hub) wireAutomations(cfg config) {
+	if !cfg.automations {
+		return
+	}
+	eng := h.automations
+	if eng == nil {
+		h.log.Error("-automations is set but there is no rule engine (no device " +
+			"driver is running, so no rule could resolve a device); the rule " +
+			"scheduler stays off")
 		return
 	}
 	runner, err := automations.NewRunner(automations.RunnerConfig{

@@ -104,27 +104,67 @@ already holds the audit log — but nothing has been committed.
 
 ## Automations
 
-The intended model is `trigger → condition → action`, evaluated against live device
-state, with scheduling and run history persisted. None of it exists: there is no rule
-object, no scheduler, and no execution engine.
+The model is `trigger → condition → action`, evaluated against live device state, with
+scheduling and run history persisted. It is built (`gateway/internal/automations/`) and
+managed over `/v1/accounts/{id}/automations`.
 
-Note that even the *access* side has no rule engine in the sense people expect — no
-per-member schedules, no time-of-day windows for online opens. Weekly windows exist only
-inside offline grants, and the **controller** evaluates them at redemption, not the hub.
-See [Architecture → What the open path actually is](architecture.md).
+Triggers are `schedule` (a minute of the day on chosen weekdays, in a named timezone, so
+a rule written as "at seven" still means seven after a DST shift), `threshold` (a device
+metric *crossing* a bound — edge-triggered, so a tank already below 20% at boot does not
+fire a rule written for "when it drops below 20%"), and `event` (a device changing
+availability).
+
+The property to know before writing a rule: **an unattended action is bounded by a
+compile-time ceiling.** `MaxActionTier` is `TierConsequential`, checked both when a rule
+is saved and again immediately before the driver call, and no flag, request or config
+file can raise it. Every access verb in the catalogue sits above that line, so **an
+automation cannot open a gate** — that is structural, not a setting. A mower's blades sit
+above it too.
+
+A rule that fails repeatedly disables itself and records why. Rules can be written while
+the scheduler is off, which is useful when setting a hub up; the list response carries
+`scheduler_running` so a console can say plainly that nothing will fire them.
+
+The *access* side is governed separately and deliberately so — see
+[Architecture → What the open path actually is](architecture.md). Per-member time windows
+for online opens do exist now (`gateway/internal/store/timewindows.go`), enforced inside
+the open path's choke point rather than by the automations engine, and geofence rules
+alongside them. Weekly windows inside offline grants remain a different mechanism
+entirely: the **controller** evaluates those at redemption, against its own clock, with
+no hub involved.
 
 ## Energy
 
-Intended: meter and inverter ingestion, hourly/daily/monthly rollups, and source-mix
-accounting (solar / grid / battery) from live readings. Built: nothing. The word "meter"
-appears in the hub only as an open/close counter derived from the access log, and the
-maintenance fields next to it return fixed nulls.
+Meter ingestion, hourly/daily/monthly rollups and source-mix accounting (solar / grid /
+battery) are built (`gateway/internal/energy/`) and readable over
+`/v1/accounts/{id}/energy/{channels,series,mix}`. A poller reads meters through the
+device engine; counter wraps and resets are handled explicitly.
+
+The design rule worth knowing, because it shapes every response: **the engine never
+states a number it cannot support.** Every bucket carries a quality label, how much of it
+was interpolated across a gap, and a measured-versus-expected coverage pair; every mix
+carries `complete` and `attributed`. An hour nobody measured reports `kwh: null`, never
+`0` — an outage and a house that used nothing are different facts. A chart drawn without
+checking those flags is confidently wrong.
+
+The API is read-only. Samples come from a poller reading real meters; an endpoint that
+injects them would be a way to forge a bill.
+
+Untested against physical meters.
 
 ## Security & bots
 
-Intended: camera live view and recording (ONVIF/RTSP), robot control for mowers,
-cleaning and patrol beyond a status row, and alerting tied to real sensor or camera
-events. Built: nothing.
+Built: an ONVIF driver (`gateway/internal/devices/camera/`) that discovers cameras via
+WS-Discovery, authenticates with WS-UsernameToken digest, and asks a camera for the RTSP
+address of a chosen encoder profile.
+
+Be precise about where that stops, because the package doc is: **there is no RTSP client.**
+It never opens an RTSP connection, never sends DESCRIBE or SETUP or PLAY, and never
+receives a frame. It obtains and hands over a stream *address*. Live view and recording —
+anything that touches a pixel — are not built.
+
+Robot control beyond a status row, and alerting tied to real sensor or camera events, are
+not built either.
 
 Movement commands are the one place where "just add a driver" is not enough: a compromised
 client must not be able to drive a machine into a person, so rate-limiting and scoping on

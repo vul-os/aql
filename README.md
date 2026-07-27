@@ -89,19 +89,26 @@ finished. The engine behind the other six is not built.**
   What is still genuinely missing: Matter, a Modbus driver (the frame/decode layer is
   written, the `Driver` is not), and device discovery. Untested against physical hardware
   — reachable in the protocol sense is not the same as verified in someone's house.
-- **Automations running against real devices.** The runtime exists and is tested
-  ([`gateway/internal/automations/`](gateway/internal/automations/)) — rule object,
-  scheduler with restart survival, execution engine, and a hard ceiling that refuses to
-  save or fire any action above `TierConsequential`, because an automation fires with
-  nobody watching. It is constructed at startup but stays off unless configured, and the
-  only devices it could drive are the demo ones, so no rule has yet moved anything real.
+- **Automations moving anything real.** The runtime is built, tested and now managed over
+  HTTP ([`gateway/internal/automations/`](gateway/internal/automations/),
+  `/v1/accounts/{id}/automations`) — rule object, scheduler with restart survival,
+  execution engine, failure breaker, and a hard ceiling that refuses to save *or* fire any
+  action above `TierConsequential`, because an automation fires with nobody watching.
+  Every access verb sits above that line, so an automation cannot open a gate; that is
+  structural, not a setting. The scheduler stays off unless configured, and the API
+  reports `scheduler_running` so rules that will not fire do not look like rules that
+  work. No rule has yet driven physical hardware.
 - **Energy metering wired into the hub.** The engine exists and is tested
   ([`gateway/internal/energy/`](gateway/internal/energy/)) — 60s ingestion, hour/day/month
   rollups, source-mix accounting, counter wrap-vs-reset detection, and gaps represented as
   *absent* rather than zero (`KWh` is a nullable pointer precisely so a renderer that
-  forgets the distinction crashes instead of drawing a confident low bar). What is missing
-  is wiring: nothing constructs a poller in `cmd/gateway`, and there is no HTTP surface, so
-  no meter is read in a running hub.
+  forgets the distinction crashes instead of drawing a confident low bar). The poller is
+  constructed at startup and the history is readable over
+  `/v1/accounts/{id}/energy/{channels,series,mix}`, with every honesty field — quality,
+  estimated share, coverage-versus-expected, `complete`, `attributed` — carried through to
+  the caller rather than flattened into a confident number. Read-only: samples come from
+  meters, and an endpoint that injects them would be a way to forge a bill. What is
+  missing is a real meter — none of it has been exercised against physical hardware.
 - **The camera pipeline.** ONVIF *discovery* now exists
   ([`gateway/internal/devices/camera/`](gateway/internal/devices/camera/)) — WS-Discovery
   probe, reachability, and stream-address resolution, so the hub can find a camera and

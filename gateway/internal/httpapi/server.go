@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/vul-os/aql/gateway/internal/automations"
 	"github.com/vul-os/aql/gateway/internal/channels"
 	"github.com/vul-os/aql/gateway/internal/devices"
 	"github.com/vul-os/aql/gateway/internal/energy"
@@ -47,6 +48,18 @@ type Config struct {
 	// Energy is the metering store. Nil (the default) means this hub has no
 	// metering, and every energy route answers 503 with a distinct code.
 	Energy *energy.Store
+
+	// Automations is the rule engine. Nil (the default) means rules cannot be
+	// managed on this hub, and every automations route answers 503.
+	Automations *automations.Engine
+
+	// AutomationsScheduler reports whether the background scheduler is
+	// actually running. The engine and the scheduler are separate: an operator
+	// can write rules with the scheduler off, and those rules will not fire.
+	//
+	// That is surfaced rather than prevented, so the API can say so plainly
+	// instead of a console showing a list of rules that silently do nothing.
+	AutomationsScheduler bool
 	// Channels holds the chat-channel credentials (WhatsApp/Slack/Telegram).
 	// Zero value = every channel refuses its webhook (fail-closed) and its
 	// sender is a config-unset no-op.
@@ -85,6 +98,11 @@ type Server struct {
 	// distinct code rather than 404, so an operator can tell "not wired up"
 	// from "wrong URL".
 	energy *energy.Store
+
+	// automations is the rule engine, or nil when the scheduler is not running.
+	// Nil is the default; every route answers 503 with a distinct code rather
+	// than 404, for the reason automations.go gives.
+	automations *automations.Engine
 
 	// devices is the device engine, or nil when no driver was configured.
 	// Nil is the DEFAULT and is not an error: a hub with no device config has
@@ -129,7 +147,7 @@ func New(cfg Config, st *store.Store, ks *keys.Keys, log *slog.Logger) *Server {
 	if cfg.Channels.PublicURL == "" {
 		cfg.Channels.PublicURL = cfg.PublicURL
 	}
-	s := &Server{cfg: cfg, store: st, keys: ks, hub: hub.New(), log: log, devices: cfg.Devices, energy: cfg.Energy}
+	s := &Server{cfg: cfg, store: st, keys: ks, hub: hub.New(), log: log, devices: cfg.Devices, energy: cfg.Energy, automations: cfg.Automations}
 	s.webhooks = newWebhookDispatcher(st, log)
 	ch := cfg.Channels
 	s.wa = channels.WhatsApp{AppSecret: ch.WhatsAppAppSecret, VerifyToken: ch.WhatsAppVerifyToken, PublicURL: ch.PublicURL}
@@ -304,6 +322,20 @@ func (s *Server) Router() http.Handler {
 	// and a resident refused at the gate needs to be able to see why. Note
 	// that this is a convenience, not a security control — the position it
 	// tests is client-supplied and unverified (store/geofence.go).
+	// Automation rules (see automations.go). Admin-only including reads: a
+	// rule says what the household's hardware does unattended, which is closer
+	// to the audit trail than to a meter reading. Every safety property lives
+	// in internal/automations, not here.
+	mux.Handle("GET /v1/accounts/{id}/automations", s.requireAuth(s.handleAutomationsList))
+	mux.Handle("POST /v1/accounts/{id}/automations", s.requireAuth(s.handleAutomationCreate))
+	mux.Handle("GET /v1/accounts/{id}/automations/runs", s.requireAuth(s.handleAutomationRuns))
+	mux.Handle("GET /v1/accounts/{id}/automations/{ruleID}", s.requireAuth(s.handleAutomationGet))
+	mux.Handle("PUT /v1/accounts/{id}/automations/{ruleID}", s.requireAuth(s.handleAutomationUpdate))
+	mux.Handle("DELETE /v1/accounts/{id}/automations/{ruleID}", s.requireAuth(s.handleAutomationDelete))
+	mux.Handle("POST /v1/accounts/{id}/automations/{ruleID}/enabled", s.requireAuth(s.handleAutomationSetEnabled))
+	mux.Handle("POST /v1/accounts/{id}/automations/{ruleID}/run", s.requireAuth(s.handleAutomationRunNow))
+	mux.Handle("GET /v1/accounts/{id}/automations/{ruleID}/runs", s.requireAuth(s.handleAutomationRuns))
+
 	// Energy metering (see energy.go). Read-only: samples come from the poller
 	// reading real meters, and an endpoint that injects them is a way to forge
 	// a bill. Every member reads — household consumption is not private

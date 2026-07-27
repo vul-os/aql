@@ -280,12 +280,12 @@ export const FEATURES = [
   {
     id: 'automations-runtime',
     label: 'Automations runtime (a real trigger → condition → action engine over device state)',
-    docStatus: 'planned',
+    docStatus: 'shipped',
     docRefs: [
-      'README.md — "The automations runtime. No rule object, no scheduler, no execution engine."',
+      'README.md § Automations running against real devices',
       'ROADMAP.md Phase 3',
-      'site/docs/devices.md § Automations — "None of it exists"',
-      'site/docs/architecture.md § What the open path actually is — "There is no rule object in the hub"',
+      'site/docs/devices.md § Automations — trigger/condition/action, MaxActionTier ceiling',
+      'site/docs/architecture.md § What the open path actually is — the rule object exists but is kept OUT of the open path',
     ],
     // Deliberately narrow. A loose /schedul|cron/ matches the controller's
     // scheduleRelease() relay timer, which is not an automations engine.

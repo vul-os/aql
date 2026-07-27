@@ -149,7 +149,7 @@ protocol driver of any kind is present in this repository.
 - [ ] Decide where it lives: the Go hub (which already owns persistence, audit and the
       always-on box) or the Rust core in `src-tauri/` (currently one IPC command). The hub
       is the likely answer; it has not been committed
-- [ ] One internal device model — id, kind, zone, state, commands, telemetry — that the
+- [x] One internal device model — id, kind, zone, state, commands, telemetry — that the
       console renders generically, with no protocol-specific code
 - [ ] Driver/adapter seam so a protocol can be added without touching the console:
   - [ ] Matter
@@ -181,29 +181,44 @@ protocol driver of any kind is present in this repository.
 
 ---
 
-## Phase 3 — Automations (not built)
+## Phase 3 — Automations (built, unproven against hardware)
 
-- [ ] A real `trigger → condition → action` engine over live device state (today's
-      automations screen is demo data with no execution behind it)
-- [ ] Scheduling, conditions and run history, persisted
-- [ ] Fail-closed behaviour on ambiguous sensor state for anything that actuates
-- [ ] Online time-window and schedule rules for access too — today there is no rule object
-      in the hub at all, and weekly windows exist only inside offline grants (evaluated by
-      the controller, not the hub)
+- [x] A real `trigger → condition → action` engine over live device state
+      (`gateway/internal/automations/`), managed over `/v1/accounts/{id}/automations`
+- [x] Scheduling, conditions and run history, persisted; the scheduler survives restart
+- [x] Fail-closed behaviour on ambiguous sensor state for anything that actuates
+- [x] A compile-time `MaxActionTier` ceiling on unattended actuation, checked on the save
+      path and again immediately before the driver call. Every access verb is above it, so
+      an automation cannot open a gate — structural, not a setting
+- [x] Online time-window rules for access (`gateway/internal/store/timewindows.go`) and
+      geofence rules, enforced inside the open path's choke point rather than by the
+      automations engine, which is deliberately kept out of that path
+- [ ] Any rule that has actually driven physical hardware — the only devices exercised so
+      far are the mock driver's
+- [ ] The console's automations screen reading live rules instead of the demo dataset
 
 ---
 
-## Phase 4 — Energy metering (not built)
+## Phase 4 — Energy metering (built, unproven against hardware)
 
-- [ ] Real meter and inverter ingestion replacing the demo 24h chart
-- [ ] Historical rollups (hourly / daily / monthly) in SQLite
-- [ ] Source-mix accounting (solar / grid / battery) from live readings
+- [x] Meter ingestion through the device engine, with counter wrap-vs-reset detection
+- [x] Historical rollups (hourly / daily / monthly) in SQLite
+- [x] Source-mix accounting (solar / grid / battery) from live readings
+- [x] A read API (`/v1/accounts/{id}/energy/{channels,series,mix}`) that carries every
+      honesty field — quality, estimated share, coverage vs expected, `complete`,
+      `attributed` — rather than flattening them into a confident number. An unmeasured
+      hour is `null`, never `0`
+- [ ] A real meter. None of this has been read from physical hardware
+- [ ] Inverter ingestion specifically — the model covers it, no driver speaks to one
+- [ ] The console's energy screen reading live buckets instead of the demo 24h chart
 
 ---
 
 ## Phase 5 — Security & bots (not built)
 
-- [ ] Camera live view and recording (ONVIF/RTSP)
+- [x] ONVIF discovery and stream-address resolution (`gateway/internal/devices/camera/`)
+- [ ] Camera live view and recording — there is **no RTSP client**: the driver never opens
+      a connection, never sends DESCRIBE, and moves no pixels
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
 - [ ] Rate-limiting and scoping on movement commands, so a compromised client cannot drive

@@ -86,9 +86,11 @@ there isn't one.
 
 ## What the open path actually is
 
-Worth stating precisely, because "rules engine" oversells it. There is **no rule object**
-in the hub — no rules table, no per-rule editor, no time-window entity for online opens.
-What exists is a single choke point that every open funnels through, in a fixed order:
+Worth stating precisely, because "rules engine" oversells it. The hub does have a rule
+object now — see [Devices → Automations](devices.md) — but it is deliberately kept *out*
+of this path: every access verb sits above the automations tier ceiling, so no automation
+can open anything. What governs an online open is a single choke point that every open
+funnels through, in a fixed order:
 
 1. Resolve the access point.
 2. Refuse if the account is suspended.
