@@ -36,7 +36,7 @@ can be reachable on WhatsApp and Slack at once without being two people in your 
 | WhatsApp | phone number | **Shipped** — Meta Cloud API | **High** — verified Meta business + WABA + number |
 | Slack | member id | **Shipped** — Events API **and** Socket Mode | Minutes — an app manifest + signing secret |
 | Telegram | chat id | **Shipped** — opens wired through the shared pipeline | Minutes — a BotFather token + webhook secret |
-| Discord | user id | **Not built** — roadmap, no code | Minutes — a bot token, once it exists |
+| Discord | user id | **In progress** — the adapter is written, nothing registers it yet, so no message reaches a gate | Minutes — a bot token, once it is wired |
 | DMTAP | keypair / `name@domain` | **Not built** — a `DialChannel` scaffold exists whose only transport implementation fails closed | — |
 
 > **Every chat channel puts a third party in the loop.** Meta, Slack and Telegram see

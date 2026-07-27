@@ -131,11 +131,15 @@ export const FEATURES = [
   },
   {
     id: 'discord-channel',
-    label: 'Discord as a working chat channel',
-    docStatus: 'planned',
+    // Split from "is Discord a working channel", which grep cannot answer. The
+    // adapter code exists; nothing registers it, so no resident can text a
+    // Discord message and open a gate. The label says which of those two this
+    // claim tracks, in capitals, so nobody reads 'shipped' as 'usable'.
+    label: 'Discord adapter code exists (NOT that it is registered or reachable — nothing wires it into the hub yet)',
+    docStatus: 'shipped',
     docRefs: [
-      'README.md — "Discord next" / "Planned, not shipped: Discord is next up"',
-      'site/index.html — "Discord <span class=soon>soon</span>"',
+      'README.md — Discord listed as in progress: adapter written, not wired',
+      'site/docs/channels.md — the channel table',
     ],
     evidence: [{ root: 'gateway/internal/channels', pattern: 'KindDiscord|type Discord struct', flags: 'i' }],
   },

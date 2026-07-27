@@ -124,6 +124,7 @@ func New(cfg Config, st *store.Store, ks *keys.Keys, log *slog.Logger) *Server {
 		s.socket = &channels.SocketMode{AppToken: ch.SlackAppToken, Logger: log, Handle: s.handleSlackSocketEnvelope}
 		s.dial = append(s.dial, s.socket)
 	}
+	s.wireDiscord() // Discord: the third dial-out rail (channels_discord.go)
 	if cfg.DMTAPTransport != nil {
 		// DMTAP: the second DialChannel, proving the seam generalizes beyond
 		// Slack. Only reachable when a caller injects a real Transport (see

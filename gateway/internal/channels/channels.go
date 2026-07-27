@@ -141,6 +141,9 @@ type Config struct {
 	TelegramBotToken      string
 	TelegramWebhookSecret string
 
+	// Discord (Bot API + the outbound Gateway WebSocket — see discord.go)
+	DiscordBotToken string
+
 	// PublicURL is the gateway's external base URL, for signup/dashboard links.
 	PublicURL string
 }
@@ -169,6 +172,7 @@ func FromEnv(getenv func(string) string, publicURL string) Config {
 		SlackAppToken:          getenv("SLACK_APP_TOKEN"),
 		TelegramBotToken:       getenv("TELEGRAM_BOT_TOKEN"),
 		TelegramWebhookSecret:  getenv("TELEGRAM_WEBHOOK_SECRET"),
+		DiscordBotToken:        getenv("DISCORD_BOT_TOKEN"),
 		PublicURL:              publicURL,
 	}
 }

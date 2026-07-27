@@ -78,7 +78,12 @@ finished. The engine behind the other six is not built.**
   exist is a driver speaking Matter, Zigbee, Z-Wave, Modbus or ONVIF to a real device
   network; an MQTT client is in progress and not yet wired to the seam. So the only
   device class the hub drives end to end today is still a gate/door/barrier controller.
-- **The automations runtime.** No rule object, no scheduler, no execution engine.
+- **Automations running against real devices.** The runtime exists and is tested
+  ([`gateway/internal/automations/`](gateway/internal/automations/)) — rule object,
+  scheduler with restart survival, execution engine, and a hard ceiling that refuses to
+  save or fire any action above `TierConsequential`, because an automation fires with
+  nobody watching. It is constructed at startup but stays off unless configured, and the
+  only devices it could drive are the demo ones, so no rule has yet moved anything real.
 - **Energy metering wired into the hub.** The engine exists and is tested
   ([`gateway/internal/energy/`](gateway/internal/energy/)) — 60s ingestion, hour/day/month
   rollups, source-mix accounting, counter wrap-vs-reset detection, and gaps represented as
@@ -98,10 +103,15 @@ finished. The engine behind the other six is not built.**
   automations views are real, interactive UI over a built-in in-memory dataset
   (`src/lib/demoData.ts`) — twelve fictional devices across the seven kinds, marked as demo
   at the point of use. Nothing behind them talks to hardware.
-- **The phone half of offline emergency access.** The wire contract, the controller-side
-  verification and the hub's issuance endpoint are all real and conformance-tested — but
-  nothing on a resident's phone requests, stores or presents a grant, so **that path does
-  not run end to end**.
+- **Offline emergency access proven against a real controller.** Every part now exists:
+  the wire contract and its vectors, the controller's eleven-step verification, the hub's
+  issuance endpoint, and — new — the app half
+  ([`src/lib/offline/`](src/lib/offline/)), which requests a grant, stores grants from
+  several hubs at once keyed by each hub's pinned key, and presents one over LAN with the
+  proof anchored on the controller's clock rather than the phone's. What has **not**
+  happened is the two halves meeting: nothing here has been run against real controller
+  hardware, and the BLE leg cannot be driven from this app at all. Treat it as untested
+  end to end until someone stands at a gate with the network off.
 - **A GPIO relay driver validated on hardware.** The default controller build still uses
   a mock relay that only logs. A real Linux character-device driver now exists behind
   `-tags gpio` ([`controller/internal/relay/`](controller/internal/relay/)) and compiles
