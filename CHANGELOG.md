@@ -15,6 +15,127 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed — login and registration were broken for anyone on a build after the email removal
+
+Removing email identity renamed the hub's auth fields to `username`. The console
+kept sending `email`. Because `readJSON` calls
+`json.Decoder.DisallowUnknownFields()`, an unknown key does not get ignored — it
+refuses the whole request, so **every login and every registration returned 400**.
+It typechecked, the route existed, and every test in the repo was green.
+
+If you were running a build between the email removal and this release, you could
+not sign in. There is nothing to migrate: update and it works.
+
+The same rename left blank fields across members, the account switcher and the
+admin views, and left branches handling error codes the hub had stopped emitting
+(`email_taken`, `invite_email_mismatch`).
+
+Three new drift alarms exist because none of the existing ones caught it:
+request-shape parity (the direction that 400s a whole endpoint), response-envelope
+parity per endpoint, and error-code parity. They immediately found three more of
+the same class, including two list endpoints that would have rendered empty
+forever.
+
+### Added — the device engine reaches real hardware protocols
+
+Four drivers now ship, selected with `-device-drivers` and configured from one
+JSON file via `-device-config`:
+
+- **MQTT**, which also reaches **Zigbee and Z-Wave** through a `zigbee2mqtt` or
+  `zwave-js-ui` bridge — no radio in the hub. A per-metric JSON field selector
+  reads the bridge's per-device object, which is what those bridges actually
+  publish.
+- **Modbus TCP** — read-only, and structurally so: config accepts only
+  capabilities whose whole verb set is `TierRead`, so the registry cannot route
+  an actuating verb to one. No RTU; it needs a serial port, and the common serial
+  deployment already works through a TCP-to-RTU bridge.
+- **ONVIF cameras**, with an RTSP `DESCRIBE` probe (`VerifyStream`, off by
+  default) so the hub reports what a camera actually streams rather than an
+  address it never touched.
+- **Generic HTTP/webhook**.
+
+Plus discovery that writes nothing: an MQTT bridge scan that reads
+`zigbee2mqtt/bridge/devices` and proposes candidates, and **mDNS controller
+discovery** — controllers have advertised themselves for a long time and nothing
+listened.
+
+**No driver has met physical hardware.** They are tested against fakes, loopback
+servers and an in-process Modbus TCP server. That proves the code agrees with the
+protocol as written and proves nothing about the devices in your house.
+
+### Added — automations and energy are reachable
+
+Both runtimes had been complete and had no HTTP surface, so neither could be used.
+Both now have one, and both have a console screen — including a rule editor, so
+rules no longer have to be written by editing files on the hub.
+
+The automations tier ceiling is unchanged and unchangeable: `MaxActionTier` is a
+compile-time constant checked when a rule is saved and again immediately before
+the driver call. Every access verb is above it, so **an automation cannot open a
+gate**. The editor deliberately does not predict that — it offers every verb, the
+hub refuses, and the refusal is shown in the hub's own words.
+
+Energy carries every honesty field through to the caller: an unmeasured hour is
+`null`, never `0`, and the console draws it as a gap rather than a zero bar.
+
+### Added — five surfaces the hub served with no way to reach them
+
+Scoped API tokens, two-factor auth, outbound webhooks, time-window rules and
+geofence rules all shipped on the hub with handlers and tests, and the console had
+no client for any of them. All five now have one, four have screens, and 2FA lives
+in Settings.
+
+Also new: **emergency access**. The offline-grant library was complete and nothing
+imported it, so no user could obtain a grant — on the one path whose whole purpose
+is working when the network is down, and which therefore has to be set up in
+advance.
+
+### Added — the GPIO relay is reachable, and refuses to lie
+
+`-relay <chip>:<line>[,active-low][,bias=…][,sensor=<line>]` selects the real
+Linux character-device driver. It had existed, tested, for a long time, and
+nothing constructed it — every controller ran the mock.
+
+**A controller told to drive a relay it cannot open now refuses to start**, and
+there is deliberately no flag to soften that. The mock reports success for every
+actuation: the command is acked, the hub writes an `opened` row into a
+hash-chained audit trail, and the gate does not move. A gate that fails to open is
+a fault someone fixes within the hour; a gate that reports opening while standing
+still corrupts the record a dispute is settled with.
+
+### Changed — the BLE peripheral now builds for Windows as well as Linux
+
+Not a port. The backend is one file of portable `tinygo.org/x/bluetooth` calls and
+the library ships real peripheral implementations for both. What confined it to
+Linux was the **filename**: Go applies an implicit build constraint from a
+`_linux.go` suffix that beats the `//go:build` line, so the tag was never
+consulted elsewhere. Renaming the file was the change.
+
+Still not hardware-validated on either platform. darwin remains unsupported —
+CoreBluetooth has peripheral mode, that library does not bind it, and a CGO
+binding nobody can test would be worse than the gap.
+
+### Added — the four KOTVA §26.3 fields, declared in code
+
+Every chat rail now declares whether it can contact a stranger, how it receives,
+what it costs each way, and **who sees plaintext** — served at
+`GET /v1/rails/disclosure`.
+
+Self-hosting removes the middleman operator. It does not remove the platform:
+Meta reads every WhatsApp message, Telegram every Telegram message. Tests fail any
+exposure claiming "nobody", "only you" or "end-to-end", or failing to name a
+concrete party.
+
+### Added — the camera retention design
+
+[`docs/CAMERA-RETENTION.md`](docs/CAMERA-RETENTION.md). No code implements it.
+Recording is a data-retention policy with a UI attached, and the policy is now
+decided: 72-hour default with no "keep forever", clips on the filesystem never in
+SQLite, a free-space floor that stops recording rather than deleting unexpired
+footage, `camera:view` as a permission **not** implied by owner or admin, and
+every view audited in a log every member can read.
+
+
 ### Changed — the backend has one name: `hub`
 
 The Go server was called three different things at once. `gateway/` on disk,
