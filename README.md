@@ -71,9 +71,13 @@ finished. The engine behind the other six is not built.**
 
 ### 🔨 Not built
 
-- **The device engine.** There is **no** Matter, MQTT, Zigbee, ONVIF, Modbus or Z-Wave
-  driver in this repository. Not a stub, not an interface — nothing. The only device class
-  the hub drives today is a gate/door/barrier controller.
+- **A driver for any real device network.** The device-engine *seam* now exists
+  ([`gateway/internal/devices/`](gateway/internal/devices/)) — an internal device model, a
+  closed capability/verb catalogue with safety tiers, a registry, and a generic
+  HTTP/webhook driver that can drive a device with a REST endpoint. What does **not**
+  exist is a driver speaking Matter, Zigbee, Z-Wave, Modbus or ONVIF to a real device
+  network; an MQTT client is in progress and not yet wired to the seam. So the only
+  device class the hub drives end to end today is still a gate/door/barrier controller.
 - **The automations runtime.** No rule object, no scheduler, no execution engine.
 - **Energy metering.** No ingestion, no rollups, no source-mix accounting.
 - **The camera pipeline.** No live view, no recording, no ONVIF/RTSP code.
@@ -85,10 +89,12 @@ finished. The engine behind the other six is not built.**
   verification and the hub's issuance endpoint are all real and conformance-tested — but
   nothing on a resident's phone requests, stores or presents a grant, so **that path does
   not run end to end**.
-- **The GPIO relay driver.** The default controller build uses a mock relay that only logs;
-  the `-tags gpio` file is a stub that **panics by design**
-  ([`controller/internal/relay/gpio.go`](controller/internal/relay/gpio.go)). Driving a
-  real gate means writing that driver first.
+- **A GPIO relay driver validated on hardware.** The default controller build still uses
+  a mock relay that only logs. A real Linux character-device driver now exists behind
+  `-tags gpio` ([`controller/internal/relay/`](controller/internal/relay/)) and compiles
+  for Linux, but it has **never been run against a GPIO chip, a relay board or a gate** —
+  there is no such hardware in the development environment. Treat it as unproven: wiring
+  it to a motor is the first time anyone will find out whether it is right.
 - **The BLE radio.** Framing, session and verification are real and unit-tested with no
   radio; the GATT peripheral glue exists only for **Linux/BlueZ** behind `-tags ble` and has
   **never been validated on hardware**. On every other platform the peripheral returns

@@ -1,7 +1,10 @@
 // Package relay is the actuation seam between verified commands and the
 // physical gate. Two implementations ship: Mock (logs + state, used by
-// tests and the simulator) and a GPIO stub behind the `gpio` build tag
-// (documented scaffold — this reference tree carries no hardware driver).
+// tests and the simulator, and the default in every build without a build
+// tag) and GPIO, a Linux gpiochip character-device driver behind the `gpio`
+// build tag. The GPIO driver is real code but has NOT been validated on
+// hardware — see the failure model and the status warning in gpio.go before
+// wiring it to anything that moves.
 package relay
 
 import (
@@ -21,6 +24,9 @@ type Relay interface {
 	// Release ends a Hold.
 	Release() error
 	// State returns "idle" | "pulsing" | "held" for telemetry/sim output.
+	// An implementation may report additional diagnostic states (the GPIO
+	// driver adds "fault" and "closed"), so consumers must treat any value
+	// other than "idle" as "the relay may be energised".
 	State() string
 }
 

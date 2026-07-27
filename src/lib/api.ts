@@ -422,6 +422,30 @@ export const api = {
   grantRevoke: (id: string) =>
     apiFetch<TemporaryAccessGrant>(`/grants/${id}/revoke`, { method: 'POST' }),
 
+  // Offline emergency access (proto/grants.md) — mints the signed,
+  // offline-redeemable `typ:"grant"` object the app later proves directly to
+  // a controller with no hub in the loop. NOT the same thing as the
+  // /grants routes above (those are visitor temp-access records with an
+  // entirely different shape and lifecycle).
+  //
+  // Issuance is all-or-nothing: the hub re-runs the exact membership /
+  // account-suspended / user-disabled gates a live /open would, for EVERY
+  // requested access point, and refuses the whole request rather than
+  // silently narrowing the grant to a subset (see
+  // gateway/internal/httpapi/offline_grants.go). TTL is fixed at 7 days
+  // hub-side and is not requestable. Error codes worth handling at the call
+  // site: invalid_app_pubkey, invalid_grant, user_disabled (403),
+  // account_suspended (403), access_point_not_found (404),
+  // access_point_has_no_device (400).
+  //
+  // Typed as `unknown` deliberately: the response is a signed document whose
+  // exact members are the hub's to define, and src/lib/offline/grant.ts
+  // validates it structurally before anything is stored or presented.
+  // Declaring a struct here would invite rebuilding the object from typed
+  // fields and silently dropping a member the signature covers.
+  offlineGrantIssue: (body: { app_pubkey: string; access_point_ids: string[] }) =>
+    apiFetch<unknown>('/offline-grants', { method: 'POST', body }),
+
   // Locations — nested under /accounts/{id}/locations on the gateway, NOT
   // /locations/accounts/{id}/locations (the old Workers backend's shape).
   locationsList: (accountId: string) =>

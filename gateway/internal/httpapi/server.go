@@ -42,6 +42,12 @@ type Config struct {
 	// Zero value = every channel refuses its webhook (fail-closed) and its
 	// sender is a config-unset no-op.
 	Channels channels.Config
+	// RecoveryMailer delivers account-recovery secrets out of band (password
+	// reset + email verification). nil falls back to LogRecoveryMailer, which
+	// prints the link to the operator console and does NOT deliver anything —
+	// read authmail.go's doc comment before running with the default on any
+	// instance that has more than one account on it.
+	RecoveryMailer RecoveryMailer
 	// DMTAPTransport is the DMTAP dial-out channel's transport (see
 	// channels/dmtap.go). nil (the default — main.go never sets this today)
 	// means the DMTAP channel is disabled: fail-closed, never a silent no-op
@@ -162,6 +168,17 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("POST /v1/auth/logout", s.handleLogout)
 	mux.Handle("POST /v1/auth/logout-all", s.requireAuth(s.handleLogoutAll))
 	mux.Handle("GET /v1/auth/me", s.requireAuth(s.handleMe))
+
+	// account recovery (spec: backend auth.ts; see authrecovery.go). The
+	// first three are unauthenticated by necessity — the caller is by
+	// definition someone who cannot log in — and are throttled + uniform in
+	// their responses accordingly. update-password is authenticated AND
+	// re-authenticates with the current password: it is not a shortcut past
+	// the reset flow.
+	mux.HandleFunc("POST /v1/auth/forgot-password", s.handleForgotPassword)
+	mux.HandleFunc("POST /v1/auth/reset-password", s.handleResetPassword)
+	mux.HandleFunc("POST /v1/auth/verify-email", s.handleVerifyEmail)
+	mux.Handle("POST /v1/auth/update-password", s.requireAuth(s.handleUpdatePassword))
 
 	// instance admin first-run claim (spec: backend/src/routes/admin.ts)
 	mux.Handle("GET /v1/admin/claim", s.requireAuth(s.handleClaimState))

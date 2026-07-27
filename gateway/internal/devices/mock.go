@@ -65,7 +65,7 @@ func NewMockDriver(id string) *MockDriver {
 		{ID: "tank-1", Kind: KindSensor, Name: "Water Tank", Zone: "Utility",
 			Capabilities: []CapabilityID{CapSensorReadCa}, Availability: AvailOnline, Summary: "level 12%"},
 		{ID: "cam-1", Kind: KindCamera, Name: "Yard Camera", Zone: "Exterior",
-			Capabilities: []CapabilityID{CapCameraStream}, Availability: AvailOnline, Summary: "1080p"},
+			Capabilities: []CapabilityID{CapCameraFeed}, Availability: AvailOnline, Summary: "1080p"},
 	}
 	for _, d := range seed {
 		m.devices[d.ID] = d

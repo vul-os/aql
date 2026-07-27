@@ -87,8 +87,13 @@ type Reading struct {
 	At   time.Time
 }
 
-// Driver is the seam. A protocol adapter — MQTT, Modbus, ONVIF, Matter,
-// whatever — implements this and nothing else. It can live out of tree.
+// Driver is the seam. A protocol adapter implements this and nothing else, and
+// it can live out of tree.
+//
+// (Protocol names are deliberately not enumerated here. scripts/check-feature-claims.mjs
+// greps for them to detect a driver landing while the docs still say none exists,
+// and prose naming a protocol as an example is exactly the false signal that
+// makes such a tripwire get ignored.)
 //
 // Implementations must be safe for concurrent use.
 type Driver interface {

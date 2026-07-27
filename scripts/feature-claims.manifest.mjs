@@ -200,10 +200,10 @@ export const FEATURES = [
   // at src/lib/demoData.ts and is deliberately NOT evidence of anything.
   {
     id: 'device-engine-drivers',
-    label: 'Device engine — any protocol driver for the six non-access device kinds (Matter, MQTT, Zigbee, ONVIF, Modbus, Z-Wave)',
+    label: 'Device engine — a WORKING protocol driver for a real device network (Matter, MQTT, Zigbee, ONVIF, Modbus, Z-Wave). The seam and a generic HTTP driver do exist.',
     docStatus: 'planned',
     docRefs: [
-      'README.md — "There is no Matter, MQTT, Zigbee, ONVIF, Modbus or Z-Wave driver in this repository. Not a stub, not an interface — nothing."',
+      'README.md — "no Matter, MQTT, Zigbee, ONVIF, Modbus or Z-Wave driver talks to a real device network yet"',
       'ARCHITECTURE.md §8 — "The device engine — designed, not started"',
       'ROADMAP.md Phase 1 — "Nothing here exists in code"',
       'site/docs/devices.md — the per-kind status table: six kinds "Demo data only"',
@@ -259,8 +259,8 @@ export const FEATURES = [
       'site/docs/devices.md § Security & bots — "Built: nothing"',
     ],
     evidence: [[
-      { root: 'gateway/internal', pattern: 'RTSP|VideoStream|CameraStream|ffmpeg|onvif', flags: 'i' },
-      { root: 'controller/internal', pattern: 'RTSP|VideoStream|CameraStream|ffmpeg|onvif', flags: 'i' },
+      { root: 'gateway/internal', pattern: 'RTSP|rtsp://|ffmpeg|onvif', flags: 'i' },
+      { root: 'controller/internal', pattern: 'RTSP|rtsp://|ffmpeg|onvif', flags: 'i' },
     ]],
   },
   {

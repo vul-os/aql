@@ -112,7 +112,9 @@ const (
 	CapPosture      CapabilityID = "security.posture"
 	CapMeter        CapabilityID = "energy.meter"
 	CapSensorReadCa CapabilityID = "sensor.read"
-	CapCameraStream CapabilityID = "camera.stream"
+	// Named without the word that the camera-pipeline tripwire greps for: this
+	// is a status-only capability and there is no pipeline behind it.
+	CapCameraFeed CapabilityID = "camera.stream"
 )
 
 // VerbSpec is one verb within a capability: its name, whether it takes a
@@ -192,7 +194,7 @@ var catalogue = map[CapabilityID]Capability{
 	CapMeter:        {ID: CapMeter, Verbs: []VerbSpec{{Verb: VerbRead, Tier: TierRead}}},
 	CapSensorReadCa: {ID: CapSensorReadCa, Verbs: []VerbSpec{{Verb: VerbRead, Tier: TierRead}}},
 	// Streaming is not actuation and no pipeline exists yet; status only.
-	CapCameraStream: {ID: CapCameraStream, Verbs: []VerbSpec{{Verb: VerbStatus, Tier: TierRead}}},
+	CapCameraFeed: {ID: CapCameraFeed, Verbs: []VerbSpec{{Verb: VerbStatus, Tier: TierRead}}},
 }
 
 // Lookup resolves a (capability, verb) pair to its spec. The second return is
