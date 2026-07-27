@@ -1,7 +1,7 @@
 // Automations — Aql's when → do screen.
 //
-// The rule engine is real (gateway/internal/automations, served over HTTP by
-// gateway/internal/httpapi/automations.go) and this page reads it live: the
+// The rule engine is real (hub/internal/automations, served over HTTP by
+// hub/internal/httpapi/automations.go) and this page reads it live: the
 // rows below are rules stored on your hub, the toggle calls the hub's enable
 // endpoint, and the tier figures are the hub's own numbers, not a copy kept
 // here. What this page does NOT do, on purpose:
@@ -14,7 +14,7 @@
 //     compile-time constant in the engine; this page only ever prints the
 //     number the hub sends alongside each rule's resolved `action_tier`. An
 //     automation cannot open a gate because every access verb resolves above
-//     that ceiling — that is enforced in gateway/internal/automations, not
+//     that ceiling — that is enforced in hub/internal/automations, not
 //     rendered here as a rule this console could get out of sync with.
 //
 // A hub with no rule engine, a hub whose rule engine is not configured, an

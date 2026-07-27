@@ -5,7 +5,7 @@ const srcDir = fileURLToPath(new URL('./src', import.meta.url));
 
 // Frontend portal unit tests. Deliberately separate from backend/vitest.config.ts
 // (that one tests the historical Cloudflare Workers reference backend; this one
-// tests the code that actually ships — the portal that talks to gateway/).
+// tests the code that actually ships — the portal that talks to hub/).
 export default defineConfig({
   resolve: {
     alias: {

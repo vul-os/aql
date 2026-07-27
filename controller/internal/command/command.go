@@ -120,7 +120,7 @@ type Processor struct {
 	Relay  relay.Relay
 	Events EventRecorder // may be nil (sim dry runs)
 	Log    *slog.Logger
-	// SyncClock, when non-nil, is called with the gateway's iat on every
+	// SyncClock, when non-nil, is called with the hub's iat on every
 	// accepted ping (drift correction; proto/commands.md `ping`).
 	SyncClock func(ts int64)
 

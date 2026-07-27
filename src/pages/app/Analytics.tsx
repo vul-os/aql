@@ -28,7 +28,7 @@ function deniedRate(denied: number, opens: number): string {
 
 // This page's endpoint (/analytics/accounts/:id/insights) exists on the
 // reference Cloudflare Workers backend but isn't ported to the Go gateway
-// yet (see gateway/README.md's porting map: "routes/analytics.ts — planned").
+// yet (see hub/README.md's porting map: "routes/analytics.ts — planned").
 // An unrouted gateway path doesn't always come back as a clean error — the
 // embedded portal's SPA fallback can answer with a 200 + HTML body instead
 // of JSON — so we validate the response shape rather than trust "it didn't

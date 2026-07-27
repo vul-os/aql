@@ -19,7 +19,7 @@ contracts above say what bytes cross a link we control; `rails.md` says what a l
 [KOTVA §26.3](https://github.com/vul-os/kotva/blob/main/26-legacy-adapters.md) requires
 every adapter to declare. It lives here because it constrains the same boundary.
 
-Status: **v0 draft** — to be implemented by the Go gateway port. v1 freezes when the
+Status: **v0 draft** — to be implemented by the Go hub port. v1 freezes when the
 first third-party controller firmware ships.
 
 ## Conventions
@@ -27,7 +27,7 @@ first third-party controller firmware ships.
 - All signatures are **Ed25519** over canonical JSON (JCS, RFC 8785) unless stated.
 - All binary values are base64url without padding. All timestamps are Unix seconds (UTC).
 - Every signed envelope carries `v` (contract major version) and `typ`.
-- Controllers **pin the gateway's public key at pairing** and reject anything else,
+- Controllers **pin the hub's public key at pairing** and reject anything else,
   regardless of transport. TLS is transport privacy; Ed25519 is the authority.
 - Nonces are single-use per controller; controllers keep a small replay window and
   reject reused or expired material fail-closed.

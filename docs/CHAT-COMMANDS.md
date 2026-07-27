@@ -27,7 +27,7 @@ func TextGateVerb(body string) (GateVerb, bool) {
 	return verbUnset, false
 }
 ```
-— `TextGateVerb`, `gateway/internal/channels/verb.go`
+— `TextGateVerb`, `hub/internal/channels/verb.go`
 
 > **Note.** When this document was written the pair lived inline in the WhatsApp
 > handler as `isClose`/`isOpen` booleans, and a body naming neither verb fell
@@ -39,8 +39,8 @@ func TextGateVerb(body string) (GateVerb, bool) {
 > current shape is what it is.
 
 Slack and Telegram are stricter still — an exact-match switch, everything else
-falls through to the help menu (`gateway/internal/httpapi/channels_slack.go:139`,
-`gateway/internal/httpapi/channels_telegram.go:84`). The choke point itself
+falls through to the help menu (`hub/internal/httpapi/channels_slack.go:139`,
+`hub/internal/httpapi/channels_telegram.go:84`). The choke point itself
 refuses anything outside the pair:
 
 ```go
@@ -48,7 +48,7 @@ if args.Command != "open" && args.Command != "close" {
     return nil, fmt.Errorf("bad command %q", args.Command)
 }
 ```
-— `gateway/internal/store/openpath.go:243-245`
+— `hub/internal/store/openpath.go:243-245`
 
 Aql's device model is heterogeneous by design: an ID, a kind, a zone, a state,
 and a set of commands/telemetry per device (`docs/ARCHITECTURE.md:96-127`),
@@ -63,12 +63,12 @@ any property the access path currently holds.
 
 | Property | Where it lives today |
 |---|---|
-| One choke point for every actuation path | `store.LogAccess`, `gateway/internal/store/openpath.go:242-307` |
-| A channel may deliver intent; it never decides authorization | `gateway/internal/channels/channels.go:6-11` (package contract), `:88-94` (same rule for dial-out) |
+| One choke point for every actuation path | `store.LogAccess`, `hub/internal/store/openpath.go:242-307` |
+| A channel may deliver intent; it never decides authorization | `hub/internal/channels/channels.go:6-11` (package contract), `:88-94` (same rule for dial-out) |
 | Every attempt — allowed or denied — writes an audit row | `openpath.go:251-261` (deny), `:298-306` (allow) |
-| Signed Ed25519 envelope, nonce + expiry, controller pins the gateway key | `gateway/internal/keys/envelope.go:73-94`, `proto/commands.md:49-70` |
-| Fail-closed webhook authentication | `gateway/internal/channels/channels.go:192-244` |
-| Honest replies — a denial never implies the gate opened | `gateway/internal/channels/reply.go:15-30` |
+| Signed Ed25519 envelope, nonce + expiry, controller pins the gateway key | `hub/internal/keys/envelope.go:73-94`, `proto/commands.md:49-70` |
+| Fail-closed webhook authentication | `hub/internal/channels/channels.go:192-244` |
+| Honest replies — a denial never implies the gate opened | `hub/internal/channels/reply.go:15-30` |
 
 ### Design constraints for everything below
 
@@ -173,14 +173,14 @@ Today's behaviour, unchanged, expressed in the new model:
 
 | Model element | Today's concrete implementation |
 |---|---|
-| Target | `store.AvailableAP` — an access point plus its location (`gateway/internal/store/channels.go:27-36`) |
-| Capability | `access.barrier` — an access point of kind gate/door/barrier/other (`gateway/internal/httpapi/access.go:15`) |
+| Target | `store.AvailableAP` — an access point plus its location (`hub/internal/store/channels.go:27-36`) |
+| Capability | `access.barrier` — an access point of kind gate/door/barrier/other (`hub/internal/httpapi/access.go:15`) |
 | Verb | `"open"` / `"close"`, the only two the choke point accepts (`openpath.go:243-245`) |
 | Args | none |
 | Tier | T3 (§3) |
-| Authorization | active visitor grant, else verified-member-by-phone (`gateway/internal/httpapi/channels_open.go:50-94`), or profile membership on Slack/Telegram (`:114-128`) |
+| Authorization | active visitor grant, else verified-member-by-phone (`hub/internal/httpapi/channels_open.go:50-94`), or profile membership on Slack/Telegram (`:114-128`) |
 | Limits | cooldown + opens/hr + account opens/hr + member/day + location/day (`openpath.go:57-190`) |
-| Actuation | `keys.SignCommand` → `hub.Dispatch` (`gateway/internal/httpapi/open.go:101-132`) |
+| Actuation | `keys.SignCommand` → `hub.Dispatch` (`hub/internal/httpapi/open.go:101-132`) |
 | Audit | `access_logs` row, always (`openpath.go:251-261`, `:298-306`) |
 
 Nothing in that row changes. `open` becomes the T3 entry in a table rather than
@@ -199,7 +199,7 @@ type Port interface {
 ```
 
 Exactly one implementation exists on day one — `AccessPort`, which is the
-current `dispatchCommand` body verbatim (`gateway/internal/httpapi/open.go:101-132`):
+current `dispatchCommand` body verbatim (`hub/internal/httpapi/open.go:101-132`):
 sign a `proto/commands.md` envelope, dispatch over the hub, record the outcome.
 
 **Every other capability returns `not_implemented`, and the chat reply says so.**
@@ -233,9 +233,9 @@ with a different trust model. Deployed gate controllers are forever
 A two-level narrowing, then a numbered picker:
 
 1. Substring-match a location name, then filter (`channels_whatsapp.go:146-150`;
-   matcher at `gateway/internal/channels/channels.go:272-275`).
+   matcher at `hub/internal/channels/channels.go:272-275`).
 2. Substring-match a gate name within the filtered set
-   (`channels_whatsapp.go:151`; matcher at `gateway/internal/channels/whatsapp.go:269-276`).
+   (`channels_whatsapp.go:151`; matcher at `hub/internal/channels/whatsapp.go:269-276`).
 3. Collapse to a single candidate when the filter left exactly one, or when the
    member has exactly one location and one gate (`channels_whatsapp.go:152-156`).
 4. Otherwise render a picker — a WhatsApp interactive list, a Telegram inline
@@ -458,7 +458,7 @@ the honest reason and a console link.
 The mechanism already exists and does not need inventing: temporary access
 grants are `{starts_at, ends_at, max_uses, status}` with an
 `EffectiveStatus` of `revoked > exhausted > pending > expired > active`
-(`gateway/internal/store/grants.go:12-46`), consumed atomically inside their
+(`hub/internal/store/grants.go:12-46`), consumed atomically inside their
 window by one `UPDATE … RETURNING` (`:194-220`) and refunded when a later check
 denies (`:224-230`). Extend the grant target from *access point* to
 *(target, verb)* and the whole T4 window falls out of code that already works.
@@ -484,8 +484,8 @@ fails *open*:
 // wins for enforcement, visibility is preserved. (Fail-open reviewed
 // upstream 2026-07-17: accepted.)
 ```
-— `gateway/internal/store/openpath.go:192-203`, policy restated at
-`gateway/internal/store/ratelimit.go:22-24`
+— `hub/internal/store/openpath.go:192-203`, policy restated at
+`hub/internal/store/ratelimit.go:22-24`
 
 That is a deliberate, reviewed decision for gates: a member locked out of their
 own driveway by a SQLite hiccup is a worse outcome than one un-counted open.
@@ -507,7 +507,7 @@ control plane.
 |---|---|---|
 | `config` — actuation parameters (pulse ms, debounce, `hold_max`) | Changes what "open" physically means | `proto/commands.md:46` |
 | `repair` — rotate the gateway signing key | Re-roots the entire trust chain | `proto/commands.md:47` |
-| Device pairing / claim-token issuance | Enrolls a new actuator | `POST /v1/devices`, `gateway/internal/httpapi/server.go:224`; claim rules `store/devices.go:29-31` |
+| Device pairing / claim-token issuance | Enrolls a new actuator | `POST /v1/devices`, `hub/internal/httpapi/server.go:224`; claim rules `store/devices.go:29-31` |
 | Grant issuance and revocation | Authorization changes must not be authorizable through the thing they authorize | `server.go:213`, `:215` |
 | Offline-grant issuance | Mints an offline-verifiable capability | `server.go:219` |
 | Rate-limit / quota changes | Disables the abuse controls | `PATCH /v1/admin/limits`, `server.go:179` |
@@ -762,22 +762,22 @@ commit `bf99a4d`, module `github.com/vul-os/aql/gateway`).
 
 | Path | Why |
 |---|---|
-| `gateway/internal/keys/envelope.go:73-94` (`SignCommand`) | The signed-command path stays exactly as-is |
-| `gateway/internal/keys/keys.go` | Signing identity |
-| `gateway/internal/hub/hub.go` | Dispatch, ack correlation, `LateAckWindow` (`:41`) |
+| `hub/internal/keys/envelope.go:73-94` (`SignCommand`) | The signed-command path stays exactly as-is |
+| `hub/internal/keys/keys.go` | Signing identity |
+| `hub/internal/hub/hub.go` | Dispatch, ack correlation, `LateAckWindow` (`:41`) |
 | `controller/` (entire module) | Deployed hardware; verification order is `proto/commands.md:49-70` |
 | `proto/commands.md`, `proto/pairing.md`, `proto/grants.md`, `proto/events.md` | No new `cmd` value; non-access devices use the driver seam (§1.5) |
-| `gateway/internal/channels/channels.go:70-106` | The `Channel` / `DialChannel` seam shape is already right |
-| `gateway/internal/channels/channels.go:178-244` | Signature primitives, fail-closed |
-| `gateway/internal/channels/channels.go:112-172` | `Config` / `FromEnv` |
-| `gateway/internal/channels/send.go` | All three senders; WhatsApp engine selection (`:202-268`) |
-| `gateway/internal/store/ratelimit.go:195-270` | Counter primitives (atomic bump / try-bump / cooldown claim) |
-| `gateway/internal/store/grants.go` | Grant lifecycle — **extended** in §6.3, not rewritten |
-| `gateway/internal/store/openpath.go:57-190` | The limit ladder itself |
+| `hub/internal/channels/channels.go:70-106` | The `Channel` / `DialChannel` seam shape is already right |
+| `hub/internal/channels/channels.go:178-244` | Signature primitives, fail-closed |
+| `hub/internal/channels/channels.go:112-172` | `Config` / `FromEnv` |
+| `hub/internal/channels/send.go` | All three senders; WhatsApp engine selection (`:202-268`) |
+| `hub/internal/store/ratelimit.go:195-270` | Counter primitives (atomic bump / try-bump / cooldown claim) |
+| `hub/internal/store/grants.go` | Grant lifecycle — **extended** in §6.3, not rewritten |
+| `hub/internal/store/openpath.go:57-190` | The limit ladder itself |
 
 ### 6.2 New — additive packages
 
-**`gateway/internal/intent/`** (new)
+**`hub/internal/intent/`** (new)
 - `registry.go` — canonical verbs, aliases, capability→verb table.
 - `tiers.go` — the `(capability, verb) → tier` table plus
   `RequiresConfirmation` / `RequiresStepUp` / `RequiresWindow`.
@@ -786,7 +786,7 @@ commit `bf99a4d`, module `github.com/vul-os/aql/gateway`).
   dependency surface `channels.NormalizeText` already has
   (`channels/channels.go:251-275`).
 
-**`gateway/internal/actuate/`** (new)
+**`hub/internal/actuate/`** (new)
 - `port.go` — the `Port` interface (§1.4).
 - `access.go` — `AccessPort`, lifted verbatim from `dispatchCommand`
   (`httpapi/open.go:101-132`).
@@ -797,7 +797,7 @@ commit `bf99a4d`, module `github.com/vul-os/aql/gateway`).
 **The one line that matters most:**
 
 ```go
-// gateway/internal/store/openpath.go:243-245
+// hub/internal/store/openpath.go:243-245
 if args.Command != "open" && args.Command != "close" {
     return nil, fmt.Errorf("bad command %q", args.Command)
 }
@@ -811,26 +811,26 @@ security boundary.
 
 | Path | Change |
 |---|---|
-| `gateway/internal/store/openpath.go:243-245` | Verb allowlist from the registry (above) |
-| `gateway/internal/store/openpath.go:285-296` | Limits currently gated on `Command == "open"`; gate on tier instead — T3 keeps today's exact ladder |
-| `gateway/internal/httpapi/channels_open.go:50-94`, `:114-142` | `phoneOpen` / `profileOpen` take verb + tier; add the tier gate before the choke point. Their contract — resolve authority, call the choke point, never decide — is unchanged |
-| `gateway/internal/httpapi/channels_whatsapp.go:137-181` | Replace the `strings.Contains` branch with one `intent.Resolve` call; `:146-156` becomes generic narrowing. `waAccessCommand` (`:259-280`) keeps its shape |
-| `gateway/internal/httpapi/channels_slack.go:131-152` | Same substitution for the `txt == "open" \|\| txt == "gates"` switch (`:139`) |
-| `gateway/internal/httpapi/channels_telegram.go:83-102` | Same substitution (`:84`); the 0/1/many branch becomes the generic narrowing |
-| `gateway/internal/httpapi/channels_slack.go:160-163` | `open_gate:` prefix check becomes registry-driven selection-context redemption |
-| `gateway/internal/httpapi/channels_telegram.go:108-110` | Same for `open_ap:` |
-| `gateway/internal/channels/whatsapp.go:279-284` | `ParseSelection`: **delete the `return "open", id` default**; unknown ids reject (§2.2d) |
-| `gateway/internal/channels/whatsapp.go:170-211`, `:214-228` | `PushGateMenu`/`PushLocationMenu` → generic over `[]Candidate`; add "showing N of M" when truncating at `:189-191` / `:216-218` |
-| `gateway/internal/channels/slack.go:88-111` | `AccessBlocks` → generic **and add the missing cap** (§2.2c) |
-| `gateway/internal/channels/telegram.go:84-96` | `TelegramGateKeyboard` → generic |
-| `gateway/internal/channels/channels.go:272-275` | `textIncludesName` moves into `intent/` and becomes scored, not first-match (§2.2a) |
-| `gateway/internal/channels/reply.go:15-30` | Add tier-refusal, `not_implemented`, and unresolved-intent copy. Existing strings are a behavioural contract — extend, don't reword |
-| `gateway/internal/store/migrations/` | New `0008_*.sql` (current head is `0007_audit_hash_chain.sql`, embedded and applied by `store/store.go:26-27`, `:84-118`): capability/verb columns, the T4 window table, per-tier quota columns. `access_logs.command` already stores a string — no change needed there |
+| `hub/internal/store/openpath.go:243-245` | Verb allowlist from the registry (above) |
+| `hub/internal/store/openpath.go:285-296` | Limits currently gated on `Command == "open"`; gate on tier instead — T3 keeps today's exact ladder |
+| `hub/internal/httpapi/channels_open.go:50-94`, `:114-142` | `phoneOpen` / `profileOpen` take verb + tier; add the tier gate before the choke point. Their contract — resolve authority, call the choke point, never decide — is unchanged |
+| `hub/internal/httpapi/channels_whatsapp.go:137-181` | Replace the `strings.Contains` branch with one `intent.Resolve` call; `:146-156` becomes generic narrowing. `waAccessCommand` (`:259-280`) keeps its shape |
+| `hub/internal/httpapi/channels_slack.go:131-152` | Same substitution for the `txt == "open" \|\| txt == "gates"` switch (`:139`) |
+| `hub/internal/httpapi/channels_telegram.go:83-102` | Same substitution (`:84`); the 0/1/many branch becomes the generic narrowing |
+| `hub/internal/httpapi/channels_slack.go:160-163` | `open_gate:` prefix check becomes registry-driven selection-context redemption |
+| `hub/internal/httpapi/channels_telegram.go:108-110` | Same for `open_ap:` |
+| `hub/internal/channels/whatsapp.go:279-284` | `ParseSelection`: **delete the `return "open", id` default**; unknown ids reject (§2.2d) |
+| `hub/internal/channels/whatsapp.go:170-211`, `:214-228` | `PushGateMenu`/`PushLocationMenu` → generic over `[]Candidate`; add "showing N of M" when truncating at `:189-191` / `:216-218` |
+| `hub/internal/channels/slack.go:88-111` | `AccessBlocks` → generic **and add the missing cap** (§2.2c) |
+| `hub/internal/channels/telegram.go:84-96` | `TelegramGateKeyboard` → generic |
+| `hub/internal/channels/channels.go:272-275` | `textIncludesName` moves into `intent/` and becomes scored, not first-match (§2.2a) |
+| `hub/internal/channels/reply.go:15-30` | Add tier-refusal, `not_implemented`, and unresolved-intent copy. Existing strings are a behavioural contract — extend, don't reword |
+| `hub/internal/store/migrations/` | New `0008_*.sql` (current head is `0007_audit_hash_chain.sql`, embedded and applied by `store/store.go:26-27`, `:84-118`): capability/verb columns, the T4 window table, per-tier quota columns. `access_logs.command` already stores a string — no change needed there |
 
 ### 6.4 One thing to fix while passing through
 
 `opSources` accepts only `web`, `whatsapp`, `api`
-(`gateway/internal/httpapi/open.go:20`) — Slack and Telegram are absent, so an
+(`hub/internal/httpapi/open.go:20`) — Slack and Telegram are absent, so an
 HTTP caller cannot claim them. The chat path does not go through that map: it
 passes `channels.Kind…` straight into `LogAccess`
 (`channels_open.go:53`, `:84-86`, `:129-134`), which is correct and is why the
@@ -842,10 +842,10 @@ from one list rather than drifting as two.
 
 1. **Pure refactor.** Land `intent/` + `actuate/` with the registry restricted to
    `{open, close}` at T3. Behaviour must be byte-identical, provable against the
-   existing suites — `gateway/internal/channels/channels_test.go`,
-   `gateway/internal/httpapi/channels_test.go`,
-   `gateway/internal/httpapi/open_test.go`,
-   `gateway/internal/store/openpath_test.go`, plus the cross-module `e2e/`
+   existing suites — `hub/internal/channels/channels_test.go`,
+   `hub/internal/httpapi/channels_test.go`,
+   `hub/internal/httpapi/open_test.go`,
+   `hub/internal/store/openpath_test.go`, plus the cross-module `e2e/`
    harness.
 2. **Disambiguation hardening.** Scored matching, truncation disclosure, the
    Slack cap, the `ParseSelection` default removal. Still one verb — so any
@@ -892,23 +892,23 @@ document and an overclaim — please keep them accurate.
 
 ## Appendix B — reference index
 
-**Chat channel seam** — `gateway/internal/channels/`: `channels.go` (seam,
+**Chat channel seam** — `hub/internal/channels/`: `channels.go` (seam,
 signature verification, text normalization), `whatsapp.go`, `slack.go`,
 `telegram.go`, `socketmode.go`, `dmtap.go` (scaffold, fails closed —
 `channels.go:47`), `send.go` (outbound), `reply.go` (denial copy).
 
-**Chat handlers** — `gateway/internal/httpapi/`: `channels_whatsapp.go`,
+**Chat handlers** — `hub/internal/httpapi/`: `channels_whatsapp.go`,
 `channels_slack.go`, `channels_telegram.go`, `channels_open.go` (the shared
 authority resolution), `channels_dmtap.go`.
 
-**Choke point and limits** — `gateway/internal/store/`: `openpath.go`
+**Choke point and limits** — `hub/internal/store/`: `openpath.go`
 (`LogAccess`, `CheckAndConsumeOpenLimits`, late-ack reconciliation),
 `ratelimit.go` (counters, config layering, chat flood throttle), `grants.go`
 (visitor grants), `channels.go` (identity → authorized set), `locations.go`
 (quotas, usage), `accesspoints.go`, `devices.go`, `audithash.go` (hash chain).
 
-**Actuation** — `gateway/internal/keys/envelope.go` (`SignCommand`),
-`gateway/internal/hub/hub.go` (dispatch, ack), `gateway/internal/httpapi/open.go`
+**Actuation** — `hub/internal/keys/envelope.go` (`SignCommand`),
+`hub/internal/hub/hub.go` (dispatch, ack), `hub/internal/httpapi/open.go`
 (`dispatchCommand`), `controller/`.
 
 **Wire contracts** — `proto/commands.md`, `proto/events.md`, `proto/grants.md`,

@@ -1,5 +1,5 @@
 // Package grants implements offline grant redemption per proto/grants.md:
-// the gateway pre-issues a signed statement of a member's rights; this
+// the hub pre-issues a signed statement of a member's rights; this
 // controller verifies it offline against its pinned gateway key, fail-closed,
 // in the normative 11-step order. The verification core is transport-agnostic
 // — the LAN HTTP listener, the BLE session layer and the simulator all drive
@@ -19,7 +19,7 @@ import (
 	"github.com/vul-os/aql/controller/internal/wire"
 )
 
-// Grant is the gateway-signed statement of a member's rights.
+// Grant is the hub-signed statement of a member's rights.
 type Grant struct {
 	V            int      `json:"v"`
 	Typ          string   `json:"typ"` // "grant"

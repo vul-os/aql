@@ -1,6 +1,6 @@
 # Controller events — v0
 
-The upstream direction: everything the controller wants the gateway (and humans) to
+The upstream direction: everything the controller wants the hub (and humans) to
 know. Designed in from day one because retrofitting event flow into deployed hardware
 is the painful one — the visitor button, held-open alarms and tamper detection all ride
 this channel.
@@ -20,15 +20,15 @@ this channel.
 }
 ```
 
-Gateway verification: `sig` must verify against that `device_id`'s enrolled
+Hub verification: `sig` must verify against that `device_id`'s enrolled
 controller key over `JCS(envelope minus sig)`; failures never enter the
 audit-of-record (quarantine + security alert instead). `ts` is the controller's
-clock and is informational — the gateway also records its own receipt time.
+clock and is informational — the hub also records its own receipt time.
 Dedupe is on `event_id`.
 
 Delivery: over the standing WebSocket when connected; otherwise queued durably on the
 controller (ring buffer, oldest-dropped, capacity ≥ 10k) and drained on reconnect.
-Gateway dedupes on `event_id`. Offline grant redemptions are **never** dropped before
+The hub dedupes on `event_id`. Offline grant redemptions are **never** dropped before
 delivery — they occupy a reserved partition of the queue.
 
 ## Kinds
@@ -38,14 +38,14 @@ delivery — they occupy a reserved partition of the queue.
 | `opened` / `closed` | `{cause: "cmd"\|"grant"\|"button", ref}` | audit log, notifications, time & attendance |
 | `denied` | `{reason, ref}` — `reason` = any cmd.ack `detail` value (commands.md) | security alerting |
 | `grant_redeemed` | full offline-redemption record (grant_id, cnonce, proof) | audit continuity for offline opens |
-| `button` | `{button_id}` | **intercom-lite**: gateway notifies the resident's chat — "Someone is at the gate. Reply OPEN." |
+| `button` | `{button_id}` | **intercom-lite**: the hub notifies the resident's chat — "Someone is at the gate. Reply OPEN." |
 | `held_open` | `{seconds}` | gate-left-open alerts (needs position sensor) |
 | `tamper` | `{sensor}` | enclosure opened / supply cut alerts |
 | `power` | `{source: "mains"\|"battery", level}` | battery/outage telemetry (load-shedding reality) |
 | `net` | `{iface: "wifi"\|"gsm", rssi}` | connectivity telemetry, `last_seen_at` |
 | `boot` | `{fw, reason}` | fleet health, update tracking |
 
-Additive: new kinds may appear; gateways must store-and-ignore unknown kinds (they
+Additive: new kinds may appear; hubs must store-and-ignore unknown kinds (they
 still land in the raw audit log).
 
 ## Reconnect, buffering, and audit-log gaps
@@ -74,7 +74,7 @@ durably writes the `grant_redeemed` event first, then pulses the relay —
 closing the window (crash, power loss, a full audit queue) between "the
 gate physically opened" and "any trace of authorization exists on disk"
 for the common case. But this is the offline emergency-access path by
-definition: there is no gateway reachable to fall back to, so recording is
+definition: there is no hub reachable to fall back to, so recording is
 never allowed to block the open. If the reserved partition is itself full,
 recording degrades in two steps rather than failing outright: (1) the
 reserved partition, normally; (2) if that is full, an always-on local
@@ -96,11 +96,11 @@ code.
 
 Commands get a `cmd.ack`; events get no acknowledgement at all. The
 controller marks an event delivered as soon as the outbound frame write
-succeeds — there is no confirmation from the gateway that it actually
+succeeds — there is no confirmation from the hub that it actually
 received or persisted the event. If the write lands in a buffer for a
-connection that dies immediately after, or the gateway accepts the bytes
+connection that dies immediately after, or the hub accepts the bytes
 but crashes before persisting, the controller believes the event delivered
-(and drops it from its durable queue) while the gateway never has it.
+(and drops it from its durable queue) while the hub never has it.
 `event_id` dedup makes a *retry* safe, but nothing triggers one — this is a
 real, currently unhandled gap, structurally similar to the lost-ack
 ambiguity in commands.md but with strictly less mitigation (no timeout, no
@@ -114,8 +114,8 @@ code.
 
 Not currently. The signed `event` envelope carries `event_id` (a random
 UUID, for dedup) but **no sequence number** — nothing on the wire lets the
-gateway detect that events are missing between two it did receive. A
-gateway operator looking at a gap in the timeline cannot distinguish "the
+hub detect that events are missing between two it did receive. A
+hub operator looking at a gap in the timeline cannot distinguish "the
 gate was quiet" from "the gate was busy and we lost the record," for
 either loss mode above. For an append-only audit log on a system that
 opens physical gates, that is a real defect, not a cosmetic one. **v0:
@@ -132,7 +132,7 @@ small/GSM boards) come up from a power cut with an untrustworthy wall
 clock, often reset to the epoch. A controller reports the system wall
 clock as "now" until the **first** live sync of that boot — either the
 `iat` on a `ws.challenge` at connect, or an accepted `ping` command's
-`iat`. The last-known-good gateway sync time, by contrast, survives
+`iat`. The last-known-good hub sync time, by contrast, survives
 reboots (it is persisted and carries forward until overwritten by a real
 sync).
 
@@ -149,7 +149,7 @@ What this means per verification path:
 - **Offline grants — the intended guard:** the 14-day stale-clock limit
   (grants.md) is meant to refuse offline redemption outright once a
   controller has gone too long without a real time reference (elapsed time
-  since the last gateway sync exceeds the limit, or the controller has
+  since the last hub sync exceeds the limit, or the controller has
   never synced at all).
 - **Offline grants — the backward-clock case, fixed:** the naive staleness
   check computed as *(untrusted now) − (last known sync)* only catches a

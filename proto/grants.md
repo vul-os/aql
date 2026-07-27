@@ -1,10 +1,10 @@
 # Offline grants — v0
 
-Emergency access: the app can open the gate with **no internet, no gateway, no Meta** —
-only the app, the controller, and math. The gateway pre-issues a signed statement of a
-member's rights; the controller verifies it offline against its pinned gateway key.
+Emergency access: the app can open the gate with **no internet, no hub, no Meta** —
+only the app, the controller, and math. The hub pre-issues a signed statement of a
+member's rights; the controller verifies it offline against its pinned hub key.
 
-## Grant (issued by gateway, refreshed whenever the app is online)
+## Grant (issued by the hub, refreshed whenever the app is online)
 
 ```json
 {
@@ -68,7 +68,7 @@ from the cmd.ack `detail` vocabulary, commands.md)
 
 1. Stale-clock rule below (`stale_clock`).
 2. Not in lockdown (`lockdown`).
-3. `grant.sig` against the pinned gateway key (`badsig`).
+3. `grant.sig` against the pinned hub key (`badsig`).
 4. `grant.iat − 90 ≤ now ≤ grant.exp + 90` (`not_yet_valid` / `expired`).
 5. Own `device_id` ∈ `grant.devices` (`wrong_device`).
 6. Requested `access_point` ∈ `grant.access_points` and equals
@@ -84,11 +84,11 @@ from the cmd.ack `detail` vocabulary, commands.md)
 `windows` entries: `days` is an inclusive range of `mon|tue|wed|thu|fri|sat|sun`
 in week order, no wrap-around (`"mon-sun"` = every day); `from`/`to` are `"HH:MM"`
 with `to` exclusive and `"24:00"` meaning end of day. Evaluated against the
-controller's gateway-synced clock in the controller's configured timezone
+controller's hub-synced clock in the controller's configured timezone
 (default UTC).
 
-Clock rule: controllers check `exp` against their last gateway-synced clock; if the
-controller has been offline (no gateway clock sync) longer than **2 × the default
+Clock rule: controllers check `exp` against their last hub-synced clock; if the
+controller has been offline (no hub clock sync) longer than **2 × the default
 grant TTL = 14 days in v0** (a fixed constant — not derived from the presented
 grant), it refuses offline redemption entirely (stale-clock fail-closed) —
 chat/portal paths still work when connectivity returns.
@@ -98,7 +98,7 @@ including the full grant_id + proof material, so the audit trail has no offline 
 
 ## Revocation vs. in-flight grants
 
-The whole point of this path is "no gateway involvement" — which means a
+The whole point of this path is "no hub involvement" — which means a
 controller mid-redemption has no way to ask "has this been revoked?" and no
 way to be told. This is a genuine, structural exposure window. Specify it
 honestly rather than implying real-time revocation exists.
@@ -111,11 +111,11 @@ everything that grant authorizes — every `access_point` it lists, for the
 rest of its `windows`, at any controller listing this device in `devices`
 — for up to that long. There is nothing else:
 
-- Deleting or disabling the member's account on the gateway does not reach
+- Deleting or disabling the member's account on the hub does not reach
   an already-issued grant; the grant is a self-contained, offline-verifiable
   object (the 11-step check above touches nothing but the presented bytes
   and the controller's own pinned key / clock / lockdown state).
-- The next `grant` the gateway signs for that member can simply not be
+- The next `grant` the hub signs for that member can simply not be
   issued, or be scoped down — but that only takes effect on the member's
   *next* refresh, and does nothing to a copy already on their device.
 
@@ -157,23 +157,23 @@ which this additive pass does not add.
 
 The controller side of this contract (verification, the 11-step order,
 stale-clock, windows, cnonce handling) is real and conformance-tested. The
-**gateway side — minting a member's `grant` object — is also real and
+**hub side — minting a member's `grant` object — is also real and
 conformance-tested**: `POST /v1/offline-grants`
-(`gateway/internal/httpapi/offline_grants.go`) authorizes the request through
+(`hub/internal/httpapi/offline_grants.go`) authorizes the request through
 the same gates the live `/open` path uses, all-or-nothing across the
 requested access points, then signs the grant with
-`gateway/internal/keys.SignGrant` — verified byte-for-byte against this
+`hub/internal/keys.SignGrant` — verified byte-for-byte against this
 file's `grant-redeem-valid` vector. TTL is fixed at the 7-day default above
 and is not caller-extendable.
 
 What is **not yet implemented anywhere in this codebase is the app side**:
 nothing requests, stores or presents a grant on a resident's device, so the
 full end-to-end path — app holds a grant, proves it to a controller with no
-gateway involved — does not run today, even though both the gateway and
+hub involved — does not run today, even though both the hub and
 controller halves are ready for it. The "refreshes on every online launch,
 so revocation converges within the TTL" reasoning above describes the
 intended contract; it is not yet an observable guarantee end to end,
-because there is no app-side refresh loop to observe it with. **v0: gateway
+because there is no app-side refresh loop to observe it with. **v0: hub
 + controller real and conformance-tested; app client unbuilt.**
 
 ## Transports

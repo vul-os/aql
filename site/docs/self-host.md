@@ -1,6 +1,6 @@
 # Run a hub
 
-The hub (built from the `gateway/` directory) is the entire server side of Aql: chat
+The hub (built from the `hub/` directory) is the entire server side of Aql: chat
 channels, the access rules, the web console, the API, the device hub and the audit log —
 one Go binary with one SQLite file. This chapter takes you from nothing to a reachable
 hub with a channel attached.
@@ -20,7 +20,7 @@ bills you directly).
 ## Install
 
 > **Status — the hub exists and runs today.** The single-binary Go hub built from
-> [`gateway/`](https://github.com/vul-os/aql/tree/main/gateway) implements the product
+> [`hub/`](https://github.com/vul-os/aql/tree/main/hub) implements the product
 > core now: auth, accounts / locations / access points, controller pairing and the
 > WebSocket device hub, the signed open path, the admin console, rate limits and quotas,
 > visitor grants, the tamper-evident audit log, offline-grant issuance, and texting
@@ -41,30 +41,30 @@ bills you directly).
 
 ```sh
 git clone https://github.com/vul-os/aql
-cd aql/gateway && go build ./cmd/gateway
-./gateway -data /var/lib/aql -listen :8080
+cd aql/hub && go build -o aql-hub ./cmd/hub
+./aql-hub -data /var/lib/aql -listen :8080
 ```
 
 Pure-Go SQLite (`modernc.org/sqlite`, no CGO), so `CGO_ENABLED=0 GOARCH=arm64`
 cross-compiles cleanly for a Pi.
 
-**Docker** — build the image locally from the `Dockerfile` in `gateway/`:
+**Docker** — build the image locally from the `Dockerfile` in `hub/`:
 
 ```sh
-cd aql/gateway && docker build -t aql-gateway .
+cd aql/hub && docker build -t aql-hub .
 docker run -d --name aql \
   -p 8080:8080 \
   -v aql:/data \
-  aql-gateway
+  aql-hub
 ```
 
-> The `ghcr.io/vul-os/aql-gateway` image is built by CI but **not auto-published
+> The `ghcr.io/vul-os/aql-hub` image is built by CI but **not auto-published
 > yet** — its workflow is manual-only. Build locally with the `Dockerfile` above, or
 > pull the published image once a release cuts it. Image and binary names are still
 > settling pre-1.0 — check the repository README for current tags before scripting
 > anything.
 
-> **This `docker run` does not give you TLS.** The image sets `LINTEL_BEHIND_PROXY=1`
+> **This `docker run` does not give you TLS.** The image sets `AQL_BEHIND_PROXY=1`
 > so the hub's in-container bind can be the wildcard `:8080` that `-p 8080:8080`
 > needs to publish at all (a container's loopback interface isn't reachable from
 > outside it, so a loopback-only bind — the binary's default-refuse posture, see
@@ -101,15 +101,15 @@ ones:
 
 | Variable | What it does |
 | --- | --- |
-| `LINTEL_PUBLIC_URL` | The URL the world reaches you at — a bare string, used to build webhook, invite and app links. The hub never dials or validates it, so it does not care whether a tunnel, a reverse proxy or a relay produced it. Leave it unset on a LAN-only install. See [Reachability](reachability.md). |
-| `LINTEL_DATA_DIR` | Where `lintel.db` and keys live. Back this directory up. |
+| `AQL_PUBLIC_URL` | The URL the world reaches you at — a bare string, used to build webhook, invite and app links. The hub never dials or validates it, so it does not care whether a tunnel, a reverse proxy or a relay produced it. Leave it unset on a LAN-only install. See [Reachability](reachability.md). |
+| `AQL_DATA_DIR` | Where `lintel.db` and keys live. Back this directory up. |
 | `WHATSAPP_*` / `SLACK_*` / `TELEGRAM_*` | Per-channel credentials (e.g. `SLACK_SIGNING_SECRET`, `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN` for Socket Mode) — see [Chat channels](channels.md). |
 | `ADMIN_CLAIM_TOKEN` | One-time secret to claim the **instance admin** seat on first run — redeemable exactly once, dead forever after; unset = nobody can claim. See [Instance admin](admin.md). |
 | `RATE_OPEN_COOLDOWN_S` | Minimum seconds between successful opens per person per access point (default 10; `0` disables). |
 | `RATE_OPENS_PER_HOUR` | Successful opens per member per hour (default 30; `0` = kill switch). |
 | `RATE_CHAT_MSGS_PER_MIN` | Inbound chat messages per sender per minute before the bot goes quiet (default 10). |
 | `RATE_ACCOUNT_OPENS_PER_HOUR` | Successful opens per account per hour — runaway-integration ceiling (default 500; `0` = kill switch). |
-| `LINTEL_BEHIND_PROXY` | Permits binding a non-loopback `-listen` address (default `false` — the hub otherwise refuses to start on one). Only set this when TLS is genuinely terminated upstream by a reverse proxy or tunnel; see **Reachability** below. |
+| `AQL_BEHIND_PROXY` | Permits binding a non-loopback `-listen` address (default `false` — the hub otherwise refuses to start on one). Only set this when TLS is genuinely terminated upstream by a reverse proxy or tunnel; see **Reachability** below. |
 
 > **The `WHATSAPP_* / SLACK_* / TELEGRAM_*` variables are the supported way to attach a
 > chat rail.** Those three adapters are shipped and tested in the hub. A designed but
@@ -137,7 +137,7 @@ honest limits). Two ways to check the chain:
 
 - **Live, from the admin console/API**: `GET /v1/admin/audit/verify` (instance-admin
   only) walks both chains and reports the first broken row, if any.
-- **Offline, against a backup**: `gateway verify-audit -data /path/to/data-copy`
+- **Offline, against a backup**: `aql-hub verify-audit -data /path/to/data-copy`
   walks the same two chains **without booting the HTTP server at all**, printing
   `OK (N rows)` or `TAMPERED at index N (row id …): <reason>` per table, with a
   non-zero exit code on any failure. Point it at a *copy* of your backup, never the
@@ -158,7 +158,7 @@ what makes that workable, but it also means one thing is non-negotiable — and,
 most "please don't do this" advice, this one is **enforced, not just documented**:
 
 > **The hub refuses to start if `-listen` resolves to a public address**, unless
-> you explicitly pass `-behind-proxy` (or set `LINTEL_BEHIND_PROXY=1`) to declare that
+> you explicitly pass `-behind-proxy` (or set `AQL_BEHIND_PROXY=1`) to declare that
 > TLS is handled upstream of it. Binding a public interface here in plain HTTP would
 > serve the admin portal, the login endpoint and the signing API over cleartext to
 > anyone who can reach the box — credentials, JWTs and refresh tokens included — so the
@@ -183,7 +183,7 @@ Pick whichever of these fits your life:
   ```
 
   ```sh
-  ./gateway -data /var/lib/aql -listen 127.0.0.1:8080 \
+  ./aql-hub -data /var/lib/aql -listen 127.0.0.1:8080 \
     -public-url https://your-gate.example &
   caddy run   # or: systemctl enable --now caddy
   ```
@@ -199,7 +199,7 @@ Pick whichever of these fits your life:
   with — put your own reverse proxy (as above) behind a passthrough tunnel if you want
   that shape. Aql has no structural dependency on any provider — the **Vulos relay** and
   **Ephor**'s reachability adapter are options among these, never a requirement. Each one
-  just ends with you setting `LINTEL_PUBLIC_URL`; the hub cannot tell them apart.
+  just ends with you setting `AQL_PUBLIC_URL`; the hub cannot tell them apart.
 - **No public URL at all** — a hub on the estate LAN as a complete installation,
   and this is **real today**. Controllers dial out, and Slack **Socket Mode** ships:
   set `SLACK_APP_TOKEN` (an `xapp-…` token) and the hub dials out to Slack over an

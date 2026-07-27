@@ -5,7 +5,7 @@ import { Field } from '@/components/ui/Field';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { useAuth } from '@/lib/auth';
 import { ApiError } from '@/lib/api';
-import { getApiBaseUrl, getStoredGatewayUrl, isTauri, openGatewayPicker } from '@/lib/gateway';
+import { getApiBaseUrl, getStoredGatewayUrl, isTauri, openGatewayPicker } from '@/lib/hub';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -47,7 +47,7 @@ export default function Login() {
       </p>
 
       {/* Google sign-in is disabled unconditionally: the gateway
-          (gateway/internal/httpapi) has no OAuth routes ported yet (see
+          (hub/internal/httpapi) has no OAuth routes ported yet (see
           api.ts's googleStartUrl doc comment) — pointing this at
           /v1/auth/google/start would just land on the SPA fallback. */}
       <div
@@ -135,7 +135,7 @@ function toMessage(err: unknown): string {
   if (err instanceof ApiError) {
     // The hub collapses every login failure into invalid_credentials — wrong
     // password, unknown username, disabled account, no password set. That is
-    // deliberate (gateway/internal/httpapi/auth.go): distinguishing them is an
+    // deliberate (hub/internal/httpapi/auth.go): distinguishing them is an
     // account-state and user-enumeration oracle.
     //
     // So there is no `account_not_active` branch here any more. There used to

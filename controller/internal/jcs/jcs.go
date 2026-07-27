@@ -2,9 +2,9 @@
 // subset of values the lintel wire contracts use.
 //
 // DUPLICATION NOTE: this file is a copy/adaptation of
-// gateway/internal/keys/jcs.go. The controller is its own Go module
+// hub/internal/keys/jcs.go. The controller is its own Go module
 // (github.com/vul-os/aql/controller) so it can be vendored onto devices
-// without dragging in the gateway; the ~170 lines of JCS are deliberately
+// without dragging in the hub; the ~170 lines of JCS are deliberately
 // duplicated rather than imported. If a canonicalization bug is found, fix
 // it in BOTH places and re-run each module's conformance-vector tests
 // (proto/vectors/) — the vectors are the arbiter, not either copy.

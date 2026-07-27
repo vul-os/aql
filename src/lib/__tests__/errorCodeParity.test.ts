@@ -52,7 +52,7 @@ const NOT_A_HUB_CODE = new Map<string, string>([
 /** Every error code any hub handler can put in an `error` field. */
 function goEmittedCodes(): Set<string> {
   const codes = new Set<string>();
-  for (const file of goFilesUnder(path.join(repo, 'gateway/internal'))) {
+  for (const file of goFilesUnder(path.join(repo, 'hub/internal'))) {
     const src = readFileSync(file, 'utf-8');
     // writeErr(w, status, "code") and writeErrDetail(w, status, "code", ...)
     for (const m of src.matchAll(/writeErr(?:Detail)?\([^,]+,[^,]+,\s*"([a-z][a-z0-9_]*)"/g)) {

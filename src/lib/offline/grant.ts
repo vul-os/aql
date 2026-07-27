@@ -5,7 +5,7 @@
 // anything:
 //   proto/grants.md                      (the wire contract + 11-step order)
 //   controller/internal/grants/grants.go (what actually verifies)
-//   gateway/internal/keys/grant.go       (what actually gets minted)
+//   hub/internal/keys/grant.go       (what actually gets minted)
 //
 // WHY THE APP RE-CHECKS AT ALL. The controller is the authority; nothing
 // here can make it open. The point of duplicating steps 4-7 locally is the

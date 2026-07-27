@@ -69,7 +69,7 @@ type Route = { method: string; path: string };
 /** Every route the gateway registers, via its own routegen tool. */
 function gatewayRoutes(): Route[] {
   const raw = execFileSync('go', ['run', './cmd/routegen'], {
-    cwd: path.join(repo, 'gateway'),
+    cwd: path.join(repo, 'hub'),
     encoding: 'utf-8',
     maxBuffer: 8 * 1024 * 1024,
   });

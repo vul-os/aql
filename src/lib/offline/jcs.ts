@@ -5,7 +5,7 @@
 // This is a deliberate re-implementation of the same subset the reference
 // implementations already agree on — proto/vectors/lib.mjs (vector
 // generator), controller/internal/jcs (Go verifier) and
-// gateway/internal/keys.Canonicalize (Go signer). It is NOT trusted on the
+// hub/internal/keys.Canonicalize (Go signer). It is NOT trusted on the
 // strength of that resemblance: src/lib/offline/__tests__/jcs.test.ts
 // byte-compares this function's output against every `canonical` string in
 // proto/vectors/grants.json, which is the same corpus the Go side is held

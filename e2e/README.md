@@ -19,12 +19,12 @@ Postgres, no Docker, no network at runtime.
 The task asked for an in-process harness that imports both modules (optionally
 via `go.work` / `replace`). **That is impossible here, and no `go.work` or
 `replace` can fix it:** every package in both modules lives under `internal/`
-(`gateway/internal/...`, `controller/internal/...`). Go's internal-package rule
+(`hub/internal/...`, `controller/internal/...`). Go's internal-package rule
 keys on *import paths*, not modules or workspaces — an importer is allowed only
 if its path is under the parent of `internal/`. This module's path is
 `github.com/vul-os/aql/e2e`, a **sibling** of
 `github.com/vul-os/aql/gateway`, so it can never import
-`.../gateway/internal/*` (or the controller's). `go.work`/`replace` only change
+`.../hub/internal/*` (or the controller's). `go.work`/`replace` only change
 module *resolution*; they do not relax `internal/`. The only in-process routes
 would be relocating this module under one of the others, or adding public
 re-export shims to those modules — both out of scope ("do not modify
@@ -69,7 +69,7 @@ These are documented by tests here; the fixes belong in `gateway/` /
 
 1. **Pairing redeem path mismatch (real bug).** The controller builds its redeem
    request at `<gateway>/pair/redeem` (matching `proto/pairing.md`'s flow
-   diagram and the controller README's `--gateway https://host`), but the
+   diagram and the controller README's `--hub https://host`), but the
    gateway serves the handler at **`/api/pair/redeem`** only (consistent with
    the `/api/controller/ws` it hands back). With the documented invocation the
    two never meet — the controller 404s to the portal and fails to pair. The
@@ -77,7 +77,7 @@ These are documented by tests here; the fixes belong in `gateway/` /
    the one URL the controller constructs itself. Fix options: controller posts
    to `/api/pair/redeem`, or the gateway also mounts `/pair/redeem`, or the
    pairing.md diagram + README standardize the `/api` prefix. This suite works
-   around it by passing `--gateway http://host/api`.
+   around it by passing `--hub http://host/api`.
 
 2. **Long-poll fallback fully mismatched (known/documented).** The controller's
    `longPollCycle` does `GET <ws_url>/../poll?device_id=…` then `POST` with

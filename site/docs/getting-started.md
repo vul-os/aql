@@ -40,7 +40,7 @@ detail.
 
    ```sh
    git clone https://github.com/vul-os/aql
-   cd aql/gateway && go build ./cmd/gateway
+   cd aql/gateway && go build ./cmd/hub
    ./gateway -data /var/lib/aql -listen 127.0.0.1:8080
    ```
 

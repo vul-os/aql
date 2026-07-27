@@ -1,6 +1,6 @@
 // Energy — Aql's metering screen.
 //
-// Wired to the hub's read-only metering API (gateway/internal/energy, via
+// Wired to the hub's read-only metering API (hub/internal/energy, via
 // energyState() in src/components/demo/liveState.ts, which calls
 // GET /v1/accounts/{id}/energy/series and .../mix). This used to be a
 // seeded fixture chart; it is not anymore. Everything below either comes

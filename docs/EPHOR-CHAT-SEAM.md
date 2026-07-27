@@ -432,8 +432,8 @@ Because §3 keeps member resolution in the hub, Ephor's map is at the granularit
 receives this rail's traffic**, not **which resident this remote party is**. That is a real
 privacy win — the aggregate "which of our users talks to which outside parties"
 (`kotva/26-legacy-adapters.md:315-318`) stays in each hub's own SQLite (`channel_identities` /
-`channel_chats`, `gateway/internal/store/channels.go`,
-`gateway/internal/store/migrations/0005_channels.sql`), where it already is today
+`channel_chats`, `hub/internal/store/channels.go`,
+`hub/internal/store/migrations/0005_channels.sql`), where it already is today
 (`docs/KOTVA-ALIGNMENT.md:332-336`).
 
 It is **not** a privacy elimination: Ephor still sees every message body, every remote id, and
@@ -460,10 +460,10 @@ the shape Aql's seam already has a name and a precedent for:
 
 > *"`DialChannel` is the per-provider seam for a SUBSCRIBE-shaped provider: one that has no
 > webhook to receive because the gateway dials OUT to it … so a LAN-only gateway with no public
-> URL can still run the channel fully."* — `gateway/internal/channels/channels.go:77-96`
+> URL can still run the channel fully."* — `hub/internal/channels/channels.go:77-96`
 
-`SocketMode` (`gateway/internal/channels/socketmode.go:52-107`) is the working precedent;
-`DMTAP` (`gateway/internal/channels/dmtap.go:143-235`) is the second, generalised one. **The
+`SocketMode` (`hub/internal/channels/socketmode.go:52-107`) is the working precedent;
+`DMTAP` (`hub/internal/channels/dmtap.go:143-235`) is the second, generalised one. **The
 Ephor channel is the third instance of a seam that already exists.** That is the strongest
 engineering argument for this whole direction and it should be stated as such: the split does
 not merely relocate the rails, it makes WhatsApp and Telegram reachable from a hub behind CGNAT,
@@ -473,7 +473,7 @@ which they are not today.
 
 **PROPOSAL.** Both are JCS (RFC 8785) + Ed25519, matching the discipline Aql already uses for
 every signed object (`proto/README.md:27-31`, canonicalisation at
-`gateway/internal/keys/jcs.go`, envelope precedent at `gateway/internal/keys/envelope.go:18-30`,
+`hub/internal/keys/jcs.go`, envelope precedent at `hub/internal/keys/envelope.go:18-30`,
 `:49-94`). Deliberately **not** a MOTE: KOTVA-ALIGNMENT's §1.2 verdict — *"expressible with no
 spec change … A poor *first* substitution to make"* (`docs/KOTVA-ALIGNMENT.md:183-185`) — applies
 with more force here, since this leg is a private link between two processes an operator runs.
@@ -516,12 +516,12 @@ Field notes, each with a reason:
   adapter enforces it by leaving `from` and `sig` empty
   (`kotva/crates/kotva-mail/src/adapters/slack.rs:68-80`).
 - **`text` is rail-de-framed but not intent-resolved.** Ephor strips rail packaging (Slack's
-  `<@U…>` mention wrapper — `gateway/internal/channels/channels.go:257-270`) and nothing else.
+  `<@U…>` mention wrapper — `hub/internal/channels/channels.go:257-270`) and nothing else.
   It does not resolve the verb, does not match a gate name, does not decide anything. §4 argues
   why.
 - **`selection_id` is an opaque echo.** When the resident taps a picker row, the rail returns
   the id verbatim; Ephor forwards it without parsing. The allowlist that validates it stays in
-  the hub (`gateway/internal/channels/whatsapp.go:459-501`).
+  the hub (`hub/internal/channels/whatsapp.go:459-501`).
 - **What the intent MUST NOT contain:** a member id, a user id, an account id, an access-point
   id resolved from text, a verb, a tier, an authorisation verdict, or any claim that the sender
   is entitled to anything. If a field like that ever appears, the trust boundary has moved and
@@ -541,7 +541,7 @@ Field notes, each with a reason:
 ```
 
 `body` is final prose the hub composed (including the truncation notice —
-`gateway/internal/channels/reply.go:40-49`). `choices` is a structure Ephor maps onto a WhatsApp
+`hub/internal/channels/reply.go:40-49`). `choices` is a structure Ephor maps onto a WhatsApp
 interactive list, Slack Block Kit sections, or a Telegram inline keyboard. Ephor renders; it
 never writes copy. §4 argues why that line and not another.
 
@@ -551,33 +551,33 @@ never writes copy. §4 argues why that line and not another.
 
 **PROPOSAL.** The adapter holds an Ed25519 keypair and is **enrolled** with the hub the way a
 controller is: a hashed, expiring, single-use claim token (the existing pattern —
-`gateway/internal/store/devices.go:29-45`, rules at `proto/pairing.md`), producing a
+`hub/internal/store/devices.go:29-45`, rules at `proto/pairing.md`), producing a
 `chat_adapters` row holding `{adapter_id, public_key, rails[], status, paired_at}`. The hub
 serves its own public key at `GET /v1/gateway/key`
-(`gateway/internal/httpapi/server.go:156`), which the adapter pins.
+(`hub/internal/httpapi/server.go:156`), which the adapter pins.
 
 - **Hub → adapter (connection):** the hub proves itself with the existing challenge/response
   shape — `ws.challenge` / `ws.auth`, single-use cnonce, 30 s TTL, ±90 s skew, replay-checked
-  (`gateway/internal/hub/hub.go:23-24`, `:113-149`). Roles are inverted (the adapter issues the
+  (`hub/internal/hub/hub.go:23-24`, `:113-149`). Roles are inverted (the adapter issues the
   challenge) but the state machine is byte-identical in structure, so the verifier already has
-  a production twin and a vector suite (`gateway/internal/hub/hub.go:1-7`).
+  a production twin and a vector suite (`hub/internal/hub/hub.go:1-7`).
 - **Adapter → hub (every intent):** `sig` over `JCS(intent ∖ sig)` under the enrolled adapter
   key. **A signature is checked against the adapter enrolled for `rail`.** An intent asserting
   `rail: "slack"` signed by an adapter whose `rails[]` does not include `slack` is refused and
   logged. Fail-closed: an unknown `adapter_id`, an unenrolled rail, or a missing `sig` is a
   refusal, never a downgrade — the same rule the channel seam already states for credentials:
   *"an unset credential means "this channel does not run", never "this channel runs
-  unauthenticated""* (`gateway/internal/channels/channels.go:87-90`).
+  unauthenticated""* (`hub/internal/channels/channels.go:87-90`).
 
 **Replay — two mechanisms, because they defend different things.**
 
 1. **Envelope replay:** 128-bit `nonce`, `exp − iat ≤ 60 s`, ±90 s skew on both bounds, and a
    single-use seen-nonce store that **fails closed when nil**
-   (`gateway/internal/keys/envelope.go:32-46`, `:132-143`, `:192-205`). This bounds how long a
+   (`hub/internal/keys/envelope.go:32-46`, `:132-143`, `:192-205`). This bounds how long a
    captured intent stays actuatable.
 2. **Rail redelivery:** dedupe on `platform_message_id` through the existing unique index —
-   exactly what WhatsApp already does (`gateway/internal/httpapi/channels_whatsapp.go:90-97`)
-   and what the DMTAP scaffold specifies (`gateway/internal/httpapi/channels_dmtap.go:39-50`).
+   exactly what WhatsApp already does (`hub/internal/httpapi/channels_whatsapp.go:90-97`)
+   and what the DMTAP scaffold specifies (`hub/internal/httpapi/channels_dmtap.go:39-50`).
    This makes a platform's own retry a no-op.
 
 Both are needed and neither substitutes for the other — the same distinction KOTVA-ALIGNMENT
@@ -589,8 +589,8 @@ draws between content-address dedupe and a validity window
 | Failure | Behaviour |
 |---|---|
 | Adapter unreachable from the hub | Chat is **unavailable**, and says so. In `OFFLINE.md` grade terms this is `blocked` — the grade Aql's own mapping already assigns to a chat-initiated open (`docs/KOTVA-ALIGNMENT.md:562`). The web portal and the LAN/controller paths are unaffected (`ARCHITECTURE.md:244-247`). |
-| Hub unreachable from the adapter | The adapter **MUST NOT queue intents for later delivery.** They expire with the envelope (≤ 60 s) and the adapter sends the resident an honest reply. A queued "open" delivered twenty minutes later is a gate that opens for no one who is standing there. This is the one place the design deliberately diverges from `hub.Dispatch`'s offline queue (`gateway/internal/hub/hub.go:298-304`) — that queue carries commands to a controller the hub has already authorised, which is a different fact. |
-| Reply undeliverable | The hub records a `failed:<reason>` outbound row rather than dropping it, so an operator can see the channel tried and could not speak — the existing precedent (`gateway/internal/httpapi/channels_dmtap.go:159-165`). |
+| Hub unreachable from the adapter | The adapter **MUST NOT queue intents for later delivery.** They expire with the envelope (≤ 60 s) and the adapter sends the resident an honest reply. A queued "open" delivered twenty minutes later is a gate that opens for no one who is standing there. This is the one place the design deliberately diverges from `hub.Dispatch`'s offline queue (`hub/internal/hub/hub.go:298-304`) — that queue carries commands to a controller the hub has already authorised, which is a different fact. |
+| Reply undeliverable | The hub records a `failed:<reason>` outbound row rather than dropping it, so an operator can see the channel tried and could not speak — the existing precedent (`hub/internal/httpapi/channels_dmtap.go:159-165`). |
 | Ack/dispatch outcome | Unchanged. `undelivered` remains *"a **dispatch outcome, not a negative result**"* and the reply stays non-committal (`proto/commands.md`, quoted at `docs/KOTVA-ALIGNMENT.md:262-266`). The seam adds no new certainty and must not imply any. |
 
 ### 3.4 The trust boundary — and containment of a compromised or substituted Ephor
@@ -613,22 +613,22 @@ gap"* that *"MUST NOT be described as a limitation a future adapter version will
 **How the hub authorises, unchanged from today.** On every intent, the hub:
 
 1. resolves `(rail, remote_id)` → member or grant holder from its own store —
-   `ResolveChannelIdentity` (`gateway/internal/store/channels.go:235`),
+   `ResolveChannelIdentity` (`hub/internal/store/channels.go:235`),
    `AvailableAccessPointsByPhone` (`:48`) / `AvailableAccessPointsByProfile` (`:124`),
    `MemberUserIDByPhoneForAP` (`:207`);
 2. resolves the verb and the target from `text` against **that member's authorised set**
-   (`gateway/internal/channels/verb.go:160-168`,
-   `gateway/internal/channels/whatsapp.go:402-434`), failing closed on ambiguity
+   (`hub/internal/channels/verb.go:160-168`,
+   `hub/internal/channels/whatsapp.go:402-434`), failing closed on ambiguity
    (`MatchAmbiguous`, `whatsapp.go:340-344`);
 3. runs the single choke point — `store.LogAccess`, which independently refuses any verb outside
-   `open`/`close` (`gateway/internal/store/openpath.go:242-245`), applies the whole limit ladder
+   `open`/`close` (`hub/internal/store/openpath.go:242-245`), applies the whole limit ladder
    (`:57-190`), consumes/refunds visitor grant uses, and **writes an audit row whether it allows
    or denies** (`:251-261`, `:298-306`);
 4. signs the controller envelope with the hub's own key and dispatches
-   (`gateway/internal/httpapi/open.go:101-132`; the controller pins that key and rejects
+   (`hub/internal/httpapi/open.go:101-132`; the controller pins that key and rejects
    anything else — `proto/pairing.md:34-36` per `docs/KOTVA-ALIGNMENT.md:94-96`).
 
-Steps 1–4 are exactly what happens today (`gateway/internal/httpapi/channels_open.go:50-142`).
+Steps 1–4 are exactly what happens today (`hub/internal/httpapi/channels_open.go:50-142`).
 **Nothing about them changes.** That is the design.
 
 **What a compromised or substituted Ephor gains.** Stated in full, because a containment claim
@@ -637,7 +637,7 @@ that lists only the good news is not a containment claim:
 - It can **forge an inbound origin** on any rail it is enrolled for — assert that
   `+27821234567` said "open" when they did not. This is **not new**: whoever holds
   `WHATSAPP_APP_SECRET` today can forge a webhook that passes `verifyWhatsAppSig`
-  (`gateway/internal/channels/channels.go:192-207`). The seam moves that secret into another
+  (`hub/internal/channels/channels.go:192-207`). The seam moves that secret into another
   process; it does not create the capability.
 - It can **read every message body** in both directions. Also not new — the platform already
   does (`kotva/26-legacy-adapters.md:496-501`), and so does the hub. But it is now a *second*
@@ -650,16 +650,16 @@ that lists only the good news is not a containment claim:
 **What it does not gain, structurally:**
 
 - It cannot open a gate for a `remote_id` with **no membership and no active grant** — step 1
-  runs against hub state it does not hold (`gateway/internal/store/channels.go:48-119`).
+  runs against hub state it does not hold (`hub/internal/store/channels.go:48-119`).
 - It cannot **exceed limits or quotas** — cooldown, opens/hr, account opens/hr, member/day,
-  location/day all live behind the choke point (`gateway/internal/store/openpath.go:57-190`).
+  location/day all live behind the choke point (`hub/internal/store/openpath.go:57-190`).
 - It cannot **actuate anything but `open`/`close`** — `openpath.go:243-245` is a structural
   allowlist, and CHAT-COMMANDS.md names that exact line as the security boundary that must
   never widen to "any non-empty string" (`docs/CHAT-COMMANDS.md:781-794`).
 - It cannot **mint a controller command** — it has no access to the hub signing key, and the
   controller rejects anything not signed by the key it pinned at pairing.
 - It cannot **escape the audit log** — every attempt, allowed or denied, writes a hash-chained
-  row (`gateway/internal/store/audithash.go`).
+  row (`hub/internal/store/audithash.go`).
 - It cannot **assert a rail it is not enrolled for** (§3.3).
 
 **Additional containment this design should add. PROPOSAL, all four:**
@@ -667,7 +667,7 @@ that lists only the good news is not a containment claim:
 1. **Per-adapter rail allowlist**, checked on every intent, fail-closed (above).
 2. **Attribution in the audit row.** Add the asserting `adapter_id` alongside the existing
    `source` column so a forged open is attributable to a component, not just a rail. The
-   comment at `gateway/internal/httpapi/channels_open.go:44-49` explains why `source` must be
+   comment at `hub/internal/httpapi/channels_open.go:44-49` explains why `source` must be
    the real channel — the same argument extends to which adapter asserted it. This needs a new
    migration (head is `0007_audit_hash_chain.sql`).
 3. **A per-adapter ceiling** independent of the per-subject limiters, so a compromised adapter
@@ -699,7 +699,7 @@ argument, then the table.
 1. **The hub's own package contract already says it.** *"A channel decides how to ask and how to
    reply; it NEVER decides whether the gate may open"* — and the same rule is restated for
    dial-out channels so a subscribe-shaped provider cannot claim an exception
-   (`gateway/internal/channels/channels.go:6-11`, `:88-96`). Ephor is a dial-out channel behind
+   (`hub/internal/channels/channels.go:6-11`, `:88-96`). Ephor is a dial-out channel behind
    the same seam. The invariant is inherited, not renegotiated.
 2. **CONTRACT §4 forbids the adapter reading content to decide what reaches the hub.**
    *"Every gate a coordinator applies **on a delivery path** … MUST be an **authorisation**
@@ -710,17 +710,17 @@ argument, then the table.
    (§1.6).
 3. **Authorisation needs data the adapter must not have.** The authorised set is a join over
    memberships, visitor grants, locations, account status and grant windows
-   (`gateway/internal/store/channels.go:48-119`); the limit ladder is keyed on account, location
-   and member (`gateway/internal/store/openpath.go:57-190`). Replicating any of it into Ephor
+   (`hub/internal/store/channels.go:48-119`); the limit ladder is keyed on account, location
+   and member (`hub/internal/store/openpath.go:57-190`). Replicating any of it into Ephor
    would replicate the tenant graph into the component with the widest blast radius.
 4. **Disambiguation needs the candidate list, which is authorisation output.** `FindMentionedGate`
-   scans the caller's authorised access points (`gateway/internal/channels/whatsapp.go:419-434`).
+   scans the caller's authorised access points (`hub/internal/channels/whatsapp.go:419-434`).
    You cannot resolve the target before you know what the caller may reach.
 5. **Copy is a safety property here, not presentation.** `DenialMessage`'s strings are *"a
    behavioral contract — a denial never pretends the gate opened"*
-   (`gateway/internal/channels/reply.go:11-14`); `TruncationNotice` exists so *"a resident is
+   (`hub/internal/channels/reply.go:11-14`); `TruncationNotice` exists so *"a resident is
    never shown a list that looks complete and is not"* (`:34-39`,
-   `gateway/internal/channels/channels.go:335-341`). If the adapter composes prose, a swapped or
+   `hub/internal/channels/channels.go:335-341`). If the adapter composes prose, a swapped or
    buggy adapter silently drops the honesty. Hub composes; adapter renders structure. **This is
    my one refinement to the stated prior.**
 
@@ -786,9 +786,9 @@ unchanged.
 
 **Step 3 — Aql grows the seam, off by default.** Add `chat.intent`/`chat.reply`, the
 `chat_adapters` enrollment, and an `EphorChannel` implementing the existing `DialChannel`
-interface (`gateway/internal/channels/channels.go:97-108`) — plus the **one rail-agnostic hub
+interface (`hub/internal/channels/channels.go:97-108`) — plus the **one rail-agnostic hub
 handler** the whole design turns on. That handler already exists in miniature:
-`gateway/internal/httpapi/channels_dmtap.go:26-123` is a rail-agnostic conversation flow that
+`hub/internal/httpapi/channels_dmtap.go:26-123` is a rail-agnostic conversation flow that
 resolves an identity from an external id, dedupes, throttles, resolves verb and target, and
 funnels through `profileOpen`. It is the template. Wired behind config, defaulting **off**.
 Working system: all three Go rails still default and untouched.
@@ -799,13 +799,13 @@ verifiable: `outbound-persistent` so no public endpoint is needed
 (`telegram.go` is 112 lines), and §26.4.2's "cannot initiate at all" ceiling
 (`:212-220`) makes its honest declaration trivially true. Run it beside the Go Telegram channel
 in a staging install and diff behaviour against
-`gateway/internal/httpapi/channels_telegram_test.go`. Working system: production still on Go.
+`hub/internal/httpapi/channels_telegram_test.go`. Working system: production still on Go.
 
 **Step 5 — per-rail engine toggle, defaulting to built-in.** The pattern already exists and is
 proven: `ResolveWhatsAppEngine` fails closed toward the safe default and refuses to switch on
-anything but the exact opt-in string (`gateway/internal/channels/send.go:217-228`), with an
+anything but the exact opt-in string (`hub/internal/channels/send.go:217-228`), with an
 operator-facing warning constant for the risky choice (`:238-246`). Reuse it verbatim:
-`LINTEL_TELEGRAM_ENGINE=ephor|builtin`, then the same for Slack and WhatsApp. Working system:
+`AQL_TELEGRAM_ENGINE=ephor|builtin`, then the same for Slack and WhatsApp. Working system:
 every install picks, and the default keeps working.
 
 **Step 6 — Slack, then WhatsApp.** Slack second: Socket Mode is already dial-out on both sides,
@@ -820,8 +820,8 @@ a one-env-var rollback.
 
 ### The point of no return
 
-`gateway/internal/channels/{whatsapp,slack,telegram,socketmode}.go`, the `Verify*` primitives,
-`send.go`'s three senders, and `gateway/internal/httpapi/channels_{whatsapp,slack,telegram}.go`
+`hub/internal/channels/{whatsapp,slack,telegram,socketmode}.go`, the `Verify*` primitives,
+`send.go`'s three senders, and `hub/internal/httpapi/channels_{whatsapp,slack,telegram}.go`
 may be **deleted only when all six hold**:
 
 1. Every shipped rail has an Ephor implementation that has been the **default** for at least one
@@ -844,7 +844,7 @@ may be **deleted only when all six hold**:
    (`kotva/coordinator/CONTRACT.md:61-68`). **This is the real gate, and it is the one most
    likely to be skipped.**
 
-Two things that are **not** deleted at that point: `gateway/internal/channels/dmtap.go` and its
+Two things that are **not** deleted at that point: `hub/internal/channels/dmtap.go` and its
 handler (a separate seam, and ADAPT-10 says move it out rather than fold it in —
 `docs/KOTVA-ALIGNMENT.md:637-642`), and `verb.go` / `reply.go` / the `MatchOutcome` machinery,
 which §4 keeps hub-side permanently.
@@ -861,10 +861,10 @@ Non-test Go in scope (`wc -l`, verified):
 
 | | lines |
 |---|---|
-| `gateway/internal/channels/` non-test, total | 2,414 |
+| `hub/internal/channels/` non-test, total | 2,414 |
 | — of which moves: `whatsapp.go` 501 + `slack.go` 134 + `telegram.go` 112 + `socketmode.go` 245 + `send.go` 536 | **1,528** |
 | — of which stays (per §4): `verb.go` 168, `reply.go` 62, `dmtap.go` 309, most of `channels.go` 347 | ~886 |
-| `gateway/internal/httpapi/channels_*.go` non-test | 1,096 |
+| `hub/internal/httpapi/channels_*.go` non-test | 1,096 |
 | **Tests being re-earned:** `channels/*_test.go` 1,416 + `httpapi/channels_*_test.go` 1,217 | **2,633** |
 
 The tests are the expensive part, and they are where the recent safety work lives —
@@ -904,7 +904,7 @@ deliberately, in the docs, at the same time.
 ### 6.3 The §26.8.2 conflict with `BridgeWhatsAppSender`
 
 Aql ships an opt-in engine targeting Evolution API — a Baileys-fronting unofficial WhatsApp Web
-client (`gateway/internal/channels/send.go:270-291`, engine selection at `:255-268`). The code's
+client (`hub/internal/channels/send.go:270-291`, engine selection at `:255-268`). The code's
 own honesty is exemplary: it names the ban risk in a non-negotiable comment block (`:172-200`),
 fails closed toward the Cloud API (`:217-228`), and logs a long warning at startup (`:238-246`).
 `ARCHITECTURE.md:184-189` states the non-conformance out loud.
@@ -950,7 +950,7 @@ changes which outcome is correct.
   `docs/CHAT-COMMANDS.md:19-23` quotes `isClose := strings.Contains(body, "close")` at
   `channels_whatsapp.go:137-138`. That code is no longer there: `channels_whatsapp.go:141` now
   calls `channels.TextGateVerb(body)` and the `strings.Contains` pair lives at
-  `gateway/internal/channels/verb.go:160-168`, behind the fail-closed `GateVerb` type. The
+  `hub/internal/channels/verb.go:160-168`, behind the fail-closed `GateVerb` type. The
   *substance* of §2.2(a)/(b)/(d) has likewise been partly fixed since it was written —
   `MatchOutcome` is now three-state (`whatsapp.go:326-344`), `ParseSelection` now rejects
   unprefixed ids (`:467-485`), and truncation now discloses (`reply.go:34-49`). **Uncertain —

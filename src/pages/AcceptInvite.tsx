@@ -1,3 +1,4 @@
+import { KEYS } from '@/lib/storageKeys';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
@@ -6,7 +7,7 @@ import { AuthLayout } from '@/components/auth/AuthLayout';
 import { useAuth } from '@/lib/auth';
 import { ApiError, api } from '@/lib/api';
 
-const PENDING_INVITE_KEY = 'lintel.pendingInviteToken';
+const PENDING_INVITE_KEY = KEYS.pendingInvite;
 
 type Status = 'idle' | 'accepting' | 'success' | 'error' | 'no-token' | 'needs-auth';
 

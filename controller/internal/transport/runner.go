@@ -123,12 +123,12 @@ func (r *Runner) runWS(ctx context.Context, p *state.Pairing, log *slog.Logger) 
 		return err
 	}
 	conn.SetReadDeadline(time.Time{})
-	log.Info("gateway connected", "ws", p.WSURL)
+	log.Info("hub connected", "ws", p.WSURL)
 	r.wsFailures = 0
 
 	// 2. Drain queued events (grants partition first). The v0 contract has
 	// no event-level ack, so an event is marked delivered after a
-	// successful frame write; the gateway dedupes on event_id, so the
+	// successful frame write; the hub dedupes on event_id, so the
 	// crash-resend window is safe.
 	r.drainEvents(conn, log)
 
@@ -210,7 +210,7 @@ func (r *Runner) drainEvents(conn *WSConn, log *slog.Logger) {
 //	GET  <ws_url with http(s) scheme>/../poll?device_id=… → {"commands":[…]}
 //	POST same URL with {"acks":[…],"events":[…]}
 //
-// documented here and in the README until the gateway freezes the shape.
+// documented here and in the README until the hub freezes the shape.
 func (r *Runner) longPollCycle(ctx context.Context, p *state.Pairing, log *slog.Logger) {
 	base, err := pollURL(p.WSURL)
 	if err != nil {

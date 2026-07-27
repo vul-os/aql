@@ -1,6 +1,6 @@
 // Route-parity test — the safeguard against the exact bug that motivated
 // this test's existence: src/lib/api.ts (the frontend client) drifting from
-// the routes gateway/internal/httpapi/server.go actually serves.
+// the routes hub/internal/httpapi/server.go actually serves.
 //
 // The gateway is the product that ships (embedded into the gateway binary
 // as the portal, reused by the Tauri desktop shell). backend/src/app.ts is a
@@ -12,10 +12,10 @@
 //     regex) to find every `apiFetch(path, init)` call, extracting the
 //     method (from `init.method`, default GET) and the path — including
 //     resolving template-literal path params (`${id}`) to a placeholder.
-//  2. Shell out to `go run ./cmd/routegen` inside gateway/, which parses
+//  2. Shell out to `go run ./cmd/routegen` inside hub/, which parses
 //     server.go's Router() with go/ast and prints every registered
 //     "METHOD /v1/..." pattern as JSON. That's the single source of truth
-//     for what the gateway serves — see gateway/cmd/routegen/main.go.
+//     for what the gateway serves — see hub/cmd/routegen/main.go.
 //  3. Diff: every frontend call must have a matching gateway route, UNLESS
 //     it's in KNOWN_UNAVAILABLE below (an endpoint the gateway genuinely
 //     doesn't implement yet, where the frontend is expected to degrade
@@ -32,7 +32,7 @@ import { API_VERSION_PREFIX } from '../api';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, '../../..');
 const apiTsPath = path.join(repoRoot, 'src/lib/api.ts');
-const gatewayDir = path.join(repoRoot, 'gateway');
+const hubDir = path.join(repoRoot, 'hub');
 
 type FrontendCall = {
   method: string;
@@ -131,7 +131,7 @@ function extractFrontendCalls(source: string): FrontendCall[] {
 
 function loadGatewayRoutes(): GatewayRoute[] {
   const out = execFileSync('go', ['run', './cmd/routegen'], {
-    cwd: gatewayDir,
+    cwd: hubDir,
     encoding: 'utf-8',
   });
   const routes = JSON.parse(out) as GatewayRoute[];
@@ -203,7 +203,7 @@ describe('frontend/gateway route parity', () => {
           `\n\nIf the gateway genuinely doesn't implement this yet (and the frontend degrades ` +
           `gracefully), add it to KNOWN_UNAVAILABLE in this test with a matching doc comment in ` +
           `api.ts. Otherwise this is route drift — fix the path in src/lib/api.ts.\n\n` +
-          `Routes the gateway actually serves (gateway/internal/httpapi/server.go):\n${gatewayList}\n`,
+          `Routes the gateway actually serves (hub/internal/httpapi/server.go):\n${gatewayList}\n`,
       );
     }
 

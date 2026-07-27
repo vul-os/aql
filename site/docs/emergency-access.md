@@ -49,12 +49,12 @@ its BlueZ glue compiles behind `-tags ble` on Linux but has not been exercised o
 hardware yet.
 
 **Hub-side issuance is now real.** `POST /v1/offline-grants`
-([`gateway/internal/httpapi/offline_grants.go`](https://github.com/vul-os/aql/blob/main/gateway/internal/httpapi/offline_grants.go))
+([`hub/internal/httpapi/offline_grants.go`](https://github.com/vul-os/aql/blob/main/hub/internal/httpapi/offline_grants.go))
 authenticates the caller, re-checks the exact same membership / account-suspended /
 user-disabled gates the live `/open` path enforces (all-or-nothing — a caller not
 currently entitled to every requested access point gets nothing, never a grant
 silently narrowed to a subset they didn't notice), and signs a `typ:"grant"` object
-with [`keys.SignGrant`](https://github.com/vul-os/aql/blob/main/gateway/internal/keys/grant.go)
+with [`keys.SignGrant`](https://github.com/vul-os/aql/blob/main/hub/internal/keys/grant.go)
 — the identical JCS/Ed25519 discipline `Envelope` uses, verified byte-for-byte against
 [`proto/vectors/grants.json`](https://github.com/vul-os/aql/blob/main/proto/vectors/grants.json)'s
 `grant-redeem-valid` fixture. TTL is fixed at the proto default (7 days) and is not

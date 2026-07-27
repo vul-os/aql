@@ -53,7 +53,7 @@ finished. The engine behind the other six is not built.**
 
 ### ✅ Built, tested, running
 
-- **The hub** (`gateway/`) — one Go binary with SQLite inside: the web console, the API,
+- **The hub** (`hub/`) — one Go binary with SQLite inside: the web console, the API,
   the controller hub, the tamper-evident audit log, accounts/locations/members, and an
   instance-admin seat above every account. **60 HTTP routes, 219 Go tests green.**
 - **Access control, end to end** — signed commands, a paired controller that pins the
@@ -72,7 +72,7 @@ finished. The engine behind the other six is not built.**
 ### 🔨 Not built
 
 - **A driver for Matter, or a native Zigbee or Z-Wave radio.** The device-engine seam
-  exists ([`gateway/internal/devices/`](gateway/internal/devices/)) — an internal device
+  exists ([`hub/internal/devices/`](hub/internal/devices/)) — an internal device
   model, a closed capability/verb catalogue with safety tiers, and a registry — and three
   drivers are wired into the binary behind `-device-drivers`: **HTTP/webhook** (any device
   with a REST endpoint), **ONVIF camera**, and **MQTT**.
@@ -90,7 +90,7 @@ finished. The engine behind the other six is not built.**
   written, the `Driver` is not), and device discovery. Untested against physical hardware
   — reachable in the protocol sense is not the same as verified in someone's house.
 - **Automations moving anything real.** The runtime is built, tested and now managed over
-  HTTP ([`gateway/internal/automations/`](gateway/internal/automations/),
+  HTTP ([`hub/internal/automations/`](hub/internal/automations/),
   `/v1/accounts/{id}/automations`) — rule object, scheduler with restart survival,
   execution engine, failure breaker, and a hard ceiling that refuses to save *or* fire any
   action above `TierConsequential`, because an automation fires with nobody watching.
@@ -99,7 +99,7 @@ finished. The engine behind the other six is not built.**
   reports `scheduler_running` so rules that will not fire do not look like rules that
   work. No rule has yet driven physical hardware.
 - **Energy metering wired into the hub.** The engine exists and is tested
-  ([`gateway/internal/energy/`](gateway/internal/energy/)) — 60s ingestion, hour/day/month
+  ([`hub/internal/energy/`](hub/internal/energy/)) — 60s ingestion, hour/day/month
   rollups, source-mix accounting, counter wrap-vs-reset detection, and gaps represented as
   *absent* rather than zero (`KWh` is a nullable pointer precisely so a renderer that
   forgets the distinction crashes instead of drawing a confident low bar). The poller is
@@ -110,13 +110,13 @@ finished. The engine behind the other six is not built.**
   meters, and an endpoint that injects them would be a way to forge a bill. What is
   missing is a real meter — none of it has been exercised against physical hardware.
 - **The camera pipeline.** ONVIF *discovery* now exists
-  ([`gateway/internal/devices/camera/`](gateway/internal/devices/camera/)) — WS-Discovery
+  ([`hub/internal/devices/camera/`](hub/internal/devices/camera/)) — WS-Discovery
   probe, reachability, and stream-address resolution, so the hub can find a camera and
   learn where its stream *would* come from. There is **no RTSP client**: it never opens a
   connection, never sends DESCRIBE, and moves no pixels. No live view, no recording, no
   decoding, no ffmpeg. It has also never seen a real camera — the tests drive a loopback
   responder, which proves the emitter and parser agree with each other, not that hardware
-  agrees with either. Not wired into `cmd/gateway`.
+  agrees with either. Not wired into `cmd/hub`.
 - **Physical hardware behind any of it.** The console's automations and energy screens now
   read the hub — live rules from `/v1/accounts/{id}/automations`, live consumption from
   `/v1/accounts/{id}/energy/*` — and the device screen reads the device engine. What sits
@@ -192,7 +192,7 @@ device that verifies rather than trusts, and an audit trail you can check after 
   chat platform down. (The phone side is the missing half — see above.)
 - **Tamper-evident audit** — `access_logs` and `admin_audit_log` are SHA-256 hash-chained
   with append-only database triggers, verifiable live or against a cold backup with
-  `gateway verify-audit`, no server running. Detection, not prevention: the honest ceiling
+  `aql-hub verify-audit`, no server running. Detection, not prevention: the honest ceiling
   is documented.
 - **Visitor / temporary passes** — a phone number gets named access points for a dated
   window with an optional use cap, revocable.
@@ -209,7 +209,7 @@ replies, because gates are the only device class there is to command. A resident
 `open` and a gate swinging is the working instance of a wider idea.
 
 > **The three chat rails are shipped and supported.** WhatsApp, Slack and Telegram live in
-> the hub, in `gateway/internal/channels/`, tested and in use — they are not deprecated and
+> the hub, in `hub/internal/channels/`, tested and in use — they are not deprecated and
 > nothing is being removed. Slack ships in two shapes: the Events API webhook, and Socket
 > Mode, where the hub dials **out** and needs no public URL at all.
 >
@@ -264,8 +264,8 @@ Access control is the one module that runs end to end, and it has the depth to m
 
 ```sh
 git clone https://github.com/vul-os/aql
-cd aql/gateway && go build ./cmd/gateway
-./gateway -data /var/lib/aql -listen 127.0.0.1:8080
+cd aql/hub && go build -o aql-hub ./cmd/hub
+./aql-hub -data /var/lib/aql -listen 127.0.0.1:8080
 ```
 
 Pure-Go SQLite, so `CGO_ENABLED=0 GOARCH=arm64` cross-compiles cleanly for a Pi. The hub
@@ -371,7 +371,7 @@ npm run check:claims  # docs-vs-code feature-claim guard
 npm run test:e2e      # Playwright against a real hub binary
 npm run screenshotter # regenerate console screenshots
 
-cd gateway    && go test ./...   # 219 tests
+cd hub    && go test ./...   # 219 tests
 cd controller && go test ./...   # 45 tests
 cd e2e        && go test ./...   # real binaries over the wire
 node proto/vectors/verify.mjs    # 61 vectors, 68 checks
@@ -380,12 +380,15 @@ node proto/vectors/verify.mjs    # 61 vectors, 68 checks
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and [ARCHITECTURE.md](ARCHITECTURE.md) before
 changing anything structural.
 
-Two naming notes. First, **the hub's directory is `gateway/` but the hub is not a
-gateway** — in the KOTVA family that word names the legacy-rail coordinator role, a
-separate component's job, not Aql's. The path, the Go module path and the binary name keep their
-spelling as compat surface; the product noun is *hub*. Second, the `LINTEL_*` environment
-variables, the `lintel.db` filename and the controller's `_lintel._tcp` mDNS service keep
-their pre-merge names on purpose — they are a deployment and wire contract for hubs and
+Two naming notes. First, **the hub's directory, Go module and binary are `hub/`,
+`github.com/vul-os/aql/hub` and `aql-hub`** — not `gateway`, which in the KOTVA family
+names the legacy-rail coordinator role, a separate component's job (Ephor's, not Aql's);
+and not `lintel`, a repo that no longer exists. Second, the environment variables were
+renamed the same way, `LINTEL_*` → `AQL_*`, but the old names still work: an unset `AQL_*`
+variable falls back to its `LINTEL_*` predecessor and logs a warning naming both
+(`hub/cmd/hub/env.go`), deprecated with no removal date decided. The `lintel.db` filename
+and the controller's `_lintel._tcp` mDNS service, by contrast, keep their pre-merge names
+outright, not as a fallback — they are a deployment and wire contract for hubs and
 controllers already in the field.
 
 ## Ecosystem

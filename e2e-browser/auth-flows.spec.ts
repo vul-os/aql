@@ -1,15 +1,15 @@
-// The two auth paths nobody had exercised against a real gateway:
+// The two auth paths nobody had exercised against a real hub:
 //   1. logout — does it actually kill the session (client AND server), or
 //      just clear localStorage and hope?
 //   2. 401 -> refresh -> retry — src/lib/api.ts's apiFetch() has a one-shot
 //      "401, refresh, retry" path (see its doRequest/refreshAccessToken).
-//      The original bug (RefreshResponse assumed flat tokens; the gateway
+//      The original bug (RefreshResponse assumed flat tokens; the hub
 //      nests them under `tokens`) would live exactly here: a real access
 //      token expiring mid-session. Since the real TTL is 15 minutes
-//      (gateway/internal/httpapi/auth.go's accessTTL) and nobody's about to
+//      (hub/internal/httpapi/auth.go's accessTTL) and nobody's about to
 //      wait that out in CI, this reproduces "expired access token, still-
 //      valid refresh token" directly instead.
-import { startGateway, type LiveGateway } from './fixtures/gateway';
+import { startGateway, type LiveGateway } from './fixtures/hub';
 import { allowExpectedConsoleError, expect, test } from './fixtures/test';
 
 test.describe.configure({ mode: 'serial' });
@@ -108,7 +108,7 @@ test('a stale access token triggers a transparent 401 -> refresh -> retry', asyn
   );
   const refreshBody = await refreshResponse.json();
   // The exact historical bug this test targets: RefreshResponse assumed
-  // flat tokens on the response; the gateway nests them under `tokens`. If
+  // flat tokens on the response; the hub nests them under `tokens`. If
   // that parsing regresses, refreshAccessToken() silently returns false,
   // tokens get cleared, and the assertions below fail loudly instead of the
   // user just getting logged out for no visible reason.
@@ -129,7 +129,7 @@ test('a stale access token triggers a transparent 401 -> refresh -> retry', asyn
   expect(newAccess).not.toBe('corrupted.not-a-real.jwt');
   expect(newAccess).toEqual(expect.any(String));
   // Refresh tokens rotate on every use (family reuse-detection, per
-  // gateway/internal/httpapi/auth.go's handleRefresh) — the pre-corruption
+  // hub/internal/httpapi/auth.go's handleRefresh) — the pre-corruption
   // refresh token must no longer be the active one.
   expect(newRefresh).not.toBe(originalRefresh);
 });

@@ -6,8 +6,8 @@
 //   - receives a 2xx response under /v1/* whose body isn't JSON
 //
 // The last one is the specific trap this whole suite exists to catch: the
-// gateway's embedded portal answers any unmatched path with 200 + index.html
-// (see gateway/internal/portal/portal.go's SPA fallback) instead of 404. A
+// hub's embedded portal answers any unmatched path with 200 + index.html
+// (see hub/internal/portal/portal.go's SPA fallback) instead of 404. A
 // frontend call to a route that doesn't exist (or a typo'd path) silently
 // "succeeds" with HTML bytes unless something asserts on it. src/lib/api.ts
 // already guards this in-app (ApiError with UNAVAILABLE_CODE), but that guard
@@ -42,7 +42,7 @@ export function allowExpectedConsoleError(
 }
 
 // Routes src/lib/api.ts's own doc comments document as NOT IMPLEMENTED on
-// the gateway, where the call site already wraps the call so it degrades
+// the hub, where the call site already wraps the call so it degrades
 // honestly (ApiError(UNAVAILABLE_CODE) -> a graceful fallback, never a crash
 // or fabricated data). Real, live examples caught by a first run of this
 // suite: Signup.tsx calls `api.countries()` on mount (falls back to a
@@ -71,14 +71,14 @@ function isKnownUnavailableV1Route(pathname: string): boolean {
   return KNOWN_UNAVAILABLE_V1_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
-// src/components/gateway/GatewayGate.tsx probes this exact hardcoded
-// fallback URL (src/lib/gateway.ts's FALLBACK_BASE_URL) on boot whenever no
-// gateway is stored yet and the build has no VITE_API_BASE_URL — which is
+// src/components/hub/HubGate.tsx probes this exact hardcoded
+// fallback URL (src/lib/hub.ts's FALLBACK_BASE_URL) on boot whenever no
+// hub is stored yet and the build has no VITE_API_BASE_URL — which is
 // every test here, since driving the real "Connect to your gateway" picker
 // is the point (see money-path.spec.ts). Nothing listens on that port in
 // this suite, so Chromium logs a `net::ERR_CONNECTION_REFUSED` console error
 // for the probe — the app's own testGatewayUrl() already catches it
-// (src/lib/gateway.ts) and correctly shows the picker. This is expected,
+// (src/lib/hub.ts) and correctly shows the picker. This is expected,
 // by-design behavior, not a bug: DevTools logs failed network requests to
 // the console regardless of whether application code catches them.
 const EXPECTED_GATEWAY_PROBE_HOST = 'localhost:8787';
@@ -148,7 +148,7 @@ export const test = base.extend<{ cleanPage: void }>({
               `${res.request().method()} ${url.pathname} -> ${status} ` +
               `content-type="${contentType}" (expected application/json; this is the ` +
               `embedded portal's SPA-fallback page, not a real API response — see ` +
-              `gateway/internal/portal/portal.go and src/lib/api.ts's UNAVAILABLE_CODE)`,
+              `hub/internal/portal/portal.go and src/lib/api.ts's UNAVAILABLE_CODE)`,
           });
         }
       });

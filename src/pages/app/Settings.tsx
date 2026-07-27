@@ -7,7 +7,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Avatar, resolveAvatarUrl } from '@/components/ui/Avatar';
 import { ApiError, api, friendlyApiError, isUnavailable, type LocationRow } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { getApiBaseUrl, getStoredGatewayUrl, isTauri, openGatewayPicker } from '@/lib/gateway';
+import { getApiBaseUrl, getStoredGatewayUrl, isTauri, openGatewayPicker } from '@/lib/hub';
 
 export default function Settings() {
   const { currentAccount, user } = useAuth();

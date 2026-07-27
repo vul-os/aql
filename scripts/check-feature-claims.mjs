@@ -48,7 +48,7 @@
 //    doc nobody wired into the manifest is invisible to this script. The
 //    manifest is a checklist, not a doc scanner.
 //
-// 3. It only searches IMPLEMENTATION code (gateway/, backend/src/,
+// 3. It only searches IMPLEMENTATION code (hub/, backend/src/,
 //    controller/, proto/, src-tauri/ config) for evidence — deliberately
 //    never src/ (the React portal's UI copy) or site/ (marketing). Scanning
 //    UI copy for "evidence" would be circular, since that copy is exactly

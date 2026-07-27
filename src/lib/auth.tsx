@@ -1,3 +1,4 @@
+import { KEYS } from '@/lib/storageKeys';
 import {
   createContext,
   useCallback,
@@ -9,7 +10,7 @@ import {
 } from 'react';
 import { ApiError, api, tokenStore, type MeResponse } from './api';
 
-// NOTE: the gateway's GET /v1/auth/me (gateway/internal/httpapi/auth.go)
+// NOTE: the gateway's GET /v1/auth/me (hub/internal/httpapi/auth.go)
 // doesn't carry profile/avatar/phone-verification/Slack data — none of that
 // is implemented on this backend (no /auth/me/profile, /auth/me/slack, or
 // /phones/me/phones routes exist). The fields below that can never be true
@@ -63,11 +64,11 @@ type AuthState = {
   refreshMe: () => Promise<void>;
 };
 
-const ACTIVE_ACCOUNT_KEY = 'lintel.activeAccount';
+const ACTIVE_ACCOUNT_KEY = KEYS.activeAccount;
 // Cached /me response for instant rehydration on refresh. Bumping the version
 // invalidates older shapes (e.g. when SessionUser gains/loses a field) so
 // stale caches don't mis-render the UI on the next deploy.
-const ME_CACHE_KEY = 'lintel.me.v5';
+const ME_CACHE_KEY = KEYS.meCache;
 
 type CachedMe = { user: SessionUser; accounts: SessionAccount[] };
 

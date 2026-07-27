@@ -1,6 +1,6 @@
 // Package pairing implements the controller side of proto/pairing.md: redeem
 // a single-use claim token over HTTPS, receive {device_id, gateway_pubkey,
-// ws_url, poll_interval}, and persist it with the gateway key PINNED. The
+// ws_url, poll_interval}, and persist it with the hub key PINNED. The
 // redeem response is the ONLY moment a gateway key is accepted; thereafter
 // only a `repair` command signed by the currently pinned key (or a physical
 // factory reset) can change it — state.Store enforces that.
@@ -57,12 +57,12 @@ type Client struct {
 // If the controller is already paired to a DIFFERENT gateway key, the save
 // is refused (state.ErrKeyChangeRefused) — a hostile or replaced gateway
 // cannot rotate the pinned key through re-pairing.
-func (c *Client) RedeemClaim(ctx context.Context, st *state.Store, gatewayURL, claimToken, controllerPubB64 string, hw HW) (*Grant, error) {
+func (c *Client) RedeemClaim(ctx context.Context, st *state.Store, hubURL, claimToken, controllerPubB64 string, hw HW) (*Grant, error) {
 	hc := c.HTTP
 	if hc == nil {
 		hc = &http.Client{Timeout: 15 * time.Second}
 	}
-	base, err := url.Parse(gatewayURL)
+	base, err := url.Parse(hubURL)
 	if err != nil {
 		return nil, fmt.Errorf("pairing: bad gateway url: %w", err)
 	}

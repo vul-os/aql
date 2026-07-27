@@ -1,4 +1,4 @@
-# lintel controller — reference implementation
+# Aql controller — reference implementation
 
 The reference controller agent: it runs on a Raspberry Pi (or any Linux box)
 at a physical gate, is owned by exactly one gateway, and drives a gate relay.
@@ -13,7 +13,7 @@ pre-issued grants against its pinned gateway key.
 
 This is its **own Go module** (`github.com/vul-os/aql/controller`) so it
 can be vendored onto devices without dragging in the gateway. It deliberately
-**copies** the small JCS + Ed25519 verify code from `gateway/internal/keys`
+**copies** the small JCS + Ed25519 verify code from `hub/internal/keys`
 rather than importing it — see [Code duplication](#code-duplication).
 
 Std-lib first, no CGO. The only third-party dependency is
@@ -42,7 +42,7 @@ controller/
     blesession/                  # open→challenge→proof→result sequencing over framing + grants
     bleperiph/                   # BLE GATT peripheral (real glue behind `-tags ble` on Linux)
     lanserver/                   # LAN HTTP grant transport + mDNS advertise
-    mdns/                        # minimal std-lib _lintel._tcp responder
+    mdns/                        # minimal std-lib _lintel._tcp responder (name is wire, see mdns.go)
     events/                      # durable event queue (JSONL ring, reserved grant partition) + Recorder
     transport/                   # RFC 6455 WSS client, ws.auth, backoff, long-poll fallback, runner
     pairing/                     # claim-token redeem client (pins gateway key)
@@ -92,8 +92,8 @@ the result, pinning the gateway's public key:
 
 ```
 go run ./cmd/controller \
-  --state /var/lib/lintel \
-  --gateway https://gate.example.com \
+  --state /var/lib/aql \
+  --hub https://gate.example.com \
   --claim-token <TOKEN> \
   --access-points main,pedestrian
 ```
@@ -111,7 +111,7 @@ conformance fixtures with no gateway at all:
 ```
 # Live agent against a dev gateway (mock relay; prints state transitions).
 # stdin accepts: status | lockdown | lift | quit
-go run ./cmd/controller-sim --gateway http://localhost:8080 --claim-token <TOKEN>
+go run ./cmd/controller-sim --hub http://localhost:8080 --claim-token <TOKEN>
 
 # Offline grant flow: replays every proto/vectors grant transcript through the
 # shared verification core, then does a live LAN open with a fresh random cnonce.
@@ -155,7 +155,7 @@ Every `proto/vectors/` file is consumed by the suite:
 ## Code duplication
 
 `internal/jcs` and the `Sign`/`Verify`/`VerifyRaw` helpers in `internal/wire`
-are **intentionally copied and adapted** from `gateway/internal/keys`
+are **intentionally copied and adapted** from `hub/internal/keys`
 (`jcs.go`, `keys.go`, `envelope.go`). The controller is a standalone module so
 it can be vendored onto devices without the gateway; importing the gateway
 module would pull in its whole dependency tree. The duplicated surface is

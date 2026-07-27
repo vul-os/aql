@@ -35,7 +35,7 @@ to sign up for, no account, no telemetry, and no billing code anywhere in the bi
 
 | Piece | What it is | Status |
 | --- | --- | --- |
-| **The hub** (`gateway/`) | One Go binary with an embedded SQLite database. It owns state, runs your rules, serves the web console and the app's API, keeps the audit log, and pushes signed commands to devices. | **Shipped** |
+| **The hub** (`hub/`) | One Go binary with an embedded SQLite database. It owns state, runs your rules, serves the web console and the app's API, keeps the audit log, and pushes signed commands to devices. | **Shipped** |
 | **Access module** | The first device kind wired all the way down: signed commands, a paired controller, offline grants, a tamper-evident trail. | **Shipped** |
 | **Controller** | The small device wired to a gate's relay. It dials *out* to the hub over a persistent connection, verifies command signatures against a pinned key, and pulses the motor. Wi-Fi or GSM. | **Shipped** (GPIO relay + BLE radio still need hardware validation — see [Controllers](controllers.md)) |
 | **Console** | The web dashboard, embedded inside the hub binary. No separate deployment. | **Shipped** for admin surfaces; the device/energy/automations screens are demo data |
@@ -50,19 +50,21 @@ actually in each.
 
 > **Two naming notes.**
 >
-> **The hub lives in `gateway/`, but it is not a gateway.** In the KOTVA family that word
-> names the legacy-rail coordinator role — a separate job, filled by
+> **Aql's hub is not a KOTVA gateway.** In the KOTVA family that word names the
+> legacy-rail coordinator role — a separate job, filled by
 > [Ephor](https://github.com/vul-os/ephor). Aql's hub bridges chat rails into its own
-> local domain; it is not that component.
-> The directory path, the Go module path and the binary name keep their spelling because
-> they are compat surface. In prose, the thing is a **hub**.
+> local domain; it is not that component. The backend lives in `hub/`, builds as
+> `cmd/hub`, and ships as the `aql-hub` binary — renamed from `gateway/` /
+> `cmd/gateway` so that distinction is the default reading, not a footnote.
 >
 > **Why some identifiers still say `lintel`.** Aql's access module shipped under the name
-> *lintel* before the two projects merged. The environment variables (`LINTEL_DATA_DIR`,
-> `LINTEL_LISTEN`, …), the SQLite filename (`lintel.db`) and the controller's mDNS service
-> (`_lintel._tcp`) are a **deployment and wire contract** for hubs and controllers already
-> in the field, so they were deliberately left alone. Renaming them would break upgrades
-> and re-pairing for no benefit. Everything user-facing is Aql.
+> *lintel* before the two projects merged. The SQLite filename (`lintel.db`) and the
+> controller's mDNS service (`_lintel._tcp`) are a **deployment and wire contract** for
+> hubs and controllers already in the field, so they were deliberately left alone —
+> renaming them would break upgrades and re-pairing for no benefit. The environment
+> variables did get renamed: `AQL_DATA_DIR`, `AQL_LISTEN`, … are now primary, and the old
+> `LINTEL_*` names still work as a fallback (logged once at WARN) so no deployment already
+> in the field breaks on upgrade. Everything user-facing is Aql.
 
 ## Access control: the first module that is real
 
@@ -96,7 +98,7 @@ the only device class there is to command. Lights, cameras, mowers, meters and b
 the roadmap, not a shipped capability.
 
 > **The WhatsApp, Slack and Telegram rails are shipped and supported.** They live in the
-> hub, in `gateway/internal/channels/`, and they are what [Chat channels](channels.md)
+> hub, in `hub/internal/channels/`, and they are what [Chat channels](channels.md)
 > documents. A *designed but unbuilt* alternative would move rail termination into an
 > external coordinator — [`docs/EPHOR-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/EPHOR-CHAT-SEAM.md)
 > — and that is an optional, experimental path, not a replacement for the rails above.
@@ -134,7 +136,7 @@ held back, MIT OR Apache-2.0.
   network. If you want WhatsApp or off-LAN console access you need a URL, and any of
   ngrok, cloudflared, a Tailscale funnel, a small VPS running nginx, or a relay someone
   else operates will produce one — the hub only ever sees the string you paste into
-  `LINTEL_PUBLIC_URL`. Whatever provides it also terminates TLS, because the hub speaks
+  `AQL_PUBLIC_URL`. Whatever provides it also terminates TLS, because the hub speaks
   plain HTTP only. Full breakdown: [Reachability](reachability.md); how-to:
   [Public URL & TLS](ingress.md).
 

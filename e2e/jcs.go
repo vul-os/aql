@@ -1,5 +1,5 @@
 // Package e2e — RFC 8785 (JCS) canonical JSON, byte-identical to the
-// canonicalizers shipped in gateway/internal/keys/jcs.go and
+// canonicalizers shipped in hub/internal/keys/jcs.go and
 // controller/internal/jcs/jcs.go.
 //
 // The harness needs its own copy because it cannot import either module's

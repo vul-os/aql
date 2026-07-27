@@ -4,7 +4,7 @@
 // (`src/lib/data.ts` at commit bf99a4d). Nothing in this file talks to a
 // gateway, a controller, or a socket — every value below was typed by a human.
 //
-// A device engine now EXISTS (gateway/internal/devices, exposed at
+// A device engine now EXISTS (hub/internal/devices, exposed at
 // /v1/engine/*), and the console renders whatever it reports as live, chipped
 // "Engine". That did not make this file live. It stays for two reasons and
 // both are marked at the point of use:

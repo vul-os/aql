@@ -1,3 +1,4 @@
+import { KEYS } from '@/lib/storageKeys';
 import { useRouteError } from 'react-router-dom';
 
 // Heuristic: any error whose message looks like it came from a failed
@@ -18,7 +19,7 @@ function looksLikeChunkLoadError(err: unknown): boolean {
   );
 }
 
-const RELOAD_FLAG = 'lintel.chunkReloadAttempted';
+const RELOAD_FLAG = KEYS.chunkReload;
 
 // Mounted as `errorElement` for every lazy-loaded route. When the user has
 // a stale `index.html` cached (chunk hashes from an older deploy) the new

@@ -134,7 +134,7 @@ func TestCommandVectorsThroughPipeline(t *testing.T) {
 	}
 }
 
-// signCmd builds and signs a fresh command envelope with the gateway key.
+// signCmd builds and signs a fresh command envelope with the hub key.
 func signCmd(t *testing.T, priv ed25519.PrivateKey, m map[string]any) []byte {
 	t.Helper()
 	canonical, err := jcs.Canonicalize(m)

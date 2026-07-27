@@ -18,7 +18,7 @@
 // not subject to CORS, and the app's capability already allows http://**),
 // which is why this works there and only there.
 
-import { gatewayFetch } from '../gateway';
+import { gatewayFetch } from '../hub';
 import { jcs, utf8 } from './jcs';
 import {
   CLOCK_SKEW_SECONDS,

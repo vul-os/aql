@@ -6,7 +6,7 @@
 // so the page stays a view and the rules live somewhere testable.
 
 import { ApiError, api, type AccessPointDetail } from '../api';
-import { gatewayFetch, getApiBaseUrl, isTauri } from '../gateway';
+import { gatewayFetch, getApiBaseUrl, isTauri } from '../hub';
 import {
   evaluate,
   isExpired,
@@ -95,7 +95,7 @@ export type EnrollOutcome =
 /**
  * Ask an address which hub it is: GET /v1/gateway/key, the same Ed25519
  * public key the controllers at that hub pin
- * (gateway/internal/keys.PublicKeyB64, served by handleGatewayKey).
+ * (hub/internal/keys.PublicKeyB64, served by handleGatewayKey).
  *
  * Trust-on-first-use, and it says so: a first fetch cannot be authenticated,
  * because the only thing available to authenticate it with is the hub itself.

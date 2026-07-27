@@ -8,7 +8,7 @@ Slack — minutes, not days — and add WhatsApp when the WABA clears.)
 > **WhatsApp is the one rail that genuinely needs a public HTTPS endpoint**, because
 > Meta's Cloud API is webhook-only — there is no polling mode to fall back to. The hub
 > does not care what provides that endpoint: a tunnel, your own reverse proxy or a relay
-> someone else runs all reduce to a URL in `LINTEL_PUBLIC_URL`, and whatever provides it
+> someone else runs all reduce to a URL in `AQL_PUBLIC_URL`, and whatever provides it
 > also terminates TLS. See [Reachability](reachability.md), and
 > [Public URL & TLS](ingress.md) for the how-to.
 
@@ -52,7 +52,7 @@ hubs run Slack-first, WhatsApp later or never.
 > **Do not read this section as an equal option. It is not.** The official Meta Cloud
 > API above is the only conformant way to run a WhatsApp channel on Aql. The bridge
 > engine documented here exists in the code
-> ([`gateway/internal/channels/send.go:168`](https://github.com/vul-os/aql/blob/main/gateway/internal/channels/send.go#L168)),
+> ([`hub/internal/channels/send.go:168`](https://github.com/vul-os/aql/blob/main/hub/internal/channels/send.go#L168)),
 > it is opt-in, it is off by default — and using it **violates KOTVA §26.8.2's
 > unconditional MUST NOT on unofficial WhatsApp client libraries** and puts your own
 > WhatsApp number at real risk of being banned. It is documented here because hiding a
@@ -63,10 +63,10 @@ self-hosted, **unofficial** WhatsApp Web bridge (target: Evolution API, which fr
 Baileys) rather than Meta's Cloud API:
 
 ```sh
-LINTEL_WHATSAPP_ENGINE=bridge
-LINTEL_WHATSAPP_BRIDGE_URL=https://bridge.example.internal:8080
-LINTEL_WHATSAPP_BRIDGE_API_KEY=…
-LINTEL_WHATSAPP_BRIDGE_INSTANCE=…
+AQL_WHATSAPP_ENGINE=bridge
+AQL_WHATSAPP_BRIDGE_URL=https://bridge.example.internal:8080
+AQL_WHATSAPP_BRIDGE_API_KEY=…
+AQL_WHATSAPP_BRIDGE_INSTANCE=…
 ```
 
 What you are accepting when you set that variable:
@@ -79,13 +79,13 @@ What you are accepting when you set that variable:
   unofficial clients, and tightened its terms further on 2026-01-15 — reported number
   survival on unofficial APIs is commonly **weeks, not years**.
 - **A loud startup warning, every time.** Selecting `bridge` logs the ban-risk warning
-  on every boot ([`send.go:238`](https://github.com/vul-os/aql/blob/main/gateway/internal/channels/send.go#L238)).
+  on every boot ([`send.go:238`](https://github.com/vul-os/aql/blob/main/hub/internal/channels/send.go#L238)).
   That warning is deliberately not softened and must not be removed.
 
 The engine is opt-in only and fails closed toward the official path: leave
-`LINTEL_WHATSAPP_ENGINE` unset, misspell it, or use anything but the exact string
+`AQL_WHATSAPP_ENGINE` unset, misspell it, or use anything but the exact string
 `bridge`, and the hub uses Meta's `cloud` engine
-([`ResolveWhatsAppEngine`, send.go:223](https://github.com/vul-os/aql/blob/main/gateway/internal/channels/send.go#L223)).
+([`ResolveWhatsAppEngine`, send.go:223](https://github.com/vul-os/aql/blob/main/hub/internal/channels/send.go#L223)).
 
 **A banned number goes silent on WhatsApp, with no notice to residents.** The hub
 does not have a working offline fallback for that moment: the LAN/BLE emergency-grant

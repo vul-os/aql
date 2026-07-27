@@ -1,11 +1,11 @@
 // Drives the actual "money path" of the product through a real Chromium
-// browser against a real gateway binary: sign up, sign out, sign back in,
+// browser against a real hub binary: sign up, sign out, sign back in,
 // create a location, create an access point, attempt an open with no
 // controller paired, and read it back out of the audit log — the exact
 // sequence src/lib/api.ts's rewrite was supposed to make work, and that
 // nobody had driven end-to-end in a browser before this suite existed (see
 // e2e-browser/README.md).
-import { startGateway, type LiveGateway } from './fixtures/gateway';
+import { startGateway, type LiveGateway } from './fixtures/hub';
 import { expect, test } from './fixtures/test';
 
 test.describe.configure({ mode: 'serial' });
@@ -30,11 +30,11 @@ const AP_NAME = 'Front Gate';
 test('sign up, sign in, create a location + access point, attempt an open, read the audit log', async ({
   page,
 }) => {
-  // ── Connect to the gateway ────────────────────────────────────────────
+  // ── Connect to the hub ────────────────────────────────────────────
   // A fresh self-hosted build with no VITE_API_BASE_URL baked in (the
-  // documented `make portal` recipe doesn't set one) and no stored gateway
+  // documented `make portal` recipe doesn't set one) and no stored hub
   // choice always boots into this picker first — see
-  // src/components/gateway/GatewayGate.tsx's decideBoot(). That's real
+  // src/components/hub/HubGate.tsx's decideBoot(). That's real
   // first-run UX for the embedded portal, not a test seam, so it's driven
   // for real here rather than pre-seeding localStorage.
   await page.goto(gw.url('/signup'));
@@ -55,7 +55,7 @@ test('sign up, sign in, create a location + access point, attempt an open, read 
 
   // ── Step 3/3 — first location: the "create a location" step of the
   // money path. POST /v1/auth/register bundles account + this location into
-  // one call (gateway/internal/httpapi/auth.go's handleRegister) — there is
+  // one call (hub/internal/httpapi/auth.go's handleRegister) — there is
   // no join-only registration mode, so this is genuinely how every account's
   // first location gets created on this product.
   await expect(page.getByRole('heading', { name: 'Your first location' })).toBeVisible();
@@ -66,12 +66,12 @@ test('sign up, sign in, create a location + access point, attempt an open, read 
   );
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
   const registerResponse = await registerResponsePromise;
-  expect(registerResponse.status(), 'registration must succeed against the real gateway').toBe(
+  expect(registerResponse.status(), 'registration must succeed against the real hub').toBe(
     201,
   );
   const registerBody = await registerResponse.json();
   // The historical bug this suite guards against: tokens used to be assumed
-  // flat on the response; the gateway nests them under `tokens`.
+  // flat on the response; the hub nests them under `tokens`.
   expect(registerBody.tokens?.access_token).toEqual(expect.any(String));
   expect(registerBody.tokens?.refresh_token).toEqual(expect.any(String));
   expect(registerBody.location?.name).toBe(LOCATION_NAME);
@@ -83,7 +83,7 @@ test('sign up, sign in, create a location + access point, attempt an open, read 
   // ── Sign out ────────────────────────────────────────────────────────
   // Signup already leaves the session signed in; sign out and do a REAL
   // fresh login as its own driven step — nobody has exercised Login.tsx
-  // against a live gateway either, and it's a separate code path
+  // against a live hub either, and it's a separate code path
   // (signInWithPassword vs registerWithPassword in src/lib/auth.tsx).
   await page.getByRole('button', { name: 'Account menu', exact: true }).click();
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
@@ -121,7 +121,7 @@ test('sign up, sign in, create a location + access point, attempt an open, read 
 
   // ── Attempt an open with no controller paired ──────────────────────────
   // This must be an honest, auditable "no device to dispatch to" outcome —
-  // HTTP 200, delivery: "no_device" (gateway/internal/httpapi/open.go's
+  // HTTP 200, delivery: "no_device" (hub/internal/httpapi/open.go's
   // dispatchCommand) — not a crash and not a fabricated "acked".
   await page.goto(gw.url('/app/open'));
   await expect(page.getByText(AP_NAME).first()).toBeVisible();
@@ -146,7 +146,7 @@ test('sign up, sign in, create a location + access point, attempt an open, read 
   // 1 Jan 1970. src/lib/time.ts's fromUnix() is the fix; confirm it actually
   // reaches the screen. The dashboard's own "Recent activity" panel can't
   // prove this — GET /analytics/accounts/{id}/summary isn't ported on the
-  // gateway yet (api.ts's accountSummary doc comment), so it always shows
+  // hub yet (api.ts's accountSummary doc comment), so it always shows
   // the honest "not available" message instead of real rows. The admin
   // audit log (GET /v1/admin/audit) is real and populated by the open above,
   // so claim the one-shot instance-admin token to reach it.

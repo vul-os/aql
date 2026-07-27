@@ -6,7 +6,7 @@
 //
 // First run:
 //
-//	controller --state /var/lib/lintel --gateway https://gate.example.com --claim-token …
+//	controller --state /var/lib/aql --hub https://gate.example.com --claim-token …
 //
 // Subsequent runs need only --state; the pairing is durable.
 package main
@@ -28,21 +28,38 @@ const firmware = "0.1.0"
 
 func main() {
 	var (
-		stateDir   = flag.String("state", "./controller-state", "durable state directory (identity, pairing, queue)")
-		gateway    = flag.String("gateway", "", "gateway base URL (first-run pairing only)")
-		claimToken = flag.String("claim-token", "", "single-use claim token (first-run pairing only)")
-		lanAddr    = flag.String("lan", ":8737", "LAN grant listener address (empty to disable)")
-		aps        = flag.String("access-points", "main", "comma-separated access points this controller serves")
-		insecure   = flag.Bool("insecure", false, "allow ws:// and http:// gateway endpoints (dev only)")
-		ble        = flag.Bool("ble", false, "enable the BLE peripheral (requires a `-tags ble` Linux build)")
+		stateDir = flag.String("state", "./controller-state", "durable state directory (identity, pairing, queue)")
+		hub      = flag.String("hub", "", "hub base URL (first-run pairing only)")
+		// Deprecated alias. A controller is a box screwed to a wall with a
+		// service file someone wrote once; renaming its flag without keeping
+		// the old one means the unit fails to start after an upgrade, on
+		// hardware whose whole job is opening a door. The alias costs one
+		// line and is resolved below.
+		gatewayLegacy = flag.String("gateway", "", "deprecated alias for -hub")
+		claimToken    = flag.String("claim-token", "", "single-use claim token (first-run pairing only)")
+		lanAddr       = flag.String("lan", ":8737", "LAN grant listener address (empty to disable)")
+		aps           = flag.String("access-points", "main", "comma-separated access points this controller serves")
+		insecure      = flag.Bool("insecure", false, "allow ws:// and http:// hub endpoints (dev only)")
+		ble           = flag.Bool("ble", false, "enable the BLE peripheral (requires a `-tags ble` Linux build)")
 	)
 	flag.Parse()
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	slog.SetDefault(log)
 
+	// -hub wins; -gateway still works and says so. Both set is an operator
+	// mid-migration, and silently preferring one would be the worst outcome
+	// of the three.
+	if *hub == "" && *gatewayLegacy != "" {
+		*hub = *gatewayLegacy
+		log.Warn("-gateway is deprecated and will eventually be removed; use -hub")
+	} else if *hub != "" && *gatewayLegacy != "" && *hub != *gatewayLegacy {
+		log.Warn("both -hub and -gateway were given with different values; using -hub",
+			"hub", *hub, "ignored_gateway", *gatewayLegacy)
+	}
+
 	a, err := agent.New(agent.Options{
 		StateDir:      *stateDir,
-		GatewayURL:    *gateway,
+		GatewayURL:    *hub,
 		ClaimToken:    *claimToken,
 		LANAddr:       *lanAddr,
 		AccessPoints:  splitNonEmpty(*aps),

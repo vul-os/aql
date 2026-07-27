@@ -94,7 +94,7 @@ function goEmittedKeys(): Set<string> {
   // anywhere in internal/ now satisfies a field declared anywhere in api.ts —
   // and this was already true across handlers, so the check is no weaker than
   // it claimed to be. See the file header for what it does not prove.
-  for (const file of goFilesUnder(path.join(repo, 'gateway/internal'))) {
+  for (const file of goFilesUnder(path.join(repo, 'hub/internal'))) {
     const src = readFileSync(file, 'utf-8');
     // JSON keys as written in map[string]any literals and struct tags.
     // Map literals: {"key": value}

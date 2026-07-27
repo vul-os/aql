@@ -14,7 +14,7 @@ design intent, not a shipped capability — see
 [`docs/CHAT-COMMANDS.md`](https://github.com/vul-os/aql/blob/main/docs/CHAT-COMMANDS.md).
 
 > **The three rails below are shipped and supported.** WhatsApp, Slack and Telegram are
-> in the hub, in `gateway/internal/channels/`, working and tested. They are not going
+> in the hub, in `hub/internal/channels/`, working and tested. They are not going
 > anywhere and they are not deprecated — configure them and text your gate open today.
 >
 > There is a *designed, optional* alternative in which a separate coordinator terminates
@@ -85,7 +85,7 @@ proxy, any tunnel you already trust, or one someone else operates).
 
 ### The non-conformant escape hatch: a self-hosted bridge
 
-`LINTEL_WHATSAPP_ENGINE=bridge` swaps the sender above for a self-hosted, **unofficial**
+`AQL_WHATSAPP_ENGINE=bridge` swaps the sender above for a self-hosted, **unofficial**
 WhatsApp Web bridge (Evolution API, fronting Baileys). It is off by default, opt-in
 only, and **not an equal option to the Cloud API**: it violates KOTVA §26.8.2's
 unconditional *MUST NOT* on unofficial WhatsApp client libraries, and it puts your own
@@ -94,7 +94,7 @@ rather than years, and tightened enforcement further on 2026-01-15). The hub log
 ban-risk warning on every boot whenever `bridge` is selected.
 
 It is documented rather than hidden because the code path exists
-(`gateway/internal/channels/send.go`) and pretending otherwise would be dishonest — not
+(`hub/internal/channels/send.go`) and pretending otherwise would be dishonest — not
 because it is recommended. **The official WABA path is the conformant one.** Full
 detail: [Linking WhatsApp](linking-whatsapp.md).
 
@@ -248,7 +248,7 @@ The seam is deliberately small: resolve sender → identity, message → intent,
 send. Every open on every channel funnels through the one open-path choke point — a
 channel decides how to ask and how to reply, never whether the gate may open.
 
-`gateway/internal/channels/` is where a new rail goes. There are two interfaces to pick
+`hub/internal/channels/` is where a new rail goes. There are two interfaces to pick
 from: `Channel` for a webhook-shaped provider (the hub verifies an inbound POST), and
 `DialChannel` for a subscribe-shaped one where the hub dials out instead — Slack Socket
 Mode is the worked example of the second. If you want Signal, SMS or another rail, copy

@@ -5,7 +5,7 @@
 // and are covered by the signature when present. See proto/README.md.
 //
 // DUPLICATION NOTE: the small Sign/Verify/b64u helpers and the command
-// envelope semantics are copied/adapted from gateway/internal/keys
+// envelope semantics are copied/adapted from hub/internal/keys
 // (keys.go + envelope.go). The controller module is standalone on purpose
 // (vendored onto devices); keep both sides honest via proto/vectors/.
 package wire
@@ -231,7 +231,7 @@ func SignEvent(priv ed25519.PrivateKey, e *Event) ([]byte, error) {
 
 // ---- ws.challenge / ws.auth (proto/pairing.md) ----
 
-// WSChallenge is the gateway's unsigned WebSocket auth challenge.
+// WSChallenge is the hub's unsigned WebSocket auth challenge.
 type WSChallenge struct {
 	V      int    `json:"v"`
 	Typ    string `json:"typ"` // "ws.challenge"
@@ -266,7 +266,7 @@ type WSAuth struct {
 	Sig      string `json:"sig"`
 }
 
-// VerifyWSAuth runs the gateway-side fail-closed verification of a ws.auth
+// VerifyWSAuth runs the hub-side fail-closed verification of a ws.auth
 // answer (proto/pairing.md §WebSocket auth): sig against the enrolled
 // controller key, cnonce issued/unexpired/single-use, |ts − now| ≤ 90 s.
 // The controller ships this so its simulator (and tests) can play the

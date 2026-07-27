@@ -1,25 +1,26 @@
+import { KEYS, read as storageRead, remove as storageRemove, write as storageWrite } from './storageKeys';
 // Lightweight API client for the Aql gateway.
 // Handles base URL, bearer auth, JSON, and one-shot refresh-on-401.
 //
-// IMPORTANT — this targets the Go gateway (gateway/internal/httpapi), which
+// IMPORTANT — this targets the Go gateway (hub/internal/httpapi), which
 // is the product that actually ships (embedded into the gateway binary as
 // the portal, and reused by the Tauri desktop shell). It does NOT target
 // backend/src/app.ts (the historical Cloudflare Workers reference — kept in
 // the repo for behavioral-spec purposes only, never deployed as the product).
-// See gateway/README.md for the route-porting map.
+// See hub/README.md for the route-porting map.
 
-import { gatewayFetch, getApiBaseUrl } from './gateway';
+import { gatewayFetch, getApiBaseUrl } from './hub';
 
-const ACCESS_KEY = 'lintel.access_token';
-const REFRESH_KEY = 'lintel.refresh_token';
+const ACCESS_KEY = KEYS.access;
+const REFRESH_KEY = KEYS.refresh;
 
 // The base URL is resolved per-request (not a build-time constant) so the
 // desktop app can point at any gateway. Resolution order: the user's stored
-// gateway ('lintel.gateway_url'), then VITE_API_BASE_URL, then localhost.
-export { getApiBaseUrl } from './gateway';
+// hub (KEYS.gatewayUrl), then VITE_API_BASE_URL, then localhost.
+export { getApiBaseUrl } from './hub';
 
 // Every route below lives under this prefix on the gateway (see
-// gateway/internal/httpapi/server.go's Router() — every mux.Handle(Func) call
+// hub/internal/httpapi/server.go's Router() — every mux.Handle(Func) call
 // registers "METHOD /v1/..."). Centralized here — NOT repeated in each path
 // string below — so a new endpoint can't be added without it; the
 // alternative (baking /v1 into each path literal) is exactly the kind of
@@ -28,7 +29,7 @@ export { getApiBaseUrl } from './gateway';
 // itself stays un-prefixed because a couple of gateway routes (/health, the
 // controller-pairing endpoints) are intentionally NOT under /v1.
 //
-// gateway/cmd/routegen and src/lib/__tests__/routeParity.test.ts both import
+// hub/cmd/routegen and src/lib/__tests__/routeParity.test.ts both import
 // this constant so the parity test can't drift from what apiFetch actually
 // sends.
 export const API_VERSION_PREFIX = '/v1';
@@ -84,12 +85,12 @@ export class ApiError extends Error {
  * Sentinel ApiError code thrown by apiFetch when a 2xx response isn't JSON.
  * Every gateway endpoint below returns either JSON or 204 — a non-JSON 2xx
  * only happens when `path` doesn't match any registered gateway route: the
- * embedded portal's SPA fallback (gateway/internal/portal) answers
+ * embedded portal's SPA fallback (hub/internal/portal) answers
  * everything unmatched with 200 + index.html rather than 404, so treating
  * "the request didn't throw" as success would silently render that HTML
  * page's bytes as if they were real API data. This is the guard against
  * that trap — every call site that hits a route the gateway genuinely
- * doesn't implement yet (see gateway/README.md's porting map) should expect
+ * doesn't implement yet (see hub/README.md's porting map) should expect
  * this code and degrade to an explicit "not available" state, never an
  * infinite spinner or fabricated data.
  */
@@ -114,7 +115,7 @@ export type RateLimitDenial = {
 
 // ── device-engine error vocabulary ─────────────────────────────────────────
 //
-// gateway/internal/httpapi/engine.go answers an actuation with one of a small
+// hub/internal/httpapi/engine.go answers an actuation with one of a small
 // set of codes, and two of them are NOT failures in the sense a toast implies.
 // They get named narrowing helpers here so no call site has to remember the
 // status/code pair, and so the difference can be unit-tested.
@@ -158,18 +159,18 @@ export function rateLimitInfo(err: unknown): RateLimitDenial | null {
 
 export const tokenStore = {
   get access(): string | null {
-    return localStorage.getItem(ACCESS_KEY);
+    return storageRead(ACCESS_KEY);
   },
   get refresh(): string | null {
-    return localStorage.getItem(REFRESH_KEY);
+    return storageRead(REFRESH_KEY);
   },
   set(access: string, refresh: string) {
-    localStorage.setItem(ACCESS_KEY, access);
-    localStorage.setItem(REFRESH_KEY, refresh);
+    storageWrite(ACCESS_KEY, access);
+    storageWrite(REFRESH_KEY, refresh);
   },
   clear() {
-    localStorage.removeItem(ACCESS_KEY);
-    localStorage.removeItem(REFRESH_KEY);
+    storageRemove(ACCESS_KEY);
+    storageRemove(REFRESH_KEY);
   },
 };
 
@@ -268,13 +269,13 @@ export async function apiFetch<T>(path: string, init: FetchInit = {}): Promise<T
 // Typed surface ------------------------------------------------------------
 //
 // Gateway timestamps are Unix seconds (int64 / sql.NullInt64 on the Go
-// side — see gateway/internal/store), NOT ISO-8601 strings. The one
+// side — see hub/internal/store), NOT ISO-8601 strings. The one
 // exception is LocationLimits.usage.day_start, which the gateway explicitly
 // formats via time.Format(time.RFC3339) — see handleLocationLimitsGet.
 export type UnixSeconds = number;
 
 // Tokens are nested under `tokens` (not flattened onto the response), per
-// gateway/internal/httpapi/auth.go's issueTokensCtx.
+// hub/internal/httpapi/auth.go's issueTokensCtx.
 export type AuthTokens = {
   access_token: string;
   refresh_token: string;
@@ -299,7 +300,7 @@ export type RefreshResponse = {
   token_type: 'Bearer';
 };
 
-// GET /v1/auth/me — the gateway's skeleton auth (see gateway/internal/httpapi/auth.go's
+// GET /v1/auth/me — the gateway's skeleton auth (see hub/internal/httpapi/auth.go's
 // handleMe) does not carry profile/phones/email-verification/Slack/avatar
 // data; none of that is implemented on this backend yet (no /auth/me/profile,
 // /auth/me/slack, or /phones/me/phones routes exist). Keep this type honest
@@ -329,7 +330,7 @@ export const api = {
     apiFetch<LoginResponse>('/auth/login', { method: 'POST', body }),
 
   // account_type and invite_token are UI-only concerns the gateway's
-  // registerReq (gateway/internal/httpapi/auth.go) doesn't accept — and
+  // registerReq (hub/internal/httpapi/auth.go) doesn't accept — and
   // because readJSON there calls json.Decoder.DisallowUnknownFields(),
   // sending them at all would 400 the whole request, not just get ignored.
   // phone_e164 is accepted by the parameter for call-site compatibility but
@@ -384,7 +385,7 @@ export const api = {
       { method: 'PATCH', body },
     ),
 
-  // All three ARE served (gateway/internal/httpapi/authrecovery.go). This
+  // All three ARE served (hub/internal/httpapi/authrecovery.go). This
   // comment previously said they were not, which stopped being true when
   // recovery landed.
   //
@@ -433,7 +434,7 @@ export const api = {
 
   // NOT IMPLEMENTED on the gateway — movement metering + maintenance
   // scheduling is a documented deviation (see accessPointJSON's comment in
-  // gateway/internal/httpapi/access.go: "maintenance block carries the
+  // hub/internal/httpapi/access.go: "maintenance block carries the
   // 'nothing recorded' shape"). No /access-points/{id}/maintenance route
   // exists to list or log against.
   maintenanceList: (id: string) =>
@@ -468,7 +469,7 @@ export const api = {
   // account-suspended / user-disabled gates a live /open would, for EVERY
   // requested access point, and refuses the whole request rather than
   // silently narrowing the grant to a subset (see
-  // gateway/internal/httpapi/offline_grants.go). TTL is fixed at 7 days
+  // hub/internal/httpapi/offline_grants.go). TTL is fixed at 7 days
   // hub-side and is not requestable. Error codes worth handling at the call
   // site: invalid_app_pubkey, invalid_grant, user_disabled (403),
   // account_suspended (403), access_point_not_found (404),
@@ -553,7 +554,7 @@ export const api = {
   deviceCreate: (body: { location_id: string; label?: string; claim_ttl_seconds?: number }) =>
     apiFetch<DeviceCreateResponse>('/devices', { method: 'POST', body }),
 
-  // Device engine (gateway/internal/httpapi/engine.go). Distinct from the
+  // Device engine (hub/internal/httpapi/engine.go). Distinct from the
   // /devices routes above: those are the *controllers* paired to access points
   // (signed-command path, real today). These are the six other device kinds,
   // served by whatever drivers the hub operator configured.
@@ -632,7 +633,7 @@ export const api = {
   // console makes targets a real route, never that a real route has a caller.
   // The gap only shows up by reading server.go against this file.
 
-  // Scoped API tokens (gateway/internal/httpapi/tokens.go). The secret is
+  // Scoped API tokens (hub/internal/httpapi/tokens.go). The secret is
   // returned EXACTLY ONCE, in the 201 — there is no read path that reveals it
   // again, by design. A caller that loses it revokes and mints another.
   apiTokens: (accountId: string) =>
@@ -649,7 +650,7 @@ export const api = {
       { method: 'POST' },
     ),
 
-  // Two-factor (gateway/internal/httpapi/twofactor.go). Enrolment is two
+  // Two-factor (hub/internal/httpapi/twofactor.go). Enrolment is two
   // steps on purpose: enroll returns a secret and an otpauth URI, activate
   // proves the person can actually generate a code. A one-step enable would
   // lock out anyone whose authenticator clock is wrong.
@@ -665,7 +666,7 @@ export const api = {
   twoFactorDisable: (body: { totp_code?: string; recovery_code?: string }) =>
     apiFetch<{ enrolled: boolean; active: boolean }>('/auth/2fa/disable', { method: 'POST', body }),
 
-  // Outbound webhooks (gateway/internal/httpapi/webhooks.go). Admin-only: a
+  // Outbound webhooks (hub/internal/httpapi/webhooks.go). Admin-only: a
   // webhook is a standing instruction to POST a signed record of every gate
   // opening to an address of the configurer's choosing.
   webhooks: (accountId: string) =>
@@ -681,7 +682,7 @@ export const api = {
       method: 'DELETE',
     }),
 
-  // Time-window rules (gateway/internal/httpapi/timewindows.go) — when a given
+  // Time-window rules (hub/internal/httpapi/timewindows.go) — when a given
   // member may open. Enforced inside the open path's choke point, not by the
   // automations engine.
   timeWindows: (accountId: string) =>
@@ -704,7 +705,7 @@ export const api = {
       method: 'DELETE',
     }),
 
-  // Geofence rules (gateway/internal/httpapi/geofence.go).
+  // Geofence rules (hub/internal/httpapi/geofence.go).
   //
   // READ THAT FILE'S HEADER BEFORE BUILDING UI ON THIS. The position a fence
   // is tested against comes from the client and NOTHING verifies it. It is a
@@ -733,7 +734,7 @@ export const api = {
     }),
 
 
-  // Automations (gateway/internal/httpapi/automations.go). Admin-only,
+  // Automations (hub/internal/httpapi/automations.go). Admin-only,
   // including reads: a rule states what the hardware does unattended, which is
   // closer to the audit trail than to a meter reading. A 503
   // automations_not_configured is the DEFAULT for a hub with no rule engine —
@@ -757,7 +758,7 @@ export const api = {
       method: 'DELETE',
     }),
 
-  // Energy (gateway/internal/httpapi/energy.go). Read-only by design: samples
+  // Energy (hub/internal/httpapi/energy.go). Read-only by design: samples
   // come from a poller reading real meters, and an endpoint that injects them
   // would be a way to forge a bill.
   energyChannels: (accountId: string) =>
@@ -1340,9 +1341,9 @@ export type MaintenanceCreateInput = {
 
 // ── automations ─────────────────────────────────────────────────────────────
 //
-// gateway/internal/httpapi/automations.go. The layer that matters is the
+// hub/internal/httpapi/automations.go. The layer that matters is the
 // ENGINE's, not this one: every safety property — the tier ceiling, the
-// cooldown, the failure breaker — lives in gateway/internal/automations and is
+// cooldown, the failure breaker — lives in hub/internal/automations and is
 // enforced identically for the scheduler. The console reads results and shows
 // refusals; it does not re-derive any of it.
 
@@ -1425,7 +1426,7 @@ export type AutomationRunsResponse = { runs: AutomationRun[]; limit: number };
 
 // ── energy ──────────────────────────────────────────────────────────────────
 //
-// gateway/internal/httpapi/energy.go. The engine goes to real trouble never to
+// hub/internal/httpapi/energy.go. The engine goes to real trouble never to
 // state a number it cannot support, and the honesty fields below are how that
 // survives the wire. A renderer that drops them turns a half-measured window
 // into a confident figure.

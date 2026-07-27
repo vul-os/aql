@@ -1,3 +1,4 @@
+import { KEYS } from '@/lib/storageKeys';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
@@ -6,11 +7,11 @@ import { AuthLayout } from '@/components/auth/AuthLayout';
 import { useAuth } from '@/lib/auth';
 import { ApiError, api, friendlyApiError, type CountryRef } from '@/lib/api';
 
-const PENDING_INVITE_KEY = 'lintel.pendingInviteToken';
-export const PENDING_WHATSAPP_PHONE_KEY = 'lintel.pendingWhatsAppPhone';
+const PENDING_INVITE_KEY = KEYS.pendingInvite;
+export const PENDING_WHATSAPP_PHONE_KEY = KEYS.pendingWhatsAppPhone;
 const PHONE_E164_RE = /^\+[1-9]\d{6,14}$/;
 
-// Mirrors gateway/internal/httpapi/username.go's validUsername: 2-254 chars,
+// Mirrors hub/internal/httpapi/username.go's validUsername: 2-254 chars,
 // no whitespace, no control characters, no leading/trailing dot. This is a
 // UX pre-check only — the gateway is the authority and re-validates on
 // submit — so it doesn't need to replicate Go's full Unicode classification,

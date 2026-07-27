@@ -1,13 +1,13 @@
 # Pairing — v0
 
-How a controller becomes owned by exactly one gateway. Carries over the legacy
+How a controller becomes owned by exactly one hub. Carries over the legacy
 claim-token flow (admin creates a claim, device redeems it) and adds mutual key
-exchange with gateway-key pinning.
+exchange with hub-key pinning.
 
 ## Flow
 
 ```
-Admin (portal)                Gateway                        Controller
+Admin (portal)                Hub                            Controller
      │  create device          │                                 │
      ├──────────────────────▶  │                                 │
      │  claim_token (TTL ≤ 7d) │                                 │
@@ -31,10 +31,10 @@ Admin (portal)                Gateway                        Controller
    expires (`claim_ttl_seconds`, default 1h, max 7d — same bounds as legacy).
 2. The controller generates its Ed25519 keypair **on device** at first boot; the
    private key never leaves it.
-3. The redeem response is the **only** moment the gateway public key is accepted.
+3. The redeem response is the **only** moment the hub public key is accepted.
    The controller persists `{device_id, gateway_pubkey, ws_url}` to durable storage
    and thereafter rejects any command or config not signed by that key.
-4. Re-pairing (gateway migration, key rotation) requires a `repair` command signed by
+4. Re-pairing (hub migration, key rotation) requires a `repair` command signed by
    the **currently pinned key** (see commands.md), or a physical factory-reset.
 5. After pairing the controller maintains an outbound WebSocket to `ws_url`
    (wss only), authenticating by signing a server challenge with its device key.
@@ -84,7 +84,7 @@ The controller answers:
   "sig": "base64url(ed25519(controller_key, JCS(message minus sig)))" }
 ```
 
-Gateway verifies fail-closed: `sig` against that device's enrolled
+The hub verifies fail-closed: `sig` against that device's enrolled
 `controller_pubkey`; `cnonce` is one it issued (`cnonce_unknown`), unexpired
 (`cnonce_expired`) and single-use (`cnonce_replay`); `|ts − now| ≤ 90 s`
 (`expired` / `not_yet_valid`). Reason strings are the cmd.ack `detail`
@@ -119,7 +119,7 @@ same ±90 s skew, delivered over the same live-WS/queued-poll paths. It is
 
 **v0: undefined / not implemented.** The primitive above — a controller
 accepting a correctly-signed `repair` and swapping its pinned key — is real
-and conformance-tested. The *orchestration* around it (the gateway
+and conformance-tested. The *orchestration* around it (the hub
 generating a new keypair, keeping the old private key available exactly
 long enough to sign and deliver `repair` to every controller it owns,
 retrying stragglers, and confirming full rollout before anything treats the
@@ -128,12 +128,12 @@ Nothing today actually calls `repair`.
 
 ### The tradeoff, stated plainly
 
-Because `repair` must be signed by the **currently pinned** key, a gateway
+Because `repair` must be signed by the **currently pinned** key, a hub
 that has genuinely lost its old private key — not rotated it deliberately,
 but lost it (disk failure with no backup, host rebuilt from scratch,
 migrated to a new instance without carrying the seed file) — **cannot
 author a valid `repair` for any controller it hasn't already migrated.**
-Those controllers can never again accept anything from the new gateway
+Those controllers can never again accept anything from the new hub
 identity. The only recovery path is rule 4's other option: physical factory
 reset and re-pairing with a fresh claim token.
 
@@ -142,7 +142,7 @@ anchor after pairing (rule 3: the controller "thereafter rejects any
 command or config not signed by that key"). An **unauthenticated** rotation
 path — anything that lets a party without the old private key retarget a
 controller to a new key — would be a total compromise of the system: it
-would convert "the gateway that paired this device" into "whoever can
+would convert "the hub that paired this device" into "whoever can
 currently reach this device's rotation endpoint," for every gate at once.
 Requiring proof of the old key is what makes pinning mean anything. The
 brick risk on irrecoverable key loss is the price of that; the real

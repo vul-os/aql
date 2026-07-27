@@ -14,7 +14,7 @@ come with it.
 > Every option below assumes something *else* — a reverse proxy you run, or a tunnel that
 > terminates TLS at its own edge — sits in front of the hub's plain-HTTP listener. The
 > binary refuses to bind a non-loopback address without `-behind-proxy` for exactly this
-> reason (`gateway/cmd/gateway/main.go:159`): binding a public interface with nothing in
+> reason (`hub/cmd/hub/main.go:159`): binding a public interface with nothing in
 > front would serve the admin portal, the login endpoint and the signing API in
 > cleartext — credentials, JWTs and refresh tokens included.
 
@@ -32,7 +32,7 @@ breakdown is in [Reachability](reachability.md).
 
 Whatever you put in front is a **dumb pipe** — it holds no keys and makes no
 authorisation decision. The hub verifies Meta's `X-Hub-Signature-256` itself before
-acting on anything (`gateway/internal/channels/channels.go:194`), so a compromised or
+acting on anything (`hub/internal/channels/channels.go:194`), so a compromised or
 third-party-operated ingress can drop or delay messages but cannot forge an open. That
 reasoning, in full, is in [Reachability](reachability.md#whatever-you-put-there-is-a-dumb-pipe-not-a-gateway).
 
@@ -56,7 +56,7 @@ your-gate.example {
 ```
 
 ```sh
-./gateway -listen 127.0.0.1:8080 -public-url https://your-gate.example &
+./aql-hub -listen 127.0.0.1:8080 -public-url https://your-gate.example &
 caddy run   # or: systemctl enable --now caddy
 ```
 

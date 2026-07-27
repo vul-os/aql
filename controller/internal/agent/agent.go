@@ -56,7 +56,7 @@ type Agent struct {
 }
 
 // New loads/creates all durable state and assembles the agent (no I/O to
-// the gateway yet).
+// the hub yet).
 func New(opts Options) (*Agent, error) {
 	log := opts.Log
 	if log == nil {
@@ -115,7 +115,7 @@ func (a *Agent) EnsurePaired(ctx context.Context) error {
 		return nil
 	}
 	if a.Opts.GatewayURL == "" || a.Opts.ClaimToken == "" {
-		return errors.New("agent: unpaired — provide --gateway and --claim-token for first run")
+		return errors.New("agent: unpaired — provide --hub and --claim-token for first run")
 	}
 	fw := a.Opts.Firmware
 	if fw == "" {
@@ -205,7 +205,7 @@ func (a *Agent) OnRedeemed(g *grants.Grant, p *grants.Proof) {
 	a.Recorder.Record("opened", map[string]any{"cause": "grant", "ref": g.GrantID})
 }
 
-// Run pairs if needed, then runs the gateway transport, the LAN grant
+// Run pairs if needed, then runs the hub transport, the LAN grant
 // listener and (if enabled and available) the BLE peripheral until ctx ends.
 func (a *Agent) Run(ctx context.Context) error {
 	if err := a.EnsurePaired(ctx); err != nil {

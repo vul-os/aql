@@ -21,7 +21,7 @@ const idb = installFakeIndexedDB();
 let currentBaseUrl = 'http://aql-home.local:8787';
 const hubKeyResponses = new Map<string, unknown>();
 
-vi.mock('../../gateway', () => ({
+vi.mock('../../hub', () => ({
   getApiBaseUrl: () => currentBaseUrl,
   isTauri: () => false,
   gatewayFetch: async (input: string) => {

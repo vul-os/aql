@@ -5,15 +5,79 @@ All notable changes to Aql are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-> Entries before the fold (see Unreleased) describe this project under its former name,
-> **lintel**. They are left as written — rewriting history to say "Aql" would make the
-> record less accurate, not more. That also means older entries use *gateway* as the
-> product noun for the server; from the fold onwards the server is **the hub**, and only
-> the `gateway/` path, the Go module path and the binary name keep that spelling.
+> Entries before the fold describe this project under its former name, **lintel**. They
+> are left as written — rewriting history to say "Aql" would make the record less
+> accurate, not more. Older entries also use *gateway* as the product noun for the
+> server; from the fold onwards the server is **the hub**, and as of the rename below
+> the path, module and binary say so too.
 
 ---
 
 ## [Unreleased]
+
+### Changed — the backend has one name: `hub`
+
+The Go server was called three different things at once. `gateway/` on disk,
+"the hub" in every sentence of the docs, and `LINTEL_*` in every environment
+variable an operator has to type. One of those names belongs to a different
+product — Ephor is the gateway — and one belongs to a repo that was folded in
+and deleted.
+
+A name is not cosmetic when someone has to type it. `LINTEL_ENERGY_TZ`
+configures a product that no longer exists, and a directory called `gateway/`
+sends a reader looking for something this repo does not contain.
+
+**Renamed**
+
+- `gateway/` → `hub/`, `cmd/gateway` → `cmd/hub`. The binary is `aql-hub` and
+  the Docker image is `aql-hub`.
+- Go module `github.com/vul-os/aql/gateway` → `github.com/vul-os/aql/hub`.
+- Environment variables `LINTEL_*` → `AQL_*`.
+- Browser storage keys `lintel.*` → `aql.*`.
+- Frontend `src/lib/gateway.ts` → `src/lib/hub.ts`,
+  `components/gateway/GatewayGate.tsx` → `components/hub/HubGate.tsx`.
+- The controller's `--gateway` flag → `--hub`.
+
+**Nothing breaks on upgrade.** Three compatibility paths, each chosen for what
+the thing actually is:
+
+- *Environment variables.* `AQL_X` is read first; if unset, `LINTEL_X` is read
+  and a single WARN names both. The hub cannot rewrite an operator's config, so
+  it warns instead. No removal date is set — dropping the fallback is a breaking
+  change and belongs in a release that says so.
+- *Browser storage.* Read migrates forward: the value is rewritten under the new
+  key and the old one deleted, so the fallback is used at most once per browser.
+  Without this, every existing user would be signed out, lose the hub they had
+  chosen and watch their theme flip — with nothing anywhere to explain it.
+- *The controller flag.* `--gateway` still works and warns. A controller is a
+  box screwed to a wall with a service file someone wrote once; a renamed flag
+  means the unit fails to start after an upgrade, on hardware whose job is
+  opening a door.
+
+**Deliberately NOT renamed.** Three names still say the old thing because
+renaming them would break something real:
+
+- The wire identifiers `gateway_key`, `gateway_pubkey`, `gateway_ed`,
+  `gateway_next`, `gateway_sync` and the route `GET /v1/gateway/key`. These are
+  the frozen protocol a deployed door controller implements, pinned by
+  `proto/vectors/*.json`.
+- The mDNS service `_lintel._tcp`. It is normative in `proto/grants.md`, the
+  phone app browses for exactly that string, and every deployed controller
+  advertises it.
+- The IndexedDB database `lintel.offline-access`. An IndexedDB name cannot be
+  migrated on read — opening a different name creates an empty database and
+  orphans the old one, destroying the app's signing key and every stored offline
+  grant.
+
+The last two matter most: both sit on the **offline** emergency path, which by
+definition is in use when there is no network to push a fix over. A cosmetic
+rename there hands someone a phone that silently cannot open the gate it was
+authorised for, at the moment they can do nothing about it.
+
+`src/lib/__tests__/naming.test.ts` enforces the rename and, just as importantly,
+allows those exceptions by name — and asserts the wire identifiers still exist,
+so the guard cannot be satisfied by deleting the thing it protects.
+
 
 ### Changed — positioning corrected: Aql is the hub, access control is its first module
 
@@ -51,7 +115,7 @@ that: it owns devices, evaluates rules, keeps the audit log and issues signed co
 All prose across the README, `ARCHITECTURE.md`, `ROADMAP.md` and the manual now says
 **hub**. Unchanged, because they are compat surface: the `gateway/` directory, the Go
 module path `github.com/vul-os/aql/gateway`, the binary and its `gateway verify-audit`
-subcommand, the `aql-gateway` image, `LINTEL_*`, `lintel.db`, `_lintel._tcp`, the JWT
+subcommand, the `aql-gateway` image, `AQL_*`, `lintel.db`, `_lintel._tcp`, the JWT
 issuer and everything under `proto/vectors/`.
 
 ### Changed — the chat rail is moving to Ephor (in progress)
@@ -62,7 +126,7 @@ the hub an authorised command, and the hub checks the rules, signs, and actuates
 separate and swappable — run your own or point at one.
 
 **The move is not finished, and the docs say so.** Texting a gate open works today; the
-adapter code in `gateway/internal/channels/` is transitional and is no longer documented
+adapter code in `hub/internal/channels/` is transitional and is no longer documented
 as the supported long-term path, and the Ephor-backed path is not presented as shipped
 either. `scripts/feature-claims.manifest.mjs` still carries `whatsapp-channel`,
 `slack-channel`, `telegram-channel` and `slack-socket-mode` as shipped claims — the code
@@ -98,10 +162,10 @@ shell survives, now wrapping the real console, with a hub picker on first run.
 - **Two new manual chapters**: `devices.md`, covering all seven device kinds and stating
   the unbuilt engine honestly instead of implying it from a screenshot, and `faq.md`.
 - Rebranded lintel → Aql across the manual, **except** the identifiers that are a
-  deployment or wire contract: the `LINTEL_*` environment variables, the `lintel.db`
+  deployment or wire contract: the `AQL_*` environment variables, the `lintel.db`
   filename, and the controller's `_lintel._tcp` mDNS service. Those were deliberately left
   alone — renaming them would break upgrades and force re-pairing for hardware already in
-  the field. `gateway/Dockerfile`'s `LINTEL_*` block is preserved for the same reason.
+  the field. `hub/Dockerfile`'s `AQL_*` block is preserved for the same reason.
 - Merged `lintel/CONTRIBUTING.md` and `lintel/SECURITY.md` into the root files (the fold's
   `git mv` had left them stranded behind same-named Aql scaffolds), rebranded, and pointed
   both at the dual **MIT OR Apache-2.0** licence.
@@ -157,7 +221,7 @@ Each of these was a doc claiming something the code does not do:
   `controller` and `e2e` jobs — all three modules exist now, so a missing module should
   fail rather than pass silently.
 - `docker.yml` and `release.yml` publish `aql-gateway` / `aql-controller` / `aql_*.dmg`
-  artifacts. The image's own `LINTEL_*` runtime env block is untouched, and both files say
+  artifacts. The image's own `AQL_*` runtime env block is untouched, and both files say
   why.
 
 ## [0.1.0] — 2026-07-21
@@ -208,7 +272,7 @@ against each other.
 
 ### Changed
 - Renamed to **lintel** across the codebase, Go module path, container image,
-  environment-variable prefix (`LINTEL_*`), and product site
+  environment-variable prefix (`AQL_*`), and product site
   (`vulos.org/products/lintel`). The WhatsApp channel integration is unchanged;
   only the product name moved.
 - **Web portal API client rewritten** — every call had been targeting a retired
@@ -232,7 +296,7 @@ against each other.
 
 ### Security
 - The gateway refuses to bind a non-loopback address unless `-behind-proxy`
-  (env `LINTEL_BEHIND_PROXY`) is set. The binary serves **plain HTTP** — there
+  (env `AQL_BEHIND_PROXY`) is set. The binary serves **plain HTTP** — there
   is no built-in TLS; terminate TLS in a reverse proxy. Documentation corrected
   accordingly.
 - Disclosure contact and secret-file guidance corrected (the Ed25519 signing

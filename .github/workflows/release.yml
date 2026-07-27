@@ -35,8 +35,8 @@ jobs:
           [ "$base" = "$ver" ] && [ "$base" = "$pkg" ] && [ "$base" = "$conf" ] || {
             echo "::error::Version mismatch — bump VERSION, package.json and src-tauri/tauri.conf.json to match the tag before pushing it"; exit 1; }
 
-  gateway:
-    name: gateway ${{ matrix.goos }}/${{ matrix.goarch }}
+  hub:
+    name: hub ${{ matrix.goos }}/${{ matrix.goarch }}
     needs: version-guard
     runs-on: ubuntu-latest
     strategy:
@@ -50,25 +50,25 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: gateway/go.mod
-          cache-dependency-path: gateway/go.sum
+          go-version-file: hub/go.mod
+          cache-dependency-path: hub/go.sum
       - name: Build
-        working-directory: gateway
+        working-directory: hub
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: "0"
         run: |
-          name="aql-gateway_${GITHUB_REF_NAME}_${GOOS}_${GOARCH}"
+          name="aql-hub_${GITHUB_REF_NAME}_${GOOS}_${GOARCH}"
           mkdir -p dist
           go build -trimpath \
             -ldflags "-s -w -X main.Version=${GITHUB_REF_NAME}" \
-            -o "dist/${name}/aql-gateway" ./cmd/gateway
+            -o "dist/${name}/aql-hub" ./cmd/hub
           tar -C dist -czf "dist/${name}.tar.gz" "${name}"
       - uses: actions/upload-artifact@v4
         with:
           name: gateway-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: gateway/dist/*.tar.gz
+          path: hub/dist/*.tar.gz
           if-no-files-found: error
 
   controller:
@@ -173,7 +173,7 @@ jobs:
           files: dist/*
           generate_release_notes: true
           body: |
-            Container image: `ghcr.io/${{ github.repository_owner }}/aql-gateway:${{ github.ref_name }}` (linux/amd64 + linux/arm64, published by the Docker workflow).
+            Container image: `ghcr.io/${{ github.repository_owner }}/aql-hub:${{ github.ref_name }}` (linux/amd64 + linux/arm64, published by the Docker workflow).
 
             The macOS desktop app is **unsigned** (no Apple signing identity is configured): on first launch, right-click the app and choose Open.
 

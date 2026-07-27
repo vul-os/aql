@@ -16,13 +16,13 @@ jobs:
           node-version: 20
           cache: npm
       # The route-parity test (src/lib/__tests__/routeParity.test.ts) shells
-      # out to `go run ./cmd/routegen` in gateway/ to get the gateway's real
+      # out to `go run ./cmd/routegen` in hub/ to get the hub's real
       # registered routes — it's the mechanical safeguard against the console
       # drifting from the routes the gateway actually serves again.
       - uses: actions/setup-go@v5
         with:
-          go-version-file: gateway/go.mod
-          cache-dependency-path: gateway/go.sum
+          go-version-file: hub/go.mod
+          cache-dependency-path: hub/go.sum
       - run: npm ci
       - run: npm run typecheck     # tsc --noEmit
       - run: npm test              # vitest run
@@ -61,25 +61,25 @@ jobs:
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
       - run: cargo check --manifest-path src-tauri/Cargo.toml --all-targets
 
-  gateway:
-    name: gateway (vet + build + test)
+  hub:
+    name: hub (vet + build + test)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: gateway/go.mod
-          cache-dependency-path: gateway/go.sum
+          go-version-file: hub/go.mod
+          cache-dependency-path: hub/go.sum
       - name: go vet
-        working-directory: gateway
+        working-directory: hub
         run: go vet ./...
       - name: go build
-        working-directory: gateway
+        working-directory: hub
         env:
           CGO_ENABLED: "0"
         run: go build ./...
       - name: go test
-        working-directory: gateway
+        working-directory: hub
         run: go test ./...
 
   controller:
@@ -103,7 +103,7 @@ jobs:
         run: go test ./...
 
   e2e-browser:
-    name: e2e-browser (real Chromium against a real gateway binary)
+    name: e2e-browser (real Chromium against a real hub binary)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -118,8 +118,8 @@ jobs:
       # that doesn't reproduce the embedded-console SPA fallback).
       - uses: actions/setup-go@v5
         with:
-          go-version-file: gateway/go.mod
-          cache-dependency-path: gateway/go.sum
+          go-version-file: hub/go.mod
+          cache-dependency-path: hub/go.sum
       - run: npm ci
       - name: Install Chromium (Playwright)
         run: npx playwright install --with-deps chromium

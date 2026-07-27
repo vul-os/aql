@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
  * responseShape.test.ts checks what comes BACK. This checks what goes OUT, and
  * the failure it guards against is strictly worse than a blank field.
  *
- * `readJSON` in gateway/internal/httpapi/server.go calls
+ * `readJSON` in hub/internal/httpapi/server.go calls
  * `json.Decoder.DisallowUnknownFields()`. So a request body carrying a key no
  * Go request struct declares does not get ignored — the WHOLE request is
  * refused with 400 invalid_json. One stale key breaks the entire endpoint.
@@ -56,7 +56,7 @@ const NOT_A_HUB_REQUEST_FIELD = new Map<string, string>([
 
 /** Every JSON key a Go request struct will accept, across all handlers. */
 function goAcceptedRequestKeys(): Set<string> {
-  const dir = path.join(repo, 'gateway/internal/httpapi');
+  const dir = path.join(repo, 'hub/internal/httpapi');
   const keys = new Set<string>();
   for (const f of readdirSync(dir)) {
     if (!f.endsWith('.go') || f.endsWith('_test.go')) continue;
@@ -185,7 +185,7 @@ describe('request shape parity', () => {
     // having, but for a much weaker reason, and the comments above would be
     // wrong. Assert the premise rather than assuming it.
     const server = readFileSync(
-      path.join(repo, 'gateway/internal/httpapi/server.go'),
+      path.join(repo, 'hub/internal/httpapi/server.go'),
       'utf-8',
     );
     expect(

@@ -28,7 +28,7 @@ import (
 // ---------------------------------------------------------------------------
 
 var (
-	gatewayBin    string
+	hubBin        string
 	controllerBin string
 	simBin        string
 )
@@ -48,7 +48,7 @@ func buildAndRun(m *testing.M) (int, error) {
 		return 1, fmt.Errorf("getwd: %w", err)
 	}
 	repo := filepath.Dir(wd) // .../aql
-	gatewayDir := filepath.Join(repo, "gateway")
+	hubDir := filepath.Join(repo, "gateway")
 	controllerDir := filepath.Join(repo, "controller")
 
 	binDir, err := os.MkdirTemp("", "aql-e2e-bin-")
@@ -57,12 +57,12 @@ func buildAndRun(m *testing.M) (int, error) {
 	}
 	defer os.RemoveAll(binDir)
 
-	gatewayBin = filepath.Join(binDir, "aql-gateway")
+	hubBin = filepath.Join(binDir, "aql-gateway")
 	controllerBin = filepath.Join(binDir, "aql-controller")
 	simBin = filepath.Join(binDir, "aql-controller-sim")
 
 	for _, b := range []struct{ dir, pkg, out string }{
-		{gatewayDir, "./cmd/gateway", gatewayBin},
+		{hubDir, "./cmd/hub", hubBin},
 		{controllerDir, "./cmd/controller", controllerBin},
 		{controllerDir, "./cmd/controller-sim", simBin},
 	} {
@@ -172,7 +172,7 @@ func startGateway(t *testing.T) *gateway {
 		t: t, url: url, apiBase: url + "/api",
 		dataDir: dataDir, adminToken: adminToken, logs: &logBuf{},
 	}
-	cmd := exec.Command(gatewayBin,
+	cmd := exec.Command(hubBin,
 		"-data", dataDir,
 		"-listen", fmt.Sprintf("127.0.0.1:%d", port),
 		"-public-url", url,
@@ -201,7 +201,7 @@ func startGateway(t *testing.T) *gateway {
 		time.Sleep(50 * time.Millisecond)
 	}
 
-	// Load the gateway's private signing key from its data dir. The harness
+	// Load the hub's private signing key from its data dir. The harness
 	// no longer uses this to self-sign offline grants (see issueOfflineGrant
 	// below — grants now come from the REAL POST /v1/offline-grants issuance
 	// path); it stays only as the seed the following block cross-checks
@@ -217,7 +217,7 @@ func startGateway(t *testing.T) *gateway {
 	gw.priv = ed25519.NewKeyFromSeed(seed)
 	gw.pubB64 = base64.RawURLEncoding.EncodeToString(gw.priv.Public().(ed25519.PublicKey))
 
-	// Cross-check our loaded key against what the gateway serves.
+	// Cross-check our loaded key against what the hub serves.
 	_, keyResp, _ := httpJSON(t, http.MethodGet, url+"/v1/gateway/key", "", nil)
 	if got, _ := keyResp["public_key"].(string); got != gw.pubB64 {
 		t.Fatalf("gateway key mismatch: served %q, derived %q", got, gw.pubB64)
@@ -297,8 +297,8 @@ func (gw *gateway) createAP(t *testing.T, ten *tenant, name, deviceID string) st
 // as ten and returns the signed grant as raw wire JSON, ready to hand to
 // grantOpen/grantIDOf. This is the harness's money-path proof: the grant it
 // hands to a controller is produced by the actual product code
-// (gateway/internal/httpapi/offline_grants.go +
-// gateway/internal/keys.SignGrant), not a fixture standing in for it.
+// (hub/internal/httpapi/offline_grants.go +
+// hub/internal/keys.SignGrant), not a fixture standing in for it.
 func (gw *gateway) issueOfflineGrant(t *testing.T, ten *tenant, appPubB64 string, apIDs []string) []byte {
 	t.Helper()
 	st, body, raw := httpJSON(t, http.MethodPost, gw.url+"/v1/offline-grants", ten.token, map[string]any{
@@ -365,13 +365,13 @@ type controller struct {
 	cmd      *exec.Cmd
 }
 
-// execController builds (does not start) a controller command. gatewayURL is
+// execController builds (does not start) a controller command. hubURL is
 // passed to -gateway verbatim; the controller appends /pair/redeem to it.
-func execController(gatewayURL, claimToken, accessPoints string, lanPort int, logs *logBuf) *exec.Cmd {
+func execController(hubURL, claimToken, accessPoints string, lanPort int, logs *logBuf) *exec.Cmd {
 	tmp, _ := os.MkdirTemp("", "aql-ctl-state-")
 	cmd := exec.Command(controllerBin,
 		"-state", tmp,
-		"-gateway", gatewayURL,
+		"-gateway", hubURL,
 		"-claim-token", claimToken,
 		"-access-points", accessPoints, // gateway signs envelopes with access_point = AP *id*
 		"-lan", fmt.Sprintf("127.0.0.1:%d", lanPort),
@@ -382,9 +382,9 @@ func execController(gatewayURL, claimToken, accessPoints string, lanPort int, lo
 	return cmd
 }
 
-// startController pairs a real controller binary against the gateway using the
+// startController pairs a real controller binary against the hub using the
 // gateway's /api base (see the pairing path bug note in the report) and waits
-// until the gateway reports it connected.
+// until the hub reports it connected.
 func startController(t *testing.T, gw *gateway, ten *tenant, deviceID, claimToken, apID string) *controller {
 	t.Helper()
 	lanPort := freePort(t)
@@ -459,7 +459,7 @@ func startSim(t *testing.T, gw *gateway, deviceID, claimToken string) *sim {
 	c.cmd = cmd
 	t.Cleanup(func() { stdin.Close(); killProc(cmd); t.Logf("sim log:\n%s", c.logs.String()) })
 
-	// Wait for the gateway WS connect (implies paired + clock synced, so an
+	// Wait for the hub WS connect (implies paired + clock synced, so an
 	// offline grant is judged on lockdown, not stale_clock).
 	if !c.logs.waitLines(1, 25*time.Second, "gateway connected") {
 		t.Fatalf("sim never connected to gateway; log:\n%s", c.logs.String())
@@ -476,7 +476,7 @@ func (s *sim) send(t *testing.T, line string) {
 }
 
 // ---------------------------------------------------------------------------
-// offline grants (proto/grants.md): the harness signs a grant AS the gateway
+// offline grants (proto/grants.md): the harness signs a grant AS the hub
 // (using the key it read from disk) and a proof AS the "app".
 // ---------------------------------------------------------------------------
 

@@ -64,7 +64,7 @@ command to the controller is minted from the hub's key, not from anything the ra
 | Slack Events API / Socket Mode | sanctioned API | permitted |
 | Telegram Bot API | sanctioned API | permitted |
 
-Aql ships an opt-in `LINTEL_WHATSAPP_ENGINE=bridge` that drives WhatsApp through an
+Aql ships an opt-in `AQL_WHATSAPP_ENGINE=bridge` that drives WhatsApp through an
 unofficial library. [§26.8.2][s26] places an **unconditional MUST NOT** on exactly this, and
 [§26][s26]'s sanctioning rule says an unsanctioned rail must never run in gateway mode — it
 may only be self-hosted by someone accepting the ban risk on their own account.
@@ -76,7 +76,7 @@ API.
 
 ## What is not a rail
 
-`gateway/internal/channels/dmtap.go` is a scaffold with no transport behind it. It is not
+`hub/internal/channels/dmtap.go` is a scaffold with no transport behind it. It is not
 declared above because nothing can currently arrive on it.
 
 ## Gateway mode

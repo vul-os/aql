@@ -23,7 +23,7 @@ reference for how every other device kind should eventually work: a versioned wi
 contract, a device that verifies rather than trusts, and an audit trail you can check
 after the fact.
 
-**The hub** (`gateway/`) — one Go binary, SQLite inside, **60 HTTP routes, 219 tests
+**The hub** (`hub/`) — one Go binary, SQLite inside, **60 HTTP routes, 219 tests
 green** across 8 packages:
 
 - [x] Accounts, locations, access points, members with roles, invites
@@ -39,8 +39,8 @@ green** across 8 packages:
 - [x] **Ed25519-signed commands** with nonce + expiry, and the WebSocket device hub that
       delivers them (with long-poll fallback)
 - [x] **Tamper-evident audit** — SHA-256 hash chain over `access_logs` and
-      `admin_audit_log`, append-only DB triggers, `GET /v1/admin/audit/verify` and a
-      `gateway verify-audit` CLI that works against a cold backup
+      `admin_audit_log`, append-only DB triggers, `GET /v1/admin/audit/verify` and an
+      `aql-hub verify-audit` CLI that works against a cold backup
 - [x] Login brute-force throttles (per-IP and per-account, fail-closed), live per-request
       session revocation, log-out-everywhere
 - [x] **Offline-grant issuance** (`POST /v1/offline-grants`) — same authorization gates as
@@ -136,7 +136,7 @@ hub's issuance endpoint):
       never gates login, ±1 step of skew, replay refused by a monotonic last-step, and ten
       single-use recovery codes minted in the same transaction as activation so 2FA is
       never on without an escape hatch
-- [ ] A `gateway 2fa disable --user` subcommand, so the last-resort recovery is not a
+- [ ] An `aql-hub 2fa disable --user` subcommand, so the last-resort recovery is not a
       manual SQL update
 
 ---
@@ -184,13 +184,13 @@ protocol driver of any kind is present in this repository.
 ## Phase 3 — Automations (built, unproven against hardware)
 
 - [x] A real `trigger → condition → action` engine over live device state
-      (`gateway/internal/automations/`), managed over `/v1/accounts/{id}/automations`
+      (`hub/internal/automations/`), managed over `/v1/accounts/{id}/automations`
 - [x] Scheduling, conditions and run history, persisted; the scheduler survives restart
 - [x] Fail-closed behaviour on ambiguous sensor state for anything that actuates
 - [x] A compile-time `MaxActionTier` ceiling on unattended actuation, checked on the save
       path and again immediately before the driver call. Every access verb is above it, so
       an automation cannot open a gate — structural, not a setting
-- [x] Online time-window rules for access (`gateway/internal/store/timewindows.go`) and
+- [x] Online time-window rules for access (`hub/internal/store/timewindows.go`) and
       geofence rules, enforced inside the open path's choke point rather than by the
       automations engine, which is deliberately kept out of that path
 - [ ] Any rule that has actually driven physical hardware — the only devices exercised so
@@ -216,7 +216,7 @@ protocol driver of any kind is present in this repository.
 
 ## Phase 5 — Security & bots (not built)
 
-- [x] ONVIF discovery and stream-address resolution (`gateway/internal/devices/camera/`)
+- [x] ONVIF discovery and stream-address resolution (`hub/internal/devices/camera/`)
 - [ ] Camera live view and recording — there is **no RTSP client**: the driver never opens
       a connection, never sends DESCRIBE, and moves no pixels
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
@@ -235,7 +235,7 @@ protocol driver of any kind is present in this repository.
       off by default, with its own threat-model addendum
 - [ ] Chat rails move to **[Ephor](https://github.com/vul-os/ephor)**, the coordinator
       implementation in the KOTVA family, so the hub consumes a rail terminator instead of
-      implementing adapters. In progress; the adapters currently in `gateway/internal/
+      implementing adapters. In progress; the adapters currently in `hub/internal/
       channels/` are transitional and neither half of that move is finished
 
 ---

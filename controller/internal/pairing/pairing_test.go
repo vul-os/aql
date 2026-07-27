@@ -130,7 +130,7 @@ func TestGatewayKeyChangeRejected(t *testing.T) {
 	if _, err := c.RedeemClaim(context.Background(), st, ts.URL, "claim-1", k.Keys["controller"].PublicKeyB64u, hw); err != nil {
 		t.Fatal(err)
 	}
-	// The gateway is replaced/hostile: new token, ATTACKER key.
+	// The hub is replaced/hostile: new token, ATTACKER key.
 	gw.mu.Lock()
 	gw.token, gw.burned = "claim-2", false
 	gw.pubB64 = k.Keys["attacker"].PublicKeyB64u

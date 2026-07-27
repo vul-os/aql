@@ -1,3 +1,4 @@
+import { KEYS } from '@/lib/storageKeys';
 import {
   createContext,
   useCallback,
@@ -16,7 +17,7 @@ type ThemeState = {
   setTheme: (theme: Theme) => void;
 };
 
-const THEME_KEY = 'lintel.theme';
+const THEME_KEY = KEYS.theme;
 const ThemeCtx = createContext<ThemeState | null>(null);
 
 function initialTheme(): Theme {

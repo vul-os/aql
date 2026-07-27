@@ -1,14 +1,14 @@
 # DMTAP channel binding — v0 DRAFT, NOT IMPLEMENTED
 
 > **Status: draft.** This contract describes what a real DMTAP dial-out channel
-> binding would look like. **No implementation exists.** The gateway ships a
-> structurally complete scaffold for it (`gateway/internal/channels/dmtap.go`,
+> binding would look like. **No implementation exists.** The hub ships a
+> structurally complete scaffold for it (`hub/internal/channels/dmtap.go`,
 > `channels.DialChannel` + `channels.DMTAPTransport`) with exactly one
 > `DMTAPTransport`: `NotImplementedTransport`, which always fails closed. This
 > file is a proposal for the shape a real transport would speak, written down
 > so it can be reviewed and revised before code is built against it — not a
 > record of something running. Do not treat anything below as available in the
-> gateway today.
+> hub today.
 
 ## Why this exists
 
@@ -16,7 +16,7 @@ DMTAP ([spec](https://github.com/vul-os/dmtap), [reference implementation](https
 is attractive as a lintel channel because a MOTE is MLS-authenticated end to
 end: an "open" command signed by the member's own DMTAP identity key, with no
 third party in the delivery path and none of WhatsApp Cloud API's per-message
-cost or 24-hour-window / template restrictions on gateway-initiated replies.
+cost or 24-hour-window / template restrictions on hub-initiated replies.
 
 ## What actually exists today (investigated 2026-07-20)
 
@@ -44,20 +44,20 @@ The pieces a real channel would need exist only in Rust, with no Go binding:
   JMAP, which is a mail-sync protocol, not group messaging.
 
 Neither `dmtap-mls` group commands nor a chat-style push/pull surface for
-group messages currently exists in a form this gateway (or any Go process)
+group messages currently exists in a form this hub (or any Go process)
 can call.
 
 ## Two integration shapes, either would work, neither started
 
 1. **A second wazero binding** alongside `bindings/go`, exposing MOTE
    construction/sealing and MLS group operations the same in-process,
-   no-cgo way `dmtap-sync` is exposed today. Keeps the gateway dependency-free
+   no-cgo way `dmtap-sync` is exposed today. Keeps the hub dependency-free
    (pure Go, single static binary) at the cost of building and maintaining
    that binding.
 2. **An HTTP client dialing a locally-run `envoir-node` daemon.** The same
    shape `HTTPWhatsAppSender` / `HTTPSlackSender` / `HTTPTelegramSender`
-   already use for their providers (`gateway/internal/channels/send.go`):
-   the gateway process talks to a sidecar it does not embed. Requires the
+   already use for their providers (`hub/internal/channels/send.go`):
+   the hub process talks to a sidecar it does not embed. Requires the
    operator to also run `envoir-node`, and requires a poll or push
    subscription for inbound (no such endpoint exists on the node today), plus
    a real mapping from "a MOTE arrived in an access-control group" to "a
@@ -65,14 +65,14 @@ can call.
    gate-command protocol, so that mapping is itself unspecified.
 
 This document assumes shape (2) for concreteness (an HTTP transport is the
-easier one to keep the gateway's no-cgo, single-binary property), but nothing
+easier one to keep the hub's no-cgo, single-binary property), but nothing
 here is settled.
 
 ## Proposed wire shapes (NOT IMPLEMENTED)
 
 ### Inbound: an intent the transport hands to `DMTAP.Handle`
 
-Maps directly onto `channels.DMTAPIntent` (`gateway/internal/channels/dmtap.go`):
+Maps directly onto `channels.DMTAPIntent` (`hub/internal/channels/dmtap.go`):
 
 ```json
 {
@@ -86,17 +86,17 @@ Maps directly onto `channels.DMTAPIntent` (`gateway/internal/channels/dmtap.go`)
 
 - `member_key_name` is the DMTAP 8-word key-name (spec §3.9.1) the MLS session
   has already authenticated as the sender — the transport's job, not this
-  gateway's, exactly as `Verify` authenticates a WhatsApp/Slack/Telegram
+  hub's, exactly as `Verify` authenticates a WhatsApp/Slack/Telegram
   webhook before its body is trusted.
 - `intent_id` SHOULD be the MOTE's content address (spec §2.2), so
   redelivery dedupes the same way `wamid`/Telegram `message_id` already do
   (`store.InsertInboundMessage`'s unique index).
-- The gateway never sees DMTAP ciphertext or key material — only the
+- The hub never sees DMTAP ciphertext or key material — only the
   MLS-decrypted plaintext body, matching the transport-owns-crypto boundary
   the `dmtap-sync` Go binding's own signer contract already draws (no entry
   point there accepts key material either).
 
-### Outbound: a reply the gateway asks the transport to send
+### Outbound: a reply the hub asks the transport to send
 
 Maps onto `channels.DMTAPReply`:
 
@@ -114,9 +114,9 @@ sealed to the group under the transport's own session.
 [`commands.md`](commands.md)'s `cmd` envelope already carries
 `cause.channel` as a free string (`"whatsapp"`, `"slack"`, `"telegram"` are
 the values in use today; no schema change needed). Once a real DMTAP
-transport exists, `"dmtap"` is the value it would use — the gateway already
+transport exists, `"dmtap"` is the value it would use — the hub already
 has the constant (`channels.KindDMTAP`) and the audit-log/chat-log storage
-for it (`gateway/internal/store/migrations/0005_channels.sql`'s `channel`
+for it (`hub/internal/store/migrations/0005_channels.sql`'s `channel`
 columns are unconstrained `TEXT`, not an enum), so nothing in the store or
 the signed-command contract needs to change to onboard it. What is missing is
 entirely the transport in the two paragraphs above.
@@ -125,7 +125,7 @@ entirely the transport in the two paragraphs above.
 
 - **Not** a DMTAP protocol specification — the normative spec is
   [`../dmtap`](https://github.com/vul-os/dmtap) (see spec §2 MOTE, §5
-  messaging). This file only describes the gateway-side binding contract.
+  messaging). This file only describes the hub-side binding contract.
 - **Not** a commitment to shape (1) vs (2) above.
 - **Not** a claim that `dmtap-mls` group semantics map cleanly onto "an
   access-control command" — that mapping needs its own design pass (likely a

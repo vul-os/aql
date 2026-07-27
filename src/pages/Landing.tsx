@@ -17,7 +17,7 @@ import { TopNav } from '@/components/nav/TopNav';
 import { Footer } from '@/components/landing/Footer';
 import { LinkButton, Button } from '@/components/ui/Button';
 import { useAuth } from '@/lib/auth';
-import { getApiBaseUrl, openGatewayPicker } from '@/lib/gateway';
+import { getApiBaseUrl, openGatewayPicker } from '@/lib/hub';
 import { DEMO_KINDS, REAL_KIND } from '@/lib/demoData';
 
 export default function Landing() {

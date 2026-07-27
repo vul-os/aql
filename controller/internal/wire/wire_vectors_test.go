@@ -88,7 +88,7 @@ func TestSignaturesReproduceVectors(t *testing.T) {
 
 // TestVerifyRawAgainstVectors: layer 3 for the pure signature dimension —
 // VerifyRaw accepts genuine signer/pub pairings and rejects attacker/
-// tampered objects against the gateway or controller key they claim.
+// tampered objects against the hub or controller key they claim.
 func TestVerifyRawAgainstVectors(t *testing.T) {
 	dir, _, pubs := loadAll(t)
 	cases := []struct {

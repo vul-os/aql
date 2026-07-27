@@ -31,12 +31,12 @@ sibling top-level directory instead, matching how `backend/`, `gateway/`,
 `global-setup.ts` runs once before any test:
 
 1. `vite build` — the same bundler invocation `npm run build` uses.
-2. Copies that build into `gateway/internal/portal/dist/` — the exact seam
-   `gateway/Makefile`'s `portal` target populates.
-3. `go build -a -tags portal ./cmd/gateway` — the exact `build-portal` target,
+2. Copies that build into `hub/internal/portal/dist/` — the exact seam
+   `hub/Makefile`'s `portal` target populates.
+3. `go build -a -tags portal ./cmd/hub` — the exact `build-portal` target,
    producing a single self-contained binary with the real React SPA embedded.
 
-Every test then boots *that* binary (`fixtures/gateway.ts`'s `startGateway`)
+Every test then boots *that* binary (`fixtures/hub.ts`'s `startGateway`)
 on a scratch SQLite data dir and a free port, and Chromium is pointed at its
 real origin. This is deliberately **not** `vite dev` pointed at a separately
 running gateway: the embedded binary is what actually ships (it's also what
@@ -53,7 +53,7 @@ unique email and a scratch data dir is already file-scoped). Each spec file's
 
 ## What each file does
 
-- **`fixtures/gateway.ts`** — spawns/health-checks/tears down a gateway
+- **`fixtures/hub.ts`** — spawns/health-checks/tears down a gateway
   process on an isolated data dir + free port.
 - **`fixtures/test.ts`** — extends Playwright's `test` with an auto-fixture
   that fails a test if the page logs a `console.error`, throws an uncaught

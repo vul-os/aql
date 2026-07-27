@@ -1,6 +1,6 @@
 // Package clock provides the controller's gateway-synced clock. GSM/RTC-less
-// boards drift, so the authoritative time base is the gateway: on every
-// connect/ping the controller stores the gateway timestamp and advances it
+// boards drift, so the authoritative time base is the hub: on every
+// connect/ping the controller stores the hub timestamp and advances it
 // with the LOCAL MONOTONIC clock (immune to wall-clock steps/NTP jumps).
 // The last-sync instant feeds the grants.md stale-clock rule.
 package clock

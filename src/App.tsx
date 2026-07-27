@@ -3,7 +3,7 @@ import { router } from '@/routes';
 import { AuthProvider } from '@/lib/auth';
 import { ThemeProvider } from '@/lib/theme';
 import { Starfield } from '@/components/illustrations/Starfield';
-import { GatewayGate } from '@/components/gateway/GatewayGate';
+import { HubGate } from '@/components/hub/HubGate';
 
 export default function App() {
   return (
@@ -16,11 +16,11 @@ export default function App() {
       {/* Desktop builds (and ?gateway= deep links) pick their gateway before
           anything talks to the network; web builds with VITE_API_BASE_URL
           pass straight through. */}
-      <GatewayGate>
+      <HubGate>
         <AuthProvider>
           <RouterProvider router={router} />
         </AuthProvider>
-      </GatewayGate>
+      </HubGate>
     </ThemeProvider>
   );
 }

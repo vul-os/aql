@@ -26,7 +26,7 @@ decentralization, made visible.
 
 ```
 resident ── "open" ──► chat rail (WhatsApp / Slack / Telegram)
-                              │ adapters in gateway/internal/channels/
+                              │ adapters in hub/internal/channels/
                               ▼
         ┌──────────────── HUB — one Go binary · SQLite ────────────────┐
         │  input seam → open-path choke point → device hub → audit     │
@@ -46,7 +46,7 @@ resident ── "open" ──► chat rail (WhatsApp / Slack / Telegram)
 ```
 
 > **The chat adapters are in the hub and stay there.** WhatsApp, Slack and Telegram are
-> shipped, tested and supported in `gateway/internal/channels/`, behind two small
+> shipped, tested and supported in `hub/internal/channels/`, behind two small
 > interfaces: `Channel` (webhook-shaped) and `DialChannel` (the hub dials out, as Slack
 > Socket Mode does).
 >
@@ -57,8 +57,9 @@ resident ── "open" ──► chat rail (WhatsApp / Slack / Telegram)
 > is `pre-alpha` by its own README badge), not as the successor to the rails above.
 > Note the naming — Aql's hub is *not* a KOTVA gateway; it bridges chat rails into its own
 > local domain, and the gateway/coordinator role in that family is a different component's
-> job. The `gateway/` directory keeps its spelling only because the path, module path and
-> binary name are compat surface.
+> job. The Go backend was renamed from `gateway/` to `hub/` (and the binary from
+> `cmd/gateway` to `cmd/hub`, built as `aql-hub`) so that distinction is the default
+> reading, not a footnote.
 
 The desktop app talks HTTPS to the hub for admin — and, by design, would talk directly
 to the controller over LAN/BLE with an offline-verifiable grant in an emergency. That
@@ -68,7 +69,7 @@ last path is only three-quarters built; see [Emergency access](emergency-access.
 
 | Component | What it is | Status | Stack |
 | --- | --- | --- | --- |
-| **hub** (`gateway/`) | The entire server: the open path, console, API, device hub, audit | **Shipped** — 60 routes, 219 tests green | Go · SQLite (`modernc.org/sqlite`, no CGO) · embedded console |
+| **hub** (`hub/`) | The entire server: the open path, console, API, device hub, audit | **Shipped** — 60 routes, 219 tests green | Go · SQLite (`modernc.org/sqlite`, no CGO) · embedded console |
 | **controller** (`controller/`) | The unit wired to the gate relay; verifies signatures, drives the motor | **Shipped** — 45 tests green; GPIO relay and BLE radio still unvalidated | Go, std-lib first, own module |
 | **e2e** (`e2e/`) | Cross-module harness: boots the real hub + controller binaries and proves the open path over the wire | **Shipped** | Go, subprocess-driven |
 | **console / app** (`src/`, `src-tauri/`) | Web console embedded in the hub, plus a Tauri v2 desktop shell with a hub picker | **Shipped** (admin surfaces) | React 19 · Vite · Tauri v2 |
@@ -120,7 +121,7 @@ them — the *controller* does, at redemption time. Geofencing does not exist in
 ## Reachability
 
 Ingress is **configuration, not a component**: there is no reachability service to run,
-and the hub's entire interest in the subject is one string, `LINTEL_PUBLIC_URL`, which it
+and the hub's entire interest in the subject is one string, `AQL_PUBLIC_URL`, which it
 never dials and never validates. The listener speaks **plain HTTP, full stop** — no TLS
 or ACME code of its own — and it refuses to bind a non-loopback address unless you
 explicitly declare that TLS is terminated upstream. Three ways to be reachable, in
@@ -150,9 +151,10 @@ hub and the controller:
 3. **Offline grants** — grant format, challenge-response, window evaluation
 4. **Controller events** — upstream: button pressed, gate held open, tamper
 
-Binaries can churn; these can only be extended. The same reasoning is why the
-`LINTEL_*` environment variables, the `lintel.db` filename and the controller's
-`_lintel._tcp` mDNS service kept their pre-merge names.
+Binaries can churn; these can only be extended. The same reasoning is why `hub/cmd/hub/env.go`
+still accepts the old `LINTEL_*` environment variables as a fallback for their `AQL_*`
+replacements, and why the `lintel.db` filename and the controller's `_lintel._tcp` mDNS
+service kept their pre-merge names.
 
 ## Money is out of scope
 

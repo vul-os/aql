@@ -39,7 +39,7 @@ to end. See [Devices](devices.md) and [Emergency access](emergency-access.md).
 ### Are the chat rails going away?
 
 No. WhatsApp, Slack and Telegram are **shipped and supported** in the hub
-(`gateway/internal/channels/`), they are tested, and nothing is being removed.
+(`hub/internal/channels/`), they are tested, and nothing is being removed.
 
 There is a designed alternative in which an external coordinator —
 **[Ephor](https://github.com/vul-os/ephor)**, the KOTVA family's rail-bridging component —
@@ -98,7 +98,7 @@ public address runs Slack end to end. Offline grants need no network at all.
 WhatsApp is the one rail that genuinely requires a public HTTPS endpoint, because Meta's
 Cloud API is webhook-only. If you need one, the hub does not care where it comes from —
 ngrok, cloudflared, a Tailscale funnel, a small VPS running nginx, or a relay someone else
-operates all end with you pasting a URL into `LINTEL_PUBLIC_URL`. Whatever provides that
+operates all end with you pasting a URL into `AQL_PUBLIC_URL`. Whatever provides that
 URL also terminates TLS, because the hub speaks plain HTTP only.
 See [Reachability](reachability.md).
 
@@ -139,22 +139,24 @@ No, and nothing. There is no hosted service and no billing code anywhere in the 
 Your costs are your own hardware and, if you run a WhatsApp channel on your own number,
 Meta's per-conversation fees billed directly to you. Slack and Telegram cost nothing.
 
-### Why is the hub's directory called `gateway/` if it isn't a gateway?
+### Why isn't the hub called a "gateway"?
 
-Because the path is compat surface and the word got taken. In the KOTVA family "gateway"
-names the legacy-rail coordinator role — a separate component's job, filled by
-[Ephor](https://github.com/vul-os/ephor).
-Aql's hub is not that: it bridges chat rails into its own local domain. The directory, the
-Go module path and the binary name keep their old spelling so builds and deployments do not
-break; in prose, the thing is a **hub**.
+Because in the KOTVA family "gateway" names a different, separate component's job — the
+legacy-rail coordinator role, filled by [Ephor](https://github.com/vul-os/ephor). Aql's
+hub is not that: it bridges chat rails into its own local domain. The backend used to live
+in `gateway/` and build as `cmd/gateway`; it has since been renamed to `hub/` and `cmd/hub`
+(binary: `aql-hub`) so that distinction is the default reading, not something you have to
+be told about.
 
 ### Why do some things still say "lintel"?
 
 Aql's access module shipped under the name *lintel* before the two projects merged.
-The environment variables (`LINTEL_*`), the SQLite filename (`lintel.db`) and the
-controller's mDNS service (`_lintel._tcp`) are a deployment and wire contract for hubs
-and controllers already in the field, so they were deliberately left alone. Renaming them
-would break upgrades and force re-pairing for no benefit.
+The SQLite filename (`lintel.db`) and the controller's mDNS service (`_lintel._tcp`) are
+a deployment and wire contract for hubs and controllers already in the field, so they
+were deliberately left alone — renaming them would break upgrades and force re-pairing
+for no benefit. The environment variables did get renamed to `AQL_*`; the old `LINTEL_*`
+names still work as a fallback (logged once at WARN) so nothing already deployed breaks
+on upgrade.
 
 ### What's Zana?
 

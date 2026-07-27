@@ -70,7 +70,7 @@ function greetForHour(h: number): string {
 }
 
 // /analytics/accounts/:id/summary isn't ported to the Go gateway yet (see
-// gateway/README.md's porting map). An unrouted gateway path can come back
+// hub/README.md's porting map). An unrouted gateway path can come back
 // as a non-JSON 200 (the portal's SPA fallback) instead of throwing, so
 // validate the shape before trusting it — and never let its absence block
 // the rest of the dashboard (locations, access points) from loading.

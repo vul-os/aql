@@ -2,7 +2,7 @@
 // (proto/events.md): signed event envelopes, ring-buffer semantics with
 // capacity 10k, oldest-dropped — except grant_redeemed events, which occupy
 // a reserved partition and are NEVER dropped before delivery. Drained over
-// the WebSocket on reconnect; the gateway dedupes on event_id.
+// the WebSocket on reconnect; the hub dedupes on event_id.
 //
 // Storage choice (justified): a plain append-only JSONL log per partition
 // with an atomically-updated cursor file, compacted opportunistically —
@@ -46,7 +46,7 @@ const (
 // relocate the same problem, not solve it. Its only job is making sure a
 // physical open this extreme still leaves SOME durable trace on the
 // device — recoverable from disk by an operator even though it never
-// reached the gateway automatically. See agent.OnRedeemed for the
+// reached the hub automatically. See agent.OnRedeemed for the
 // actuation-safety reasoning this exists to support.
 const overflowFileName = "grant_overflow.jsonl"
 
@@ -196,7 +196,7 @@ func (q *Queue) Enqueue(kind string, raw []byte) error {
 }
 
 // EnqueueGrantRedeemed durably records one grant_redeemed event, preferring
-// the reserved partition (delivered to the gateway like any other event on
+// the reserved partition (delivered to the hub like any other event on
 // reconnect, per Drain/Ack above). If — and only if — the reserved
 // partition is already full, it falls back to appendOverflow, a minimal
 // always-on local overflow log, so the event this call describes is never

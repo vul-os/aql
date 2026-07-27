@@ -105,7 +105,7 @@ already holds the audit log — but nothing has been committed.
 ## Automations
 
 The model is `trigger → condition → action`, evaluated against live device state, with
-scheduling and run history persisted. It is built (`gateway/internal/automations/`) and
+scheduling and run history persisted. It is built (`hub/internal/automations/`) and
 managed over `/v1/accounts/{id}/automations`.
 
 Triggers are `schedule` (a minute of the day on chosen weekdays, in a named timezone, so
@@ -127,7 +127,7 @@ the scheduler is off, which is useful when setting a hub up; the list response c
 
 The *access* side is governed separately and deliberately so — see
 [Architecture → What the open path actually is](architecture.md). Per-member time windows
-for online opens do exist now (`gateway/internal/store/timewindows.go`), enforced inside
+for online opens do exist now (`hub/internal/store/timewindows.go`), enforced inside
 the open path's choke point rather than by the automations engine, and geofence rules
 alongside them. Weekly windows inside offline grants remain a different mechanism
 entirely: the **controller** evaluates those at redemption, against its own clock, with
@@ -136,7 +136,7 @@ no hub involved.
 ## Energy
 
 Meter ingestion, hourly/daily/monthly rollups and source-mix accounting (solar / grid /
-battery) are built (`gateway/internal/energy/`) and readable over
+battery) are built (`hub/internal/energy/`) and readable over
 `/v1/accounts/{id}/energy/{channels,series,mix}`. A poller reads meters through the
 device engine; counter wraps and resets are handled explicitly.
 
@@ -154,7 +154,7 @@ Untested against physical meters.
 
 ## Security & bots
 
-Built: an ONVIF driver (`gateway/internal/devices/camera/`) that discovers cameras via
+Built: an ONVIF driver (`hub/internal/devices/camera/`) that discovers cameras via
 WS-Discovery, authenticates with WS-UsernameToken digest, and asks a camera for the RTSP
 address of a chosen encoder profile.
 

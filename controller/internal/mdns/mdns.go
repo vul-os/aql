@@ -1,5 +1,14 @@
 // Package mdns is a minimal, best-effort mDNS (RFC 6762) responder that
 // advertises the controller's LAN grant listener as _lintel._tcp.local
+//
+// THE SERVICE NAME IS DELIBERATELY NOT RENAMED. `_lintel._tcp` is a wire
+// identifier, not a label: it is normative in proto/grants.md, the phone app
+// browses for exactly this string (src/lib/offline/service.ts), and controllers
+// already deployed advertise it. Renaming it means an updated app cannot find an
+// existing controller and an updated controller cannot be found by an existing
+// app — on the OFFLINE emergency path, which by definition is being used when
+// there is no network to push a fix over. The repo is called Aql; this string
+// stays lintel until a protocol change migrates both halves together.
 // with TXT ["device=<device_id>", "proto=0"] (proto/grants.md §LAN). It is
 // std-lib only: a hand-rolled DNS encoder/decoder covering exactly the
 // PTR/SRV/TXT/A records this service needs. Advertising failures are logged

@@ -105,6 +105,24 @@
 import { parseStoredGrant, type Grant } from './grant';
 import { b64u, unB64u } from './jcs';
 
+// DELIBERATELY NOT RENAMED when the repo became Aql.
+//
+// localStorage keys could be migrated forward on read (see lib/storageKeys.ts).
+// An IndexedDB database name cannot: opening a different name creates a new,
+// EMPTY database and orphans the old one. There is no rename, and no read that
+// would notice.
+//
+// What that would destroy is not a preference. This database holds the app's
+// non-extractable Ed25519 private key and every offline grant issued to it — and
+// the whole point of an offline grant is that it works when there is no network
+// to fetch a replacement. A cosmetic rename would hand someone a phone that
+// silently cannot open the gate it was authorised for, at exactly the moment
+// they cannot do anything about it.
+//
+// A migration is possible (open the old DB, copy both stores, delete it) but it
+// is real work with a real failure mode of its own, and the name is invisible to
+// users. If it is ever done, it must be a deliberate change with its own tests —
+// not a side effect of tidying a directory name.
 const DB_NAME = 'lintel.offline-access';
 const DB_VERSION = 1;
 const KEY_STORE = 'appkey';

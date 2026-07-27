@@ -22,14 +22,14 @@ controllers, and runs Slack end to end.
 Ingress is not a component of this system. It is **one configuration string**:
 
 ```sh
-LINTEL_PUBLIC_URL=https://your-gate.example    # or the -public-url flag
+AQL_PUBLIC_URL=https://your-gate.example    # or the -public-url flag
 ```
 
 The hub never dials that URL, never validates it, never asks where it came from. It uses
 it to build the links it hands out — a signup link in a chat reply, the WebSocket URL a
-controller is told to dial — and nothing else (`gateway/cmd/gateway/main.go:96`,
-`gateway/internal/httpapi/channels_http.go:29`,
-`gateway/internal/httpapi/devices.go:213`). Leave it empty and the hub falls back to the
+controller is told to dial — and nothing else (`hub/cmd/hub/main.go:96`,
+`hub/internal/httpapi/channels_http.go:29`,
+`hub/internal/httpapi/devices.go:213`). Leave it empty and the hub falls back to the
 `Host` header of the request it is answering, which is exactly right for a LAN install.
 
 There is deliberately **no provider abstraction** in the code — no
@@ -43,7 +43,7 @@ hub notices.
 | Rail / component | Needs inbound reachability? | Why |
 | --- | --- | --- |
 | **WhatsApp — Meta Cloud API** | **Yes, always** | The Cloud API is webhook-only. Meta offers no polling or socket mode to switch to |
-| **Slack — Socket Mode** | **No** | The hub dials **out** over one WebSocket (`apps.connections.open` → `wss://…`). Shipped: `gateway/internal/channels/socketmode.go` |
+| **Slack — Socket Mode** | **No** | The hub dials **out** over one WebSocket (`apps.connections.open` → `wss://…`). Shipped: `hub/internal/channels/socketmode.go` |
 | **Slack — Events API** | Yes, public HTTPS | Slack POSTs to `/webhooks/slack`. The default only when no `SLACK_APP_TOKEN` is set |
 | **Telegram — webhook** | Yes, public HTTPS | Today's shipped path: Telegram POSTs to `/webhooks/telegram` |
 | **Telegram — long polling** | **No** *(in progress)* | `getUpdates` is entirely outbound. Being built as an opt-in engine; **not shipped yet** |
@@ -75,7 +75,7 @@ Meta made, not one Aql made.
 
 For WhatsApp you need something with a domain that Meta can `POST` to. Any of these does
 the job, and they are listed in **no order of preference** because the hub genuinely
-cannot distinguish them — each one ends with you setting `LINTEL_PUBLIC_URL`:
+cannot distinguish them — each one ends with you setting `AQL_PUBLIC_URL`:
 
 - **ngrok** — run it beside the hub, point it at the local port.
 - **cloudflared** — same shape, standard (HTTP) mode.
@@ -99,8 +99,8 @@ happens inside the hub, on your box:
 
 - The hub verifies Meta's `X-Hub-Signature-256` itself — an HMAC-SHA256 over the **raw
   request body** under your `WHATSAPP_APP_SECRET`, compared in constant time, before the
-  body is even parsed as JSON (`gateway/internal/channels/channels.go:194`, called from
-  `gateway/internal/httpapi/channels_whatsapp.go:48`; failure is a `403` and the request
+  body is even parsed as JSON (`hub/internal/channels/channels.go:194`, called from
+  `hub/internal/httpapi/channels_whatsapp.go:48`; failure is a `403` and the request
   goes no further). It is fail-closed: an unset secret rejects everything rather than
   accepting anything.
 - Identity resolution, membership, suspension, quotas and the open decision are all
@@ -128,8 +128,8 @@ This is the part people discover painfully at setup, so it goes in bold:
 
 And it will not let you get this wrong quietly. The binary **refuses to start** if
 `-listen` resolves to anything that is not loopback, unless you pass `-behind-proxy`
-(env `LINTEL_BEHIND_PROXY=1`) to declare that TLS is terminated upstream
-(`gateway/cmd/gateway/main.go:159`, tested in `gateway/cmd/gateway/main_test.go:222`).
+(env `AQL_BEHIND_PROXY=1`) to declare that TLS is terminated upstream
+(`hub/cmd/hub/main.go:159`, tested in `hub/cmd/hub/main_test.go:222`).
 The refusal names the flag and explains why: binding a public interface with nothing in
 front would serve the admin portal, the login endpoint and the signing API in cleartext —
 credentials, JWTs and refresh tokens included.

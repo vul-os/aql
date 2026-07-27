@@ -1,6 +1,6 @@
 // Package state persists the controller's durable pairing + runtime state:
 // {device_id, gateway_pubkey, ws_url, poll_interval}, the lockdown latch,
-// actuation config, and the last gateway clock sync. The gateway public key
+// actuation config, and the last gateway clock sync. The hub public key
 // is PINNED: once paired, Save refuses any key change; the only sanctioned
 // paths are a verified `repair` command (ApplyRepair) or a physical
 // factory reset (deleting the state dir).

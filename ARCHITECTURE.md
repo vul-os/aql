@@ -22,7 +22,7 @@ exist and which are design intent. The condensed operator-facing tour is
 
 | Layer | Status |
 | --- | --- |
-| Hub (`gateway/`) — open path, console, API, device hub, audit | **Built.** 60 HTTP routes, 219 Go tests green across 8 packages |
+| Hub (`hub/`) — open path, console, API, device hub, audit | **Built.** 60 HTTP routes, 219 Go tests green across 8 packages |
 | **Access module** — the first device kind wired end to end | **Built.** Signed commands, pinned-key controller, offline grants, tamper-evident audit |
 | Controller agent (`controller/`) — pairing, signed commands, grants, events | **Built.** 45 Go tests green. GPIO relay driver and BLE radio are **not** |
 | Wire contracts (`proto/`) | **Built.** 61 conformance vectors, 68 checks, consumed by both sides |
@@ -30,7 +30,7 @@ exist and which are design intent. The condensed operator-facing tour is
 | Web console + desktop shell (`src/`, `src-tauri/`) | **Built** for admin surfaces. The device / energy / automations screens run on a demo dataset; there is no emergency-access screen |
 | **Device engine** — drivers, discovery, telemetry, automations, energy | **Not built.** No Matter, MQTT, Zigbee, ONVIF, Modbus or Z-Wave code exists |
 | **Phone-side offline grants** | **Not built.** The contract, controller verification and hub issuance are real; nothing on a phone presents a grant |
-| Chat rail | **In transition.** Moving out of Aql into [Ephor](https://github.com/vul-os/ephor); the adapters in `gateway/internal/channels/` are transitional (§3a) |
+| Chat rail | **In transition.** Moving out of Aql into [Ephor](https://github.com/vul-os/ephor); the adapters in `hub/internal/channels/` are transitional (§3a) |
 | Google OAuth | **Not built** |
 
 ### The seven device kinds
@@ -100,7 +100,7 @@ ports.
 
 | Component | What it is | Runs on | Stack |
 | --- | --- | --- | --- |
-| **the hub** (`gateway/`) | The entire server: open path, console, API, device hub, audit. The directory keeps its old spelling; the product noun is *hub* (§3a) | Any VPS / Pi / always-on box | Go · SQLite (`modernc.org/sqlite`, no CGO) · `go:embed` console |
+| **the hub** (`hub/`) | The entire server: open path, console, API, device hub, audit — not a KOTVA gateway (§3a) | Any VPS / Pi / always-on box | Go · SQLite (`modernc.org/sqlite`, no CGO) · `go:embed` console |
 | **controller** | The unit wired to the gate relay; verifies signatures, drives the motor. The agent is real and conformance-tested; the GPIO relay and BLE radio are the hardware-only surfaces still missing | Pi-class board at the gate, Wi-Fi or GSM | Go, own module, std-lib first (`-tags gpio` / `-tags ble` for hardware) |
 | **e2e** | Cross-module harness: boots real hub + controller binaries and proves the open path over the wire | CI, dev machine | Go, subprocess-driven |
 | **src / src-tauri** | The console (embedded in the hub) and the Tauri v2 desktop shell with a hub picker | Browser, desktop | React 19 · Vite · Tauri v2 · Rust (thin) |
@@ -112,7 +112,7 @@ ports.
 
 ```
 aql/
-├── gateway/      # 🟢 the hub: Go, the whole product server (auth, open path, device hub, admin)
+├── hub/          # 🟢 the hub: Go, the whole product server (auth, open path, device hub, admin)
 │                 #    …plus channels/, the transitional chat adapters moving to Ephor (§3a)
 │   └── migrations/   # SQLite schema, clean folded baseline (7 migrations, 22 tables)
 ├── controller/   # 🟢 reference gate device agent (own Go module); GPIO/BLE need real hardware
@@ -155,11 +155,12 @@ gate may open.
 > rules, sign it, actuate. Ephor is separate and swappable — run your own or point at one.
 >
 > **That move is in progress.** Texting a gate open works today, but the adapter code in
-> `gateway/internal/channels/` is transitional and is not the long-term answer, and the
+> `hub/internal/channels/` is transitional and is not the long-term answer, and the
 > Ephor-backed path is not shipped either. Note also the naming: **Aql's hub is not a KOTVA
 > gateway.** It bridges chat rails into its own local domain; the gateway/coordinator role
-> in that family is Ephor's. The `gateway/` directory keeps its spelling only because the
-> path, the Go module path and the binary name are compat surface. See
+> in that family is Ephor's — which is exactly why this component's own directory
+> (`hub/`), Go module (`github.com/vul-os/aql/hub`) and binary (`aql-hub`) are named for
+> what it is, a hub, rather than for a role that belongs to a different product. See
 > [`docs/KOTVA-ALIGNMENT.md`](docs/KOTVA-ALIGNMENT.md).
 
 | Channel | Identity | Transport | Today |
@@ -258,7 +259,7 @@ is never in the loop, and Meta bills the operator directly.
 HTTP, full stop** — no TLS/ACME code, no tunnel protocol, no relay dependency. TLS is
 entirely the operator's job. This is not merely advised, it is **enforced**: the hub
 refuses to start if `-listen` resolves to a non-loopback address unless `-behind-proxy`
-(env `LINTEL_BEHIND_PROXY`) is set. The check is address-resolution-aware, not a string
+(env `AQL_BEHIND_PROXY`) is set. The check is address-resolution-aware, not a string
 match.
 
 1. **Direct** — a VPS or public IP behind your own reverse proxy (Caddy, nginx, Traefik).
@@ -346,9 +347,13 @@ self-checker that independently re-canonicalizes, re-signs and re-evaluates each
 the controller consume these fixtures in their own test suites. Binaries can churn; these
 can only be extended.
 
-The same reasoning is why `LINTEL_*` environment variables, the `lintel.db` filename and
-the controller's `_lintel._tcp` mDNS service kept their pre-merge names: they are a
-deployment and wire contract for hubs and controllers already in the field.
+The same reasoning is why the environment variables were renamed `LINTEL_*` → `AQL_*`
+without dropping the old ones: an unset `AQL_*` variable falls back to its `LINTEL_*`
+predecessor and logs a warning naming both (`hub/cmd/hub/env.go`), so an existing
+deployment upgrades without its configuration silently going dark. The `lintel.db`
+filename and the controller's `_lintel._tcp` mDNS service went the other way and kept
+their pre-merge names outright, no fallback involved: they are a deployment and wire
+contract for hubs and controllers already in the field.
 
 ---
 
@@ -398,7 +403,7 @@ Full detail, including what "works with any hardware" does and does not mean:
 - **Runtime rate-limit overrides** — the operator can retune the four abuse limits without
   a restart; resolution is *runtime override → env var → built-in default*, and
   `GET /admin/limits` shows all four layers side by side.
-- **`gateway verify-audit`** — walks both audit chains against a cold backup without
+- **`aql-hub verify-audit`** — walks both audit chains against a cold backup without
   booting the HTTP server.
 
 **Not built, stated plainly:**

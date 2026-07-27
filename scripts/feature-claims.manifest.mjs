@@ -36,7 +36,7 @@
 //                                matches `pattern`.
 //
 // Evidence roots are deliberately restricted to IMPLEMENTATION code —
-// gateway/, backend/src/, controller/, proto/, src-tauri/ config — never
+// hub/, backend/src/, controller/, proto/, src-tauri/ config — never
 // src/ (the React portal's UI copy) or site/ (marketing). Scanning UI copy
 // for evidence would be circular: it's the exact layer that lies. See the
 // checker's header for what that means this tool cannot catch.
@@ -46,7 +46,7 @@ export const FEATURES = [
   // overclaims, now correctly marked in the docs. This check's job is to
   // make sure nobody re-overclaims them by accident, and to catch the day
   // any of them actually ships (evidence appears → docs must be updated).
-  // ── geofence enforcement shipped 2026-07-27: gateway/internal/store/
+  // ── geofence enforcement shipped 2026-07-27: hub/internal/store/
   // geofence.go + migration 0015, enforced inside the LogAccess choke point,
   // with POST/GET/DELETE /v1/accounts/{id}/geofences to manage the rules.
   //
@@ -61,18 +61,18 @@ export const FEATURES = [
   // When they are updated, the one thing that copy MUST keep saying is that
   // this is a convenience and not a security control: the position it tests is
   // client-supplied and unverified, so it stops mistakes, not attackers (see
-  // gateway/internal/store/geofence.go's package comment for the full claim).
+  // hub/internal/store/geofence.go's package comment for the full claim).
   {
     id: 'geofencing',
     label: 'Geofencing (block opens outside a per-access-point/per-location radius)',
     docStatus: 'shipped',
     docRefs: [
-      'gateway/internal/store/geofence.go — package comment: what it buys, and what it explicitly does not',
-      'gateway/internal/store/migrations/0015_geofence.sql — the geofence_rules table',
-      'gateway/internal/store/openpath.go — the check inside LogAccess, after time windows, before the limit block',
+      'hub/internal/store/geofence.go — package comment: what it buys, and what it explicitly does not',
+      'hub/internal/store/migrations/0015_geofence.sql — the geofence_rules table',
+      'hub/internal/store/openpath.go — the check inside LogAccess, after time windows, before the limit block',
       'STALE, needs updating: README.md, ARCHITECTURE.md §8, site/index.html, site/docs/security.md, site/docs/getting-started.md, site/docs/troubleshooting.md, src/pages/docs/GeofenceSafety.tsx',
     ],
-    evidence: [{ root: 'gateway/internal', pattern: 'geofenc', flags: 'i' }],
+    evidence: [{ root: 'hub/internal', pattern: 'geofenc', flags: 'i' }],
   },
   // ── offline-grant issuance is the 2026-07-20 evening's headline ship: the
   // gateway side is now real, but the third leg (the app holding/presenting
@@ -88,13 +88,13 @@ export const FEATURES = [
       'README.md resilience note — "both the controller side and the gateway\'s issuance side are real and conformance-tested"',
       'site/docs/emergency-access.md — "Gateway-side issuance is now real"',
       'proto/grants.md "Implementation status" — "gateway side ... is also real and conformance-tested"',
-      'gateway/internal/channels/send.go — ban-risk warning names the app, not the gateway, as the missing half',
+      'hub/internal/channels/send.go — ban-risk warning names the app, not the gateway, as the missing half',
     ],
     // Deliberately narrow: "offline" alone appears constantly in this
     // codebase for unrelated things (the HTTPS long-poll device queue,
     // comments explaining this exact gap). Look for the specific route this
     // half of proto/grants.md would need to land on.
-    evidence: [{ root: 'gateway/internal', pattern: '"POST /v1/offline-grants"|handleOfflineGrantIssue', flags: 'i' }],
+    evidence: [{ root: 'hub/internal', pattern: '"POST /v1/offline-grants"|handleOfflineGrantIssue', flags: 'i' }],
   },
   {
     id: 'offline-grant-app-client',
@@ -104,7 +104,7 @@ export const FEATURES = [
       'README.md resilience note — "not built yet is the app side (🔨)"',
       'site/docs/emergency-access.md — "What is still not built: the app"',
       'proto/grants.md "Implementation status" — "app client unbuilt"',
-      'gateway/internal/channels/send.go — "the app doesn\'t hold or present a grant yet"',
+      'hub/internal/channels/send.go — "the app doesn\'t hold or present a grant yet"',
     ],
     // The app is src/ + src-tauri/ (React 19 + Tauri v2). src/ is
     // deliberately never used as an evidence root (see this file's header —
@@ -153,9 +153,9 @@ export const FEATURES = [
     // the route that lets an operator create one. A rule nobody can create and
     // a check nothing calls are both just code.
     evidence: [
-      { file: 'gateway/internal/store/migrations/0014_time_windows.sql', pattern: 'CREATE TABLE time_window_rules' },
-      { file: 'gateway/internal/store/openpath.go', pattern: 'CheckTimeWindows' },
-      { file: 'gateway/internal/httpapi/server.go', pattern: 'time-windows' },
+      { file: 'hub/internal/store/migrations/0014_time_windows.sql', pattern: 'CREATE TABLE time_window_rules' },
+      { file: 'hub/internal/store/openpath.go', pattern: 'CheckTimeWindows' },
+      { file: 'hub/internal/httpapi/server.go', pattern: 'time-windows' },
     ],
   },
   {
@@ -169,9 +169,9 @@ export const FEATURES = [
     // adapter, the env read that lets an operator turn it on, and the
     // registration without which no message reaches a gate.
     evidence: [
-      { root: 'gateway/internal/channels', pattern: 'KindDiscord', flags: 'i' },
-      { file: 'gateway/internal/channels/channels.go', pattern: 'DISCORD_BOT_TOKEN' },
-      { file: 'gateway/internal/httpapi/server.go', pattern: 's\\.wireDiscord\\(\\)' },
+      { root: 'hub/internal/channels', pattern: 'KindDiscord', flags: 'i' },
+      { file: 'hub/internal/channels/channels.go', pattern: 'DISCORD_BOT_TOKEN' },
+      { file: 'hub/internal/httpapi/server.go', pattern: 's\\.wireDiscord\\(\\)' },
     ],
   },
   {
@@ -197,10 +197,10 @@ export const FEATURES = [
     // with no emit is inert; one with no signature is unauthenticated; one
     // with no SSRF check is a request-forgery primitive.
     evidence: [
-      { file: 'gateway/internal/store/migrations/0013_webhooks.sql', pattern: 'CREATE TABLE webhooks' },
-      { file: 'gateway/internal/httpapi/server.go', pattern: 'POST /v1/accounts/\\{id\\}/webhooks' },
-      { file: 'gateway/internal/httpapi/webhookdispatch.go', pattern: 'func signWebhook' },
-      { file: 'gateway/internal/httpapi/channels_open.go', pattern: 'emitAccessWebhook' },
+      { file: 'hub/internal/store/migrations/0013_webhooks.sql', pattern: 'CREATE TABLE webhooks' },
+      { file: 'hub/internal/httpapi/server.go', pattern: 'POST /v1/accounts/\\{id\\}/webhooks' },
+      { file: 'hub/internal/httpapi/webhookdispatch.go', pattern: 'func signWebhook' },
+      { file: 'hub/internal/httpapi/channels_open.go', pattern: 'emitAccessWebhook' },
     ],
   },
   {
@@ -214,7 +214,7 @@ export const FEATURES = [
       'README.md — "still ahead on a few deferred surfaces: OTP verify, analytics, OAuth, meters"',
       'site/docs/self-host.md — "Still deferred ... analytics endpoints"',
     ],
-    evidence: [{ root: 'gateway/internal', pattern: '/v1/analytics|handleAnalytics', flags: 'i' }],
+    evidence: [{ root: 'hub/internal', pattern: '/v1/analytics|handleAnalytics', flags: 'i' }],
   },
   {
     id: '2fa',
@@ -229,9 +229,9 @@ export const FEATURES = [
     // own hub; recovery codes minted anywhere but activation mean 2FA can be on
     // with no escape hatch. Both are worse than no 2FA.
     evidence: [
-      { file: 'gateway/internal/store/migrations/0016_two_factor.sql', pattern: 'CREATE TABLE user_totp' },
-      { file: 'gateway/internal/httpapi/server.go', pattern: '2fa/activate' },
-      { file: 'gateway/internal/store/twofactor.go', pattern: 'ClaimSecondFactorAndIssueRefresh' },
+      { file: 'hub/internal/store/migrations/0016_two_factor.sql', pattern: 'CREATE TABLE user_totp' },
+      { file: 'hub/internal/httpapi/server.go', pattern: '2fa/activate' },
+      { file: 'hub/internal/store/twofactor.go', pattern: 'ClaimSecondFactorAndIssueRefresh' },
     ],
   },
   {
@@ -240,7 +240,7 @@ export const FEATURES = [
     docStatus: 'planned',
     docRefs: ['No current README/ARCHITECTURE/site claim ships this; verified absent to guard against re-introduction.'],
     evidence: [[
-      { root: 'gateway/internal', pattern: 'text/csv|ExportCSV|\\.csv"', flags: 'i' },
+      { root: 'hub/internal', pattern: 'text/csv|ExportCSV|\\.csv"', flags: 'i' },
       { root: 'backend/src', pattern: 'text/csv|ExportCSV|\\.csv"', flags: 'i' },
     ]],
   },
@@ -272,7 +272,7 @@ export const FEATURES = [
     // protocol names are unambiguous, and no plausible Matter driver lands
     // without at least one of them landing too.
     evidence: [[
-      { root: 'gateway/internal', pattern: 'MQTT|Zigbee|ONVIF|Modbus|Z-?Wave', flags: 'i' },
+      { root: 'hub/internal', pattern: 'MQTT|Zigbee|ONVIF|Modbus|Z-?Wave', flags: 'i' },
       { root: 'controller/internal', pattern: 'MQTT|Zigbee|ONVIF|Modbus|Z-?Wave', flags: 'i' },
       { root: 'src-tauri/src', pattern: 'MQTT|Zigbee|ONVIF|Modbus|Z-?Wave', flags: 'i' },
     ]],
@@ -290,13 +290,13 @@ export const FEATURES = [
     // Deliberately narrow. A loose /schedul|cron/ matches the controller's
     // scheduleRelease() relay timer, which is not an automations engine.
     evidence: [[
-      { root: 'gateway/internal', pattern: 'AutomationRule|RuleEngine|automations_|type Automation\\b|EvaluateRule', flags: 'i' },
+      { root: 'hub/internal', pattern: 'AutomationRule|RuleEngine|automations_|type Automation\\b|EvaluateRule', flags: 'i' },
       { root: 'controller/internal', pattern: 'AutomationRule|RuleEngine|automations_|type Automation\\b|EvaluateRule', flags: 'i' },
     ]],
   },
   {
     id: 'energy-metering',
-    label: 'Energy-metering engine code exists (NOT that any meter is polled in a running hub — nothing constructs a poller in cmd/gateway)',
+    label: 'Energy-metering engine code exists (NOT that any meter is polled in a running hub — nothing constructs a poller in cmd/hub)',
     docStatus: 'shipped',
     docRefs: [
       'README.md — "Energy metering. No ingestion, no rollups, no source-mix accounting."',
@@ -304,7 +304,7 @@ export const FEATURES = [
       'site/docs/devices.md § Energy — "Built: nothing"',
     ],
     evidence: [[
-      { root: 'gateway/internal', pattern: 'MeterReading|kWh|inverter|EnergyReading|solar', flags: 'i' },
+      { root: 'hub/internal', pattern: 'MeterReading|kWh|inverter|EnergyReading|solar', flags: 'i' },
       { root: 'controller/internal', pattern: 'MeterReading|kWh|inverter|EnergyReading|solar', flags: 'i' },
     ]],
   },
@@ -318,7 +318,7 @@ export const FEATURES = [
       'site/docs/devices.md § Security & bots — "Built: nothing"',
     ],
     evidence: [[
-      { root: 'gateway/internal', pattern: 'RTSP|rtsp://|ffmpeg|onvif', flags: 'i' },
+      { root: 'hub/internal', pattern: 'RTSP|rtsp://|ffmpeg|onvif', flags: 'i' },
       { root: 'controller/internal', pattern: 'RTSP|rtsp://|ffmpeg|onvif', flags: 'i' },
     ]],
   },
@@ -331,7 +331,7 @@ export const FEATURES = [
       'site/docs/overview.md — the data directory holds the unencrypted signing key and JWT secret',
     ],
     evidence: [[
-      { root: 'gateway/internal', pattern: 'keychain|keyring|CredentialVault|SecretService', flags: 'i' },
+      { root: 'hub/internal', pattern: 'keychain|keyring|CredentialVault|SecretService', flags: 'i' },
       { root: 'controller/internal', pattern: 'keychain|keyring|CredentialVault|SecretService', flags: 'i' },
       { root: 'src-tauri/src', pattern: 'keychain|keyring|CredentialVault|SecretService', flags: 'i' },
     ]],
@@ -362,7 +362,7 @@ export const FEATURES = [
     label: 'Ed25519-signed device commands',
     docStatus: 'shipped',
     docRefs: ['README.md Wire contracts — "Ed25519 over canonical JSON (JCS, RFC 8785)"'],
-    evidence: [{ file: 'gateway/internal/keys/keys.go', pattern: 'ed25519\\.Sign\\(' }],
+    evidence: [{ file: 'hub/internal/keys/keys.go', pattern: 'ed25519\\.Sign\\(' }],
   },
   {
     id: 'controller-key-pinning',
@@ -376,14 +376,14 @@ export const FEATURES = [
     label: 'Claim-token controller pairing',
     docStatus: 'shipped',
     docRefs: ['README.md — "claim-token controller pairing"'],
-    evidence: [{ file: 'gateway/internal/store/devices.go', pattern: 'claim_token_hash' }],
+    evidence: [{ file: 'hub/internal/store/devices.go', pattern: 'claim_token_hash' }],
   },
   {
     id: 'append-only-audit-log',
     label: 'Append-only audit log',
     docStatus: 'shipped',
     docRefs: ['README.md — "an append-only audit log"'],
-    evidence: [{ file: 'gateway/internal/store/admin.go', pattern: 'admin_audit_log' }],
+    evidence: [{ file: 'hub/internal/store/admin.go', pattern: 'admin_audit_log' }],
   },
   {
     id: 'rate-limits',
@@ -391,10 +391,10 @@ export const FEATURES = [
     docStatus: 'shipped',
     docRefs: ['README.md — "all four rate limits"'],
     evidence: [
-      { file: 'gateway/internal/store/ratelimit.go', pattern: 'RATE_OPEN_COOLDOWN_S' },
-      { file: 'gateway/internal/store/ratelimit.go', pattern: 'RATE_OPENS_PER_HOUR' },
-      { file: 'gateway/internal/store/ratelimit.go', pattern: 'RATE_ACCOUNT_OPENS_PER_HOUR' },
-      { file: 'gateway/internal/store/ratelimit.go', pattern: 'RATE_CHAT_MSGS_PER_MIN' },
+      { file: 'hub/internal/store/ratelimit.go', pattern: 'RATE_OPEN_COOLDOWN_S' },
+      { file: 'hub/internal/store/ratelimit.go', pattern: 'RATE_OPENS_PER_HOUR' },
+      { file: 'hub/internal/store/ratelimit.go', pattern: 'RATE_ACCOUNT_OPENS_PER_HOUR' },
+      { file: 'hub/internal/store/ratelimit.go', pattern: 'RATE_CHAT_MSGS_PER_MIN' },
     ],
   },
   {
@@ -402,7 +402,7 @@ export const FEATURES = [
     label: 'Per-location daily quotas (owner/admin exempt)',
     docStatus: 'shipped',
     docRefs: ['README.md — "per-location daily quotas (owner/admin exempt)"'],
-    evidence: [{ file: 'gateway/internal/store/locations.go', pattern: 'LocationQuotas' }],
+    evidence: [{ file: 'hub/internal/store/locations.go', pattern: 'LocationQuotas' }],
   },
   {
     id: 'one-off-visitor-grants',
@@ -410,8 +410,8 @@ export const FEATURES = [
     docStatus: 'shipped',
     docRefs: ['README.md — "one-off dated temporary access grants ... (POST/GET /v1/grants, portal page)"'],
     evidence: [
-      { file: 'gateway/internal/store/grants.go', pattern: 'phone_e164' },
-      { file: 'gateway/internal/httpapi/server.go', pattern: '"POST /v1/grants"' },
+      { file: 'hub/internal/store/grants.go', pattern: 'phone_e164' },
+      { file: 'hub/internal/httpapi/server.go', pattern: '"POST /v1/grants"' },
     ],
   },
   {
@@ -419,28 +419,28 @@ export const FEATURES = [
     label: 'WhatsApp channel',
     docStatus: 'shipped',
     docRefs: ['README.md — "the WhatsApp / Slack ... / Telegram channels"'],
-    evidence: [{ file: 'gateway/internal/channels/whatsapp.go', pattern: 'func \\(WhatsApp\\) Kind\\(\\)' }],
+    evidence: [{ file: 'hub/internal/channels/whatsapp.go', pattern: 'func \\(WhatsApp\\) Kind\\(\\)' }],
   },
   {
     id: 'slack-channel',
     label: 'Slack channel (Events API)',
     docStatus: 'shipped',
     docRefs: ['README.md — "Slack (Events API + Socket Mode)"'],
-    evidence: [{ file: 'gateway/internal/channels/slack.go', pattern: 'func \\(Slack\\) Kind\\(\\)' }],
+    evidence: [{ file: 'hub/internal/channels/slack.go', pattern: 'func \\(Slack\\) Kind\\(\\)' }],
   },
   {
     id: 'telegram-channel',
     label: 'Telegram channel',
     docStatus: 'shipped',
     docRefs: ['README.md — "the WhatsApp / Slack ... / Telegram channels"'],
-    evidence: [{ file: 'gateway/internal/channels/telegram.go', pattern: 'func \\(Telegram\\) Kind\\(\\)' }],
+    evidence: [{ file: 'hub/internal/channels/telegram.go', pattern: 'func \\(Telegram\\) Kind\\(\\)' }],
   },
   {
     id: 'slack-socket-mode',
     label: 'Slack Socket Mode (outbound WSS, zero ingress)',
     docStatus: 'shipped',
-    docRefs: ['README.md — "Slack (Events API + Socket Mode)"', 'gateway/internal/channels/socketmode.go'],
-    evidence: [{ file: 'gateway/internal/channels/socketmode.go', pattern: 'type SocketMode struct' }],
+    docRefs: ['README.md — "Slack (Events API + Socket Mode)"', 'hub/internal/channels/socketmode.go'],
+    evidence: [{ file: 'hub/internal/channels/socketmode.go', pattern: 'type SocketMode struct' }],
   },
   {
     id: 'go-gateway-product-core',
@@ -451,8 +451,8 @@ export const FEATURES = [
       'README.md dev table — gateway row: "🟢 runs the product core"',
     ],
     evidence: [
-      { file: 'gateway/internal/httpapi/server.go', pattern: 'func \\(s \\*Server\\) Router\\(\\)' },
-      { file: 'gateway/cmd/gateway/main.go' },
+      { file: 'hub/internal/httpapi/server.go', pattern: 'func \\(s \\*Server\\) Router\\(\\)' },
+      { file: 'hub/cmd/hub/main.go' },
     ],
   },
 
@@ -465,7 +465,7 @@ export const FEATURES = [
     label: 'Tamper-evident hash chain for access_logs/admin_audit_log + append-only DB triggers, verifiable via GET /v1/admin/audit/verify or `gateway verify-audit` against a cold backup',
     docStatus: 'shipped',
     docRefs: [
-      'gateway/README.md — "Tamper-evident audit log"',
+      'hub/README.md — "Tamper-evident audit log"',
       'site/docs/security.md — "Tamper-evident audit log"',
       'site/docs/self-host.md — "Checking the audit log hasn\'t been tampered with"',
       'site/docs/admin.md — "The audit trail" (three views)',
@@ -474,13 +474,13 @@ export const FEATURES = [
     // NOTE: this only proves the mechanism exists, not that it's a
     // prevention control — the honest ceiling (a fully re-hashed tamper
     // verifies clean) is load-bearing prose, not something a regex can
-    // check; see gateway/internal/store/audithash_test.go's
+    // check; see hub/internal/store/audithash_test.go's
     // TestHashChainTamperRecomputingDownstreamIsUndetected.
     evidence: [
-      { file: 'gateway/internal/store/audithash.go', pattern: 'func \\(s \\*Store\\) VerifyAccessLogHashChain' },
-      { file: 'gateway/internal/store/migrations/0007_audit_hash_chain.sql' },
-      { file: 'gateway/internal/httpapi/server.go', pattern: '"GET /v1/admin/audit/verify"' },
-      { file: 'gateway/cmd/gateway/main.go', pattern: 'verify-audit' },
+      { file: 'hub/internal/store/audithash.go', pattern: 'func \\(s \\*Store\\) VerifyAccessLogHashChain' },
+      { file: 'hub/internal/store/migrations/0007_audit_hash_chain.sql' },
+      { file: 'hub/internal/httpapi/server.go', pattern: '"GET /v1/admin/audit/verify"' },
+      { file: 'hub/cmd/hub/main.go', pattern: 'verify-audit' },
     ],
   },
   {
@@ -488,15 +488,15 @@ export const FEATURES = [
     label: 'Per-IP (hard) + per-account (soft, failures-only, fixed non-compounding window) brute-force throttles on login/register/refresh/admin-claim, fail-closed on a counter-store error',
     docStatus: 'shipped',
     docRefs: [
-      'gateway/README.md — "Auth & session security"',
+      'hub/README.md — "Auth & session security"',
       'site/docs/security.md — "Login & session security"',
       'site/docs/self-host.md — Configuration (RATE_LOGIN_IP_PER_5MIN etc.)',
       'site/docs/api.md — Authentication section',
     ],
     evidence: [
-      { file: 'gateway/internal/store/authratelimit.go', pattern: 'RATE_LOGIN_IP_PER_5MIN' },
-      { file: 'gateway/internal/store/authratelimit.go', pattern: 'RATE_LOGIN_ACCOUNT_PER_5MIN' },
-      { file: 'gateway/internal/httpapi/auth.go', pattern: 'authIPGate' },
+      { file: 'hub/internal/store/authratelimit.go', pattern: 'RATE_LOGIN_IP_PER_5MIN' },
+      { file: 'hub/internal/store/authratelimit.go', pattern: 'RATE_LOGIN_ACCOUNT_PER_5MIN' },
+      { file: 'hub/internal/httpapi/auth.go', pattern: 'authIPGate' },
     ],
   },
   {
@@ -516,9 +516,9 @@ export const FEATURES = [
       'site/docs/getting-started.md — not-implemented list excludes it',
     ],
     evidence: [
-      { file: 'gateway/internal/httpapi/server.go', pattern: '"POST /v1/auth/forgot-password"' },
-      { file: 'gateway/internal/httpapi/server.go', pattern: '"POST /v1/auth/reset-password"' },
-      { file: 'gateway/internal/httpapi/server.go', pattern: '"POST /v1/auth/update-password"' },
+      { file: 'hub/internal/httpapi/server.go', pattern: '"POST /v1/auth/forgot-password"' },
+      { file: 'hub/internal/httpapi/server.go', pattern: '"POST /v1/auth/reset-password"' },
+      { file: 'hub/internal/httpapi/server.go', pattern: '"POST /v1/auth/update-password"' },
     ],
   },
   {
@@ -529,12 +529,12 @@ export const FEATURES = [
     label: 'No email identity and no email verification — users are identified by a local username',
     docStatus: 'planned',
     docRefs: [
-      'gateway/internal/store/migrations/0001_baseline.sql — users.username, and why it is not an address',
+      'hub/internal/store/migrations/0001_baseline.sql — users.username, and why it is not an address',
       'README.md — email verification described as removed, not missing',
     ],
     evidence: [
-      { file: 'gateway/internal/store/migrations/0001_baseline.sql', pattern: 'email\\s+TEXT NOT NULL UNIQUE' },
-      { file: 'gateway/internal/httpapi/server.go', pattern: 'verify-email' },
+      { file: 'hub/internal/store/migrations/0001_baseline.sql', pattern: 'email\\s+TEXT NOT NULL UNIQUE' },
+      { file: 'hub/internal/httpapi/server.go', pattern: 'verify-email' },
     ],
   },
   {
@@ -542,13 +542,13 @@ export const FEATURES = [
     label: '"Log out everywhere" — POST /v1/auth/logout-all revokes every refresh-token family for the calling user',
     docStatus: 'shipped',
     docRefs: [
-      'gateway/README.md — "Auth & session security"',
+      'hub/README.md — "Auth & session security"',
       'site/docs/security.md — "Login & session security"',
       'site/docs/api.md — Authentication section',
     ],
     evidence: [
-      { file: 'gateway/internal/httpapi/server.go', pattern: '"POST /v1/auth/logout-all"' },
-      { file: 'gateway/internal/store/users.go', pattern: 'func \\(s \\*Store\\) RevokeAllRefreshTokensForUser' },
+      { file: 'hub/internal/httpapi/server.go', pattern: '"POST /v1/auth/logout-all"' },
+      { file: 'hub/internal/store/users.go', pattern: 'func \\(s \\*Store\\) RevokeAllRefreshTokensForUser' },
     ],
   },
   {
@@ -556,26 +556,26 @@ export const FEATURES = [
     label: 'requireAuth re-reads the live user row on every authenticated request (not just admin routes) — a disabled user is cut off on their next request, not at token TTL expiry',
     docStatus: 'shipped',
     docRefs: [
-      'gateway/README.md — "Auth & session security"',
+      'hub/README.md — "Auth & session security"',
       'site/docs/security.md — "Login & session security"',
     ],
     evidence: [
-      { file: 'gateway/internal/httpapi/server.go', pattern: 'func \\(s \\*Server\\) requireAuth' },
-      { file: 'gateway/internal/httpapi/server.go', pattern: 'u\\.Status != "active"' },
+      { file: 'hub/internal/httpapi/server.go', pattern: 'func \\(s \\*Server\\) requireAuth' },
+      { file: 'hub/internal/httpapi/server.go', pattern: 'u\\.Status != "active"' },
     ],
   },
   {
     id: 'public-bind-refusal',
-    label: 'Gateway refuses to start when -listen resolves to a non-loopback address unless -behind-proxy/LINTEL_BEHIND_PROXY is set',
+    label: 'Gateway refuses to start when -listen resolves to a non-loopback address unless -behind-proxy/AQL_BEHIND_PROXY is set',
     docStatus: 'shipped',
     docRefs: [
-      'gateway/README.md — "Deployment & TLS"',
+      'hub/README.md — "Deployment & TLS"',
       'site/docs/self-host.md — "Reachability"',
     ],
     evidence: [
-      { file: 'gateway/cmd/gateway/main.go', pattern: 'func checkListenAddr' },
-      { file: 'gateway/cmd/gateway/main.go', pattern: 'LINTEL_BEHIND_PROXY' },
-      { file: 'gateway/Dockerfile', pattern: 'LINTEL_BEHIND_PROXY=1' },
+      { file: 'hub/cmd/hub/main.go', pattern: 'func checkListenAddr' },
+      { file: 'hub/cmd/hub/main.go', pattern: 'AQL_BEHIND_PROXY' },
+      { file: 'hub/Dockerfile', pattern: 'AQL_BEHIND_PROXY=1' },
     ],
   },
 ];

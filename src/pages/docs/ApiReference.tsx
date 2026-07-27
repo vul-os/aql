@@ -68,7 +68,7 @@ Accept: application/json`}</CodeBlock>
   {
     method: 'POST',
     headers: {
-      Authorization: \`Bearer \${process.env.LINTEL_TOKEN}\`,
+      Authorization: \`Bearer \${process.env.AQL_TOKEN}\`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -81,7 +81,7 @@ const event = await r.json();`}</CodeBlock>
 
 r = requests.post(
     "https://<your-hub>/v1/access-points/ap_ABC123/open",
-    headers={"Authorization": f"Bearer {os.environ['LINTEL_TOKEN']}"},
+    headers={"Authorization": f"Bearer {os.environ['AQL_TOKEN']}"},
     json={
         "actor": {"phone": "+27825550144"},
     },
@@ -107,7 +107,7 @@ func openGate() (*http.Response, error) {
         "https://<your-hub>/v1/access-points/ap_ABC123/open",
         bytes.NewReader(body),
     )
-    req.Header.Set("Authorization", "Bearer "+os.Getenv("LINTEL_TOKEN"))
+    req.Header.Set("Authorization", "Bearer "+os.Getenv("AQL_TOKEN"))
     req.Header.Set("Content-Type", "application/json")
     return http.DefaultClient.Do(req)
 }`}</CodeBlock>

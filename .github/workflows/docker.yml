@@ -1,10 +1,10 @@
 name: Docker
 
 # Builds and publishes the gateway container image to GHCR:
-#   ghcr.io/<owner>/aql-gateway  (docs reference ghcr.io/vul-os/aql-gateway)
+#   ghcr.io/<owner>/aql-hub  (docs reference ghcr.io/vul-os/aql-gateway)
 #
-# Note: the image's own runtime environment variables are still named LINTEL_*
-# (see gateway/Dockerfile). That is deliberate — they are a deployment contract
+# Note: the image's own runtime environment variables are still named AQL_*
+# (see hub/Dockerfile). That is deliberate — they are a deployment contract
 # for gateways already in the field, and renaming them would break upgrades.
 #
 # Tag scheme:
@@ -24,20 +24,20 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  gateway-image:
-    name: gateway image (ghcr)
+  hub-image:
+    name: hub image (ghcr)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Detect gateway Dockerfile
+      - name: Detect hub Dockerfile
         id: detect
         run: |
-          if [ -f gateway/Dockerfile ]; then
+          if [ -f hub/Dockerfile ]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "gateway/Dockerfile not found — skipping image build"
+            echo "hub/Dockerfile not found — skipping image build"
           fi
 
       - uses: docker/setup-qemu-action@v3
@@ -59,7 +59,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/aql-gateway
+          images: ghcr.io/${{ github.repository_owner }}/aql-hub
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -70,8 +70,8 @@ jobs:
         if: steps.detect.outputs.present == 'true'
         uses: docker/build-push-action@v6
         with:
-          context: gateway
-          file: gateway/Dockerfile
+          context: hub
+          file: hub/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}

@@ -10,7 +10,7 @@ about what is shipped versus what is only designed.
 
 | Directory | What it is |
 | --- | --- |
-| `gateway/` | The hub: one Go binary, SQLite inside — chat channels, the open path, the embedded console, the API, the device hub, the audit log |
+| `hub/` | The hub: one Go binary, SQLite inside — chat channels, the open path, the embedded console, the API, the device hub, the audit log |
 | `controller/` | The reference gate-device agent, its own Go module — pairing, signed-command verification, offline grants, events |
 | `e2e/` | Cross-module Go harness that boots the real hub and controller binaries and drives them over the wire |
 | `proto/` | The versioned wire contracts plus `vectors/` conformance fixtures (61 vectors, 68 checks) |
@@ -23,7 +23,7 @@ about what is shipped versus what is only designed.
 
 ## Dev setup
 
-Prereqs: **Node 20+**, **Go** (version pinned in `gateway/go.mod`), and — only if you
+Prereqs: **Node 20+**, **Go** (version pinned in `hub/go.mod`), and — only if you
 touch the desktop shell — **Rust stable** plus your platform's
 [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/).
 
@@ -33,8 +33,8 @@ git clone https://github.com/vul-os/aql && cd aql
 npm install                                   # console deps
 
 # hub
-cd gateway && go build ./cmd/gateway && cd ..
-./gateway/gateway -data ./data -listen 127.0.0.1:8080
+cd hub && go build -o aql-hub ./cmd/hub && cd ..
+./hub/aql-hub -data ./data -listen 127.0.0.1:8080
 
 # console (Vite dev server, points at a hub you choose on first run)
 npm run dev
@@ -58,7 +58,7 @@ Run these before opening a PR; CI (`.github/workflows/ci.yml`) runs the same set
 | `npm run build` | root | `tsc -b && vite build` |
 | `npm run check:claims` | root | The docs-vs-code feature-claim guard — fails if the docs claim a feature with no code behind it |
 | `npm run test:e2e` | root | Playwright against a real hub binary with the embedded console (builds it first) |
-| `go test ./...` | `gateway/` | 183 tests |
+| `go test ./...` | `hub/` | 183 tests |
 | `go test ./...` | `controller/` | 45 tests |
 | `go test ./...` | `e2e/` | Cross-module, real binaries over the wire |
 | `cargo fmt --check` / `cargo clippy` | `src-tauri/` | Only if you touched the Rust shell |
@@ -76,10 +76,11 @@ Run these before opening a PR; CI (`.github/workflows/ci.yml`) runs the same set
   physical failure. Do not add new exceptions without saying why in the code.
 - **Changes to [`proto/`](proto/) are additive-only** within a major version. Deployed
   controllers are forever. Add a vector for anything you add.
-- **Do not rename the `LINTEL_*` environment variables, `lintel.db`, or the controller's
-  `_lintel._tcp` mDNS service.** They are a deployment and wire contract for hubs and
-  controllers already in the field. Everything user-facing is Aql; those identifiers are
-  not user-facing.
+- **Do not rename the `AQL_*` environment variables, `lintel.db`, or the controller's
+  `_lintel._tcp` mDNS service** — and do not remove the `LINTEL_*` fallback in
+  `hub/cmd/hub/env.go` either; it is deprecated but no removal date has been decided.
+  All of it is a deployment and wire contract for hubs and controllers already in the
+  field. Everything user-facing is Aql; those identifiers are not user-facing.
 - **Keep the hub local-first**: no default outbound calls, no cloud dependency, no
   telemetry, no billing code. Ever.
 - **The Rust core stays small** and owns device I/O behind the IPC seam if and when the

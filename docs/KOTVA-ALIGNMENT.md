@@ -63,7 +63,7 @@ what Aql can build against today.
 MOTEs"* (`26-legacy-adapters.md:26-27`). Aql's chat channels bridge a legacy rail to Aql's *own*
 SQLite/HTTP domain model. **No MOTE is constructed, sealed, verified or consumed anywhere in the
 aql tree** — the only DMTAP-shaped code is a scaffold whose sole transport implementation always
-fails closed (`gateway/internal/channels/dmtap.go:127-141`).
+fails closed (`hub/internal/channels/dmtap.go:127-141`).
 
 So most of §26 is an obligation Aql would *acquire* on riding KOTVA, not one it is currently
 failing. §3 assesses both readings, because two of §26's obligations (§26.6 sovereignty
@@ -97,7 +97,7 @@ What Aql has:
 - Public keys on the wire are raw 32-byte Ed25519, base64url, no framing
   (`proto/README.md:32-33`) — the same minimal shape KOTVA's `ik-pub` takes.
 - The gateway verifies every controller uplink against that device's enrolled key
-  (`gateway/internal/hub/hub.go:152-169`).
+  (`hub/internal/hub/hub.go:152-169`).
 
 Where it does not reach KOTVA's row:
 
@@ -111,9 +111,9 @@ Where it does not reach KOTVA's row:
   (a small pinned list with `valid_from`, `proto/pairing.md:152-161`) — which is a hand-rolled
   approximation of KOTVA's `KeyRotation`/`MoveRecord` machinery.
 - **Residents/members have no keypair at all.** They are a verified phone number or a channel
-  user id (`gateway/internal/store/channels.go:89-102`, `:121-135`). The *only* human-held key
+  user id (`hub/internal/store/channels.go:89-102`, `:121-135`). The *only* human-held key
   anywhere in the system is `app_pubkey` inside an offline grant
-  (`gateway/internal/keys/grant.go:36`) — and the app that would hold it does not exist:
+  (`hub/internal/keys/grant.go:36`) — and the app that would hold it does not exist:
   *"What is **not yet implemented anywhere in this codebase is the app side**"*
   (`proto/grants.md:169-177`).
 
@@ -218,12 +218,12 @@ equivocation**, surfaced not merged"* (`substrate/OFFLINE.md:164`).
 
 Aql's nearest object is the audit hash chain over `access_logs` and `admin_audit_log`. It is a
 SHA-256 chain over `{chain, prev_hash, fields}` rendered as JCS
-(`gateway/internal/store/audithash.go:103-110`) and it is **not signed** — there is no Ed25519
+(`hub/internal/store/audithash.go:103-110`) and it is **not signed** — there is no Ed25519
 anywhere in that file. Its own header says the consequence plainly:
 
 > *"a hash chain does NOT stop an attacker who edits the SQLite file directly AND recomputes
 > every hash after their edit forward through the end of the chain. That attacker can still
-> rewrite history undetectably."* — `gateway/internal/store/audithash.go:6-13`
+> rewrite history undetectably."* — `hub/internal/store/audithash.go:6-13`
 
 That is exactly the gap a signed, `seq`-chained PUB feed closes: rewriting becomes a *detectable
 equivocation* rather than an undetectable recompute. And it composes with the second audit defect
@@ -246,8 +246,8 @@ application invariant that neither replica could check while partitioned"*, and 
 invariants to be enforced *"by a **single-writer authority** for that resource"* or surfaced as a
 detectable conflict (`substrate/OFFLINE.md:131-139`). Visitor-grant use caps are exactly that
 invariant class: `max_uses`/`uses_count` are enforced by a server-side counter in a single SQL
-predicate (`gateway/internal/store/channels.go:56-68`,
-`gateway/internal/store/grants.go:37`). Aql's current shape — one gateway is the sole writer for
+predicate (`hub/internal/store/channels.go:56-68`,
+`hub/internal/store/grants.go:37`). Aql's current shape — one gateway is the sole writer for
 a location's access state — *is* the shape R-SYNC-1 prescribes. Adopting SYNC for access policy
 would be a regression unless the single-writer rule is preserved explicitly.
 
@@ -267,7 +267,7 @@ gateway *"never reports success when the controller did not answer"*, and the ch
 
 ---
 
-## 2. §26 node-mode obligations, checked against `gateway/internal/channels/`
+## 2. §26 node-mode obligations, checked against `hub/internal/channels/`
 
 ### 2.1 Which obligations are node-mode obligations
 
@@ -297,14 +297,14 @@ regardless.
 
 | # | Obligation (ref) | Aql today | Evidence |
 |---|---|---|---|
-| **ADAPT-2** | Declare all four fields; per-direction where asymmetric (`:509`) | **Missing entirely** | Zero occurrences of initiation class / inbound transport class / price shape / exposure in `gateway/`, `controller/`, `proto/` or `docs/`. The *distinction* exists in code — `Channel` is webhook-shaped, `DialChannel` is outbound-persistent, with the CGNAT rationale stated verbatim (`gateway/internal/channels/channels.go:65-80`) — but no declaration exists for a user. |
-| **ADAPT-3** | Template-walled outbound-cold presented as a functional wall, never a price tier (`:510`) | **Not satisfied; latent** | Nothing models a service window or a template anywhere. Masked today because every outbound send is a reply to a verified inbound webhook. **But** `proto/events.md:41` specifies the intercom feature (`button` → *"gateway notifies the resident's chat — 'Someone is at the gate. Reply OPEN.'"*), and `ARCHITECTURE.md:271-272` lists it as "protocol supports now, ship later". That is a **gateway-initiated cold send** — exactly §26.4.1's wall (`26-legacy-adapters.md:192-202`). Verified unimplemented: controller `event` uplinks are signature-verified and then only logged (`gateway/internal/httpapi/devices.go:351-352`). |
+| **ADAPT-2** | Declare all four fields; per-direction where asymmetric (`:509`) | **Missing entirely** | Zero occurrences of initiation class / inbound transport class / price shape / exposure in `gateway/`, `controller/`, `proto/` or `docs/`. The *distinction* exists in code — `Channel` is webhook-shaped, `DialChannel` is outbound-persistent, with the CGNAT rationale stated verbatim (`hub/internal/channels/channels.go:65-80`) — but no declaration exists for a user. |
+| **ADAPT-3** | Template-walled outbound-cold presented as a functional wall, never a price tier (`:510`) | **Not satisfied; latent** | Nothing models a service window or a template anywhere. Masked today because every outbound send is a reply to a verified inbound webhook. **But** `proto/events.md:41` specifies the intercom feature (`button` → *"gateway notifies the resident's chat — 'Someone is at the gate. Reply OPEN.'"*), and `ARCHITECTURE.md:271-272` lists it as "protocol supports now, ship later". That is a **gateway-initiated cold send** — exactly §26.4.1's wall (`26-legacy-adapters.md:192-202`). Verified unimplemented: controller `event` uplinks are signature-verified and then only logged (`hub/internal/httpapi/devices.go:351-352`). |
 | **ADAPT-4** | `AuthResults` carries a structurally distinct platform-asserted entry (`:511`) | **N/A, and blocked in KOTVA itself** | `26-legacy-adapters.md:452-457` lists this as *"**Still open** — `AuthResults` platform-asserted entry"*. Aql cannot conform even in principle until it lands. |
-| **ADAPT-5** | No visual parity between a platform-asserted claim and `dmarc=pass` (`:512`) | **Vacuously satisfied; substantively not carried** | There is no verified-sender badge in the UI, so nothing is mis-rendered. But the underlying honesty is absent: the webhook is HMAC-verified (`gateway/internal/channels/channels.go:189-244`), the phone/user-id is then resolved straight to a member (`gateway/internal/store/channels.go:89-102`), and a **physical actuation** is signed on the strength of it — with no marker anywhere that the origin is platform-asserted. §26.5's point is that this is *"evidence of what the platform's backend says, never of what a signature proves"* (`26-legacy-adapters.md:250-254`). A gate is the highest-consequence place to lose that distinction. |
-| **ADAPT-6** | Client can say whether a conversation is node-mode (portable) or gateway-mode (dies, handle reassignable) (`:513`) | **Not satisfied — and Aql is structurally in gateway mode** | Credentials are a single **process-global** set read from env (`gateway/internal/channels/channels.go:112-144`, `:154-172`), wired once at startup (`gateway/cmd/gateway/main.go:270-271`), while the store is multi-account (`gateway/internal/store/channels.go:93-95`; cross-tenant admin listings at `gateway/internal/store/admin.go:294`, `:369`, `:435`). One WhatsApp number ID serves every account on the instance (`gateway/internal/httpapi/channels_whatsapp.go:59-66`). By §26.2's table that is *"Identities served: many"* → gateway mode (`26-legacy-adapters.md:54-59`). **See §2.3 for the honest counter-argument.** |
-| **ADAPT-8** | WhatsApp defaults to BYO credentials; BSP option labelled distinctly (`:515`) | **Satisfied by construction, not by declaration** | No path provisions Meta access on a user's behalf; the operator supplies `WHATSAPP_ACCESS_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` themselves (`gateway/internal/channels/channels.go:156-160`). No BSP path exists, so nothing is mislabelled. Nothing is declared either. |
+| **ADAPT-5** | No visual parity between a platform-asserted claim and `dmarc=pass` (`:512`) | **Vacuously satisfied; substantively not carried** | There is no verified-sender badge in the UI, so nothing is mis-rendered. But the underlying honesty is absent: the webhook is HMAC-verified (`hub/internal/channels/channels.go:189-244`), the phone/user-id is then resolved straight to a member (`hub/internal/store/channels.go:89-102`), and a **physical actuation** is signed on the strength of it — with no marker anywhere that the origin is platform-asserted. §26.5's point is that this is *"evidence of what the platform's backend says, never of what a signature proves"* (`26-legacy-adapters.md:250-254`). A gate is the highest-consequence place to lose that distinction. |
+| **ADAPT-6** | Client can say whether a conversation is node-mode (portable) or gateway-mode (dies, handle reassignable) (`:513`) | **Not satisfied — and Aql is structurally in gateway mode** | Credentials are a single **process-global** set read from env (`hub/internal/channels/channels.go:112-144`, `:154-172`), wired once at startup (`hub/cmd/hub/main.go:270-271`), while the store is multi-account (`hub/internal/store/channels.go:93-95`; cross-tenant admin listings at `hub/internal/store/admin.go:294`, `:369`, `:435`). One WhatsApp number ID serves every account on the instance (`hub/internal/httpapi/channels_whatsapp.go:59-66`). By §26.2's table that is *"Identities served: many"* → gateway mode (`26-legacy-adapters.md:54-59`). **See §2.3 for the honest counter-argument.** |
+| **ADAPT-8** | WhatsApp defaults to BYO credentials; BSP option labelled distinctly (`:515`) | **Satisfied by construction, not by declaration** | No path provisions Meta access on a user's behalf; the operator supplies `WHATSAPP_ACCESS_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` themselves (`hub/internal/channels/channels.go:156-160`). No BSP path exists, so nothing is mislabelled. Nothing is declared either. |
 | **ADAPT-9** | No unofficial WhatsApp libraries or ban-evasion rotation as a credential path (`:516`) | **NOT SATISFIED — a genuine conflict** | See §2.4. |
-| **ADAPT-10** | Node core ships no adapter but hardware SMS; every other adapter versions independently (`:517`) | **Not satisfied; N/A today** | All four rails are in-tree in one Go module (`gateway/internal/channels/{whatsapp,slack,telegram,socketmode}.go`, `gateway/go.mod`) started by one call (`gateway/cmd/gateway/main.go:278`). §26.9's rule is about *"The node core"* (`26-legacy-adapters.md:350-352`) and Aql's gateway is not a KOTVA node — so this is N/A now and binding the moment it becomes one. It is a real architectural constraint on the DMTAP plan, because `dmtap.go` currently sits in the same package as the legacy rails. |
+| **ADAPT-10** | Node core ships no adapter but hardware SMS; every other adapter versions independently (`:517`) | **Not satisfied; N/A today** | All four rails are in-tree in one Go module (`hub/internal/channels/{whatsapp,slack,telegram,socketmode}.go`, `hub/go.mod`) started by one call (`hub/cmd/hub/main.go:278`). §26.9's rule is about *"The node core"* (`26-legacy-adapters.md:350-352`) and Aql's gateway is not a KOTVA node — so this is N/A now and binding the moment it becomes one. It is a real architectural constraint on the DMTAP plan, because `dmtap.go` currently sits in the same package as the legacy rails. |
 | **ADAPT-11** | A free adapter still populates the exposure field; "free" never reads as "private" (`:518`) | **Not satisfied** | No exposure statement exists (see ADAPT-2). Concretely: Telegram and Slack are free and both put the platform in the plaintext path of a message that **opens a physical gate** (`26-legacy-adapters.md:187-189`, `:417-421`). `docs/THREAT-MODEL.md` contains **zero** mentions of WhatsApp, Meta, Slack, Telegram, "platform" or "chat" — verified by grep across all 146 lines. Worse, it still asserts *"No cloud broker sits between you and your devices"* (`docs/THREAT-MODEL.md:19`) and scopes out *"Multi-tenant / multi-user permission models … single-operator model only"* (`docs/THREAT-MODEL.md:119-120`), both of which the folded gateway contradicts. |
 
 ### 2.3 The honest counter-argument on ADAPT-6, and why the disclosure duty survives it
@@ -332,7 +332,7 @@ disclosure obligation is real today, independent of MOTEs.
 Likewise §26.7's reply-routing state — *"(rail, remote party, which number/bot/account) → identity"*,
 which the operator *"can corrupt"* and *"can leak"* (`26-legacy-adapters.md:288-305`) — exists in
 Aql right now as `channel_identities` / `channel_chats`
-(`gateway/internal/store/channels.go`, `gateway/internal/store/migrations/0005_channels.sql`),
+(`hub/internal/store/channels.go`, `hub/internal/store/migrations/0005_channels.sql`),
 and is undisclosed.
 
 ### 2.4 ADAPT-9 — the one place Aql is squarely non-conformant
@@ -348,10 +348,10 @@ Aql's own comment names what that is:
 
 > *"a self-hosted bridge (Evolution API / OpenWA / MultiWA — anything fronting Baileys, an
 > unofficial reverse-engineered WhatsApp Web client) carries a real account-ban risk"*
-> — `gateway/internal/channels/send.go:172-178`
+> — `hub/internal/channels/send.go:172-178`
 
 The engine is opt-in and fails closed toward the official Cloud API
-(`gateway/internal/channels/send.go:179-181`, `:210-225`), and the code's honesty about the ban
+(`hub/internal/channels/send.go:179-181`, `:210-225`), and the code's honesty about the ban
 risk is exemplary. But §26.8.2's MUST NOT is unconditional — it is not "node-mode only", it is
 "MUST NOT offer". **Aql is non-conformant with ADAPT-9 today, on a non-default path.**
 
@@ -370,20 +370,20 @@ Not everything is a gap. These are genuinely satisfied, several of them exceedin
 - **One binary, two modes.** *"An implementation MUST NOT require a separate build, fork, or
   reimplementation to move an adapter from node mode to gateway mode or back"*
   (`26-legacy-adapters.md:61-65`). Satisfied: mode is entirely env configuration
-  (`gateway/internal/channels/channels.go:154-172`).
+  (`hub/internal/channels/channels.go:154-172`).
 - **Fail-closed inbound authentication, better than §26 requires.** Unset secret refuses; missing
   or malformed signature refuses; constant-time compare; Slack's 300 s replay window enforced
-  (`gateway/internal/channels/channels.go:189-244`, `:52`).
+  (`hub/internal/channels/channels.go:189-244`, `:52`).
 - **The fail-closed rule §26.2.1 wants, stated as a seam invariant.** *"an unset credential means
   'this channel does not run', never 'this channel runs unauthenticated'"*
-  (`gateway/internal/channels/channels.go:82-88`).
+  (`hub/internal/channels/channels.go:82-88`).
 - **A choke point that no channel can bypass.** *"A channel decides how to ask and how to reply;
-  it NEVER decides whether the gate may open"* (`gateway/internal/channels/channels.go:8-11`),
+  it NEVER decides whether the gate may open"* (`hub/internal/channels/channels.go:8-11`),
   with every open funnelling through `store.LogAccess` → `SignCommand` → `hub.Dispatch`
-  (`gateway/internal/httpapi/open.go:4-7`, `:57`, `:101-127`).
+  (`hub/internal/httpapi/open.go:4-7`, `:57`, `:101-127`).
 - **The DMTAP scaffold's honesty is exactly right.** `NotImplementedTransport` fails closed on
   every call and is documented as *"never a silent no-op that could be mistaken for 'it works,
-  just quietly does nothing'"* (`gateway/internal/channels/dmtap.go:127-141`); `Enabled()` is
+  just quietly does nothing'"* (`hub/internal/channels/dmtap.go:127-141`); `Enabled()` is
   false without a real transport (`:168`); the contract doc leads with **"v0 DRAFT, NOT
   IMPLEMENTED"** (`proto/dmtap-channel.md:1-11`).
 
@@ -416,7 +416,7 @@ Aql can copy that decision table as data rather than re-deriving §26 from prose
 1. **One Aql instance operating a rail on behalf of multiple accounts, where a member of account
    A could cause an outbound send presenting as a handle belonging to account B.** Today this is
    impossible only because there is exactly one handle per rail per process
-   (`gateway/internal/channels/channels.go:112-144`) — a coincidence of configuration, not an
+   (`hub/internal/channels/channels.go:112-144`) — a coincidence of configuration, not an
    enforced rule. §26.2.1 item 1 requires the operator to *"know, for every outbound message it
    relays, which of its served identities is authorised to present as which remote-facing
    number/handle/account"* and to refuse otherwise (`26-legacy-adapters.md:80-89`). Aql has no
@@ -437,7 +437,7 @@ Aql can copy that decision table as data rather than re-deriving §26 from prose
 2. **The entire controller path** — pairing, signed commands, acks, events. `GatewayAuthz`
    governs *legacy-rail egress authorisation*; it has no bearing on gateway→controller actuation,
    which is a pinned-key relationship (`proto/pairing.md:34-36`), not a rail.
-3. **The entire offline-grant path** — issuance (`gateway/internal/httpapi/offline_grants.go`),
+3. **The entire offline-grant path** — issuance (`hub/internal/httpapi/offline_grants.go`),
    LAN/BLE redemption, controller verification
    (`controller/internal/grants/grants.go:174-250`). No rail, no adapter, no coordinator.
 4. **A real `DMTAPTransport`, single-identity.** A node-mode DMTAP channel — the gateway holding
@@ -499,14 +499,14 @@ actuation, fails for the audit.**
   expected to find a live problem here (a visitor use cap that two partitioned parties could
   jointly overspend) and checked it directly. It does not arise:
   - Offline grants are **member-only**: issuance requires an authenticated user
-    (`gateway/internal/httpapi/offline_grants.go:69-70`) who is an active member of the access
-    point's account (`gateway/internal/httpapi/offline_grants.go:113-125`).
+    (`hub/internal/httpapi/offline_grants.go:69-70`) who is an active member of the access
+    point's account (`hub/internal/httpapi/offline_grants.go:113-125`).
   - Visitor passes are a separate, phone-keyed mechanism whose cap is a **server-side counter**
-    enforced in one SQL predicate (`gateway/internal/store/channels.go:56-68`,
-    `gateway/internal/store/grants.go:37`) — the single-writer authority `R-SYNC-1` prescribes.
+    enforced in one SQL predicate (`hub/internal/store/channels.go:56-68`,
+    `hub/internal/store/grants.go:37`) — the single-writer authority `R-SYNC-1` prescribes.
   - Member grants carry no counter at all; windows are unrestricted by design, matching the
     online path's own lack of a member schedule
-    (`gateway/internal/httpapi/offline_grants.go:151-160`).
+    (`hub/internal/httpapi/offline_grants.go:151-160`).
 
   **Conclusion: the one offline-violable invariant in the product is structurally excluded from
   the offline path today.** If offline grants are ever extended to visitors, `R-SYNC-1` and
@@ -520,14 +520,14 @@ Aql's grant is, field for field, a `CapabilityToken`:
 > from an issuer key to an audience key … Delegation is verified **without contacting any
 > server**"* — `18-wire-format.md:1722-1728`
 
-| Aql `grant` (`proto/grants.md:9-23`, `gateway/internal/keys/grant.go:31-43`) | KOTVA `CapabilityToken` (`18-wire-format.md:1731-1745`) |
+| Aql `grant` (`proto/grants.md:9-23`, `hub/internal/keys/grant.go:31-43`) | KOTVA `CapabilityToken` (`18-wire-format.md:1731-1745`) |
 |---|---|
 | gateway signing key | `iss` (key 2) |
 | `app_pubkey` | `aud` (key 3) |
 | `access_points[]` + implicit "open" verb | `caps` → `Capability.resource` / `.ability` |
 | `devices[]`, `windows[]` | `Capability.caveats` |
 | `iat` | `nbf` (key 5) |
-| `exp` (clamped to 7 d, `gateway/internal/keys/grant.go:12`, `:83-85`) | `exp` (key 6) — *"MUST be present — no non-expiring capability"* (`18-wire-format.md:1737`) |
+| `exp` (clamped to 7 d, `hub/internal/keys/grant.go:12`, `:83-85`) | `exp` (key 6) — *"MUST be present — no non-expiring capability"* (`18-wire-format.md:1737`) |
 
 Two things this buys immediately:
 
@@ -582,7 +582,7 @@ Ranked honestly:
 
 - **Best fit:** Identity on the machine leg (§1.1) and PUB (§1.4). PUB is the only place where
   riding KOTVA fixes a defect Aql has already documented against itself, twice
-  (`gateway/internal/store/audithash.go:6-13`, `proto/events.md:113-126`).
+  (`hub/internal/store/audithash.go:6-13`, `proto/events.md:113-126`).
 - **Real but second-order:** Transport, for CGNAT reach without a public gateway URL (§1.3).
 - **Expressible but expensive and low-value first:** MOTE (§1.2). Yes, the open-command can be a
   MOTE with zero spec change. No, it should not be the first thing built — it replaces working
@@ -608,7 +608,7 @@ is multi-account and routes gate-open commands through Meta, Slack and Telegram.
    broker" (`:19`), and remove multi-tenancy from "out of scope" (`:119-120`) now that
    `account_members` and cross-tenant admin exist.
 3. **Resolve the ADAPT-9 conflict on the WhatsApp bridge engine.** `[no spec change needed]` —
-   either drop `BridgeWhatsAppSender` (`gateway/internal/channels/send.go:256-271`), or keep it
+   either drop `BridgeWhatsAppSender` (`hub/internal/channels/send.go:256-271`), or keep it
    and declare the §26.8.2 non-conformance explicitly in (1). Do not leave it undeclared. This is
    a founder call, not an engineering one.
 4. **Gate the intercom / `button` feature behind an initiation-class check *before* it ships.**
@@ -616,9 +616,9 @@ is multi-account and routes gate-open commands through Meta, Slack and Telegram.
    (`crates/kotva-mail/src/adapters/mod.rs:141-152`, `:186-203`): a cold outbound on
    Telegram/Slack becomes a surfaced `BlockedNoWindow`, WhatsApp cold a surfaced
    `RequiresTemplate`, never a silent send failure. The feature is currently unimplemented
-   (`gateway/internal/httpapi/devices.go:351-352`) — the cheapest possible moment to get it right.
+   (`hub/internal/httpapi/devices.go:351-352`) — the cheapest possible moment to get it right.
 5. **Sign the audit chain and give it `seq` + `prev` — make it PUB-shaped.**
-   `[no spec change needed]` — closes `gateway/internal/store/audithash.go:6-13`'s self-declared
+   `[no spec change needed]` — closes `hub/internal/store/audithash.go:6-13`'s self-declared
    limit. Requires no MOTE, no MLS, no KOTVA transport. Highest value per unit cost in this list.
 6. **Add a per-device monotonic event `seq` on the wire.** `[no spec change needed]` — this is
    Aql's own v1 proposal (`proto/events.md:121-126`); `R-ID-1` additionally requires it be

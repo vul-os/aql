@@ -1,9 +1,9 @@
 // Command controller-sim is an interactive/scriptable simulator for the
 // lintel reference controller. It runs the REAL agent assembly with the
 // mock relay (state transitions printed), or replays the conformance
-// fixtures without any gateway:
+// fixtures without any hub:
 //
-//	controller-sim --gateway https://gate.example --claim-token …   # live agent, mock relay
+//	controller-sim --hub https://gate.example --claim-token …       # live agent, mock relay
 //	controller-sim --offline-demo                                   # LAN grant flow vs proto/vectors fixtures
 //	controller-sim --ble-demo                                       # BLE framing + session vs fixtures (no radio)
 //
@@ -41,14 +41,17 @@ import (
 
 func main() {
 	var (
-		gateway     = flag.String("gateway", "", "gateway base URL (live mode)")
-		claimToken  = flag.String("claim-token", "", "claim token (live mode, first run)")
-		stateDir    = flag.String("state", "./sim-state", "state directory")
-		lanAddr     = flag.String("lan", ":8737", "LAN grant listener address")
-		insecure    = flag.Bool("insecure", true, "allow ws://+http:// gateways (sim default)")
-		vectorsDir  = flag.String("vectors", "", "path to proto/vectors (default: auto-discover upward)")
-		offlineDemo = flag.Bool("offline-demo", false, "exercise the offline grant flow against fixture grants")
-		bleDemo     = flag.Bool("ble-demo", false, "exercise the BLE framing codec + redemption core in-memory")
+		hub = flag.String("hub", "", "hub base URL (live mode)")
+		// Deprecated alias, same reason as the controller's: see
+		// cmd/controller/main.go.
+		gatewayLegacy = flag.String("gateway", "", "deprecated alias for -hub")
+		claimToken    = flag.String("claim-token", "", "claim token (live mode, first run)")
+		stateDir      = flag.String("state", "./sim-state", "state directory")
+		lanAddr       = flag.String("lan", ":8737", "LAN grant listener address")
+		insecure      = flag.Bool("insecure", true, "allow ws://+http:// gateways (sim default)")
+		vectorsDir    = flag.String("vectors", "", "path to proto/vectors (default: auto-discover upward)")
+		offlineDemo   = flag.Bool("offline-demo", false, "exercise the offline grant flow against fixture grants")
+		bleDemo       = flag.Bool("ble-demo", false, "exercise the BLE framing codec + redemption core in-memory")
 	)
 	flag.Parse()
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
@@ -71,7 +74,11 @@ func main() {
 		}
 		return
 	}
-	runLive(*stateDir, *gateway, *claimToken, *lanAddr, *insecure, log)
+	if *hub == "" && *gatewayLegacy != "" {
+		*hub = *gatewayLegacy
+		log.Warn("-gateway is deprecated and will eventually be removed; use -hub")
+	}
+	runLive(*stateDir, *hub, *claimToken, *lanAddr, *insecure, log)
 }
 
 func fatal(err error) {

@@ -1,5 +1,5 @@
 // Package e2e is the lintel cross-module integration suite. Each test boots
-// a REAL gateway binary and (mostly) a REAL controller binary and drives them
+// a REAL hub binary and (mostly) a REAL controller binary and drives them
 // over the real wire (HTTP + WebSocket + LAN grant HTTP), asserting the two
 // independent implementations agree on the proto/ contracts.
 //
@@ -13,10 +13,10 @@ import (
 	"time"
 )
 
-// TestMoneyPath is THE assertion: a member opens an access point; the gateway
+// TestMoneyPath is THE assertion: a member opens an access point; the hub
 // runs its verdict, signs an `open` envelope, pushes it over the WebSocket; the
 // real controller verifies it against the pinned gateway key, pulses its relay,
-// and returns a signed cmd.ack; the gateway correlates the ack by nonce and
+// and returns a signed cmd.ack; the hub correlates the ack by nonce and
 // records `acked` on the audit row.
 func TestMoneyPath(t *testing.T) {
 	gw := startGateway(t)
@@ -32,7 +32,7 @@ func TestMoneyPath(t *testing.T) {
 	if st != http.StatusOK {
 		t.Fatalf("open: status %d, body %v", st, body)
 	}
-	// The money assertion. delivery=="acked" can ONLY happen if the gateway's
+	// The money assertion. delivery=="acked" can ONLY happen if the hub's
 	// hub matched the returned cmd.ack to the pending dispatch BY NONCE
 	// (hub.ResolveAck keys on env.Nonce) — so "acked" intrinsically proves the
 	// signed nonce round-tripped intact and the ack verified against the
@@ -41,7 +41,7 @@ func TestMoneyPath(t *testing.T) {
 		t.Fatalf("delivery = %q, want \"acked\" (nonce round-trip / ack correlation failed)", delivery)
 	}
 	// Timing: the whole sign→push→verify→pulse→ack→correlate cycle completed
-	// well within the gateway's 5s ack deadline (AckTimeout).
+	// well within the hub's 5s ack deadline (AckTimeout).
 	if elapsed >= 5*time.Second {
 		t.Fatalf("open round-trip took %s, want < 5s ack window", elapsed)
 	}
@@ -129,7 +129,7 @@ func TestOpen_Queued(t *testing.T) {
 }
 
 // TestRateLimit_NeverReachesController: a denied open (open_cooldown, default
-// 10s) is rejected at the gateway BEFORE dispatch, so the controller sees no
+// 10s) is rejected at the hub BEFORE dispatch, so the controller sees no
 // second command and the relay does not pulse again.
 func TestRateLimit_NeverReachesController(t *testing.T) {
 	gw := startGateway(t)
@@ -158,7 +158,7 @@ func TestRateLimit_NeverReachesController(t *testing.T) {
 	}
 
 	// The controller must not have seen the denied open. Dispatch is
-	// synchronous in the gateway handler, which returned 429 without
+	// synchronous in the hub handler, which returned 429 without
 	// dispatching; verify no new pulse/command appears (bounded settle).
 	deadline := time.Now().Add(400 * time.Millisecond)
 	for time.Now().Before(deadline) {
@@ -173,12 +173,12 @@ func TestRateLimit_NeverReachesController(t *testing.T) {
 }
 
 // TestControllerEvent_FlowsToGateway: after an open, the controller records an
-// `opened` event, signs it, and drains it over the SAME WebSocket; the gateway
+// `opened` event, signs it, and drains it over the SAME WebSocket; the hub
 // verifies it against the enrolled key and accepts it.
 //
-// FINDING (reported): the gateway does NOT persist controller events — it logs
+// FINDING (reported): the hub does NOT persist controller events — it logs
 // "controller event" and drops them. There is no event store and no API to
-// read them back, so the strongest cross-module observable is the gateway log.
+// read them back, so the strongest cross-module observable is the hub log.
 func TestControllerEvent_FlowsToGateway(t *testing.T) {
 	gw := startGateway(t)
 	ten := gw.register(t)
@@ -191,18 +191,18 @@ func TestControllerEvent_FlowsToGateway(t *testing.T) {
 		t.Fatalf("open: st=%d delivery=%q body=%v", st, delivery, body)
 	}
 	// A NEW controller event (the `opened` event from the command) reached and
-	// was accepted by the gateway.
+	// was accepted by the hub.
 	if !gw.logs.waitLines(before+1, 8*time.Second, "controller event", dev) {
-		t.Fatalf("opened event never reached gateway for device %s; gateway log:\n%s", dev, gw.logs.String())
+		t.Fatalf("opened event never reached the hub for device %s; hub log:\n%s", dev, gw.logs.String())
 	}
 	_ = c
 }
 
-// TestOfflineGrant_Redeem: the "app" (this harness) presents a gateway-signed
-// grant (proto/grants.md) to the controller's LAN listener with the gateway
+// TestOfflineGrant_Redeem: the "app" (this harness) presents a hub-signed
+// grant (proto/grants.md) to the controller's LAN listener with the hub
 // absent from the transaction; the controller verifies grant + proof offline
 // against its pinned key, pulses the relay, and queues grant_redeemed + opened
-// events which drain to the gateway over the live WS.
+// events which drain to the hub over the live WS.
 func TestOfflineGrant_Redeem(t *testing.T) {
 	gw := startGateway(t)
 	ten := gw.register(t)
@@ -228,17 +228,17 @@ func TestOfflineGrant_Redeem(t *testing.T) {
 	if !c.logs.waitLines(pulseBefore+1, 5*time.Second, "relay", "state=pulsing") {
 		t.Fatalf("relay did not pulse for offline grant; log:\n%s", c.logs.String())
 	}
-	// grant_redeemed + opened events drained to the gateway.
+	// grant_redeemed + opened events drained to the hub.
 	if !gw.logs.waitLines(evBefore+1, 8*time.Second, "controller event", dev) {
-		t.Fatalf("grant_redeemed event never drained to gateway; gateway log:\n%s", gw.logs.String())
+		t.Fatalf("grant_redeemed event never drained to the hub; hub log:\n%s", gw.logs.String())
 	}
 }
 
 // TestOfflineGrant_Rejects drives adversarial inputs at the REAL controller's
 // grants.Exchange over the real LAN wire — the one controller-side verification
 // surface reachable from an external harness (the WS command path only accepts
-// input from the pinned gateway, which the harness cannot impersonate). Every
-// grant here is minted by the REAL gateway issuance path (gw.issueOfflineGrant);
+// input from the pinned hub, which the harness cannot impersonate). Every
+// grant here is minted by the REAL hub issuance path (gw.issueOfflineGrant);
 // only the transport-level tampering in (a) mutates bytes after the fact. Every
 // rejection must fail-closed with no relay pulse.
 func TestOfflineGrant_Rejects(t *testing.T) {
@@ -302,7 +302,7 @@ func TestOfflineGrant_Rejects(t *testing.T) {
 }
 
 // TestLockdown_DeniesOfflineRedeem exercises the lockdown matrix end-to-end
-// against a REAL gateway-issued grant. No gateway API can push a `lockdown`
+// against a REAL hub-issued grant. No hub API can push a `lockdown`
 // command (dispatch is open/close only — reported gap), so the latch is set
 // through the controller-sim's stdin override; the grant itself is minted by
 // the real POST /v1/offline-grants path for a real access point bound to the
@@ -341,7 +341,7 @@ func TestLockdown_DeniesOfflineRedeem(t *testing.T) {
 
 // TestPairing_PathContract locks in the fix for interop finding #1: the
 // controller constructs its redeem request at <gateway>/pair/redeem
-// (proto/pairing.md's own flow diagram), and the gateway now serves the redeem
+// (proto/pairing.md's own flow diagram), and the hub now serves the redeem
 // handler there (spec form) as well as the /api alias. Both paths must return
 // pair.grant and burn the single-use claim.
 func TestPairing_PathContract(t *testing.T) {
@@ -376,7 +376,7 @@ func TestPairing_PathContract(t *testing.T) {
 }
 
 // TestPairing_DocumentedInvocationWorks proves the fix with the REAL controller
-// binary: invoked the way its README documents (bare --gateway, no /api), it
+// binary: invoked the way its README documents (bare --hub, no /api), it
 // pairs successfully and establishes its authenticated WS session.
 func TestPairing_DocumentedInvocationWorks(t *testing.T) {
 	gw := startGateway(t)
@@ -392,7 +392,7 @@ func TestPairing_DocumentedInvocationWorks(t *testing.T) {
 	t.Cleanup(func() { killProc(cmd); t.Logf("controller log:\n%s", logs.String()) })
 
 	// The controller should pair over the documented bare path and connect its WS.
-	if !logs.waitLines(1, 20*time.Second, "gateway connected") {
-		t.Fatalf("controller (documented bare --gateway) did not pair + connect; log:\n%s", logs.String())
+	if !logs.waitLines(1, 20*time.Second, "hub connected") {
+		t.Fatalf("controller (documented bare --hub) did not pair + connect; log:\n%s", logs.String())
 	}
 }

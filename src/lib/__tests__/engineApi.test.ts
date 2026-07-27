@@ -20,7 +20,7 @@ type Recorded = { url: string; method: string; body: unknown; headers: Headers }
 const calls: Recorded[] = [];
 let next: Response[] = [];
 
-vi.mock('../gateway', () => ({
+vi.mock('../hub', () => ({
   getApiBaseUrl: () => BASE,
   isTauri: () => false,
   gatewayFetch: async (input: string | URL, init?: RequestInit) => {

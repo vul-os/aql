@@ -44,7 +44,7 @@ required.
 **Most of this already exists.** `src/lib/offline/` requests, stores, and
 presents a signed grant from a hub. Holding grants from several hubs is a
 **list instead of a single item**. `lintel:open-gateway-picker`
-(`src/lib/gateway.ts:185`) and "Connect to a different hub"
+(`src/lib/hub.ts:185`) and "Connect to a different hub"
 (`src/pages/Landing.tsx:132`) already ship.
 
 ---
@@ -77,7 +77,7 @@ key (`state.go:153-165`, `ApplyRepair`) or a physical factory reset.
 the wrong one, or be actively malicious, and no gate opens that should not. The
 worst outcome of an app-side bug is a **denial** (`bad_sig`), which is the safe
 direction — the same directional principle stated at
-`gateway/internal/channels/verb.go:28-30`.
+`hub/internal/channels/verb.go:28-30`.
 
 Everything in §2–§5 below is therefore **defence in depth and UI correctness**,
 not the security boundary. That ordering matters: it is why multi-hub in the app
@@ -114,7 +114,7 @@ for (const rec of all) {
 ```
 
 `src/lib/offline/service.ts:53-67` (`loadState`) calls it with the *current*
-hub's URL from `getApiBaseUrl()` (`src/lib/gateway.ts:44-48`). And
+hub's URL from `getApiBaseUrl()` (`src/lib/hub.ts:44-48`). And
 `gateway.ts:171-181` (`applyGatewayUrl`) reloads the page on a hub switch. So
 today, switching hubs deletes the other hub's offline grant on the next load.
 **That is the bug that makes multi-hub not work — and it is a one-function fix.**
@@ -134,7 +134,7 @@ URL inherits its record.
 
 Identify a hub by its **Ed25519 public key**, pinned at first enrolment.
 
-- The key is already published — `gateway/internal/keys/keys.go:52-54`
+- The key is already published — `hub/internal/keys/keys.go:52-54`
   (`PublicKeyB64`, served at `/v1/gateway/key`), the same key controllers pin.
 - `gatewayUrl` demotes to **mutable metadata**: a current address hint, plus a
   list of addresses that have worked. Changing it is routine and requires no
@@ -261,12 +261,12 @@ This mostly falls out of the existing shape:
 
 - `memberId` is already **stored in the record** at enrolment
   (`vault.ts:99`, written at `service.ts:120-131`), not derived at read time.
-- The grant itself carries `member` (`gateway/internal/keys/grant.go:33`,
+- The grant itself carries `member` (`hub/internal/keys/grant.go:33`,
   `controller/internal/grants/grants.go:27`) and it is signed, so it is the hub's
   own statement about who the holder is at *that* hub.
 - Users are instance-wide per hub (`users` table, `0001_baseline.sql:23`) and
   membership is per account (`account_members`, `0001_baseline.sql:72`, with
-  `MemberRole` at `gateway/internal/store/tenants.go:140-146`). Two hubs share no
+  `MemberRole` at `hub/internal/store/tenants.go:140-146`). Two hubs share no
   identifier at all.
 
 **PROPOSAL P-6.** `loadState` (`service.ts:53-67`) currently takes a single
@@ -303,11 +303,11 @@ speaks:
 
 | Never held / forwarded | Where it lives | Why |
 |---|---|---|
-| A hub's Ed25519 **signing seed** | `gateway/internal/keys/keys.go:16`, mode `0600` at `keys.go:41` | Controllers pin the public half (`state.go:120-131`). The seed forges every gate that hub guards. |
+| A hub's Ed25519 **signing seed** | `hub/internal/keys/keys.go:16`, mode `0600` at `keys.go:41` | Controllers pin the public half (`state.go:120-131`). The seed forges every gate that hub guards. |
 | **Password hashes** | `users.password_hash`, `0001_baseline.sql:23` | Credential compromise at A must not reach B. |
 | **Session / refresh tokens** | `refresh_tokens`, `0001_baseline.sql:46`; localStorage `lintel.*` | A bearer token for hub A in a store shared with hub B's data is a cross-hub escalation path. |
-| **API tokens, channel credentials** (WhatsApp app secret, bot tokens, Slack signing secret) | env/config, never in SQLite; used at `gateway/internal/channels/channels.go:177-230` | Never app-facing at all. |
-| **Audit hash-chain state** | `gateway/internal/store/audithash.go`; `prev_hash`/`row_hash` per `0007_audit_hash_chain.sql` | Per-hub, append-only, local. Chains do not merge — see §8. |
+| **API tokens, channel credentials** (WhatsApp app secret, bot tokens, Slack signing secret) | env/config, never in SQLite; used at `hub/internal/channels/channels.go:177-230` | Never app-facing at all. |
+| **Audit hash-chain state** | `hub/internal/store/audithash.go`; `prev_hash`/`row_hash` per `0007_audit_hash_chain.sql` | Per-hub, append-only, local. Chains do not merge — see §8. |
 | **Another hub's anything** | — | Rule 3 of §2.5. |
 
 **Why this is structural, not a promise not to add a field.**
@@ -405,7 +405,7 @@ Its grants are already scoped to that hub's controllers and expire on their own
   no sync there is no merge to roll back. The old hub can only issue *new*
   grants, and it will only do so for members its restored database still
   considers active — the same authorisation gates as any issuance
-  (`gateway/internal/httpapi/offline_grants.go:9-31`). This is a genuine
+  (`hub/internal/httpapi/offline_grants.go:9-31`). This is a genuine
   weakness of restoring a stale backup, but it is a **local** one, identical to
   the risk that already exists today, and it does not propagate.
 - **Under the epoch proposal (§7.2), rollback is structurally blocked at the
@@ -416,7 +416,7 @@ Its grants are already scoped to that hub's controllers and expire on their own
 ### 6.5 Tenancy
 
 Aql's tenancy is app-layer, not RLS —
-`gateway/internal/store/store.go:1-9` states the doctrine (*"every method that
+`hub/internal/store/store.go:1-9` states the doctrine (*"every method that
 reads or writes tenant data takes an accountID and scopes its SQL to that
 account"*), and `store.go:142-145` states the contract that a row belonging to
 another account is **indistinguishable from one that does not exist**.
@@ -511,7 +511,7 @@ recommends a combination, and states the residual as a number.
 **Framing first.** Revocation is only hard when the **controller cannot reach its
 hub**. When a controller is online, the hub is authoritative and simply stops
 dispatching — a revoked member's live open is denied by the existing choke point
-(`gateway/internal/store/openpath.go:242-307`, which checks account suspension
+(`hub/internal/store/openpath.go:242-307`, which checks account suspension
 at `openpath.go:265-267` and user status at `openpath.go:272-282`). Offline
 grants exist precisely for the case where that channel is down
 (`offline_grants.go:23-31`), which is why the answer cannot be "tell the
@@ -522,7 +522,7 @@ controller".
 **Finding: the 7-day TTL is a compile-time constant at the call site, but
 `SignGrant` was already built to take a shorter one.**
 
-- `gateway/internal/keys/grant.go:12` — `const DefaultGrantTTL = 7 * 24 * time.Hour`
+- `hub/internal/keys/grant.go:12` — `const DefaultGrantTTL = 7 * 24 * time.Hour`
 - `grant.go:82-84` — `SignGrant(..., ttl time.Duration)`, clamped:
   `if ttl <= 0 || ttl > DefaultGrantTTL { ttl = DefaultGrantTTL }`
 
@@ -563,7 +563,7 @@ Why this fits Aql specifically:
   the existing 8 KiB LAN body (`lanserver.go:26`).
 - **It needs no new trust.** The epoch assertion is signed by the hub key the
   controller **already pins**, using the JCS + Ed25519 discipline already in the
-  codebase (`gateway/internal/keys/keys.go:62`, verified with
+  codebase (`hub/internal/keys/keys.go:62`, verified with
   `wire.VerifyRaw` as at `grants.go:210`). No new key, no new party, no new
   component to run.
 - **Rollback is structurally impossible, not merely checked.** Max-wins never
