@@ -80,33 +80,48 @@ func ParseTGUpdate(body []byte) (*TGUpdate, error) {
 // ---------------------------------------------------------------------------
 
 // TelegramGatePicker renders the gate picker as an inline keyboard, one button
-// per gate (callback data "open_ap:<id>"), capped at PickerCapacity rows —
-// together with the message body that must accompany it.
+// per gate (callback data "open_ap:<id>" or "close_ap:<id>"), capped at
+// PickerCapacity rows — together with the message body that must accompany it.
 //
 // It returns the body rather than leaving it to the caller precisely because
 // the cap lives here: an inline keyboard has nowhere to say "there are more",
 // so the disclosure has to ride in the text, and a renderer that silently
 // dropped rows while the caller wrote the text is how a truncated list ends up
 // looking complete. The prompt param keeps the caller's wording.
-func TelegramGatePicker(prompt string, gates []store.AvailableAP, publicURL string) (string, InlineKeyboard) {
+//
+// verb is REQUIRED and fails closed the same way every other renderer's does
+// (verb.go): the callback data is all that survives the tap, so the verb rides
+// on it or it is lost, and a caller that forgets to pass one gets a keyboard
+// that closes rather than one that opens.
+//
+// ONE button per gate, in the verb that was asked for — not an Open/Close pair
+// per row. A phone keyboard puts a pair of buttons a few millimetres apart and
+// truncates both labels ("Open Front ga…" / "Close Front g…"); making the
+// difference between opening and closing a gate a matter of which half of a row
+// a thumb lands on is not a trade worth an extra saved message.
+func TelegramGatePicker(verb GateVerb, prompt string, gates []store.AvailableAP, publicURL string) (string, InlineKeyboard) {
+	selCmd := verb.SelectionCommand()
+	label := verb.Title()
 	kb := InlineKeyboard{}
 	for _, g := range gates {
 		if len(kb.Rows) == PickerCapacity {
 			break
 		}
 		kb.Rows = append(kb.Rows, []InlineButton{{
-			Text:         "Open " + g.APName,
-			CallbackData: "open_ap:" + g.APID,
+			Text:         label + " " + g.APName,
+			CallbackData: selCmd + ":" + g.APID,
 		}})
 	}
 	return withTruncationNotice(prompt, len(kb.Rows), len(gates), publicURL), kb
 }
 
-// TelegramMenu is the help/greeting text.
+// TelegramMenu is the help/greeting text. It names BOTH verbs, for the reason
+// SlackMenu and DMTAPMenu do: the words in this message are how a resident
+// finds out that closing a gate from Telegram is possible at all.
 func TelegramMenu(profileName string) string {
 	hello := "Welcome to Aql."
 	if profileName != "" {
 		hello = "Hi " + profileName + "."
 	}
-	return hello + "\n\nSend \"open\" to open your linked gates."
+	return hello + "\n\nSend \"open\" or \"close\" for your linked gates."
 }

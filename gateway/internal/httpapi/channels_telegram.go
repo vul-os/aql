@@ -81,7 +81,23 @@ func (s *Server) processTGMessage(ctx contextT, msg *channels.TGMessage) {
 	}
 
 	switch {
-	case txt == "open" || txt == "gates":
+	// "close" is a first-class command word here, exactly as "open" is. It was
+	// not, and the whole verb only existed on Telegram as something the handler
+	// would have refused anyway: the text matcher accepted neither the word nor
+	// a callback carrying it, so a resident who could open a gate from Telegram
+	// could not close it from Telegram. That is "close is never harder to reach
+	// than open" violated in the one direction that matters.
+	//
+	// The verb is decided ONCE, here, from an exact word — never inferred later
+	// and never defaulted. "gates" keeps its existing open semantics byte for
+	// byte (a listing word acting as a verb is a real, separately recorded
+	// defect on this rail; widening close is not the change that should quietly
+	// alter what "gates" does).
+	case txt == "open" || txt == "gates" || txt == "close":
+		verb := channels.VerbOpen
+		if txt == "close" {
+			verb = channels.VerbClose
+		}
 		gates, err := s.store.AvailableAccessPointsByProfile(ctx, profileID)
 		if err != nil {
 			s.log.Error("tg available", "err", err)
@@ -91,9 +107,13 @@ func (s *Server) processTGMessage(ctx contextT, msg *channels.TGMessage) {
 		case 0:
 			s.tgSendText(ctx, msg.Chat.ID, chatID, "You don't have any active gate access. Please contact the administrator.")
 		case 1:
-			s.tgAccessCommand(ctx, msg.Chat.ID, chatID, profileID, gates[0].APID, gates[0].APName)
+			s.tgAccessCommand(ctx, msg.Chat.ID, chatID, profileID, gates[0].APID, gates[0].APName, verb.Command())
 		default:
-			body, kb := channels.TelegramGatePicker("Which gate would you like to open?", gates, s.channelPublicURL())
+			prompt := "Which gate would you like to open?"
+			if verb != channels.VerbOpen {
+				prompt = "I haven't closed anything. Which gate would you like to close?"
+			}
+			body, kb := channels.TelegramGatePicker(verb, prompt, gates, s.channelPublicURL())
 			s.tgSendKeyboard(ctx, msg.Chat.ID, chatID, body, kb)
 		}
 	case tgHelpWords[txt]:
@@ -107,8 +127,18 @@ func (s *Server) processTGCallback(ctx contextT, cq *channels.TGCallbackQuery) {
 	// Always dismiss the button spinner, even on a no-op.
 	s.tgSend.AnswerCallback(ctx, cq.ID)
 	cmd, apID, ok := channels.ParseSelection(cq.Data)
-	if !ok || cmd != channels.SelOpenAP {
+	if !ok {
 		return // unrecognised callback data actuates nothing
+	}
+	// The verb comes from the allowlist, never from the id's text, and there is
+	// no fallback: SelectionCommandVerb answers only for open_ap/close_ap, so a
+	// narrowing id (select_loc:, minted by another rail) and anything else this
+	// gateway did not write actuate nothing. Previously this compared against
+	// SelOpenAP alone, which is why a close button rendered here would have been
+	// a dead button — and why no close button was rendered here at all.
+	command, ok := channels.SelectionCommandVerb(cmd)
+	if !ok {
+		return
 	}
 	userKey := strconv.FormatInt(cq.From.ID, 10)
 	profileID, err := s.store.ResolveChannelIdentity(ctx, channels.KindTelegram, userKey)
@@ -131,12 +161,16 @@ func (s *Server) processTGCallback(ctx contextT, cq *channels.TGCallbackQuery) {
 			}
 		}
 	}
-	s.tgAccessCommand(ctx, chatNum, chatID, profileID, apID, gateName)
+	s.tgAccessCommand(ctx, chatNum, chatID, profileID, apID, gateName, command)
 }
 
-// tgAccessCommand runs one open through the shared choke point and replies.
-func (s *Server) tgAccessCommand(ctx contextT, chatNum int64, chatID, profileID, apID, gateName string) {
-	had, v, err := s.profileOpen(ctx, profileID, apID, "open", channels.KindTelegram)
+// tgAccessCommand runs one open/close through the shared choke point and
+// replies — same shape as waAccessCommand/dmtapAccessCommand. command is the
+// open-path vocabulary ("open"/"close") and reaches store.LogAccess unchanged;
+// nothing here re-derives it, and nothing here touches the limit handling that
+// deliberately exempts close.
+func (s *Server) tgAccessCommand(ctx contextT, chatNum int64, chatID, profileID, apID, gateName, command string) {
+	had, v, err := s.profileOpen(ctx, profileID, apID, command, channels.KindTelegram)
 	if err != nil {
 		s.log.Error("tg open", "err", err)
 		return
@@ -152,7 +186,11 @@ func (s *Server) tgAccessCommand(ctx contextT, chatNum int64, chatID, profileID,
 	if gateName == "" {
 		gateName = "the gate"
 	}
-	s.tgSendText(ctx, chatNum, chatID, "Opening "+gateName+"...")
+	word := "Opening"
+	if command == "close" {
+		word = "Closing"
+	}
+	s.tgSendText(ctx, chatNum, chatID, word+" "+gateName+"...")
 }
 
 func (s *Server) tgSendText(ctx contextT, chatNum int64, chatID, body string) {

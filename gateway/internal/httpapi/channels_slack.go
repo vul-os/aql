@@ -136,7 +136,18 @@ func (s *Server) processSlackEvent(ctx contextT, teamID string, ev *channels.Sla
 			"I don't know which lintel profile this Slack user belongs to yet.",
 			"Add Slack user ID " + ev.User + " in the web dashboard, then send \"menu\".",
 		}, "\n"), nil)
-	case txt == "open" || txt == "gates":
+	// "close" is a first-class command word here, exactly as "open" is. Until
+	// now AccessBlocks only ever minted open_gate: buttons and this switch only
+	// ever recognised "open", so a resident who could open a gate from Slack had
+	// no way to close one from Slack — "close is never harder to reach than
+	// open" violated in the one direction that matters. The verb is decided
+	// ONCE, here, from an exact word, and threaded into the renderer; "gates"
+	// keeps its existing open semantics byte for byte.
+	case txt == "open" || txt == "gates" || txt == "close":
+		verb := channels.VerbOpen
+		if txt == "close" {
+			verb = channels.VerbClose
+		}
 		gates, err := s.store.AvailableAccessPointsByProfile(ctx, profileID)
 		if err != nil {
 			s.log.Error("slack available", "err", err)
@@ -146,7 +157,11 @@ func (s *Server) processSlackEvent(ctx contextT, teamID string, ev *channels.Sla
 			s.slackReply(ctx, chatID, channelID, "You don't have any active gate access. Please contact the administrator.", nil)
 			return
 		}
-		s.slackReply(ctx, chatID, channelID, "Select a gate to open", channels.AccessBlocks(displayName, gates, s.channelPublicURL()))
+		notify := "Select a gate to open"
+		if verb != channels.VerbOpen {
+			notify = "Select a gate to close"
+		}
+		s.slackReply(ctx, chatID, channelID, notify, channels.AccessBlocks(verb, displayName, gates, s.channelPublicURL()))
 	default:
 		s.slackReply(ctx, chatID, channelID, channels.SlackMenu(displayName), nil)
 	}
@@ -157,17 +172,30 @@ func (s *Server) processSlackInteraction(ctx contextT, inter *channels.SlackInte
 		return
 	}
 	act := inter.Actions[0]
-	if !strings.HasPrefix(act.ActionID, "open_gate:") {
+	// The verb and the target both come out of the action_id through the
+	// allowlist (channels.ParseSlackAction) — never from a prefix test and never
+	// from a default. An id outside {open_gate:, close_gate:}, including an id
+	// in another rail's scheme, actuates nothing. open_gate: keeps its exact
+	// wire value, so every button Slack has already delivered still resolves and
+	// still opens, which is what it was rendered to mean.
+	verb, apID, ok := channels.ParseSlackAction(act.ActionID)
+	if !ok {
 		return
 	}
-	apID := act.Value
+	// A gate button carries its access point twice — in the action_id and in
+	// value — and both halves are minted here and echoed back verbatim inside
+	// Slack's signed payload, so they always agree. A payload where they
+	// disagree is not one this gateway wrote: refuse rather than pick one.
+	if act.Value != "" && act.Value != apID {
+		return
+	}
 	channelID := inter.Channel.ID
 	profileID, err := s.store.ResolveChannelIdentity(ctx, channels.KindSlack, inter.User.ID)
 	if err != nil {
 		return // unlinked user: no actuation
 	}
 	chatID, _ := s.store.UpsertChannelChat(ctx, channels.KindSlack, channelID, profileID, "", nil)
-	had, v, err := s.profileOpen(ctx, profileID, apID, "open", channels.KindSlack)
+	had, v, err := s.profileOpen(ctx, profileID, apID, verb.Command(), channels.KindSlack)
 	if err != nil {
 		s.log.Error("slack open", "err", err)
 		return
@@ -180,7 +208,11 @@ func (s *Server) processSlackInteraction(ctx contextT, inter *channels.SlackInte
 		s.slackReply(ctx, chatID, channelID, channels.DenialMessage(v.Reason, v.RetryAfterS, s.channelPublicURL()), nil)
 		return
 	}
-	s.slackReply(ctx, chatID, channelID, "✅ Opening gate...", nil)
+	word := "Opening"
+	if verb != channels.VerbOpen {
+		word = "Closing"
+	}
+	s.slackReply(ctx, chatID, channelID, "✅ "+word+" gate...", nil)
 }
 
 // slackReply sends a text or blocks reply and logs the outbound row.

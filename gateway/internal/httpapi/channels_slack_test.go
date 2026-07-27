@@ -75,7 +75,7 @@ func TestSlackHelpAndOpenBlocks(t *testing.T) {
 	// help word → menu text
 	slackPost(e.h, "/webhooks/slack", slackEvent(testSlackUID, "hi", "1700000000.1"))
 	sent := e.slack.all()
-	if len(sent) != 1 || !strings.Contains(sent[0].text, "open your linked gates") {
+	if len(sent) != 1 || !strings.Contains(sent[0].text, "open and close your linked gates") {
 		t.Fatalf("help menu: %+v", sent)
 	}
 

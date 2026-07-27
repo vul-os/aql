@@ -82,6 +82,20 @@ func (v GateVerb) LocationCommand() string {
 	return SelSelectLocClose
 }
 
+// SlackActionCommand is the Block Kit action_id prefix a Slack gate button
+// carries. Slack has its OWN id scheme (open_gate:) rather than the
+// interactive-reply scheme WhatsApp and Telegram share (open_ap:), because that
+// is what its buttons have always been minted with and buttons already sitting
+// in workspace histories must keep meaning what they meant. Same allowlist
+// discipline as SelectionCommand, same fail-closed rule: only an explicit
+// VerbOpen mints open_gate, so an unset verb renders a button that closes.
+func (v GateVerb) SlackActionCommand() string {
+	if v == VerbOpen {
+		return SlackActOpenGate
+	}
+	return SlackActCloseGate
+}
+
 // Command is the open-path command string ("open" / "close") — the vocabulary
 // store.LogAccess accepts and the audit log records. Fail-closed: an unset verb
 // yields "close", never "open".

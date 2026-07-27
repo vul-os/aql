@@ -244,7 +244,7 @@ func manyGates(n int) []store.AvailableAP {
 // blocks and Slack rejected the whole message — the member got nothing.
 func TestSlackAccessBlocksStaysUnderCeiling(t *testing.T) {
 	for _, n := range []int{1, 9, 10, 11, 50, 200, 1000} {
-		blocks := AccessBlocks("Ada", manyGates(n), testPortal)
+		blocks := AccessBlocks(VerbOpen, "Ada", manyGates(n), testPortal)
 		if len(blocks) > SlackMaxBlocks {
 			t.Fatalf("%d gates → %d blocks, over the %d ceiling", n, len(blocks), SlackMaxBlocks)
 		}
@@ -293,7 +293,7 @@ func TestEveryPickerDisclosesTruncation(t *testing.T) {
 		t.Errorf("whatsapp location menu: %q", got)
 	}
 
-	body, kb := TelegramGatePicker("Which gate would you like to open?", gates, testPortal)
+	body, kb := TelegramGatePicker(VerbOpen, "Which gate would you like to open?", gates, testPortal)
 	if len(kb.Rows) != PickerCapacity {
 		t.Errorf("telegram rows: %d", len(kb.Rows))
 	}
@@ -301,7 +301,7 @@ func TestEveryPickerDisclosesTruncation(t *testing.T) {
 		t.Errorf("telegram body: %q", body)
 	}
 
-	blocks := AccessBlocks("Ada", gates, testPortal)
+	blocks := AccessBlocks(VerbOpen, "Ada", gates, testPortal)
 	last := blocks[len(blocks)-1]
 	els, _ := last["elements"].([]any)
 	if last["type"] != "context" || len(els) != 1 || !strings.Contains(els[0].(map[string]any)["text"].(string), "Showing 10 of 34") {
@@ -321,11 +321,11 @@ func TestPickersStaySilentWhenComplete(t *testing.T) {
 	if got := PushGateMenu(VerbOpen, "Home", gates, testPortal).Interactive.Body.Text; got != "Welcome to Home. Which gate would you like to open?" {
 		t.Errorf("whatsapp body changed for a complete list: %q", got)
 	}
-	body, _ := TelegramGatePicker("Which gate would you like to open?", gates, testPortal)
+	body, _ := TelegramGatePicker(VerbOpen, "Which gate would you like to open?", gates, testPortal)
 	if body != "Which gate would you like to open?" {
 		t.Errorf("telegram body changed for a complete list: %q", body)
 	}
-	for _, b := range AccessBlocks("Ada", gates, testPortal) {
+	for _, b := range AccessBlocks(VerbOpen, "Ada", gates, testPortal) {
 		if b["type"] == "context" {
 			t.Errorf("slack added a notice for a complete list: %+v", b)
 		}
