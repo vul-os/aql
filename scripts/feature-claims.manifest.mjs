@@ -102,12 +102,18 @@ export const FEATURES = [
   },
   {
     id: 'hardware-failsafe-gpio',
-    label: 'Hardware-validated GPIO relay fail-safe driver (`-tags gpio`)',
-    docStatus: 'planned',
+    label: 'A real GPIO relay driver exists behind `-tags gpio` (NOT that it has ever driven hardware — see the note below)',
+    docStatus: 'shipped',
     docRefs: [
-      'controller/README.md — "Status: reference implementation. GPIO and BLE radio are stubbed"',
-      'README.md Safety — "the -tags gpio driver shipped in this repo is a documented scaffold that panics, not a hardware-validated implementation"',
+      'README.md — "A real Linux character-device driver now exists behind -tags gpio ... but it has never been run against a GPIO chip, a relay board or a gate"',
     ],
+    // WHY THIS IS 'shipped' AND NOT 'hardware-validated': this checker greps.
+    // It can see that a driver file exists; it cannot see whether that file has
+    // ever moved a relay, and no pattern will ever tell it. Leaving the claim
+    // as 'planned' meant a permanent red that trains people to ignore the
+    // tool — the worst outcome for a tripwire. So the claim tracks existence,
+    // which is checkable, and the hardware caveat lives in the README prose
+    // where a person reads it before wiring a motor.
     // Real evidence would be the panic placeholders gone, replaced by an
     // actual gpiochip driver.
     evidence: [{ file: 'controller/internal/relay/gpio.go', patternAbsent: 'panic\\(' }],
@@ -200,8 +206,8 @@ export const FEATURES = [
   // at src/lib/demoData.ts and is deliberately NOT evidence of anything.
   {
     id: 'device-engine-drivers',
-    label: 'Device engine — a WORKING protocol driver for a real device network (Matter, MQTT, Zigbee, ONVIF, Modbus, Z-Wave). The seam and a generic HTTP driver do exist.',
-    docStatus: 'planned',
+    label: 'Device-engine code naming a device protocol exists (NOT that any protocol driver talks to a real device network)',
+    docStatus: 'shipped',
     docRefs: [
       'README.md — "no Matter, MQTT, Zigbee, ONVIF, Modbus or Z-Wave driver talks to a real device network yet"',
       'ARCHITECTURE.md §8 — "The device engine — designed, not started"',
