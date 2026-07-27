@@ -16,7 +16,7 @@ import (
 
 // Auth endpoints — the skeleton subset of backend/src/routes/auth.ts. Real
 // argon2id hashing and real token issuance; the ceremony around them
-// (email verification, password reset, Google OAuth, invites) is deferred.
+// (username verification, password reset, Google OAuth, invites) is deferred.
 
 const (
 	accessTTL  = 15 * time.Minute
@@ -37,7 +37,7 @@ func hashToken(t string) string {
 }
 
 type registerReq struct {
-	Email        string `json:"email"`
+	Username     string `json:"username"`
 	Password     string `json:"password"`
 	DisplayName  string `json:"display_name"`
 	LocationName string `json:"location_name"`
@@ -54,9 +54,9 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &req) {
 		return
 	}
-	req.Email = strings.TrimSpace(req.Email)
-	if req.Email == "" || !strings.Contains(req.Email, "@") {
-		writeErr(w, http.StatusBadRequest, "invalid_email")
+	req.Username = strings.TrimSpace(req.Username)
+	if req.Username == "" || !strings.Contains(req.Username, "@") {
+		writeErr(w, http.StatusBadRequest, "invalid_username")
 		return
 	}
 	if len(req.Password) < 8 {
@@ -72,9 +72,9 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "internal")
 		return
 	}
-	u, err := s.store.CreateUser(r.Context(), req.Email, hash, req.DisplayName, req.CountryCode)
-	if errors.Is(err, store.ErrEmailTaken) {
-		writeErr(w, http.StatusConflict, "email_taken")
+	u, err := s.store.CreateUser(r.Context(), req.Username, hash, req.DisplayName, req.CountryCode)
+	if errors.Is(err, store.ErrUsernameTaken) {
+		writeErr(w, http.StatusConflict, "username_taken")
 		return
 	}
 	if err != nil {
@@ -93,7 +93,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]any{
-		"user":       map[string]any{"id": u.ID, "email": u.Email},
+		"user":       map[string]any{"id": u.ID, "username": u.Username},
 		"account":    map[string]any{"id": acct.ID, "name": acct.Name},
 		"location":   map[string]any{"id": loc.ID, "name": loc.Name, "slug": loc.Slug},
 		"tokens":     tokens,
@@ -102,7 +102,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 type loginReq struct {
-	Email    string `json:"email"`
+	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
@@ -111,7 +111,7 @@ type loginReq struct {
 // Brute-force protection (security assessment finding — this endpoint had
 // NONE): a per-IP throttle (the HARD limit — every attempt counts, see
 // authIPGate) runs first, then a per-ACCOUNT soft-lockout check keyed on
-// the email — see store/authratelimit.go's package doc comment for why the
+// the username — see store/authratelimit.go's package doc comment for why the
 // account-level check only ever counts FAILURES and is bounded to one
 // fixed window, specifically so an attacker can't cheaply lock a VICTIM
 // out by deliberately failing their login from elsewhere.
@@ -124,10 +124,10 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	nowUnix := time.Now().Unix()
-	email := strings.ToLower(strings.TrimSpace(req.Email))
-	acctSubject := "email:" + email
+	username := strings.ToLower(strings.TrimSpace(req.Username))
+	acctSubject := "username:" + username
 
-	if email != "" {
+	if username != "" {
 		over, retry, err := s.store.AuthAttemptsOverCap(r.Context(), "login_acct", acctSubject,
 			s.cfg.AuthRateLimits.LoginAccountPerWindow, nowUnix)
 		if err != nil {
@@ -142,12 +142,12 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	u, err := s.store.UserByEmail(r.Context(), req.Email)
+	u, err := s.store.UserByUsername(r.Context(), req.Username)
 	if err != nil {
 		// Burn a verify anyway so user-not-found and bad-password take
 		// comparable time (no account enumeration by timing) — unchanged.
 		VerifyPassword(req.Password, dummyHash)
-		if email != "" {
+		if username != "" {
 			if ferr := s.store.RecordAuthFailure(r.Context(), "login_acct", acctSubject, nowUnix); ferr != nil {
 				s.log.Error("record auth failure", "err", ferr)
 			}
@@ -167,13 +167,13 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"user":       map[string]any{"id": u.ID, "email": u.Email, "is_platform_admin": u.IsPlatformAdmin},
+		"user":       map[string]any{"id": u.ID, "username": u.Username, "is_platform_admin": u.IsPlatformAdmin},
 		"tokens":     tokens,
 		"token_type": "Bearer",
 	})
 }
 
-// dummyHash keeps login timing flat when the email doesn't exist.
+// dummyHash keeps login timing flat when the username doesn't exist.
 var dummyHash = func() string {
 	h, err := HashPassword("lintel-dummy")
 	if err != nil {
@@ -224,7 +224,7 @@ func (s *Server) handleRefresh(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "internal")
 		return
 	}
-	access, err := SignJWT(s.cfg.JWTSecret, u.ID, u.Email, u.IsPlatformAdmin, accessTTL)
+	access, err := SignJWT(s.cfg.JWTSecret, u.ID, u.Username, u.IsPlatformAdmin, accessTTL)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "internal")
 		return
@@ -281,14 +281,14 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 		list = append(list, map[string]any{"id": a.ID, "name": a.Name, "role": a.Role})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"user":     map[string]any{"id": u.ID, "email": u.Email, "is_platform_admin": u.IsPlatformAdmin},
+		"user":     map[string]any{"id": u.ID, "username": u.Username, "is_platform_admin": u.IsPlatformAdmin},
 		"accounts": list,
 	})
 }
 
 // issueTokensCtx issues access+refresh with the request context.
 func (s *Server) issueTokensCtx(w http.ResponseWriter, r *http.Request, u *store.User) (map[string]any, bool) {
-	access, err := SignJWT(s.cfg.JWTSecret, u.ID, u.Email, u.IsPlatformAdmin, accessTTL)
+	access, err := SignJWT(s.cfg.JWTSecret, u.ID, u.Username, u.IsPlatformAdmin, accessTTL)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "internal")
 		return nil, false

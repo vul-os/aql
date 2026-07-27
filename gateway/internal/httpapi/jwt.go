@@ -11,16 +11,16 @@ import (
 )
 
 // Minimal HS256 JWT — std-lib only, deliberately no dependency. Only what the
-// gateway needs: iss "lintel", sub, email, admin flag, iat/exp.
+// gateway needs: iss "lintel", sub, username, admin flag, iat/exp.
 
 // Claims is the access-token payload.
 type Claims struct {
-	Iss     string `json:"iss"`
-	Sub     string `json:"sub"`
-	Email   string `json:"email,omitempty"`
-	IsAdmin bool   `json:"adm,omitempty"`
-	IAT     int64  `json:"iat"`
-	EXP     int64  `json:"exp"`
+	Iss      string `json:"iss"`
+	Sub      string `json:"sub"`
+	Username string `json:"username,omitempty"`
+	IsAdmin  bool   `json:"adm,omitempty"`
+	IAT      int64  `json:"iat"`
+	EXP      int64  `json:"exp"`
 }
 
 var (
@@ -37,9 +37,9 @@ var jwtHeaderB64 = b64(`{"alg":"HS256","typ":"JWT"}`)
 func b64(s string) string { return base64.RawURLEncoding.EncodeToString([]byte(s)) }
 
 // SignJWT issues an HS256 token for the user with the given TTL.
-func SignJWT(secret []byte, sub, email string, isAdmin bool, ttl time.Duration) (string, error) {
+func SignJWT(secret []byte, sub, username string, isAdmin bool, ttl time.Duration) (string, error) {
 	now := time.Now()
-	c := Claims{Iss: jwtIssuer, Sub: sub, Email: email, IsAdmin: isAdmin,
+	c := Claims{Iss: jwtIssuer, Sub: sub, Username: username, IsAdmin: isAdmin,
 		IAT: now.Unix(), EXP: now.Add(ttl).Unix()}
 	payload, err := json.Marshal(c)
 	if err != nil {

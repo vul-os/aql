@@ -75,7 +75,7 @@ func liveJSON(t *testing.T, ts *httptest.Server, method, path, bearer string, bo
 func pairDevice(t *testing.T, ts *httptest.Server) (access, accountID, locationID, deviceID string, priv ed25519.PrivateKey) {
 	t.Helper()
 	code, out := liveJSON(t, ts, "POST", "/v1/auth/register", "", map[string]any{
-		"email": "pair@x.com", "password": "hunter2hunter2", "location_name": "Pair House",
+		"username": "pair@x.com", "password": "hunter2hunter2", "location_name": "Pair House",
 	})
 	if code != 201 {
 		t.Fatalf("register: %d %v", code, out)
@@ -196,7 +196,7 @@ func TestDeviceCreateRoleGates(t *testing.T) {
 
 	// Another user (non-member) cannot mint claims for A's location — 404.
 	code, out := liveJSON(t, ts, "POST", "/v1/auth/register", "", map[string]any{
-		"email": "other@x.com", "password": "hunter2hunter2", "location_name": "Other House",
+		"username": "other@x.com", "password": "hunter2hunter2", "location_name": "Other House",
 	})
 	if code != 201 {
 		t.Fatal(code)

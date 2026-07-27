@@ -43,7 +43,7 @@ type Config struct {
 	// sender is a config-unset no-op.
 	Channels channels.Config
 	// RecoveryMailer delivers account-recovery secrets out of band (password
-	// reset + email verification). nil falls back to LogRecoveryMailer, which
+	// reset + username verification). nil falls back to LogRecoveryMailer, which
 	// prints the link to the operator console and does NOT deliver anything —
 	// read authmail.go's doc comment before running with the default on any
 	// instance that has more than one account on it.
@@ -177,7 +177,6 @@ func (s *Server) Router() http.Handler {
 	// the reset flow.
 	mux.HandleFunc("POST /v1/auth/forgot-password", s.handleForgotPassword)
 	mux.HandleFunc("POST /v1/auth/reset-password", s.handleResetPassword)
-	mux.HandleFunc("POST /v1/auth/verify-email", s.handleVerifyEmail)
 	mux.Handle("POST /v1/auth/update-password", s.requireAuth(s.handleUpdatePassword))
 
 	// instance admin first-run claim (spec: backend/src/routes/admin.ts)

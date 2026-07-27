@@ -11,19 +11,19 @@ import (
 // User is an authenticated end-user of this gateway instance.
 type User struct {
 	ID              string
-	Email           string
+	Username        string
 	PasswordHash    string
 	Status          string
 	IsPlatformAdmin bool
 	CreatedAt       int64
 }
 
-// ErrEmailTaken is returned by CreateUser when the email already exists.
-var ErrEmailTaken = errors.New("email_taken")
+// ErrUsernameTaken is returned by CreateUser when the username already exists.
+var ErrUsernameTaken = errors.New("username_taken")
 
 // CreateUser inserts a user plus their 1:1 profile row.
-func (s *Store) CreateUser(ctx context.Context, email, passwordHash, displayName, countryCode string) (*User, error) {
-	email = strings.ToLower(strings.TrimSpace(email))
+func (s *Store) CreateUser(ctx context.Context, username, passwordHash, displayName, countryCode string) (*User, error) {
+	username = strings.ToLower(strings.TrimSpace(username))
 	id := NewID()
 	t := now()
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -33,15 +33,15 @@ func (s *Store) CreateUser(ctx context.Context, email, passwordHash, displayName
 	defer tx.Rollback()
 
 	var n int
-	if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM users WHERE email = ?`, email).Scan(&n); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM users WHERE username = ?`, username).Scan(&n); err != nil {
 		return nil, err
 	}
 	if n > 0 {
-		return nil, ErrEmailTaken
+		return nil, ErrUsernameTaken
 	}
 	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO users (id, email, password_hash, status, created_at, updated_at)
-		 VALUES (?, ?, ?, 'active', ?, ?)`, id, email, passwordHash, t, t); err != nil {
+		`INSERT INTO users (id, username, password_hash, status, created_at, updated_at)
+		 VALUES (?, ?, ?, 'active', ?, ?)`, id, username, passwordHash, t, t); err != nil {
 		return nil, err
 	}
 	var cc any
@@ -56,14 +56,14 @@ func (s *Store) CreateUser(ctx context.Context, email, passwordHash, displayName
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-	return &User{ID: id, Email: email, PasswordHash: passwordHash, Status: "active", CreatedAt: t}, nil
+	return &User{ID: id, Username: username, PasswordHash: passwordHash, Status: "active", CreatedAt: t}, nil
 }
 
 func scanUser(row *sql.Row) (*User, error) {
 	var u User
 	var hash sql.NullString
 	var admin int
-	if err := row.Scan(&u.ID, &u.Email, &hash, &u.Status, &admin, &u.CreatedAt); err != nil {
+	if err := row.Scan(&u.ID, &u.Username, &hash, &u.Status, &admin, &u.CreatedAt); err != nil {
 		return nil, err
 	}
 	u.PasswordHash = hash.String
@@ -71,12 +71,12 @@ func scanUser(row *sql.Row) (*User, error) {
 	return &u, nil
 }
 
-const userCols = `id, email, password_hash, status, is_platform_admin, created_at`
+const userCols = `id, username, password_hash, status, is_platform_admin, created_at`
 
-// UserByEmail looks a user up by (case-insensitive) email.
-func (s *Store) UserByEmail(ctx context.Context, email string) (*User, error) {
-	email = strings.ToLower(strings.TrimSpace(email))
-	return scanUser(s.db.QueryRowContext(ctx, `SELECT `+userCols+` FROM users WHERE email = ?`, email))
+// UserByUsername looks a user up by (case-insensitive) username.
+func (s *Store) UserByUsername(ctx context.Context, username string) (*User, error) {
+	username = strings.ToLower(strings.TrimSpace(username))
+	return scanUser(s.db.QueryRowContext(ctx, `SELECT `+userCols+` FROM users WHERE username = ?`, username))
 }
 
 // UserByID looks a user up by id.

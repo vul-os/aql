@@ -60,18 +60,18 @@ func TestUserCRUDRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
-	if u.Email != "alice@example.com" {
-		t.Errorf("email not lowercased: %q", u.Email)
+	if u.Username != "alice@example.com" {
+		t.Errorf("username not lowercased: %q", u.Username)
 	}
 
-	// duplicate email (case-insensitive) rejected
-	if _, err := s.CreateUser(ctx, "ALICE@example.com", "h", "A", ""); !errors.Is(err, ErrEmailTaken) {
-		t.Errorf("dup email: want ErrEmailTaken, got %v", err)
+	// duplicate username (case-insensitive) rejected
+	if _, err := s.CreateUser(ctx, "ALICE@example.com", "h", "A", ""); !errors.Is(err, ErrUsernameTaken) {
+		t.Errorf("dup username: want ErrUsernameTaken, got %v", err)
 	}
 
-	got, err := s.UserByEmail(ctx, "alice@example.com")
+	got, err := s.UserByUsername(ctx, "alice@example.com")
 	if err != nil {
-		t.Fatalf("UserByEmail: %v", err)
+		t.Fatalf("UserByUsername: %v", err)
 	}
 	if got.ID != u.ID || got.PasswordHash != "hash" || got.Status != "active" || got.IsPlatformAdmin {
 		t.Errorf("round-trip mismatch: %+v", got)
@@ -79,7 +79,7 @@ func TestUserCRUDRoundTrip(t *testing.T) {
 	if _, err := s.UserByID(ctx, u.ID); err != nil {
 		t.Errorf("UserByID: %v", err)
 	}
-	if _, err := s.UserByEmail(ctx, "nobody@example.com"); !errors.Is(err, ErrNotFound) {
+	if _, err := s.UserByUsername(ctx, "nobody@example.com"); !errors.Is(err, ErrNotFound) {
 		t.Errorf("missing user: want ErrNotFound, got %v", err)
 	}
 }
@@ -182,7 +182,7 @@ func TestMemberRole(t *testing.T) {
 	ctx := context.Background()
 	acctA, acctB, _, _ := twoTenants(t, s)
 
-	ua, _ := s.UserByEmail(ctx, "a@x.com")
+	ua, _ := s.UserByUsername(ctx, "a@x.com")
 	role, err := s.MemberRole(ctx, acctA.ID, ua.ID)
 	if err != nil || role != "owner" {
 		t.Errorf("own role: %q %v", role, err)

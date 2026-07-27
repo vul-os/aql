@@ -45,10 +45,10 @@ func newOpenFixture(t *testing.T) *openFixture {
 	}
 }
 
-func (f *openFixture) addMember(t *testing.T, email string) *User {
+func (f *openFixture) addMember(t *testing.T, username string) *User {
 	t.Helper()
 	ctx := context.Background()
-	u, err := f.s.CreateUser(ctx, email, "h", "M", "")
+	u, err := f.s.CreateUser(ctx, username, "h", "M", "")
 	if err != nil {
 		t.Fatal(err)
 	}

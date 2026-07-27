@@ -97,10 +97,10 @@ func TestAccountsCRUDAndTenancy(t *testing.T) {
 // inviteAndRecoverToken creates an invite as `access` and force-sets a known
 // token via the store handle (delivery is not wired; backend tests do the
 // same by overwriting token_hash).
-func inviteAndRecoverToken(t *testing.T, h http.Handler, st *store.Store, access, accountID, email, role, phone string) string {
+func inviteAndRecoverToken(t *testing.T, h http.Handler, st *store.Store, access, accountID, username, role, phone string) string {
 	t.Helper()
 	rec, out := doJSON(t, h, "POST", "/v1/accounts/"+accountID+"/invites", access, map[string]any{
-		"email": email, "role": role, "phone_e164": phone,
+		"username": username, "role": role, "phone_e164": phone,
 	})
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("invite create: %d %s", rec.Code, rec.Body)
@@ -110,7 +110,7 @@ func inviteAndRecoverToken(t *testing.T, h http.Handler, st *store.Store, access
 	if strings.Contains(raw, "token") || strings.Contains(raw, "accept_url") {
 		t.Fatalf("invite create leaks token material: %s", raw)
 	}
-	tokenPlain := "test-recovered-token-" + email
+	tokenPlain := "test-recovered-token-" + username
 	if err := st.SetInviteTokenHash(t.Context(), out["id"].(string), hashToken(tokenPlain)); err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func TestInviteFlow(t *testing.T) {
 
 	// invitee (plain member elsewhere) cannot create invites on A's account
 	rec, _ := doJSON(t, h, "POST", "/v1/accounts/"+acctA+"/invites", accessC, map[string]any{
-		"email": "x@inv.com", "phone_e164": "+27821234567",
+		"username": "x@inv.com", "phone_e164": "+27821234567",
 	})
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("non-member invite create: %d", rec.Code)
@@ -133,11 +133,11 @@ func TestInviteFlow(t *testing.T) {
 
 	token := inviteAndRecoverToken(t, h, st, accessA, acctA, "cleaner@inv.com", "member", "+27821234567")
 
-	// email mismatch: another logged-in user cannot burn the invite
+	// username mismatch: another logged-in user cannot burn the invite
 	accessX, _ := register(t, h, "x@inv.com")
 	rec, out := doJSON(t, h, "POST", "/v1/accounts/invites/"+token+"/accept", accessX, map[string]any{})
-	if rec.Code != http.StatusBadRequest || out["error"] != "invite_email_mismatch" {
-		t.Errorf("email mismatch: %d %v", rec.Code, out)
+	if rec.Code != http.StatusBadRequest || out["error"] != "invite_username_mismatch" {
+		t.Errorf("username mismatch: %d %v", rec.Code, out)
 	}
 
 	// right user accepts; phone never auto-verified
@@ -171,7 +171,7 @@ func TestInviteFlow(t *testing.T) {
 		t.Errorf("member rename: %d", rec.Code)
 	}
 	rec, _ = doJSON(t, h, "POST", "/v1/accounts/"+acctA+"/invites", accessC, map[string]any{
-		"email": "y@inv.com", "phone_e164": "+27821234568",
+		"username": "y@inv.com", "phone_e164": "+27821234568",
 	})
 	if rec.Code != http.StatusForbidden {
 		t.Errorf("member invite create: %d", rec.Code)

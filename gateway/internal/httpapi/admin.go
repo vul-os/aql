@@ -81,7 +81,7 @@ func (s *Server) handleClaim(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusForbidden, "claim_closed")
 		return
 	}
-	s.log.Info("instance claimed", "user", c.Sub, "email", c.Email)
+	s.log.Info("instance claimed", "user", c.Sub, "username", c.Username)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"ok": true, "user_id": c.Sub, "is_platform_admin": true,
 	})

@@ -27,7 +27,7 @@ import (
 // ---------------------------------------------------------------------------
 
 type capturedMail struct {
-	email     string
+	username  string
 	token     string
 	expiresAt time.Time
 }
@@ -41,17 +41,10 @@ type captureMailer struct {
 	verifies []capturedMail
 }
 
-func (m *captureMailer) SendPasswordReset(_ context.Context, email, token string, exp time.Time) error {
+func (m *captureMailer) SendPasswordReset(_ context.Context, username, token string, exp time.Time) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.resets = append(m.resets, capturedMail{email, token, exp})
-	return nil
-}
-
-func (m *captureMailer) SendEmailVerification(_ context.Context, email, token string, exp time.Time) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.verifies = append(m.verifies, capturedMail{email, token, exp})
+	m.resets = append(m.resets, capturedMail{username, token, exp})
 	return nil
 }
 
@@ -107,11 +100,11 @@ var generousLimits = store.AuthRateLimitConfig{
 
 // forgotToken runs the real forgot-password route and returns the token the
 // mailer received — the only place a caller can legitimately obtain one.
-func forgotToken(t *testing.T, h http.Handler, m *captureMailer, email string) string {
+func forgotToken(t *testing.T, h http.Handler, m *captureMailer, username string) string {
 	t.Helper()
-	rec, out := doJSON(t, h, "POST", "/v1/auth/forgot-password", "", map[string]any{"email": email})
+	rec, out := doJSON(t, h, "POST", "/v1/auth/forgot-password", "", map[string]any{"username": username})
 	if rec.Code != http.StatusAccepted {
-		t.Fatalf("forgot-password %s: %d %v", email, rec.Code, out)
+		t.Fatalf("forgot-password %s: %d %v", username, rec.Code, out)
 	}
 	return m.lastReset(t).token
 }
@@ -124,10 +117,10 @@ func resetWith(t *testing.T, h http.Handler, token, newPassword string) (int, st
 	return rec.Code, rec.Body.String()
 }
 
-func loginCode(t *testing.T, h http.Handler, email, password string) int {
+func loginCode(t *testing.T, h http.Handler, username, password string) int {
 	t.Helper()
 	rec, _ := doJSON(t, h, "POST", "/v1/auth/login", "", map[string]any{
-		"email": email, "password": password,
+		"username": username, "password": password,
 	})
 	return rec.Code
 }
@@ -144,7 +137,7 @@ func userIDOf(t *testing.T, h http.Handler, access string) string {
 // mintStoredToken puts a token of the caller's choosing (purpose, expiry)
 // straight into the store and hands back the plaintext — the only way to
 // build an ALREADY-EXPIRED token, and the only issuance path for
-// email-verification tokens, which nothing in the gateway mints yet.
+// username-verification tokens, which nothing in the gateway mints yet.
 func mintStoredToken(t *testing.T, st *store.Store, userID string, purpose store.RecoveryPurpose, expiresAt int64) string {
 	t.Helper()
 	m, err := mintRecovery(purpose)
@@ -171,8 +164,8 @@ func TestForgotPasswordDoesNotEnumerate(t *testing.T) {
 	h, _, mailer := newRecoveryServer(t, generousLimits)
 	register(t, h, "known@x.com")
 
-	recKnown, _ := doJSON(t, h, "POST", "/v1/auth/forgot-password", "", map[string]any{"email": "known@x.com"})
-	recUnknown, _ := doJSON(t, h, "POST", "/v1/auth/forgot-password", "", map[string]any{"email": "nobody@x.com"})
+	recKnown, _ := doJSON(t, h, "POST", "/v1/auth/forgot-password", "", map[string]any{"username": "known@x.com"})
+	recUnknown, _ := doJSON(t, h, "POST", "/v1/auth/forgot-password", "", map[string]any{"username": "nobody@x.com"})
 
 	if recKnown.Code != http.StatusAccepted {
 		t.Fatalf("known address: want 202, got %d %s", recKnown.Code, recKnown.Body)
@@ -192,7 +185,7 @@ func TestForgotPasswordDoesNotEnumerate(t *testing.T) {
 	if n := mailer.resetCount(); n != 1 {
 		t.Fatalf("expected exactly one delivered reset (the real account), got %d", n)
 	}
-	if got := mailer.lastReset(t).email; got != "known@x.com" {
+	if got := mailer.lastReset(t).username; got != "known@x.com" {
 		t.Errorf("delivered to %q, want known@x.com", got)
 	}
 }
@@ -203,7 +196,7 @@ func TestForgotPasswordDoesNotEnumerate(t *testing.T) {
 func TestForgotPasswordNeverReturnsTheToken(t *testing.T) {
 	h, _, mailer := newRecoveryServer(t, generousLimits)
 	register(t, h, "leak@x.com")
-	rec, _ := doJSON(t, h, "POST", "/v1/auth/forgot-password", "", map[string]any{"email": "leak@x.com"})
+	rec, _ := doJSON(t, h, "POST", "/v1/auth/forgot-password", "", map[string]any{"username": "leak@x.com"})
 	tok := mailer.lastReset(t).token
 	if bytes.Contains(rec.Body.Bytes(), []byte(tok)) {
 		t.Fatal("the reset token appeared in the HTTP response body")
@@ -236,7 +229,7 @@ func TestPasswordResetEndsLiveSessions(t *testing.T) {
 	}
 	newRefresh := func() string {
 		_, out := doJSON(t, h, "POST", "/v1/auth/login", "", map[string]any{
-			"email": "session@x.com", "password": "hunter2hunter2",
+			"username": "session@x.com", "password": "hunter2hunter2",
 		})
 		return out["tokens"].(map[string]any)["refresh_token"].(string)
 	}()
@@ -260,7 +253,7 @@ func TestPasswordResetEndsLiveSessions(t *testing.T) {
 
 // TestResetTokenIsSingleUse: the second redemption of a spent token must fail
 // AND must not apply its password. A token that keeps working is a permanent
-// key handed out by email.
+// key handed out by username.
 func TestResetTokenIsSingleUse(t *testing.T) {
 	h, _, mailer := newRecoveryServer(t, generousLimits)
 	register(t, h, "once@x.com")
@@ -435,57 +428,6 @@ func TestResetTokenCannotBeRedeemedAgainstADifferentUser(t *testing.T) {
 // purpose separation
 // ---------------------------------------------------------------------------
 
-// TestEmailVerifyTokenCannotResetAPassword: purpose is part of the lookup key
-// AND of the hash domain, so a reachability token is structurally unable to
-// act as an account-takeover credential. The second half of the test matters
-// as much as the first — the rejected attempt must not have consumed it.
-func TestEmailVerifyTokenCannotResetAPassword(t *testing.T) {
-	h, st, _ := newRecoveryServer(t, generousLimits)
-	access, _ := register(t, h, "purpose@x.com")
-	uid := userIDOf(t, h, access)
-	tok := mintStoredToken(t, st, uid, store.RecoveryEmailVerify, time.Now().Add(time.Hour).Unix())
-
-	if code, _ := resetWith(t, h, tok, "crossed-purposes"); code != http.StatusBadRequest {
-		t.Fatalf("a verification token must not reset a password: %d", code)
-	}
-	if code := loginCode(t, h, "purpose@x.com", "crossed-purposes"); code != http.StatusUnauthorized {
-		t.Fatal("the cross-purpose redemption changed the password")
-	}
-	rec, out := doJSON(t, h, "POST", "/v1/auth/verify-email", "", map[string]any{"token": tok})
-	if rec.Code != http.StatusOK {
-		t.Fatalf("the rejected cross-purpose attempt consumed the token: %d %v", rec.Code, out)
-	}
-}
-
-// TestVerifyEmailStampsOnceAndIsSingleUse.
-func TestVerifyEmailStampsOnceAndIsSingleUse(t *testing.T) {
-	h, st, _ := newRecoveryServer(t, generousLimits)
-	access, _ := register(t, h, "verify@x.com")
-	uid := userIDOf(t, h, access)
-
-	if v, err := st.EmailVerifiedAt(context.Background(), uid); err != nil || v != 0 {
-		t.Fatalf("fresh user should be unverified: %d %v", v, err)
-	}
-	tok := mintStoredToken(t, st, uid, store.RecoveryEmailVerify, time.Now().Add(time.Hour).Unix())
-	rec, out := doJSON(t, h, "POST", "/v1/auth/verify-email", "", map[string]any{"token": tok})
-	if rec.Code != http.StatusOK {
-		t.Fatalf("verify: %d %v", rec.Code, out)
-	}
-	v, err := st.EmailVerifiedAt(context.Background(), uid)
-	if err != nil || v == 0 {
-		t.Fatalf("email_verified_at not stamped: %d %v", v, err)
-	}
-	rec, _ = doJSON(t, h, "POST", "/v1/auth/verify-email", "", map[string]any{"token": tok})
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("replayed verification token: want 400, got %d", rec.Code)
-	}
-	// Verification is a claim about reachability, never a credential event:
-	// it must not have touched the password or the sessions.
-	if code := loginCode(t, h, "verify@x.com", "hunter2hunter2"); code != http.StatusOK {
-		t.Error("verifying an email disturbed the password")
-	}
-}
-
 // ---------------------------------------------------------------------------
 // update-password
 // ---------------------------------------------------------------------------
@@ -569,12 +511,12 @@ func TestForgotPasswordRateLimitExhausted(t *testing.T) {
 	h, _, _ := newRecoveryServer(t, limits)
 
 	for i := 0; i < 2; i++ {
-		rec, out := doJSON(t, h, "POST", "/v1/auth/forgot-password", "", map[string]any{"email": "probe@x.com"})
+		rec, out := doJSON(t, h, "POST", "/v1/auth/forgot-password", "", map[string]any{"username": "probe@x.com"})
 		if rec.Code != http.StatusAccepted {
 			t.Fatalf("probe %d: want 202, got %d %v", i, rec.Code, out)
 		}
 	}
-	rec, out := doJSON(t, h, "POST", "/v1/auth/forgot-password", "", map[string]any{"email": "probe@x.com"})
+	rec, out := doJSON(t, h, "POST", "/v1/auth/forgot-password", "", map[string]any{"username": "probe@x.com"})
 	if rec.Code != http.StatusTooManyRequests || out["error"] != "rate_limited" {
 		t.Fatalf("3rd probe from the same IP: want 429, got %d %v", rec.Code, out)
 	}
@@ -603,28 +545,6 @@ func TestResetPasswordRateLimitExhausted(t *testing.T) {
 	})
 	if rec.Code != http.StatusTooManyRequests || out["error"] != "rate_limited" {
 		t.Fatalf("3rd guess from the same IP: want 429, got %d %v", rec.Code, out)
-	}
-}
-
-// TestVerifyEmailRateLimitExhausted — same reasoning, same shared limiter.
-func TestVerifyEmailRateLimitExhausted(t *testing.T) {
-	limits := generousLimits
-	limits.LoginIPPerWindow = 2
-	h, _, _ := newRecoveryServer(t, limits)
-
-	for i := 0; i < 2; i++ {
-		rec, _ := doJSON(t, h, "POST", "/v1/auth/verify-email", "", map[string]any{
-			"token": mustMint(t, store.RecoveryEmailVerify),
-		})
-		if rec.Code != http.StatusBadRequest {
-			t.Fatalf("guess %d: want 400, got %d", i, rec.Code)
-		}
-	}
-	rec, out := doJSON(t, h, "POST", "/v1/auth/verify-email", "", map[string]any{
-		"token": mustMint(t, store.RecoveryEmailVerify),
-	})
-	if rec.Code != http.StatusTooManyRequests || out["error"] != "rate_limited" {
-		t.Fatalf("3rd verify from the same IP: want 429, got %d %v", rec.Code, out)
 	}
 }
 
@@ -667,12 +587,12 @@ func TestUpdatePasswordAccountLockoutAfterFailures(t *testing.T) {
 // for. Includes the no-account forgot-password branch, which an operator
 // investigating an incident needs to see just as much as the real ones.
 func TestRecoveryWritesAuditRows(t *testing.T) {
-	h, st, mailer := newRecoveryServer(t, generousLimits)
+	h, _, mailer := newRecoveryServer(t, generousLimits)
 	adminAccess := claimAdmin(t, h, "recovery-admin@x.com")
 	userAccess, _ := register(t, h, "audited@x.com")
-	uid := userIDOf(t, h, userAccess)
+	_ = userIDOf(t, h, userAccess)
 
-	doJSON(t, h, "POST", "/v1/auth/forgot-password", "", map[string]any{"email": "no-such-user@x.com"})
+	doJSON(t, h, "POST", "/v1/auth/forgot-password", "", map[string]any{"username": "no-such-user@x.com"})
 	tok := forgotToken(t, h, mailer, "audited@x.com")
 	if code, body := resetWith(t, h, tok, "audited-new-password"); code != http.StatusOK {
 		t.Fatalf("reset: %d %s", code, body)
@@ -683,17 +603,11 @@ func TestRecoveryWritesAuditRows(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("update-password: %d %v", rec.Code, out)
 	}
-	vtok := mintStoredToken(t, st, uid, store.RecoveryEmailVerify, time.Now().Add(time.Hour).Unix())
-	if rec, out := doJSON(t, h, "POST", "/v1/auth/verify-email", "", map[string]any{"token": vtok}); rec.Code != http.StatusOK {
-		t.Fatalf("verify-email: %d %v", rec.Code, out)
-	}
-
 	actions := auditActions(t, h, adminAccess)
 	for _, want := range []string{
 		"password_reset_request",
 		"password_reset_redeem",
 		"password_update",
-		"email_verify_redeem",
 	} {
 		if !containsAction(actions, want) {
 			t.Errorf("expected %q in the admin audit trail, got: %v", want, actions)

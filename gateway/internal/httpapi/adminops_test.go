@@ -9,9 +9,9 @@ import (
 
 // claimAdmin registers a user and wins the first-run claim, returning their
 // access token (now a live platform admin).
-func claimAdmin(t *testing.T, h http.Handler, email string) string {
+func claimAdmin(t *testing.T, h http.Handler, username string) string {
 	t.Helper()
-	access, _ := register(t, h, email)
+	access, _ := register(t, h, username)
 	rec, out := doJSON(t, h, "POST", "/v1/admin/claim", access, map[string]any{"token": "op-token"})
 	if rec.Code != 200 || out["ok"] != true {
 		t.Fatalf("claim: %d %v", rec.Code, out)
@@ -74,7 +74,7 @@ func TestAdminOverviewAndListings(t *testing.T) {
 		t.Fatal(rec.Code)
 	}
 
-	// users listing + search (email substring, wildcards escaped)
+	// users listing + search (username substring, wildcards escaped)
 	rec, out = doJSON(t, h, "GET", "/v1/admin/users?query=alice", adminAccess, nil)
 	if rec.Code != 200 || out["total"].(float64) != 1 {
 		t.Errorf("user search: %d %v", rec.Code, out)
@@ -178,7 +178,7 @@ func TestLogoutAllRevokesEverySession(t *testing.T) {
 	// gives the first, login gives the second (issueTokensCtx mints a
 	// fresh refresh-token family every time).
 	rec, out := doJSON(t, h, "POST", "/v1/auth/register", "", map[string]any{
-		"email": "multi@x.com", "password": "hunter2hunter2", "location_name": "L",
+		"username": "multi@x.com", "password": "hunter2hunter2", "location_name": "L",
 	})
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("register: %d %s", rec.Code, rec.Body)
@@ -186,7 +186,7 @@ func TestLogoutAllRevokesEverySession(t *testing.T) {
 	deviceARefresh := out["tokens"].(map[string]any)["refresh_token"].(string)
 
 	rec, out = doJSON(t, h, "POST", "/v1/auth/login", "", map[string]any{
-		"email": "multi@x.com", "password": "hunter2hunter2",
+		"username": "multi@x.com", "password": "hunter2hunter2",
 	})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("login: %d %s", rec.Code, rec.Body)

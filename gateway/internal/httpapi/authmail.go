@@ -62,11 +62,9 @@ import (
 // delivery failure that is visible to the requester is an enumeration
 // oracle (see this file's doc comment).
 type RecoveryMailer interface {
-	// SendPasswordReset delivers a password-reset token to email. expiresAt
+	// SendPasswordReset delivers a password-reset token to username. expiresAt
 	// is the token's hard expiry, for the message body.
-	SendPasswordReset(ctx context.Context, email, token string, expiresAt time.Time) error
-	// SendEmailVerification delivers an email-verification token.
-	SendEmailVerification(ctx context.Context, email, token string, expiresAt time.Time) error
+	SendPasswordReset(ctx context.Context, username, token string, expiresAt time.Time) error
 }
 
 // LogRecoveryMailer is the default RecoveryMailer: it prints the recovery
@@ -108,25 +106,12 @@ func (m *LogRecoveryMailer) link(path, token string) string {
 
 // SendPasswordReset prints the reset link. The console route is
 // /reset-password (src/routes.tsx).
-func (m *LogRecoveryMailer) SendPasswordReset(_ context.Context, email, token string, expiresAt time.Time) error {
+func (m *LogRecoveryMailer) SendPasswordReset(_ context.Context, username, token string, expiresAt time.Time) error {
 	m.logger().Warn(NoDeliveryWarning,
 		"kind", "password_reset",
-		"email", email,
+		"username", username,
 		"token", token,
 		"link", m.link("/reset-password", token),
-		"expires_at", expiresAt.UTC().Format(time.RFC3339),
-	)
-	return nil
-}
-
-// SendEmailVerification prints the verification link. The console route is
-// /auth/verify-email (src/routes.tsx).
-func (m *LogRecoveryMailer) SendEmailVerification(_ context.Context, email, token string, expiresAt time.Time) error {
-	m.logger().Warn(NoDeliveryWarning,
-		"kind", "email_verification",
-		"email", email,
-		"token", token,
-		"link", m.link("/auth/verify-email", token),
 		"expires_at", expiresAt.UTC().Format(time.RFC3339),
 	)
 	return nil

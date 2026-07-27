@@ -1,5 +1,5 @@
 -- 0009_auth_recovery.sql
--- Account recovery: password reset + email verification tokens.
+-- Account recovery: password-reset tokens.
 --
 -- 0001_baseline.sql deliberately deferred `password_reset_tokens` and
 -- `email_verification_tokens` ("ported when their routes are ported"). The
@@ -63,7 +63,11 @@
 CREATE TABLE auth_recovery_tokens (
     id             TEXT PRIMARY KEY,
     user_id        TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    purpose        TEXT NOT NULL CHECK (purpose IN ('password_reset','email_verify')),
+    -- 'email_verify' is deliberately absent: identity on this hub is a local
+    -- username, there is no address to verify and no mail sender to verify it
+    -- with. Password reset remains, delivered by the operator or over the
+    -- member's chat rail.
+    purpose        TEXT NOT NULL CHECK (purpose IN ('password_reset')),
     selector       TEXT NOT NULL UNIQUE,
     salt           TEXT NOT NULL,
     verifier_hash  TEXT NOT NULL,

@@ -125,15 +125,15 @@ func (s *Store) SetPlatformAdmin(ctx context.Context, userID string, grant bool)
 
 // AdminAuditEntry is one admin-action trail row.
 type AdminAuditEntry struct {
-	ID          string
-	ActorUserID string
-	ActorEmail  string
-	Action      string
-	TargetKind  string
-	TargetID    string
-	Allowed     bool
-	Detail      json.RawMessage
-	CreatedAt   int64
+	ID            string
+	ActorUserID   string
+	ActorUsername string
+	Action        string
+	TargetKind    string
+	TargetID      string
+	Allowed       bool
+	Detail        json.RawMessage
+	CreatedAt     int64
 }
 
 // WriteAdminAudit appends one admin-action row (claims, suspensions, grants,
@@ -193,7 +193,7 @@ func (s *Store) AdminAuditActions(ctx context.Context, limit, offset int) ([]Adm
 		return nil, 0, err
 	}
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT aal.id, coalesce(aal.actor_user_id,''), coalesce(u.email,''), aal.action,
+		`SELECT aal.id, coalesce(aal.actor_user_id,''), coalesce(u.username,''), aal.action,
 		        coalesce(aal.target_kind,''), coalesce(aal.target_id,''), aal.allowed, aal.detail, aal.created_at
 		 FROM admin_audit_log aal LEFT JOIN users u ON u.id = aal.actor_user_id
 		 ORDER BY aal.created_at DESC, aal.rowid DESC
@@ -207,7 +207,7 @@ func (s *Store) AdminAuditActions(ctx context.Context, limit, offset int) ([]Adm
 		var e AdminAuditEntry
 		var allowed int
 		var detail string
-		if err := rows.Scan(&e.ID, &e.ActorUserID, &e.ActorEmail, &e.Action, &e.TargetKind,
+		if err := rows.Scan(&e.ID, &e.ActorUserID, &e.ActorUsername, &e.Action, &e.TargetKind,
 			&e.TargetID, &allowed, &detail, &e.CreatedAt); err != nil {
 			return nil, 0, err
 		}
@@ -269,7 +269,7 @@ func (s *Store) AdminOverview(ctx context.Context, nowUnix int64) (*AdminTotals,
 // AdminUserRow is one /admin/users listing row.
 type AdminUserRow struct {
 	ID              string
-	Email           string
+	Username        string
 	Status          string
 	IsPlatformAdmin bool
 	DisplayName     string
@@ -291,7 +291,7 @@ func likeEscape(q string) string {
 	return "%" + q + "%"
 }
 
-// AdminUsers lists users (email-substring search, paged), cross-tenant.
+// AdminUsers lists users (username-substring search, paged), cross-tenant.
 func (s *Store) AdminUsers(ctx context.Context, query string, limit, offset int) ([]AdminUserRow, int, error) {
 	if limit <= 0 || limit > 200 {
 		limit = 50
@@ -302,15 +302,15 @@ func (s *Store) AdminUsers(ctx context.Context, query string, limit, offset int)
 	}
 	var total int
 	if err := s.db.QueryRowContext(ctx,
-		`SELECT count(*) FROM users WHERE (? = '' OR email LIKE ? ESCAPE '\')`,
+		`SELECT count(*) FROM users WHERE (? = '' OR username LIKE ? ESCAPE '\')`,
 		pattern, pattern).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT u.id, u.email, u.status, u.is_platform_admin, coalesce(p.display_name,''), u.created_at,
+		`SELECT u.id, u.username, u.status, u.is_platform_admin, coalesce(p.display_name,''), u.created_at,
 		        (SELECT max(al.ts) FROM access_logs al WHERE al.user_id = u.id)
 		 FROM users u LEFT JOIN profiles p ON p.id = u.id
-		 WHERE (? = '' OR u.email LIKE ? ESCAPE '\')
+		 WHERE (? = '' OR u.username LIKE ? ESCAPE '\')
 		 ORDER BY u.created_at DESC LIMIT ? OFFSET ?`,
 		pattern, pattern, limit, offset)
 	if err != nil {
@@ -321,7 +321,7 @@ func (s *Store) AdminUsers(ctx context.Context, query string, limit, offset int)
 	for rows.Next() {
 		var u AdminUserRow
 		var admin int
-		if err := rows.Scan(&u.ID, &u.Email, &u.Status, &admin, &u.DisplayName, &u.CreatedAt, &u.LastAccessAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Username, &u.Status, &admin, &u.DisplayName, &u.CreatedAt, &u.LastAccessAt); err != nil {
 			return nil, 0, err
 		}
 		u.IsPlatformAdmin = admin == 1
@@ -423,7 +423,7 @@ type AuditLogEntry struct {
 	AccessPointID   string
 	AccessPointName string
 	UserID          string
-	UserEmail       string
+	UserUsername    string
 	// ReconcilesLogID mirrors AccessLog.ReconcilesLogID: "" for every
 	// ordinary row, else the id of the original row this one is a
 	// late-cmd.ack reconciliation of (see store.ReconcileLateAck). Exposed
@@ -465,7 +465,7 @@ func (s *Store) AdminAudit(ctx context.Context, kind string, limit, offset int) 
 		        coalesce(al.account_id,''), coalesce(a.name,''),
 		        coalesce(al.location_id,''), coalesce(l.name,''),
 		        coalesce(al.access_point_id,''), coalesce(ap.name,''),
-		        coalesce(al.user_id,''), coalesce(u.email,''),
+		        coalesce(al.user_id,''), coalesce(u.username,''),
 		        coalesce(al.reconciles_log_id,'')
 		 FROM access_logs al
 		 LEFT JOIN accounts a ON a.id = al.account_id
@@ -484,7 +484,7 @@ func (s *Store) AdminAudit(ctx context.Context, kind string, limit, offset int) 
 		var success int
 		if err := rows.Scan(&e.ID, &e.TS, &e.Command, &e.Source, &success, &e.Error,
 			&e.AccountID, &e.AccountName, &e.LocationID, &e.LocationName,
-			&e.AccessPointID, &e.AccessPointName, &e.UserID, &e.UserEmail,
+			&e.AccessPointID, &e.AccessPointName, &e.UserID, &e.UserUsername,
 			&e.ReconcilesLogID); err != nil {
 			return nil, 0, err
 		}

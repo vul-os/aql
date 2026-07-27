@@ -279,7 +279,7 @@ func (s *Store) PatchLocationQuotas(ctx context.Context, locationID string, hasM
 // MemberOpens is one member's successful-open count for the usage breakdown.
 type MemberOpens struct {
 	UserID     string
-	Email      string
+	Username   string
 	OpensToday int
 }
 
@@ -296,10 +296,10 @@ func (s *Store) LocationUsage(ctx context.Context, locationID, userID string, da
 		return 0, 0, nil, err
 	}
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT coalesce(al.user_id, ''), coalesce(u.email, ''), count(*)
+		`SELECT coalesce(al.user_id, ''), coalesce(u.username, ''), count(*)
 		 FROM access_logs al LEFT JOIN users u ON u.id = al.user_id
 		 WHERE al.location_id = ? AND al.success = 1 AND al.command = 'open' AND al.ts >= ?
-		 GROUP BY al.user_id, u.email
+		 GROUP BY al.user_id, u.username
 		 ORDER BY count(*) DESC
 		 LIMIT 50`, locationID, dayStart)
 	if err != nil {
@@ -308,7 +308,7 @@ func (s *Store) LocationUsage(ctx context.Context, locationID, userID string, da
 	defer rows.Close()
 	for rows.Next() {
 		var m MemberOpens
-		if err := rows.Scan(&m.UserID, &m.Email, &m.OpensToday); err != nil {
+		if err := rows.Scan(&m.UserID, &m.Username, &m.OpensToday); err != nil {
 			return 0, 0, nil, err
 		}
 		members = append(members, m)

@@ -1,7 +1,7 @@
 package httpapi
 
 // Account recovery — the HTTP half of POST /v1/auth/{forgot-password,
-// reset-password,verify-email,update-password}. The persistence half (and the
+// reset-password,verify-username,update-password}. The persistence half (and the
 // single-use / session-killing invariants it enforces) is
 // store/authrecovery.go; the out-of-band delivery seam is authmail.go. This
 // file owns exactly one thing neither of those can: TOKEN CONSTRUCTION.
@@ -39,7 +39,7 @@ package httpapi
 // here, you have written an account-takeover primitive.
 //
 // NO USER ENUMERATION, and what that costs: POST /v1/auth/forgot-password is
-// unauthenticated and takes an email address, which makes it the obvious
+// unauthenticated and takes an username address, which makes it the obvious
 // oracle for "does this person have an account on this gate system?" — a
 // question with physical-world consequences here, since an account on this
 // instance means a person with keys to a specific building. So the handler
@@ -92,9 +92,9 @@ const (
 	// opens physical gates. A mailbox that leaks in an hour's time should not
 	// still be a key.
 	passwordResetTTL = time.Hour
-	// emailVerifyTTL is longer because the token is worth far less — proving
-	// reachability, never identity (see store.RedeemEmailVerification).
-	emailVerifyTTL = 24 * time.Hour
+	// usernameVerifyTTL is longer because the token is worth far less — proving
+	// reachability, never identity (see store.RedeemREMOVE_UsernameVerification).
+	usernameVerifyTTL = 24 * time.Hour
 )
 
 // mintedRecovery is a freshly generated token in both of its forms: the
@@ -233,7 +233,7 @@ func (s *Server) recoveryMailer() RecoveryMailer {
 // ---------------------------------------------------------------------------
 
 type forgotPasswordReq struct {
-	Email string `json:"email"`
+	Username string `json:"username"`
 }
 
 // handleForgotPassword issues a password-reset token and hands it to the
@@ -245,7 +245,7 @@ type forgotPasswordReq struct {
 // an issuance endpoint (it causes a message to be sent and a row to be
 // written), so it belongs with account creation, not with credential
 // guessing. There is deliberately NO per-ACCOUNT counter here — one keyed on
-// the submitted email would let anyone freeze a victim's ability to recover
+// the submitted username would let anyone freeze a victim's ability to recover
 // their own account by spraying requests at their address, which on a system
 // that opens doors is a denial-of-entry primitive, not a nuisance.
 func (s *Server) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
@@ -256,13 +256,13 @@ func (s *Server) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &req) {
 		return
 	}
-	email := strings.ToLower(strings.TrimSpace(req.Email))
-	if email == "" || !strings.Contains(email, "@") {
+	username := strings.ToLower(strings.TrimSpace(req.Username))
+	if username == "" || !strings.Contains(username, "@") {
 		// Structural rejection only. A string that cannot be an address tells
 		// an attacker nothing about who has an account, so this is not an
 		// enumeration channel — but it must stay structural: never reject
 		// because of anything learned from the database.
-		writeErr(w, http.StatusBadRequest, "invalid_email")
+		writeErr(w, http.StatusBadRequest, "invalid_username")
 		return
 	}
 
@@ -276,7 +276,7 @@ func (s *Server) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 	}
 	expiresAt := time.Now().Add(passwordResetTTL)
 
-	u, uerr := s.store.UserByEmail(r.Context(), email)
+	u, uerr := s.store.UserByUsername(r.Context(), username)
 	issued := uerr == nil && u.Status == "active"
 	if issued {
 		if _, err := s.store.CreateRecoveryToken(r.Context(), u.ID, store.RecoveryPasswordReset,
@@ -289,7 +289,7 @@ func (s *Server) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if issued {
-		if err := s.recoveryMailer().SendPasswordReset(r.Context(), u.Email, minted.plain, expiresAt); err != nil {
+		if err := s.recoveryMailer().SendPasswordReset(r.Context(), u.Username, minted.plain, expiresAt); err != nil {
 			// Swallowed by contract (RecoveryMailer's doc comment): a
 			// delivery error visible to the requester is an oracle too.
 			s.log.Error("send password reset", "err", err)
@@ -306,7 +306,7 @@ func (s *Server) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 		actor, target = u.ID, u.ID
 	}
 	if err := s.store.WriteAdminAudit(r.Context(), actor, "password_reset_request", "user", target,
-		issued, map[string]any{"email": email}); err != nil {
+		issued, map[string]any{"username": username}); err != nil {
 		s.log.Error("audit password_reset_request", "err", err)
 	}
 
@@ -377,50 +377,11 @@ func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 // ---------------------------------------------------------------------------
-// POST /v1/auth/verify-email
+// POST /v1/auth/verify-username
 // ---------------------------------------------------------------------------
 
-type verifyEmailReq struct {
+type verifyUsernameReq struct {
 	Token string `json:"token"`
-}
-
-// handleVerifyEmail spends an email-verification token and stamps
-// users.email_verified_at.
-//
-// NOTHING in this codebase mints these tokens yet — registration does not,
-// because there is no real mailer to deliver them (authmail.go). The
-// redemption side is here, complete and guarded, so that adding issuance is a
-// one-call change rather than a security design; until then this endpoint
-// answers every request with the same refusal an unknown token gets, which is
-// the correct fail-closed behaviour, not a stub.
-func (s *Server) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
-	if !s.authIPGate(w, r, "verify_email_ip", s.cfg.AuthRateLimits.LoginIPPerWindow) {
-		return
-	}
-	var req verifyEmailReq
-	if !readJSON(w, r, &req) {
-		return
-	}
-	row, ok := s.lookupRecovery(r.Context(), req.Token, store.RecoveryEmailVerify)
-	if !ok {
-		writeInvalidToken(w)
-		return
-	}
-	err := s.store.RedeemEmailVerification(r.Context(), row.ID, row.UserID)
-	switch {
-	case errors.Is(err, store.ErrRecoveryTokenUnusable), errors.Is(err, store.ErrNotFound):
-		writeInvalidToken(w)
-		return
-	case err != nil:
-		s.log.Error("redeem email verification", "err", err)
-		writeErr(w, http.StatusInternalServerError, "internal")
-		return
-	}
-	if err := s.store.WriteAdminAudit(r.Context(), row.UserID, "email_verify_redeem", "user", row.UserID,
-		true, map[string]any{"token_id": row.ID}); err != nil {
-		s.log.Error("audit email_verify_redeem", "err", err)
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 // ---------------------------------------------------------------------------
@@ -448,7 +409,7 @@ type updatePasswordReq struct {
 // hard per-IP one, and a per-account soft cap that counts only FAILURES, so
 // this cannot become an unmetered oracle for guessing the current password
 // behind an access token. The account subject is the caller's own user id —
-// unlike login's email-keyed counter, a stranger cannot reach it at all,
+// unlike login's username-keyed counter, a stranger cannot reach it at all,
 // because they would need a live token for that account first.
 func (s *Server) handleUpdatePassword(w http.ResponseWriter, r *http.Request) {
 	if !s.authIPGate(w, r, "update_password_ip", s.cfg.AuthRateLimits.LoginIPPerWindow) {

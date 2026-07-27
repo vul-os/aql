@@ -359,8 +359,6 @@ export const api = {
     apiFetch<void>('/auth/forgot-password', { method: 'POST', body: { email } }),
   resetPassword: (token: string, new_password: string) =>
     apiFetch<void>('/auth/reset-password', { method: 'POST', body: { token, new_password } }),
-  verifyEmail: (token: string) =>
-    apiFetch<void>('/auth/verify-email', { method: 'POST', body: { token } }),
   updatePassword: (current_password: string, new_password: string) =>
     apiFetch<void>('/auth/update-password', {
       method: 'POST',

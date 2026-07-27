@@ -57,13 +57,13 @@ func doJSON(t *testing.T, h http.Handler, method, path, bearer string, body any)
 	return rec, out
 }
 
-func register(t *testing.T, h http.Handler, email string) (access, refresh string) {
+func register(t *testing.T, h http.Handler, username string) (access, refresh string) {
 	t.Helper()
 	rec, out := doJSON(t, h, "POST", "/v1/auth/register", "", map[string]any{
-		"email": email, "password": "hunter2hunter2", "display_name": "T", "location_name": "Test House",
+		"username": username, "password": "hunter2hunter2", "display_name": "T", "location_name": "Test House",
 	})
 	if rec.Code != http.StatusCreated {
-		t.Fatalf("register %s: %d %s", email, rec.Code, rec.Body)
+		t.Fatalf("register %s: %d %s", username, rec.Code, rec.Body)
 	}
 	tok := out["tokens"].(map[string]any)
 	return tok["access_token"].(string), tok["refresh_token"].(string)
@@ -109,26 +109,26 @@ func TestRegisterLoginMe(t *testing.T) {
 	h := newTestServer(t, "")
 	access, _ := register(t, h, "a@x.com")
 
-	// duplicate email
+	// duplicate username
 	rec, out := doJSON(t, h, "POST", "/v1/auth/register", "", map[string]any{
-		"email": "a@x.com", "password": "hunter2hunter2", "location_name": "L",
+		"username": "a@x.com", "password": "hunter2hunter2", "location_name": "L",
 	})
-	if rec.Code != http.StatusConflict || out["error"] != "email_taken" {
+	if rec.Code != http.StatusConflict || out["error"] != "username_taken" {
 		t.Errorf("dup register: %d %v", rec.Code, out)
 	}
 
 	// login wrong password
-	rec, out = doJSON(t, h, "POST", "/v1/auth/login", "", map[string]any{"email": "a@x.com", "password": "wrong-password"})
+	rec, out = doJSON(t, h, "POST", "/v1/auth/login", "", map[string]any{"username": "a@x.com", "password": "wrong-password"})
 	if rec.Code != http.StatusUnauthorized || out["error"] != "invalid_credentials" {
 		t.Errorf("bad login: %d %v", rec.Code, out)
 	}
 	// login unknown user — same error, no enumeration
-	rec, out = doJSON(t, h, "POST", "/v1/auth/login", "", map[string]any{"email": "z@x.com", "password": "whatever123"})
+	rec, out = doJSON(t, h, "POST", "/v1/auth/login", "", map[string]any{"username": "z@x.com", "password": "whatever123"})
 	if rec.Code != http.StatusUnauthorized || out["error"] != "invalid_credentials" {
 		t.Errorf("unknown login: %d %v", rec.Code, out)
 	}
 	// login right password
-	rec, out = doJSON(t, h, "POST", "/v1/auth/login", "", map[string]any{"email": "a@x.com", "password": "hunter2hunter2"})
+	rec, out = doJSON(t, h, "POST", "/v1/auth/login", "", map[string]any{"username": "a@x.com", "password": "hunter2hunter2"})
 	if rec.Code != 200 {
 		t.Fatalf("login: %d %s", rec.Code, rec.Body)
 	}
@@ -280,7 +280,7 @@ func TestJWTIssueVerifyExpiry(t *testing.T) {
 		t.Fatal(err)
 	}
 	c, err := VerifyJWT(secret, tok)
-	if err != nil || c.Sub != "user-1" || c.Email != "u@x.com" || !c.IsAdmin {
+	if err != nil || c.Sub != "user-1" || c.Username != "u@x.com" || !c.IsAdmin {
 		t.Fatalf("verify: %v %+v", err, c)
 	}
 

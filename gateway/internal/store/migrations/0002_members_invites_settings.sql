@@ -26,7 +26,11 @@ CREATE TABLE location_settings (
 CREATE TABLE account_invites (
     id          TEXT PRIMARY KEY,
     account_id  TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-    email       TEXT NOT NULL COLLATE NOCASE,
+    -- Who the invite is FOR, as a local handle. An operator hands the claim
+    -- token over in person or on the chat rail the member will use anyway;
+    -- there is no mail path and inventing one would re-introduce the
+    -- dependency users.username exists to avoid.
+    username    TEXT NOT NULL COLLATE NOCASE,
     role        TEXT NOT NULL CHECK (role IN ('owner','admin','member','viewer')),
     token_hash  TEXT NOT NULL UNIQUE,
     phone_e164  TEXT,

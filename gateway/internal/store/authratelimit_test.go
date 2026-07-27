@@ -42,23 +42,23 @@ func TestAuthAttemptsOverCapOnlyCountsRecordedFailures(t *testing.T) {
 	ctx := context.Background()
 	nowUnix := int64(1_700_000_000)
 
-	if over, _, err := s.AuthAttemptsOverCap(ctx, "login_acct", "email:a@x.com", 3, nowUnix); err != nil || over {
+	if over, _, err := s.AuthAttemptsOverCap(ctx, "login_acct", "username:a@x.com", 3, nowUnix); err != nil || over {
 		t.Fatalf("fresh subject must not be over cap: over=%v err=%v", over, err)
 	}
 	for i := 0; i < 2; i++ {
-		if err := s.RecordAuthFailure(ctx, "login_acct", "email:a@x.com", nowUnix); err != nil {
+		if err := s.RecordAuthFailure(ctx, "login_acct", "username:a@x.com", nowUnix); err != nil {
 			t.Fatal(err)
 		}
 	}
 	// 2 failures recorded, cap 3: still not over.
-	if over, _, err := s.AuthAttemptsOverCap(ctx, "login_acct", "email:a@x.com", 3, nowUnix); err != nil || over {
+	if over, _, err := s.AuthAttemptsOverCap(ctx, "login_acct", "username:a@x.com", 3, nowUnix); err != nil || over {
 		t.Fatalf("2 failures under cap 3 must not be over: over=%v err=%v", over, err)
 	}
-	if err := s.RecordAuthFailure(ctx, "login_acct", "email:a@x.com", nowUnix); err != nil {
+	if err := s.RecordAuthFailure(ctx, "login_acct", "username:a@x.com", nowUnix); err != nil {
 		t.Fatal(err)
 	}
 	// 3rd failure trips it.
-	over, retry, err := s.AuthAttemptsOverCap(ctx, "login_acct", "email:a@x.com", 3, nowUnix)
+	over, retry, err := s.AuthAttemptsOverCap(ctx, "login_acct", "username:a@x.com", 3, nowUnix)
 	if err != nil || !over {
 		t.Fatalf("3 failures at cap 3 must be over: over=%v err=%v", over, err)
 	}
@@ -67,7 +67,7 @@ func TestAuthAttemptsOverCapOnlyCountsRecordedFailures(t *testing.T) {
 	}
 
 	// A DIFFERENT account is unaffected by the first one's failures.
-	if over, _, err := s.AuthAttemptsOverCap(ctx, "login_acct", "email:b@x.com", 3, nowUnix); err != nil || over {
+	if over, _, err := s.AuthAttemptsOverCap(ctx, "login_acct", "username:b@x.com", 3, nowUnix); err != nil || over {
 		t.Errorf("unrelated account must not be over cap: over=%v err=%v", over, err)
 	}
 }
@@ -87,7 +87,7 @@ func TestAuthRateLimitFailsClosedOnStoreError(t *testing.T) {
 	if _, _, err := s.CheckAuthRateLimit(ctx, "login_ip", "ip:1.2.3.4", 5, 1_700_000_000); err == nil {
 		t.Error("CheckAuthRateLimit must return an error (fail closed), not silently allow, once the store is unusable")
 	}
-	if _, _, err := s.AuthAttemptsOverCap(ctx, "login_acct", "email:a@x.com", 5, 1_700_000_000); err == nil {
+	if _, _, err := s.AuthAttemptsOverCap(ctx, "login_acct", "username:a@x.com", 5, 1_700_000_000); err == nil {
 		t.Error("AuthAttemptsOverCap must return an error (fail closed) once the store is unusable")
 	}
 }

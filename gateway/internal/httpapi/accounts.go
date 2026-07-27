@@ -169,14 +169,14 @@ func (s *Server) handleMembersList(w http.ResponseWriter, r *http.Request) {
 		}
 		list = append(list, map[string]any{
 			"user_id": m.UserID, "role": m.Role, "status": m.Status,
-			"email": m.Email, "display_name": dn,
+			"username": m.Username, "display_name": dn,
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"members": list})
 }
 
 type inviteReq struct {
-	Email     string `json:"email"`
+	Username  string `json:"username"`
 	Role      string `json:"role"`
 	PhoneE164 string `json:"phone_e164"`
 }
@@ -185,7 +185,7 @@ type inviteReq struct {
 //
 // SECURITY (ported fix): the accept token is NEVER returned to the inviter —
 // it is delivered to the INVITEE only. Without delivery channels wired in the
-// gateway yet, email_sent/whatsapp_sent report false and tests recover the
+// gateway yet, username_sent/whatsapp_sent report false and tests recover the
 // token via store.SetInviteTokenHash (backend parity for mocked delivery).
 func (s *Server) handleInviteCreate(w http.ResponseWriter, r *http.Request) {
 	c := claimsFrom(r)
@@ -194,9 +194,9 @@ func (s *Server) handleInviteCreate(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &req) {
 		return
 	}
-	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
-	if req.Email == "" || !strings.Contains(req.Email, "@") {
-		writeErr(w, http.StatusBadRequest, "invalid_email")
+	req.Username = strings.ToLower(strings.TrimSpace(req.Username))
+	if req.Username == "" || !strings.Contains(req.Username, "@") {
+		writeErr(w, http.StatusBadRequest, "invalid_username")
 		return
 	}
 	if req.Role == "" {
@@ -214,7 +214,7 @@ func (s *Server) handleInviteCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tokenPlain := randomToken()
-	inviteID, err := s.store.CreateInvite(r.Context(), id, req.Email, req.Role, req.PhoneE164,
+	inviteID, err := s.store.CreateInvite(r.Context(), id, req.Username, req.Role, req.PhoneE164,
 		hashToken(tokenPlain), time.Now().Add(inviteTTL).Unix())
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "internal")
@@ -226,13 +226,13 @@ func (s *Server) handleInviteCreate(w http.ResponseWriter, r *http.Request) {
 	// record. The plaintext accept token is NEVER written here either,
 	// same as it is never returned in the HTTP response above.
 	if err := s.store.WriteAdminAudit(r.Context(), c.Sub, "invite_create", "account_invite", inviteID, true,
-		map[string]any{"account_id": id, "email": req.Email, "role": req.Role}); err != nil {
+		map[string]any{"account_id": id, "username": req.Username, "role": req.Role}); err != nil {
 		s.log.Error("invite create audit write failed", "invite_id", inviteID, "err", err)
 	}
-	// tokenPlain deliberately dropped here — delivery seam (email/WhatsApp)
+	// tokenPlain deliberately dropped here — delivery seam (username/WhatsApp)
 	// attaches later; the create response must never carry it.
 	writeJSON(w, http.StatusCreated, map[string]any{
-		"id": inviteID, "email_sent": false, "whatsapp_sent": false,
+		"id": inviteID, "username_sent": false, "whatsapp_sent": false,
 	})
 }
 
@@ -267,8 +267,8 @@ func (s *Server) handleInviteAccept(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, store.ErrInviteExpired):
 		writeErr(w, http.StatusBadRequest, "invite_expired")
 		return
-	case errors.Is(err, store.ErrInviteEmailMismatch):
-		writeErr(w, http.StatusBadRequest, "invite_email_mismatch")
+	case errors.Is(err, store.ErrInviteUsernameMismatch):
+		writeErr(w, http.StatusBadRequest, "invite_username_mismatch")
 		return
 	case errors.Is(err, store.ErrInvitePhoneMismatch):
 		writeErr(w, http.StatusBadRequest, "invite_phone_mismatch")

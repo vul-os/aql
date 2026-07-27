@@ -83,7 +83,7 @@ func (s *Server) handleAdminOverview(w http.ResponseWriter, r *http.Request) {
 	recent := make([]map[string]any, 0, len(signups))
 	for _, u := range signups {
 		recent = append(recent, map[string]any{
-			"id": u.ID, "email": u.Email, "display_name": nilIfEmpty(u.DisplayName),
+			"id": u.ID, "username": u.Username, "display_name": nilIfEmpty(u.DisplayName),
 			"status": u.Status, "is_platform_admin": u.IsPlatformAdmin, "created_at": u.CreatedAt,
 		})
 	}
@@ -133,7 +133,7 @@ func (s *Server) handleAdminAccountGet(w http.ResponseWriter, r *http.Request) {
 	members := make([]map[string]any, 0, len(d.Members))
 	for _, m := range d.Members {
 		members = append(members, map[string]any{
-			"user_id": m.UserID, "email": m.Email, "display_name": nilIfEmpty(m.DisplayName),
+			"user_id": m.UserID, "username": m.Username, "display_name": nilIfEmpty(m.DisplayName),
 			"role": m.Role, "status": m.Status,
 		})
 	}
@@ -204,7 +204,7 @@ func (s *Server) handleAdminUsers(w http.ResponseWriter, r *http.Request) {
 			accounts = append(accounts, map[string]any{"account_id": a.AccountID, "name": a.Name, "role": a.Role})
 		}
 		list = append(list, map[string]any{
-			"id": u.ID, "email": u.Email, "status": u.Status, "is_platform_admin": u.IsPlatformAdmin,
+			"id": u.ID, "username": u.Username, "status": u.Status, "is_platform_admin": u.IsPlatformAdmin,
 			"display_name": nilIfEmpty(u.DisplayName), "created_at": u.CreatedAt,
 			"accounts": accounts, "last_access_at": nullInt64(u.LastAccessAt),
 		})
@@ -246,9 +246,9 @@ func (s *Server) handleAdminUserPatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = s.store.WriteAdminAudit(r.Context(), c.Sub, "user_status", "user", id, true,
-		map[string]any{"status": req.Status, "email": u.Email})
+		map[string]any{"status": req.Status, "username": u.Username})
 	writeJSON(w, http.StatusOK, map[string]any{"user": map[string]any{
-		"id": u.ID, "email": u.Email, "status": u.Status, "is_platform_admin": u.IsPlatformAdmin,
+		"id": u.ID, "username": u.Username, "status": u.Status, "is_platform_admin": u.IsPlatformAdmin,
 	}})
 }
 
@@ -281,9 +281,9 @@ func (s *Server) handleAdminPlatformAdmin(w http.ResponseWriter, r *http.Request
 		return
 	}
 	_ = s.store.WriteAdminAudit(r.Context(), c.Sub, "platform_admin", "user", id, true,
-		map[string]any{"grant": *req.Grant, "email": u.Email})
+		map[string]any{"grant": *req.Grant, "username": u.Username})
 	writeJSON(w, http.StatusOK, map[string]any{"user": map[string]any{
-		"id": u.ID, "email": u.Email, "status": u.Status, "is_platform_admin": u.IsPlatformAdmin,
+		"id": u.ID, "username": u.Username, "status": u.Status, "is_platform_admin": u.IsPlatformAdmin,
 	}})
 }
 
@@ -417,7 +417,7 @@ func auditEntriesJSON(entries []store.AuditLogEntry) []map[string]any {
 			"account_id": nilIfEmpty(e.AccountID), "account_name": nilIfEmpty(e.AccountName),
 			"location_id": nilIfEmpty(e.LocationID), "location_name": nilIfEmpty(e.LocationName),
 			"access_point_id": nilIfEmpty(e.AccessPointID), "access_point_name": nilIfEmpty(e.AccessPointName),
-			"user_id": nilIfEmpty(e.UserID), "user_email": nilIfEmpty(e.UserEmail),
+			"user_id": nilIfEmpty(e.UserID), "user_username": nilIfEmpty(e.UserUsername),
 			"reconciles_log_id": nilIfEmpty(e.ReconcilesLogID),
 		})
 	}
@@ -494,7 +494,7 @@ func (s *Server) handleAdminAuditActions(w http.ResponseWriter, r *http.Request)
 	list := make([]map[string]any, 0, len(actions))
 	for _, a := range actions {
 		list = append(list, map[string]any{
-			"id": a.ID, "actor_user_id": nilIfEmpty(a.ActorUserID), "actor_email": nilIfEmpty(a.ActorEmail),
+			"id": a.ID, "actor_user_id": nilIfEmpty(a.ActorUserID), "actor_username": nilIfEmpty(a.ActorUsername),
 			"action": a.Action, "target_kind": nilIfEmpty(a.TargetKind), "target_id": nilIfEmpty(a.TargetID),
 			"allowed": a.Allowed, "detail": a.Detail, "created_at": a.CreatedAt,
 		})

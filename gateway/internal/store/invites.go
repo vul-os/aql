@@ -9,11 +9,11 @@ import (
 
 // Invite errors — the backend's accept-invite error vocabulary.
 var (
-	ErrInviteUsed          = errors.New("invite_used")
-	ErrInviteRevoked       = errors.New("invite_revoked")
-	ErrInviteExpired       = errors.New("invite_expired")
-	ErrInviteEmailMismatch = errors.New("invite_email_mismatch")
-	ErrInvitePhoneMismatch = errors.New("invite_phone_mismatch")
+	ErrInviteUsed             = errors.New("invite_used")
+	ErrInviteRevoked          = errors.New("invite_revoked")
+	ErrInviteExpired          = errors.New("invite_expired")
+	ErrInviteUsernameMismatch = errors.New("invite_username_mismatch")
+	ErrInvitePhoneMismatch    = errors.New("invite_phone_mismatch")
 )
 
 // Invite is one account invite. TokenHash only — the plaintext accept token
@@ -22,7 +22,7 @@ var (
 type Invite struct {
 	ID         string
 	AccountID  string
-	Email      string
+	Username   string
 	Role       string
 	PhoneE164  string // "" when none
 	ExpiresAt  int64
@@ -32,12 +32,12 @@ type Invite struct {
 
 // CreateInvite records an invite under the account. Handlers gate on the
 // caller being an admin of accountID first.
-func (s *Store) CreateInvite(ctx context.Context, accountID, email, role, phoneE164, tokenHash string, expiresAt int64) (string, error) {
+func (s *Store) CreateInvite(ctx context.Context, accountID, username, role, phoneE164, tokenHash string, expiresAt int64) (string, error) {
 	id := NewID()
 	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO account_invites (id, account_id, email, role, token_hash, phone_e164, expires_at, created_at)
+		`INSERT INTO account_invites (id, account_id, username, role, token_hash, phone_e164, expires_at, created_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		id, accountID, strings.ToLower(strings.TrimSpace(email)), role, tokenHash, nullable(phoneE164), expiresAt, now())
+		id, accountID, strings.ToLower(strings.TrimSpace(username)), role, tokenHash, nullable(phoneE164), expiresAt, now())
 	return id, err
 }
 
@@ -68,11 +68,11 @@ type AcceptInviteResult struct {
 
 // AcceptInvite runs the whole transactional accept per the backend spec:
 // look the invite up by token hash, reject used/revoked/expired, require the
-// accepting user's email to match, upsert the account membership + every
+// accepting user's username to match, upsert the account membership + every
 // location membership, mark accepted, and link the invite's phone UNVERIFIED.
 //
 // SECURITY (ported design choice): accepting NEVER verifies a phone number —
-// the accept token is dual-delivered (email AND WhatsApp), so possessing it
+// the accept token is dual-delivered (username AND WhatsApp), so possessing it
 // proves nothing about controlling the phone. A body-supplied phone is
 // attacker-typed input: it must equal the invite's phone when both exist.
 func (s *Store) AcceptInvite(ctx context.Context, tokenHash, userID, bodyPhoneE164 string) (*AcceptInviteResult, error) {
@@ -85,9 +85,9 @@ func (s *Store) AcceptInvite(ctx context.Context, tokenHash, userID, bodyPhoneE1
 	var inv Invite
 	var phone sql.NullString
 	err = tx.QueryRowContext(ctx,
-		`SELECT id, account_id, email, role, phone_e164, expires_at, accepted_at, revoked_at
+		`SELECT id, account_id, username, role, phone_e164, expires_at, accepted_at, revoked_at
 		 FROM account_invites WHERE token_hash = ?`, tokenHash).
-		Scan(&inv.ID, &inv.AccountID, &inv.Email, &inv.Role, &phone, &inv.ExpiresAt, &inv.AcceptedAt, &inv.RevokedAt)
+		Scan(&inv.ID, &inv.AccountID, &inv.Username, &inv.Role, &phone, &inv.ExpiresAt, &inv.AcceptedAt, &inv.RevokedAt)
 	if err != nil {
 		return nil, err // ErrNotFound for unknown tokens
 	}
@@ -101,12 +101,12 @@ func (s *Store) AcceptInvite(ctx context.Context, tokenHash, userID, bodyPhoneE1
 		return nil, ErrInviteExpired
 	}
 
-	var userEmail string
-	if err := tx.QueryRowContext(ctx, `SELECT email FROM users WHERE id = ?`, userID).Scan(&userEmail); err != nil {
+	var userUsername string
+	if err := tx.QueryRowContext(ctx, `SELECT username FROM users WHERE id = ?`, userID).Scan(&userUsername); err != nil {
 		return nil, err
 	}
-	if !strings.EqualFold(userEmail, inv.Email) {
-		return nil, ErrInviteEmailMismatch
+	if !strings.EqualFold(userUsername, inv.Username) {
+		return nil, ErrInviteUsernameMismatch
 	}
 
 	if bodyPhoneE164 != "" && inv.PhoneE164 != "" && bodyPhoneE164 != inv.PhoneE164 {

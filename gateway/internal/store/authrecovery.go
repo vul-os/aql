@@ -1,7 +1,7 @@
 package store
 
 // Account-recovery token persistence — the store half of
-// POST /v1/auth/{forgot-password,reset-password,verify-email,update-password}.
+// POST /v1/auth/{forgot-password,reset-password,verify-username,update-password}.
 // See migrations/0009_auth_recovery.sql for the schema rationale (split
 // selector/verifier, per-row salt, the two distinct lifecycle columns) and
 // internal/httpapi/authrecovery.go for the token construction itself.
@@ -30,15 +30,13 @@ import (
 
 // RecoveryPurpose discriminates the two flows sharing auth_recovery_tokens.
 // It is part of the redemption lookup key, never a field checked afterwards
-// — an email-verification token must be structurally unable to reset a
+// — an username-verification token must be structurally unable to reset a
 // password, not merely rejected once found.
 type RecoveryPurpose string
 
 const (
 	// RecoveryPasswordReset tokens redeem at POST /v1/auth/reset-password.
 	RecoveryPasswordReset RecoveryPurpose = "password_reset"
-	// RecoveryEmailVerify tokens redeem at POST /v1/auth/verify-email.
-	RecoveryEmailVerify RecoveryPurpose = "email_verify"
 )
 
 // ErrRecoveryTokenUnusable is the SINGLE error every failed redemption
@@ -224,32 +222,6 @@ func (s *Store) RedeemPasswordReset(ctx context.Context, tokenID, userID, newPas
 	return tx.Commit()
 }
 
-// RedeemEmailVerification consumes an email-verification token and stamps
-// users.email_verified_at in one transaction.
-//
-// Note what this deliberately does NOT do: it does not touch sessions and
-// it does not touch the password. Verifying an email address is a claim
-// about reachability, not a credential event — conflating it with one would
-// mean a leaked verification link could be used to log someone out, or
-// worse, treated as proof of identity for a reset.
-func (s *Store) RedeemEmailVerification(ctx context.Context, tokenID, userID string) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	if err := claimRecoveryToken(ctx, tx, tokenID, userID, RecoveryEmailVerify); err != nil {
-		return err
-	}
-	if _, err := tx.ExecContext(ctx,
-		`UPDATE users SET email_verified_at = coalesce(email_verified_at, ?), updated_at = ?
-		 WHERE id = ?`, now(), now(), userID); err != nil {
-		return err
-	}
-	return tx.Commit()
-}
-
 // SetUserPassword is the authenticated change-password path
 // (POST /v1/auth/update-password). Same three atomic effects as a redeemed
 // reset (see setPasswordTx) minus the token claim, because this route
@@ -266,15 +238,4 @@ func (s *Store) SetUserPassword(ctx context.Context, userID, newPasswordHash str
 		return err
 	}
 	return tx.Commit()
-}
-
-// EmailVerifiedAt returns users.email_verified_at (0 when unverified) —
-// read-only observation for the verify-email flow and its tests.
-func (s *Store) EmailVerifiedAt(ctx context.Context, userID string) (int64, error) {
-	var v sql.NullInt64
-	if err := s.db.QueryRowContext(ctx,
-		`SELECT email_verified_at FROM users WHERE id = ?`, userID).Scan(&v); err != nil {
-		return 0, err
-	}
-	return v.Int64, nil
 }

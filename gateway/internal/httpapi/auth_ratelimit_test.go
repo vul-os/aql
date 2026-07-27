@@ -55,7 +55,7 @@ func TestLoginIPRateLimited(t *testing.T) {
 	// and each still behaves like an ordinary failed login.
 	for i := 0; i < 3; i++ {
 		rec, out := doJSON(t, h, "POST", "/v1/auth/login", "", map[string]any{
-			"email": "iplimit@x.com", "password": "wrong",
+			"username": "iplimit@x.com", "password": "wrong",
 		})
 		if rec.Code != http.StatusUnauthorized || out["error"] != "invalid_credentials" {
 			t.Fatalf("attempt %d: want 401 invalid_credentials, got %d %v", i, rec.Code, out)
@@ -65,7 +65,7 @@ func TestLoginIPRateLimited(t *testing.T) {
 	// password: the per-IP limit is the hard one and applies to every
 	// attempt, not just failures (see authratelimit.go's doc comment).
 	rec, out := doJSON(t, h, "POST", "/v1/auth/login", "", map[string]any{
-		"email": "iplimit@x.com", "password": "hunter2hunter2",
+		"username": "iplimit@x.com", "password": "hunter2hunter2",
 	})
 	if rec.Code != http.StatusTooManyRequests || out["error"] != "rate_limited" {
 		t.Fatalf("4th attempt: want 429 rate_limited, got %d %v", rec.Code, out)
@@ -78,7 +78,7 @@ func TestLoginIPRateLimited(t *testing.T) {
 // TestLoginAccountSoftLockoutBlocksFurtherGuessesEvenWithRightPassword
 // proves the per-account failure cap: once an account has accumulated
 // LoginAccountPerWindow failures within the window, FURTHER attempts
-// against that email are blocked — including one with the correct
+// against that username are blocked — including one with the correct
 // password — until the window rolls over. This is what makes password
 // guessing against one known account actually bounded, distributed
 // attacker or not.
@@ -91,14 +91,14 @@ func TestLoginAccountSoftLockoutBlocksFurtherGuessesEvenWithRightPassword(t *tes
 
 	for i := 0; i < 3; i++ {
 		rec, out := doJSON(t, h, "POST", "/v1/auth/login", "", map[string]any{
-			"email": "acctlock@x.com", "password": "wrong",
+			"username": "acctlock@x.com", "password": "wrong",
 		})
 		if rec.Code != http.StatusUnauthorized || out["error"] != "invalid_credentials" {
 			t.Fatalf("failure %d: want 401, got %d %v", i, rec.Code, out)
 		}
 	}
 	rec, out := doJSON(t, h, "POST", "/v1/auth/login", "", map[string]any{
-		"email": "acctlock@x.com", "password": "hunter2hunter2", // correct
+		"username": "acctlock@x.com", "password": "hunter2hunter2", // correct
 	})
 	if rec.Code != http.StatusTooManyRequests || out["error"] != "rate_limited" {
 		t.Fatalf("post-cap login with the RIGHT password must still be throttled: %d %v", rec.Code, out)
@@ -117,7 +117,7 @@ func TestLoginSuccessNeverConsumesTheAccountFailureBudget(t *testing.T) {
 
 	for i := 0; i < 6; i++ { // 2x the account cap
 		rec, _ := doJSON(t, h, "POST", "/v1/auth/login", "", map[string]any{
-			"email": "goodlogin@x.com", "password": "hunter2hunter2",
+			"username": "goodlogin@x.com", "password": "hunter2hunter2",
 		})
 		if rec.Code != http.StatusOK {
 			t.Fatalf("successful login %d must never be throttled: %d", i, rec.Code)
@@ -126,10 +126,10 @@ func TestLoginSuccessNeverConsumesTheAccountFailureBudget(t *testing.T) {
 }
 
 // TestLoginRateLimitPreservesAntiEnumeration proves the pre-existing
-// "unknown email still burns a dummy Argon2id verify" behaviour (auth.go's
-// dummyHash) survives the rate-limit changes untouched: an unknown email
+// "unknown username still burns a dummy Argon2id verify" behaviour (auth.go's
+// dummyHash) survives the rate-limit changes untouched: an unknown username
 // still gets exactly the same 401 invalid_credentials a wrong-password
-// known email gets, right up to (and distinctly from) the point the
+// known username gets, right up to (and distinctly from) the point the
 // throttle itself kicks in.
 func TestLoginRateLimitPreservesAntiEnumeration(t *testing.T) {
 	h := newAuthLimitTestServer(t, "", store.AuthRateLimitConfig{
@@ -137,10 +137,10 @@ func TestLoginRateLimitPreservesAntiEnumeration(t *testing.T) {
 		RegisterIPPerWindow: 1000, RefreshIPPerWindow: 1000, ClaimIPPerWindow: 1000,
 	})
 	rec, out := doJSON(t, h, "POST", "/v1/auth/login", "", map[string]any{
-		"email": "never-registered@x.com", "password": "whatever123",
+		"username": "never-registered@x.com", "password": "whatever123",
 	})
 	if rec.Code != http.StatusUnauthorized || out["error"] != "invalid_credentials" {
-		t.Errorf("unknown email: %d %v", rec.Code, out)
+		t.Errorf("unknown username: %d %v", rec.Code, out)
 	}
 }
 
@@ -153,14 +153,14 @@ func TestRegisterIPRateLimited(t *testing.T) {
 	})
 	for i := 0; i < 2; i++ {
 		rec, out := doJSON(t, h, "POST", "/v1/auth/register", "", map[string]any{
-			"email": "reg" + string(rune('a'+i)) + "@x.com", "password": "hunter2hunter2", "location_name": "L",
+			"username": "reg" + string(rune('a'+i)) + "@x.com", "password": "hunter2hunter2", "location_name": "L",
 		})
 		if rec.Code != http.StatusCreated {
 			t.Fatalf("register %d: %d %v", i, rec.Code, out)
 		}
 	}
 	rec, out := doJSON(t, h, "POST", "/v1/auth/register", "", map[string]any{
-		"email": "regz@x.com", "password": "hunter2hunter2", "location_name": "L",
+		"username": "regz@x.com", "password": "hunter2hunter2", "location_name": "L",
 	})
 	if rec.Code != http.StatusTooManyRequests || out["error"] != "rate_limited" {
 		t.Fatalf("3rd register from the same IP: want 429, got %d %v", rec.Code, out)

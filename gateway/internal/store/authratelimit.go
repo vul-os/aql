@@ -27,7 +27,7 @@ package store
 //   - Per-ACCOUNT (AuthAttemptsOverCap + RecordAuthFailure, read-then-
 //     conditionally-record, FAILURES ONLY): the SOFT limit. A distributed
 //     attacker spread across many IPs can't be stopped by the per-IP limit
-//     alone, so guessing against one KNOWN victim email still needs a
+//     alone, so guessing against one KNOWN victim username still needs a
 //     cap — but any per-account cap is also a lever an attacker could use
 //     to lock a VICTIM out on purpose by deliberately failing their login
 //     from elsewhere. Two properties keep that cheap: it only ever counts
@@ -63,7 +63,7 @@ const AuthWindowS int64 = 5 * MinuteS
 // package doc comment for the full design.
 type AuthRateLimitConfig struct {
 	LoginIPPerWindow      int64 // POST /v1/auth/login, per source IP
-	LoginAccountPerWindow int64 // POST /v1/auth/login, failures per account (email)
+	LoginAccountPerWindow int64 // POST /v1/auth/login, failures per account (username)
 	RegisterIPPerWindow   int64 // POST /v1/auth/register, per source IP
 	RefreshIPPerWindow    int64 // POST /v1/auth/refresh, per source IP
 	ClaimIPPerWindow      int64 // POST /v1/admin/claim, per source IP

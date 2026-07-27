@@ -305,7 +305,7 @@ func (s *Server) handleLocationLimitsGet(w http.ResponseWriter, r *http.Request)
 	memberList := make([]map[string]any, 0, len(members))
 	for _, m := range members {
 		memberList = append(memberList, map[string]any{
-			"user_id": nilIfEmpty(m.UserID), "email": nilIfEmpty(m.Email), "opens_today": m.OpensToday,
+			"user_id": nilIfEmpty(m.UserID), "username": nilIfEmpty(m.Username), "opens_today": m.OpensToday,
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{

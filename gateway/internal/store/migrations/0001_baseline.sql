@@ -20,13 +20,27 @@
 -- (see internal/store). Conventions: ids are UUIDv4 TEXT, timestamps are
 -- INTEGER unix seconds (UTC), booleans are INTEGER 0/1, json is TEXT.
 
+-- Identity is LOCAL. `username` is a handle chosen on this hub and meaningful
+-- only on this hub — it is deliberately not an email address.
+--
+-- An email address is a centralised identity: it resolves through DNS to
+-- someone else's server, it needs a mail sender to verify, and it makes a hub
+-- running in a house depend on infrastructure the household does not own. That
+-- is the one dependency this system otherwise refuses, so it is refused here
+-- too. There is no verification column for the same reason: there is nothing
+-- external to verify against, and a hub with no mail sender "verifying" an
+-- address means the operator reading a token out of their own terminal and
+-- handing it to the person standing next to them.
+--
+-- A resident is also known by (channel, external_id) — a WhatsApp number, a
+-- Telegram chat id (see channel_identities) — and by a device key the hub pins
+-- for offline grants. Those are the identities that actually carry weight.
 CREATE TABLE users (
     id                 TEXT PRIMARY KEY,
-    email              TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    username           TEXT NOT NULL UNIQUE COLLATE NOCASE,
     password_hash      TEXT,
     status             TEXT NOT NULL DEFAULT 'active'
                        CHECK (status IN ('active','disabled','pending')),
-    email_verified_at  INTEGER,
     is_platform_admin  INTEGER NOT NULL DEFAULT 0,
     created_at         INTEGER NOT NULL,
     updated_at         INTEGER NOT NULL

@@ -11,7 +11,7 @@ type Member struct {
 	UserID      string
 	Role        string
 	Status      string
-	Email       string
+	Username    string
 	DisplayName string // "" when the profile has none
 }
 
@@ -20,7 +20,7 @@ type Member struct {
 // to — the SECURITY DEFINER helper's self-gate, done in the HTTP layer here).
 func (s *Store) MemberList(ctx context.Context, accountID string) ([]Member, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT am.user_id, am.role, am.status, u.email, coalesce(p.display_name, '')
+		`SELECT am.user_id, am.role, am.status, u.username, coalesce(p.display_name, '')
 		 FROM account_members am
 		 JOIN users u ON u.id = am.user_id
 		 LEFT JOIN profiles p ON p.id = am.user_id
@@ -33,7 +33,7 @@ func (s *Store) MemberList(ctx context.Context, accountID string) ([]Member, err
 	var out []Member
 	for rows.Next() {
 		var m Member
-		if err := rows.Scan(&m.UserID, &m.Role, &m.Status, &m.Email, &m.DisplayName); err != nil {
+		if err := rows.Scan(&m.UserID, &m.Role, &m.Status, &m.Username, &m.DisplayName); err != nil {
 			return nil, err
 		}
 		out = append(out, m)

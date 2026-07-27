@@ -19,12 +19,12 @@ func TestMemberListAndScoping(t *testing.T) {
 	if err != nil || len(ms) != 1 {
 		t.Fatalf("roster: %v %d", err, len(ms))
 	}
-	if ms[0].Role != "owner" || ms[0].Email != "a@x.com" {
+	if ms[0].Role != "owner" || ms[0].Username != "a@x.com" {
 		t.Errorf("roster row: %+v", ms[0])
 	}
 	// The store method itself is unscoped-by-design (handlers gate); verify
 	// the scoped account getter honors tenancy.
-	ua, _ := s.UserByEmail(ctx, "a@x.com")
+	ua, _ := s.UserByUsername(ctx, "a@x.com")
 	if _, err := s.AccountByIDScoped(ctx, acctB.ID, ua.ID); !errors.Is(err, ErrNotFound) {
 		t.Errorf("cross-tenant AccountByIDScoped: want ErrNotFound, got %v", err)
 	}
@@ -53,10 +53,10 @@ func TestInviteLifecycle(t *testing.T) {
 	if _, err := s.AcceptInvite(ctx, "wrong-hash", invitee.ID, ""); !errors.Is(err, ErrNotFound) {
 		t.Errorf("unknown token: want ErrNotFound, got %v", err)
 	}
-	// wrong user email → mismatch
+	// wrong user username → mismatch
 	stranger, _ := s.CreateUser(ctx, "stranger@x.com", "h", "S", "")
-	if _, err := s.AcceptInvite(ctx, "hash-1", stranger.ID, ""); !errors.Is(err, ErrInviteEmailMismatch) {
-		t.Errorf("email mismatch: got %v", err)
+	if _, err := s.AcceptInvite(ctx, "hash-1", stranger.ID, ""); !errors.Is(err, ErrInviteUsernameMismatch) {
+		t.Errorf("username mismatch: got %v", err)
 	}
 	// body phone conflicting with the invite phone → mismatch
 	if _, err := s.AcceptInvite(ctx, "hash-1", invitee.ID, "+27829999999"); !errors.Is(err, ErrInvitePhoneMismatch) {
