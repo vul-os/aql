@@ -485,7 +485,15 @@ func buildHub(cfg config, log *slog.Logger) (*hub, error) {
 		return nil, fmt.Errorf("jwt secret: %w", err)
 	}
 
+	// The device engine is built BEFORE the server, because the server exposes
+	// it: constructing the server first and back-filling the registry would
+	// leave a window where /v1/engine/* reports an empty fleet on a hub that
+	// actually has one.
+	h := &hub{log: log, store: st, keys: ks}
+	h.wireDevices(cfg)
+
 	srv := httpapi.New(httpapi.Config{
+		Devices:         h.reg,
 		Version:         Version,
 		Env:             envOr("LINTEL_ENV", "self-hosted"),
 		PublicURL:       cfg.publicURL,
@@ -502,8 +510,7 @@ func buildHub(cfg config, log *slog.Logger) (*hub, error) {
 		Channels: channels.FromEnv(os.Getenv, cfg.publicURL),
 	}, st, ks, log)
 
-	h := &hub{log: log, store: st, keys: ks, srv: srv}
-	h.wireDevices(cfg)
+	h.srv = srv
 	h.wireEnergy(cfg)
 	h.wireAutomations(cfg)
 	return h, nil

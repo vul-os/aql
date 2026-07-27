@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/vul-os/aql/gateway/internal/channels"
+	"github.com/vul-os/aql/gateway/internal/devices"
 	"github.com/vul-os/aql/gateway/internal/hub"
 	"github.com/vul-os/aql/gateway/internal/keys"
 	"github.com/vul-os/aql/gateway/internal/portal"
@@ -38,6 +39,9 @@ type Config struct {
 	// refresh) and the admin claim against brute-force/DoS — see
 	// store.AuthRateLimitConfig's doc comment. Zero value = defaults.
 	AuthRateLimits store.AuthRateLimitConfig
+	// Devices is the device engine. Nil (the default) means no engine: the
+	// endpoints report an empty fleet rather than failing.
+	Devices *devices.Registry
 	// Channels holds the chat-channel credentials (WhatsApp/Slack/Telegram).
 	// Zero value = every channel refuses its webhook (fail-closed) and its
 	// sender is a config-unset no-op.
@@ -64,6 +68,12 @@ type Server struct {
 	keys  *keys.Keys
 	hub   *hub.Hub
 	log   *slog.Logger
+
+	// devices is the device engine, or nil when no driver was configured.
+	// Nil is the DEFAULT and is not an error: a hub with no device config has
+	// an empty fleet, which is different from a failure. Every handler in
+	// engine.go checks for nil rather than assuming an engine exists.
+	devices *devices.Registry
 
 	// Chat-channel seam (internal/channels). The Channel values authenticate
 	// inbound webhooks; the senders are interfaces so tests inject fakes.
@@ -102,7 +112,7 @@ func New(cfg Config, st *store.Store, ks *keys.Keys, log *slog.Logger) *Server {
 	if cfg.Channels.PublicURL == "" {
 		cfg.Channels.PublicURL = cfg.PublicURL
 	}
-	s := &Server{cfg: cfg, store: st, keys: ks, hub: hub.New(), log: log}
+	s := &Server{cfg: cfg, store: st, keys: ks, hub: hub.New(), log: log, devices: cfg.Devices}
 	ch := cfg.Channels
 	s.wa = channels.WhatsApp{AppSecret: ch.WhatsAppAppSecret, VerifyToken: ch.WhatsAppVerifyToken, PublicURL: ch.PublicURL}
 	s.slack = channels.Slack{SigningSecret: ch.SlackSigningSecret}
@@ -208,6 +218,14 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("GET /v1/accounts/{id}/members", s.requireAuth(s.handleMembersList))
 	mux.Handle("POST /v1/accounts/{id}/invites", s.requireAuth(s.handleInviteCreate))
 
+	// scoped API tokens (see tokens.go). Session-only routes: a token can
+	// never mint, list or revoke another token — requireAuth accepts JWTs
+	// only, so escalating from a leaked token to a fresh, differently-scoped
+	// one is not a path that exists.
+	mux.Handle("GET /v1/accounts/{id}/api-tokens", s.requireAuth(s.handleAPITokensList))
+	mux.Handle("POST /v1/accounts/{id}/api-tokens", s.requireAuth(s.handleAPITokenCreate))
+	mux.Handle("POST /v1/accounts/{id}/api-tokens/{token_id}/revoke", s.requireAuth(s.handleAPITokenRevoke))
+
 	// locations + limits (spec: backend/src/routes/locations.ts)
 	mux.Handle("GET /v1/accounts/{id}/locations", s.requireAuth(s.handleLocationsList))
 	mux.Handle("POST /v1/accounts/{id}/locations", s.requireAuth(s.handleLocationCreate))
@@ -219,13 +237,22 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("PATCH /v1/locations/{id}/limits", s.requireAuth(s.handleLocationLimitsPatch))
 
 	// access points (spec: backend/src/routes/access.ts)
-	mux.Handle("GET /v1/access-points", s.requireAuth(s.handleAccessPointsList))
+	//
+	// The four tokenScoped routes below are the ONLY ones an API token can
+	// reach, and each names the scope it demands at registration — see
+	// tokens_auth.go for why that placement, rather than a check inside a
+	// handler, is what makes a read-only token structurally unable to
+	// actuate. Every other route in this Router is requireAuth/requireAdmin,
+	// which accept session JWTs only, so a token presented anywhere else is
+	// refused for not being a JWT. Adding a token-reachable route is a
+	// deliberate one-line act here; forgetting is fail-closed.
+	mux.Handle("GET /v1/access-points", s.tokenScoped(store.ScopeAccessRead, fenceAccountQuery, s.handleAccessPointsList))
 	mux.Handle("POST /v1/access-points", s.requireAuth(s.handleAccessPointCreate))
-	mux.Handle("GET /v1/access-points/{id}", s.requireAuth(s.handleAccessPointGet))
+	mux.Handle("GET /v1/access-points/{id}", s.tokenScoped(store.ScopeAccessRead, fenceAccessPointPath, s.handleAccessPointGet))
 
 	// the open path + temporary grants (spec: backend access.ts logAccess)
-	mux.Handle("POST /v1/access-points/{id}/open", s.requireAuth(s.handleAccessPointOpen))
-	mux.Handle("POST /v1/access-points/{id}/close", s.requireAuth(s.handleAccessPointClose))
+	mux.Handle("POST /v1/access-points/{id}/open", s.tokenScoped(store.ScopeAccessOpen, fenceAccessPointPath, s.handleAccessPointOpen))
+	mux.Handle("POST /v1/access-points/{id}/close", s.tokenScoped(store.ScopeAccessOpen, fenceAccessPointPath, s.handleAccessPointClose))
 	mux.Handle("GET /v1/grants", s.requireAuth(s.handleGrantsList))
 	mux.Handle("POST /v1/grants", s.requireAuth(s.handleGrantCreate))
 	mux.Handle("GET /v1/grants/{id}", s.requireAuth(s.handleGrantGet))
@@ -234,6 +261,14 @@ func (s *Server) Router() http.Handler {
 	// offline grants (spec: proto/grants.md) — the gateway-side issuance half
 	// of the emergency no-internet path; controller/internal/grants verifies.
 	mux.Handle("POST /v1/offline-grants", s.requireAuth(s.handleOfflineGrantIssue))
+
+	// Device engine (internal/devices). Read paths are open to any authenticated
+	// member; execute is an actuation and carries the tier ceiling and the
+	// hazardous-motion confirm described in engine.go.
+	mux.Handle("GET /v1/engine/devices", s.requireAuth(s.handleEngineDevices))
+	mux.Handle("GET /v1/engine/devices/{key}/readings", s.requireAuth(s.handleEngineReadings))
+	mux.Handle("POST /v1/engine/devices/{key}/execute", s.requireAuth(s.handleEngineExecute))
+	mux.Handle("GET /v1/engine/health", s.requireAuth(s.handleEngineHealth))
 
 	// devices + pairing + controller transport (spec: backend devices.ts +
 	// proto/pairing.md)

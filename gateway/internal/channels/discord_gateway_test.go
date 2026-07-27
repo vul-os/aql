@@ -176,7 +176,7 @@ func TestDiscordServerRequestedHeartbeat(t *testing.T) {
 	var sess discordSession
 	go d.serve(ctx, conn, &sess)
 
-	conn.toClient <- hello(60_000) // a beat is a minute away
+	conn.toClient <- hello(60_000)  // a beat is a minute away
 	nextFrame(t, conn, time.Second) // identify
 	conn.toClient <- []byte(`{"op":1}`)
 	hb := nextFrame(t, conn, time.Second)
