@@ -71,10 +71,12 @@ green**:
 
 - [x] React 19 + Vite console, embedded in the hub via `go:embed`, and wrapped by a
       Tauri v2 desktop shell with a hub picker on first run
-- [x] The operations-console views — devices, energy, automations — over a built-in
-      **demo dataset** (`src/lib/demoData.ts`: twelve fictional devices across all seven
-      kinds). Real, interactive UI; no engine behind it. Demo figures are marked as such
-      at the point of use, because they sit beside real access data
+- [x] The operations-console views — devices, energy, automations — reading **live state
+      from the device engine** (`GET /v1/engine/devices`), with the demo dataset now
+      confined to the kinds no driver can yet serve. Every row says which it is: engine
+      devices are chipped live, fixtures keep a demo chip, and a hub with no engine
+      configured says so in words rather than showing an empty list that reads as a
+      failed fetch
 - [x] A route-parity test that diffs every frontend API call against the hub's real
       registered routes (AST-extracted), and a docs-vs-code feature-claim guard
       (`npm run check:claims`)
@@ -94,9 +96,18 @@ Real work, not new features — listed so it isn't mistaken for done.
 four parts already exist (the wire contract, the controller's 11-step verification, the
 hub's issuance endpoint):
 
-- [ ] App-side grant client: request, store and refresh a grant when connectivity allows
-- [ ] App-side presentation over LAN/mDNS and BLE, with the challenge-response the
-      controller already implements
+- [x] App-side grant client: requests, stores and refreshes grants, holding them for
+      several hubs at once keyed by each hub's pinned Ed25519 key — a URL is not an
+      identity, since a home hub is one address on the LAN and another from outside
+- [x] App-side presentation over **LAN/mDNS**, with the proof anchored on the
+      controller's clock from the challenge rather than the phone's, so a phone whose
+      clock is wrong after a blackout still opens the gate
+- [ ] App-side presentation over **BLE** — the framing and session layer exist on the
+      controller, but nothing in this app can reach a radio, and the UI says so rather
+      than implying otherwise
+- [ ] **The two halves meeting on real hardware.** Every part now exists and is tested
+      in isolation; none of it has been run against a real controller. Until someone
+      stands at a gate with the network off, treat this as unproven
 - [ ] An emergency-access screen that appears when the hub is unreachable and a paired
       controller is in range
 - [ ] Grant revocation semantics beyond "wait for expiry" (currently an accepted v0
@@ -114,9 +125,13 @@ hub's issuance endpoint):
 
 **Console screens ahead of their backend** (tracked mechanically by the route-parity test):
 
-- [ ] Analytics, per-access-point maintenance, Google OAuth /
-      Google OAuth
-- [ ] Scoped API tokens and outbound webhooks
+- [x] **Scoped API tokens** — hashed at rest, scope enforced by a route wrapper rather
+      than a handler check, bounded by the holder's membership at the time of use
+- [x] **Outbound webhooks** — HMAC-signed, with the target re-validated against SSRF
+      immediately before every delivery, because DNS belongs to whoever owns the name
+- [x] **Password reset** (forgot / reset / update)
+- [ ] Analytics and per-access-point maintenance
+- [ ] Google OAuth
 - [ ] 2FA, and any in-band recovery for a lost sole instance-admin password
 
 ---
