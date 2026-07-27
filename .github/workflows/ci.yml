@@ -27,6 +27,21 @@ jobs:
       - run: npm run typecheck     # tsc --noEmit
       - run: npm test              # vitest run
       - run: npm run build         # tsc -b && vite build
+      # The doc-accuracy gate. It has existed for a long time and CI never ran
+      # it — every "claims green" in this repo's history was somebody running it
+      # by hand, which is not a gate, it is a habit.
+      #
+      # What it checks, precisely, so nobody trusts it further than it goes: each
+      # entry in scripts/feature-claims.manifest.mjs declares a docStatus, and
+      # this fails when that disagrees with evidence found in the code. It does
+      # NOT read README prose — adding a false sentence about an unbuilt driver
+      # passes, because no manifest entry covers it. Doc drift outside the
+      # manifest is caught by review, or not at all.
+      - run: npm run check:claims
+      # The protocol vectors. These pin the signed wire format a deployed
+      # controller implements; a change that breaks them must not reach main on
+      # the strength of nobody having checked locally.
+      - run: node proto/vectors/verify.mjs
 
   rust:
     name: rust (fmt + clippy + check, Tauri shell)
@@ -70,6 +85,16 @@ jobs:
         with:
           go-version-file: hub/go.mod
           cache-dependency-path: hub/go.sum
+      # gofmt, which `go vet` does not cover. Formatting drift is trivial on its
+      # own and it makes every subsequent diff noisier, which is how a real
+      # change gets lost in a reformat.
+      - name: gofmt
+        working-directory: hub
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "not gofmt-clean:"; echo "$unformatted"; exit 1
+          fi
       - name: go vet
         working-directory: hub
         run: go vet ./...
@@ -90,6 +115,16 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: controller/go.mod
+      # gofmt, which `go vet` does not cover. Formatting drift is trivial on its
+      # own and it makes every subsequent diff noisier, which is how a real
+      # change gets lost in a reformat.
+      - name: gofmt
+        working-directory: controller
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "not gofmt-clean:"; echo "$unformatted"; exit 1
+          fi
       - name: go vet
         working-directory: controller
         run: go vet ./...
