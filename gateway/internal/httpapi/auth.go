@@ -55,7 +55,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req.Username = strings.TrimSpace(req.Username)
-	if req.Username == "" || !strings.Contains(req.Username, "@") {
+	if !validUsername(req.Username) {
 		writeErr(w, http.StatusBadRequest, "invalid_username")
 		return
 	}

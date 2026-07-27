@@ -432,10 +432,11 @@ func run(cfg config, log *slog.Logger) error {
 // actually start?" is answerable without binding a port — which is how the
 // everything-off default is held to account in the tests.
 type hub struct {
-	log   *slog.Logger
-	store *store.Store
-	keys  *keys.Keys
-	srv   *httpapi.Server
+	energy *energy.Store
+	log    *slog.Logger
+	store  *store.Store
+	keys   *keys.Keys
+	srv    *httpapi.Server
 	// reg is the device engine. nil unless -device-drivers named a driver
 	// this binary could build: no device config, no registry, no behaviour.
 	reg *devices.Registry
@@ -492,9 +493,11 @@ func buildHub(cfg config, log *slog.Logger) (*hub, error) {
 	// actually has one.
 	h := &hub{log: log, store: st, keys: ks}
 	h.wireDevices(cfg)
+	h.energy = h.newEnergyStore(cfg)
 
 	srv := httpapi.New(httpapi.Config{
 		Devices:         h.reg,
+		Energy:          h.energy,
 		Version:         Version,
 		Env:             envOr("LINTEL_ENV", "self-hosted"),
 		PublicURL:       cfg.publicURL,
@@ -794,6 +797,28 @@ func (h *hub) runDiscovery(ctx context.Context, every time.Duration) {
 // energy metering
 // ---------------------------------------------------------------------------
 
+// newEnergyStore builds the metering store. It is built UNCONDITIONALLY, and
+// separately from the poller, for a reason worth stating: history does not
+// vanish because polling was turned off. An operator who disables the poller —
+// or whose meter died last month — must still be able to read what was already
+// recorded, so the read API is bound to the store rather than to the worker.
+//
+// The engine owns migration 0011's tables and takes a bare database handle so
+// it cannot reach the audit tables — see store.DB.
+func (h *hub) newEnergyStore(cfg config) *energy.Store {
+	loc := time.UTC
+	if cfg.energyTZ != "" {
+		l, err := time.LoadLocation(cfg.energyTZ)
+		if err != nil {
+			h.log.Error("LINTEL_ENERGY_TZ is not a timezone this system knows; "+
+				"rollup buckets stay anchored to UTC", "tz", cfg.energyTZ, "err", err)
+		} else {
+			loc = l
+		}
+	}
+	return energy.NewStore(h.store.DB(), energy.WithLocation(loc))
+}
+
 // wireEnergy starts the meter poller. Off unless -energy-account names an
 // account that exists on this hub.
 //
@@ -816,20 +841,7 @@ func (h *hub) wireEnergy(cfg config) {
 		return
 	}
 
-	loc := time.UTC
-	if cfg.energyTZ != "" {
-		l, err := time.LoadLocation(cfg.energyTZ)
-		if err != nil {
-			h.log.Error("LINTEL_ENERGY_TZ is not a timezone this system knows; "+
-				"rollup buckets stay anchored to UTC", "tz", cfg.energyTZ, "err", err)
-		} else {
-			loc = l
-		}
-	}
-
-	// The metering engine owns migration 0011's tables and takes a bare
-	// database handle so it cannot reach the audit tables — see store.DB.
-	est := energy.NewStore(h.store.DB(), energy.WithLocation(loc))
+	est := h.energy
 	poller := energy.NewPoller(h.reg, est, cfg.energyAccount, energy.WithInterval(cfg.energyInterval))
 
 	h.log.Info("energy poller enabled", "account", cfg.energyAccount,

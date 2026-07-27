@@ -257,7 +257,7 @@ func (s *Server) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	username := strings.ToLower(strings.TrimSpace(req.Username))
-	if username == "" || !strings.Contains(username, "@") {
+	if !validUsername(username) {
 		// Structural rejection only. A string that cannot be an address tells
 		// an attacker nothing about who has an account, so this is not an
 		// enumeration channel — but it must stay structural: never reject

@@ -16,6 +16,7 @@ import (
 
 	"github.com/vul-os/aql/gateway/internal/channels"
 	"github.com/vul-os/aql/gateway/internal/devices"
+	"github.com/vul-os/aql/gateway/internal/energy"
 	"github.com/vul-os/aql/gateway/internal/hub"
 	"github.com/vul-os/aql/gateway/internal/keys"
 	"github.com/vul-os/aql/gateway/internal/portal"
@@ -42,6 +43,10 @@ type Config struct {
 	// Devices is the device engine. Nil (the default) means no engine: the
 	// endpoints report an empty fleet rather than failing.
 	Devices *devices.Registry
+
+	// Energy is the metering store. Nil (the default) means this hub has no
+	// metering, and every energy route answers 503 with a distinct code.
+	Energy *energy.Store
 	// Channels holds the chat-channel credentials (WhatsApp/Slack/Telegram).
 	// Zero value = every channel refuses its webhook (fail-closed) and its
 	// sender is a config-unset no-op.
@@ -73,6 +78,13 @@ type Server struct {
 	// nil dispatcher simply emits nothing, which is what tests that do not
 	// care about webhooks get.
 	webhooks *webhookDispatcher
+
+	// energy is the metering store, or nil when no meter is configured. Nil is
+	// the default and is not an error — a hub with no meter has no energy
+	// history, which is different from a failure. Handlers return 503 with a
+	// distinct code rather than 404, so an operator can tell "not wired up"
+	// from "wrong URL".
+	energy *energy.Store
 
 	// devices is the device engine, or nil when no driver was configured.
 	// Nil is the DEFAULT and is not an error: a hub with no device config has
@@ -117,7 +129,7 @@ func New(cfg Config, st *store.Store, ks *keys.Keys, log *slog.Logger) *Server {
 	if cfg.Channels.PublicURL == "" {
 		cfg.Channels.PublicURL = cfg.PublicURL
 	}
-	s := &Server{cfg: cfg, store: st, keys: ks, hub: hub.New(), log: log, devices: cfg.Devices}
+	s := &Server{cfg: cfg, store: st, keys: ks, hub: hub.New(), log: log, devices: cfg.Devices, energy: cfg.Energy}
 	s.webhooks = newWebhookDispatcher(st, log)
 	ch := cfg.Channels
 	s.wa = channels.WhatsApp{AppSecret: ch.WhatsAppAppSecret, VerifyToken: ch.WhatsAppVerifyToken, PublicURL: ch.PublicURL}
@@ -292,6 +304,14 @@ func (s *Server) Router() http.Handler {
 	// and a resident refused at the gate needs to be able to see why. Note
 	// that this is a convenience, not a security control — the position it
 	// tests is client-supplied and unverified (store/geofence.go).
+	// Energy metering (see energy.go). Read-only: samples come from the poller
+	// reading real meters, and an endpoint that injects them is a way to forge
+	// a bill. Every member reads — household consumption is not private
+	// between members of the same household.
+	mux.Handle("GET /v1/accounts/{id}/energy/channels", s.requireAuth(s.handleEnergyChannels))
+	mux.Handle("GET /v1/accounts/{id}/energy/series", s.requireAuth(s.handleEnergySeries))
+	mux.Handle("GET /v1/accounts/{id}/energy/mix", s.requireAuth(s.handleEnergyMix))
+
 	mux.Handle("GET /v1/accounts/{id}/geofences", s.requireAuth(s.handleGeofencesList))
 	mux.Handle("POST /v1/accounts/{id}/geofences", s.requireAuth(s.handleGeofenceCreate))
 	mux.Handle("DELETE /v1/accounts/{id}/geofences/{ruleID}", s.requireAuth(s.handleGeofenceDelete))
