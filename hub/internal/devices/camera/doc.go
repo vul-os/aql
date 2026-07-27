@@ -41,12 +41,17 @@
 // That boundary is a decision, not an oversight. Everything above is testable
 // without a camera — a Probe is a datagram and a parse, and the media calls are
 // HTTP requests to a server a test can stand up in-process. Decoding and
-// recording are not. They need a real camera to develop against and a storage
-// design this repository does not have: where clips live, for how long, who may
-// see them, what happens when the disk fills, what a resident is told when
-// retention silently drops the evening they care about. Writing that blind
-// produces code that compiles, passes tests written against its own
-// assumptions, and fails the first time it meets hardware.
+// recording are not. They need a real camera to develop against — an RTSP media
+// client and an fMP4 writer are not things to write blind, and code written that
+// way compiles, passes tests built on its own assumptions, and fails the first
+// time it meets hardware.
+//
+// The OTHER half of that blocker is gone. "A storage design this repository does
+// not have" was true for a long time and is not now: docs/CAMERA-RETENTION.md
+// settles where clips live, how long they last, who may watch, what a full disk
+// does, and what a resident is told when retention drops the evening they cared
+// about. Read it before adding anything here that stores a frame — recording is
+// a data-retention policy with a UI attached, and the policy is decided.
 //
 // # What "it works" means here, precisely
 //

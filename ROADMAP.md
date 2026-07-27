@@ -256,8 +256,15 @@ and none has met physical hardware.
 - [x] RTSP reachability probe (`VerifyStream`) — DESCRIBE, digest/basic auth, SDP parse, so
       the hub reports what a camera actually streams instead of an address it never touched.
       Tested against an in-process RTSP server; never run against a real camera
-- [ ] Camera live view and recording — no SETUP, no PLAY, no frame is ever received. Needs
-      hardware to develop against and a retention design this repo does not have
+- [x] The retention design — [`docs/CAMERA-RETENTION.md`](docs/CAMERA-RETENTION.md). Where
+      clips live, how long they last, who may watch, what a full disk does, and what a
+      resident is told when retention drops the evening they cared about. Design only; no
+      code implements it
+- [ ] Camera live view and recording — no SETUP, no PLAY, no frame is ever received. The
+      remaining blocker is genuinely hardware: an RTSP media client and an fMP4 writer both
+      need a real camera to develop against. The retention worker, the `camera:view`
+      permission and the viewer do not — but building a retention policy for footage that
+      does not exist yet is the wrong order
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
 - [ ] Rate-limiting and scoping on movement commands, so a compromised client cannot drive

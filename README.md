@@ -237,10 +237,13 @@ and the BLE peripheral all build and are tested against fakes and loopback
 servers, and none has touched a real meter, relay board, radio or gate. Wiring one
 up is the first time anyone finds out whether it's right.
 
-**Some of it isn't built.** Matter, Modbus RTU, camera live view and recording
-(the driver probes a stream and reports what it carries; it never receives a
-frame) and mDNS discovery are open. [ROADMAP.md](ROADMAP.md) tracks them line by
-line.
+**Some of it isn't built.** Matter, Modbus RTU, and camera live view and recording
+are open — the camera driver probes a stream and reports what it carries, and
+never receives a frame. Recording is a data-retention policy with a UI attached,
+so the policy is written down first:
+[docs/CAMERA-RETENTION.md](docs/CAMERA-RETENTION.md) settles where clips live,
+how long they last, who may watch, and what a full disk does.
+[ROADMAP.md](ROADMAP.md) tracks the rest line by line.
 
 `npm run check:claims` checks 36 feature claims in these docs against the code and
 fails when one drifts. It's how the two paragraphs above stay true.
