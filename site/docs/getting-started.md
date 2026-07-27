@@ -48,7 +48,7 @@ detail.
    > access points, controller pairing and the WebSocket device hub, the signed open
    > path, the admin console, rate limits and quotas, visitor grants, the tamper-evident
    > audit log, offline-grant issuance, and the WhatsApp / Slack / Telegram channels.
-   > **Not implemented:** analytics endpoints, Google OAuth, email verification and
+   > **Not implemented:** analytics endpoints, Google OAuth and
    > password reset (the console has screens for some of these that the hub does not
    > serve), and the entire device engine. A Docker image builds from the `Dockerfile`
    > in `gateway/`; the `ghcr.io/vul-os/aql-gateway` image is CI-built but published

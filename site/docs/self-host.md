@@ -28,8 +28,8 @@ bills you directly).
 > 60 HTTP routes, 219 Go tests, all green. **Building from source is the reliable
 > path today** — see the commands below.
 >
-> Honest gaps: there are **no analytics endpoints**, and **no Google OAuth,
-> email-verification or password-reset routes** — the console has screens for some of
+> Honest gaps: there are **no analytics endpoints** and **no Google OAuth** — the
+> console has screens for some of
 > these that the hub does not serve (they are enumerated as `KNOWN_UNAVAILABLE` in
 > `src/lib/__tests__/routeParity.test.ts`, so the drift is at least mechanically
 > tracked). The maintenance-logging UI on an access point posts to routes that do not

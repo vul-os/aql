@@ -114,7 +114,7 @@ hub's issuance endpoint):
 
 **Console screens ahead of their backend** (tracked mechanically by the route-parity test):
 
-- [ ] Analytics, per-access-point maintenance, password reset / email verification /
+- [ ] Analytics, per-access-point maintenance, Google OAuth /
       Google OAuth
 - [ ] Scoped API tokens and outbound webhooks
 - [ ] 2FA, and any in-band recovery for a lost sole instance-admin password

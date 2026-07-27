@@ -112,10 +112,12 @@ finished. The engine behind the other six is not built.**
   radio; the GATT peripheral glue exists only for **Linux/BlueZ** behind `-tags ble` and has
   **never been validated on hardware**. On every other platform the peripheral returns
   `ErrUnsupported`.
-- **Geofencing, online time-window rules, analytics endpoints, Google OAuth / email
-  verification / password reset, outbound webhooks, scoped API tokens, 2FA.** Some of these
-  have console screens the hub does not serve; the drift is tracked mechanically by a
-  route-parity test.
+- **Geofencing, online time-window rules, analytics endpoints, Google OAuth, outbound
+  webhooks, scoped API tokens, 2FA.** Some of these have console screens the hub does not
+  serve; the drift is tracked mechanically by a route-parity test. (Password reset IS
+  served. Email verification is not a gap — it was removed: identity here is a local
+  username, not an address, because an email address resolves through DNS to someone
+  else's server and this hub depends on nobody.)
 
 Phase-by-phase status: **[ROADMAP.md](ROADMAP.md)**. Adversarial view:
 **[docs/THREAT-MODEL.md](docs/THREAT-MODEL.md)**.

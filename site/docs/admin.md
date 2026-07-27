@@ -75,7 +75,7 @@ stops on their next request, even if their token has hours left on it.
 | --- | --- | --- |
 | Overview | `GET /admin/overview` | Instance totals (users, accounts, locations, devices, access points), successful opens today and over 7 days, today's denials broken down by reason, the last ten signups |
 | Accounts | `GET /admin/accounts`, `GET /admin/accounts/:id`, `PATCH /admin/accounts/:id` | List and search accounts (name, paged); drill into one — members and roles, locations, the last 25 access-log entries; suspend or unsuspend |
-| Users | `GET /admin/users`, `PATCH /admin/users/:id`, `POST /admin/users/:id/platform-admin` | List and search users (email, paged) with their account memberships and last access; disable or re-enable; grant or revoke instance admin |
+| Users | `GET /admin/users`, `PATCH /admin/users/:id`, `POST /admin/users/:id/platform-admin` | List and search users (username, paged) with their account memberships and last access; disable or re-enable; grant or revoke instance admin |
 | Limits | `GET /admin/limits`, `PATCH /admin/limits` | Read and override the four abuse rate limits at runtime, no restart |
 | Audit | `GET /admin/audit`, `GET /admin/audit/actions`, `GET /admin/audit/verify` | The cross-account access log, filterable by kind; the admin action trail; verify both tables' tamper-evident hash chains |
 
