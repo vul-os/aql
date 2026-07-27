@@ -146,7 +146,21 @@ CREATE TABLE access_logs (
     success         INTEGER NOT NULL,
     error           TEXT,
     ts              INTEGER NOT NULL,
-    created_at      INTEGER NOT NULL
+    created_at      INTEGER NOT NULL,
+    -- Late cmd.ack reconciliation (see 0006): an insert-only follow-up row
+    -- pointing at the row it corrects. The audit tables are append-only, so a
+    -- correction is a new row, never an UPDATE.
+    reconciles_log_id TEXT REFERENCES access_logs(id) ON DELETE SET NULL,
+    -- Tamper-evident chain + the denormalised snapshots it covers (see 0007).
+    -- The snapshots exist because the FKs above are ON DELETE SET NULL: an
+    -- account removed later would otherwise silently change what a historical
+    -- row says, and a hash chain over mutable fields verifies nothing.
+    account_id_snapshot      TEXT,
+    location_id_snapshot     TEXT,
+    access_point_id_snapshot TEXT,
+    user_id_snapshot         TEXT,
+    prev_hash                TEXT,
+    row_hash                 TEXT
 );
 CREATE INDEX access_logs_account_id_ts_idx  ON access_logs (account_id, ts DESC);
 CREATE INDEX access_logs_location_id_ts_idx ON access_logs (location_id, ts DESC);

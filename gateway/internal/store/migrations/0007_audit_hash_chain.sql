@@ -63,17 +63,8 @@
 --   everything from the moment of upgrade forward with full fidelity; it
 --   makes no claim about data recorded before it existed.
 
-ALTER TABLE access_logs ADD COLUMN account_id_snapshot TEXT;
-ALTER TABLE access_logs ADD COLUMN location_id_snapshot TEXT;
-ALTER TABLE access_logs ADD COLUMN access_point_id_snapshot TEXT;
-ALTER TABLE access_logs ADD COLUMN user_id_snapshot TEXT;
-ALTER TABLE access_logs ADD COLUMN prev_hash TEXT;
-ALTER TABLE access_logs ADD COLUMN row_hash TEXT;
 CREATE UNIQUE INDEX access_logs_row_hash_idx ON access_logs (row_hash) WHERE row_hash IS NOT NULL;
 
-ALTER TABLE admin_audit_log ADD COLUMN actor_user_id_snapshot TEXT;
-ALTER TABLE admin_audit_log ADD COLUMN prev_hash TEXT;
-ALTER TABLE admin_audit_log ADD COLUMN row_hash TEXT;
 CREATE UNIQUE INDEX admin_audit_log_row_hash_idx ON admin_audit_log (row_hash) WHERE row_hash IS NOT NULL;
 
 CREATE TRIGGER access_logs_immutable
@@ -155,3 +146,7 @@ BEFORE DELETE ON admin_audit_log
 BEGIN
     SELECT RAISE(ABORT, 'admin_audit_log is append-only: rows may never be deleted');
 END;
+
+-- The snapshot and hash columns are now declared in 0001 (access_logs) and
+-- 0004 (admin_audit_log) alongside their tables. Migrations here are
+-- CREATE-only.

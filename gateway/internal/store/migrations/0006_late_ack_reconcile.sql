@@ -11,5 +11,8 @@
 -- row that references the original via reconciles_log_id, so "we heard
 -- back late, and here is what it said" is a separate, equally durable
 -- fact — the two are never collapsed into one.
-ALTER TABLE access_logs ADD COLUMN reconciles_log_id TEXT REFERENCES access_logs(id) ON DELETE SET NULL;
 CREATE INDEX access_logs_reconciles_idx ON access_logs (reconciles_log_id);
+
+-- The reconciles_log_id column is now declared in 0001 alongside the table.
+-- Migrations here are CREATE-only: a schema is stated once, in the file that
+-- creates the table, rather than assembled from a trail of ALTERs.

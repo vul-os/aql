@@ -10,6 +10,12 @@ CREATE TABLE admin_audit_log (
     target_id     TEXT,
     allowed       INTEGER NOT NULL,
     detail        TEXT NOT NULL DEFAULT '{}', -- json
-    created_at    INTEGER NOT NULL
+    created_at    INTEGER NOT NULL,
+    -- Tamper-evident chain + the actor snapshot it covers (see 0007). Same
+    -- reasoning as access_logs: actor_user_id is ON DELETE SET NULL, so the
+    -- chain must cover a value that cannot change under it.
+    actor_user_id_snapshot TEXT,
+    prev_hash              TEXT,
+    row_hash               TEXT
 );
 CREATE INDEX admin_audit_log_created_idx ON admin_audit_log (created_at DESC);
