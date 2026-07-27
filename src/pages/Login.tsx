@@ -8,7 +8,7 @@ import { ApiError } from '@/lib/api';
 import { getApiBaseUrl, getStoredGatewayUrl, isTauri, openGatewayPicker } from '@/lib/gateway';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export default function Login() {
     setErrorMsg(null);
     setSubmitting(true);
     try {
-      await signInWithPassword(email, password);
+      await signInWithPassword(username, password);
       navigate('/app');
     } catch (err) {
       setErrorMsg(toMessage(err));
@@ -43,7 +43,7 @@ export default function Login() {
         Sign in
       </h1>
       <p className="mt-2 sm:mt-3 text-[15px] text-ink/65 leading-relaxed">
-        Use your email and password to sign in.
+        Use your username and password to sign in.
       </p>
 
       {/* Google sign-in is disabled unconditionally: the gateway
@@ -52,7 +52,7 @@ export default function Login() {
           /v1/auth/google/start would just land on the SPA fallback. */}
       <div
         aria-disabled="true"
-        title="Google sign-in isn’t available on this hub yet — use email + password."
+        title="Google sign-in isn’t available on this hub yet — use username + password."
         className="mt-5 sm:mt-7 flex items-center justify-center gap-3 h-11 rounded-full border border-ink/15 bg-paper-cool/40 opacity-45 cursor-not-allowed select-none"
       >
         <GoogleMark />
@@ -67,12 +67,12 @@ export default function Login() {
 
       <form onSubmit={onSubmit} className="space-y-3 sm:space-y-4" noValidate>
         <Field
-          label="Email"
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={setEmail}
-          placeholder="you@example.com"
+          label="Username"
+          type="text"
+          autoComplete="username"
+          value={username}
+          onChange={setUsername}
+          placeholder="pat"
           required
           autoFocus
         />
@@ -133,8 +133,8 @@ export default function Login() {
 
 function toMessage(err: unknown): string {
   if (err instanceof ApiError) {
-    if (err.code === 'invalid_credentials') return 'That email and password don’t match.';
-    if (err.code === 'account_not_active') return 'Verify your email before signing in.';
+    if (err.code === 'invalid_credentials') return 'That username and password don’t match.';
+    if (err.code === 'account_not_active') return 'This account isn’t active — ask whoever runs this hub to reactivate it.';
     return err.detail ?? err.code;
   }
   if (err instanceof Error) return err.message;

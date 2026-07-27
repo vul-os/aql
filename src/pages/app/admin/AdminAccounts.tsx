@@ -274,9 +274,9 @@ function AccountDrawer({
               <ul className="divide-y divide-ink/8 border border-ink/8 rounded-xl overflow-hidden">
                 {detail.members.map((m) => (
                   <li key={m.user_id} className="flex items-center gap-3 px-4 py-2.5 text-sm bg-paper-cool">
-                    <span className="font-medium truncate">{m.display_name ?? m.email.split('@')[0]}</span>
+                    <span className="font-medium truncate">{m.display_name ?? m.username}</span>
                     <span className="font-mono text-xs text-ink/50 truncate flex-1 min-w-0 hidden sm:inline">
-                      {m.email}
+                      {m.username}
                     </span>
                     <span className="text-[10px] uppercase tracking-[0.16em] text-ink/55 shrink-0">
                       {m.role}

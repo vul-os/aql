@@ -71,14 +71,31 @@ const AWAITING_ENDPOINT = new Map<string, string>([
   ['cost_zar_cents', 'access-point maintenance'],
   ['next_due_in_days', 'access-point maintenance'],
   ['movement_m_at_event', 'access-point maintenance'],
+  ['parts', 'access-point maintenance'],
+
+  // Reference data the hub does not serve. api.ts already documents that there
+  // is no /reference/countries route; these are CountryRef's fields, kept here
+  // so the widened extractor does not report them as drift.
+  ['code', 'reference data — GET /reference/countries, not served by the hub'],
+  ['flag', 'reference data — GET /reference/countries, not served by the hub'],
 ]);
 
 function goEmittedKeys(): Set<string> {
-  const dir = path.join(repo, 'gateway/internal/httpapi');
   const keys = new Set<string>();
-  for (const f of readdirSync(dir)) {
-    if (!f.endsWith('.go') || f.endsWith('_test.go')) continue;
-    const src = readFileSync(path.join(dir, f), 'utf-8');
+  // httpapi is where response bodies are built, but not where every emitted
+  // key is DECLARED. A handler that writes `"trigger": r.Trigger` emits
+  // whatever json tags that struct carries, and those live in the package the
+  // type comes from — automations.Trigger's `schedule`/`threshold`/`event`
+  // tags are in internal/automations, not here.
+  //
+  // Scanning only httpapi reported those as drift, which is the false-positive
+  // direction that matters most: it trains people to exempt fields that are
+  // perfectly real. Widening the corpus costs precision — a key declared
+  // anywhere in internal/ now satisfies a field declared anywhere in api.ts —
+  // and this was already true across handlers, so the check is no weaker than
+  // it claimed to be. See the file header for what it does not prove.
+  for (const file of goFilesUnder(path.join(repo, 'gateway/internal'))) {
+    const src = readFileSync(file, 'utf-8');
     // JSON keys as written in map[string]any literals and struct tags.
     // Map literals: {"key": value}
     for (const m of src.matchAll(/"([a-z][a-z0-9_]*)"\s*:/g)) keys.add(m[1]);
@@ -93,15 +110,55 @@ function goEmittedKeys(): Set<string> {
   return keys;
 }
 
+/** Every non-test .go file under a directory, recursively. */
+function goFilesUnder(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      out.push(...goFilesUnder(full));
+    } else if (entry.name.endsWith('.go') && !entry.name.endsWith('_test.go')) {
+      out.push(full);
+    }
+  }
+  return out;
+}
+
 function tsDeclaredFields(): Map<string, number> {
   const src = readFileSync(path.join(repo, 'src/lib/api.ts'), 'utf-8');
   const lines = src.split('\n');
   const fields = new Map<string, number>();
   lines.forEach((line, i) => {
-    // A snake_case object field in a type literal. camelCase is skipped: those
-    // are client-side shapes, not wire fields.
-    const m = /^\s+([a-z][a-z0-9]*(?:_[a-z0-9]+)+)\??\s*:/.exec(line);
-    if (m) fields.set(m[1], i + 1);
+    // A lower-case object field in a type literal. camelCase is skipped —
+    // those are client-side shapes, not wire fields.
+    //
+    // The `_`-optional part is load-bearing and was the bug. The first version
+    // of this pattern REQUIRED an underscore, so it only ever saw
+    // multi-word wire fields. Every single-word one — `email`, `role`, `status`
+    // — was invisible, and `email` is exactly the field that broke: the hub
+    // renamed it to `username`, api.ts kept declaring `email`, and because the
+    // Go handlers call json.Decoder.DisallowUnknownFields() every login and
+    // registration returned 400 while this test stayed green.
+    //
+    // A drift alarm with a blind spot over the most common field shape is
+    // worse than no alarm, because it is trusted.
+    // The value must LOOK LIKE A TYPE. Widening the name pattern to accept
+    // single-word fields also started matching two things that are not wire
+    // fields at all: methods on the `api` object (`login: (body) => ...`) and
+    // ordinary value assignments in helper code (`headers: h,`). Requiring a
+    // type expression after the colon separates a declaration from a value
+    // without needing to track which block we are inside.
+    const m = /^\s+([a-z][a-z0-9]*(?:_[a-z0-9]+)*)\??\s*:\s*(.+)$/.exec(line);
+    if (!m) return;
+    const value = m[2].trim();
+    // A declaration in a type literal ends in `;`. A value in an object
+    // literal ends in `,` — which is what separates a real wire field from
+    // `headers: { 'Content-Type': 'application/json' },` inside fetch code.
+    if (!/;\s*(\/\/.*)?$/.test(value)) return;
+    const looksLikeAType =
+      /^(string|number|boolean|null|undefined|unknown|any|Array<|Record<|\{|\[|'|")/.test(value) ||
+      /^[A-Z]/.test(value); // a named type: UnixSeconds, AccountMemberRow, ...
+    if (looksLikeAType) fields.set(m[1], i + 1);
   });
   return fields;
 }

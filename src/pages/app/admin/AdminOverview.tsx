@@ -113,9 +113,9 @@ export default function AdminOverview() {
                 <span className="font-mono text-[11px] text-ink/50 w-24 shrink-0">
                   {fmtRelative(u.created_at)}
                 </span>
-                <span className="font-medium truncate">{u.display_name ?? u.email.split('@')[0]}</span>
+                <span className="font-medium truncate">{u.display_name ?? u.username}</span>
                 <span className="font-mono text-xs text-ink/55 truncate flex-1 min-w-0 hidden sm:inline">
-                  {u.email}
+                  {u.username}
                 </span>
                 <span className="flex items-center gap-2 shrink-0">
                   {u.is_platform_admin && <AdminBadge />}

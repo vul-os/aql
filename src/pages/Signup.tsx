@@ -10,6 +10,18 @@ const PENDING_INVITE_KEY = 'lintel.pendingInviteToken';
 export const PENDING_WHATSAPP_PHONE_KEY = 'lintel.pendingWhatsAppPhone';
 const PHONE_E164_RE = /^\+[1-9]\d{6,14}$/;
 
+// Mirrors gateway/internal/httpapi/username.go's validUsername: 2-254 chars,
+// no whitespace, no control characters, no leading/trailing dot. This is a
+// UX pre-check only — the gateway is the authority and re-validates on
+// submit — so it doesn't need to replicate Go's full Unicode classification,
+// just keep an obviously-invalid username from round-tripping to a 400.
+function isValidUsername(u: string): boolean {
+  if (u.length < 2 || u.length > 254) return false;
+  // eslint-disable-next-line no-control-regex -- mirrors the backend's control-char rejection
+  if (/[\s\x00-\x1f\x7f]/.test(u)) return false;
+  return !u.startsWith('.') && !u.endsWith('.');
+}
+
 type Step = 'auth' | 'kind' | 'location';
 const STEPS: Array<{ key: Step; label: string }> = [
   { key: 'auth', label: 'Account' },
@@ -22,7 +34,7 @@ export default function Signup() {
 
   // Step 1 — auth basics
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
 
@@ -39,7 +51,7 @@ export default function Signup() {
   const [submitting, setSubmitting] = useState(false);
   const [connectingPhone, setConnectingPhone] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
+  const [submittedUsername, setSubmittedUsername] = useState<string | null>(null);
   const { registerWithPassword, refreshMe } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -85,7 +97,7 @@ export default function Signup() {
 
   const canAdvanceFromAuth =
     name.trim().length > 0 &&
-    /.+@.+\..+/.test(email) &&
+    isValidUsername(username.trim()) &&
     password.length >= 8 &&
     (phone.trim().length === 0 || PHONE_E164_RE.test(phone.trim()));
 
@@ -94,7 +106,7 @@ export default function Signup() {
     setSubmitting(true);
     try {
       await registerWithPassword({
-        email,
+        username,
         password,
         display_name: name,
         phone_e164: phone.trim() || undefined,
@@ -113,7 +125,7 @@ export default function Signup() {
         try { sessionStorage.removeItem(PENDING_INVITE_KEY); } catch {/**/}
         navigate('/app', { replace: true });
       } else {
-        setSubmittedEmail(email);
+        setSubmittedUsername(username);
       }
     } catch (err) {
       setErrorMsg(toMessage(err));
@@ -126,7 +138,7 @@ export default function Signup() {
     setErrorMsg(null);
     if (step === 'auth') {
       if (!canAdvanceFromAuth) {
-        setErrorMsg('Fill in your name, email, password (8+ chars), and use +27821234567 if you add a phone number.');
+        setErrorMsg('Fill in your name, username, password (8+ chars), and use +27821234567 if you add a phone number.');
         return;
       }
       if (isInviteSignup) {
@@ -191,16 +203,16 @@ export default function Signup() {
         </p>
       }
     >
-      {submittedEmail ? (
+      {submittedUsername ? (
         <SuccessPanel
-          email={submittedEmail}
+          username={submittedUsername}
           pendingWhatsAppPhone={pendingWhatsAppPhone}
           connectingPhone={connectingPhone}
           errorMsg={errorMsg}
           onConnectWhatsApp={connectPendingWhatsAppPhone}
           onSkipWhatsApp={skipPendingWhatsAppPhone}
           onContinue={() => navigate('/app', { replace: true })}
-          onRedo={() => setSubmittedEmail(null)}
+          onRedo={() => setSubmittedUsername(null)}
         />
       ) : (
         <>
@@ -221,7 +233,7 @@ export default function Signup() {
                       googleStartUrl doc comment). */}
                   <div
                     aria-disabled="true"
-                    title="Google sign-in isn’t available on this hub yet — use email + password."
+                    title="Google sign-in isn’t available on this hub yet — use username + password."
                     className="mt-3 flex items-center justify-center gap-3 h-10 rounded-full border border-ink/15 bg-paper-cool/40 opacity-45 cursor-not-allowed select-none"
                   >
                     <GoogleMark />
@@ -253,12 +265,12 @@ export default function Signup() {
                   required
                 />
                 <Field
-                  label="Email"
-                  type="email"
-                  value={email}
-                  onChange={setEmail}
-                  placeholder="you@example.com"
-                  autoComplete="email"
+                  label="Username"
+                  type="text"
+                  value={username}
+                  onChange={setUsername}
+                  placeholder="pat"
+                  autoComplete="username"
                   required
                 />
                 <Field
@@ -565,7 +577,7 @@ function KindCard({
 }
 
 function SuccessPanel({
-  email,
+  username,
   pendingWhatsAppPhone,
   connectingPhone,
   errorMsg,
@@ -574,7 +586,7 @@ function SuccessPanel({
   onContinue,
   onRedo,
 }: {
-  email: string;
+  username: string;
   pendingWhatsAppPhone: string | null;
   connectingPhone: boolean;
   errorMsg: string | null;
@@ -587,13 +599,9 @@ function SuccessPanel({
     <>
       <h1 className="font-display-tight text-3xl sm:text-4xl text-ink">You're in.</h1>
       <p className="mt-3 text-sm text-ink/70">
-        Signed up as <span className="font-medium text-ink">{email}</span>. Continue to your
+        Signed up as <span className="font-medium text-ink">{username}</span>. Continue to your
         dashboard to add access points and invite members.
       </p>
-      <div className="mt-6 rounded-xl bg-paper-cool border border-ink/10 px-4 py-3 text-sm text-ink/70">
-        We sent a verification link too — clicking it confirms your email but isn't required to
-        sign in.
-      </div>
       {pendingWhatsAppPhone && (
         <div className="mt-4 rounded-xl border border-terracotta/25 bg-terracotta/10 px-4 py-4">
           <p className="text-sm font-medium text-ink">Connect WhatsApp number?</p>
@@ -630,7 +638,7 @@ function SuccessPanel({
         Go to dashboard
       </Button>
       <p className="mt-5 text-sm text-ink/60">
-        Wrong email?{' '}
+        Wrong username?{' '}
         <button
           type="button"
           onClick={onRedo}
@@ -646,9 +654,9 @@ function SuccessPanel({
 
 function toMessage(err: unknown): string {
   if (err instanceof ApiError) {
-    if (err.code === 'email_taken') return 'That email is already in use. Try signing in.';
+    if (err.code === 'username_taken') return 'That username is already in use. Try signing in.';
     if (err.code === 'invalid_credentials') return 'Could not sign in after registration.';
-    if (err.code === 'invite_email_mismatch') return 'Use the same email address this invitation was sent to.';
+    if (err.code === 'invite_username_mismatch') return 'Use the same username this invitation was sent to.';
     if (err.code === 'invite_phone_mismatch') return 'Use the same WhatsApp number this invitation was sent to.';
     if (err.code === 'invite_used') return 'This invitation has already been accepted.';
     if (err.code === 'invite_expired') return 'This invitation has expired. Ask the sender to send a new one.';

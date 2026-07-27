@@ -233,7 +233,7 @@ export function LocationLimitsPanel({
                     className="flex items-center justify-between gap-3 border-b border-ink/8 pb-2 last:border-b-0"
                   >
                     <span className="font-mono text-xs text-ink/75 truncate">
-                      {m.email ?? (m.user_id ? `${m.user_id.slice(0, 8)}…` : 'visitor / grant')}
+                      {m.username ?? (m.user_id ? `${m.user_id.slice(0, 8)}…` : 'visitor / grant')}
                     </span>
                     <span className="font-mono text-sm tabular-nums shrink-0">
                       {m.opens_today.toLocaleString()}

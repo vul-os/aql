@@ -6,7 +6,7 @@ import { AuthLayout } from '@/components/auth/AuthLayout';
 import { api, friendlyApiError } from '@/lib/api';
 
 export default function ForgotPassword() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -16,10 +16,10 @@ export default function ForgotPassword() {
     setErrorMsg(null);
     setSubmitting(true);
     try {
-      await api.forgotPassword(email.trim().toLowerCase());
+      await api.forgotPassword(username.trim().toLowerCase());
       setSent(true);
     } catch (err) {
-      setErrorMsg(friendlyApiError(err, 'Could not send the reset email.'));
+      setErrorMsg(friendlyApiError(err, 'Could not request a reset link.'));
     } finally {
       setSubmitting(false);
     }
@@ -28,11 +28,12 @@ export default function ForgotPassword() {
   return (
     <AuthLayout
       asideKicker="Forgot password"
-      asideTitle="We’ll send you a link."
+      asideTitle="No inbox — check the log."
       asideBody={
         <p>
-          If an account exists for the email you enter, we’ll deliver a one-hour reset link there.
-          Check your spam folder if it doesn’t show up.
+          This hub has no outbound mail. If an account exists for the username you enter, a
+          one-hour reset link is generated and printed to the hub's own server log — ask whoever
+          runs it to hand you the link.
         </p>
       }
     >
@@ -41,34 +42,36 @@ export default function ForgotPassword() {
       </h1>
       {!sent && (
         <p className="mt-2 sm:mt-3 text-[15px] text-ink/65 leading-relaxed">
-          Enter the email you signed up with — we&rsquo;ll email you a reset link.
+          Enter your username. There's no email on this hub, so the reset link isn't delivered
+          anywhere automatically — whoever administers this hub can read it off the server log.
         </p>
       )}
 
       {sent ? (
         <div className="mt-5 sm:mt-6 space-y-3 sm:space-y-4">
           <div className="rounded-xl bg-signal/[0.08] border border-signal/25 px-5 py-4 text-sm text-ink/85">
-            <p className="font-medium text-ink">Check your inbox.</p>
+            <p className="font-medium text-ink">Nothing was emailed — check the server log.</p>
             <p className="mt-1.5 leading-relaxed text-ink/70">
-              If <span className="font-medium text-ink">{email}</span> is on file, the reset link is
-              on its way. It expires in one hour — check your spam folder too.
+              If <span className="font-medium text-ink">{username}</span> is on file, a reset link
+              was just printed to this hub's server log. It expires in one hour; ask whoever runs
+              the hub for it if you can't read the log yourself.
             </p>
           </div>
           <Button variant="outline" size="lg" className="w-full" onClick={() => setSent(false)}>
-            Try a different address
+            Try a different username
           </Button>
         </div>
       ) : (
         <form onSubmit={onSubmit} className="mt-5 sm:mt-6 space-y-3 sm:space-y-4" noValidate>
           <Field
-            label="Email"
-            type="email"
-            autoComplete="email"
+            label="Username"
+            type="text"
+            autoComplete="username"
             required
             autoFocus
-            value={email}
-            onChange={setEmail}
-            placeholder="you@example.com"
+            value={username}
+            onChange={setUsername}
+            placeholder="pat"
             error={errorMsg}
           />
 

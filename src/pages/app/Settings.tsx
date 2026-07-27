@@ -86,7 +86,7 @@ function SignInIdentitySection() {
         >
           forgot-password
         </a>{' '}
-        flow with this email — you&rsquo;ll set a password without unlinking Google. Both
+        flow with this username — you&rsquo;ll set a password without unlinking Google. Both
         methods will then work.
       </div>
     </Card>
@@ -177,7 +177,7 @@ function ProfileSection() {
         <div className="flex flex-col items-center gap-2 sm:items-start">
           <Avatar
             url={avatarUrl.trim() || resolveAvatarUrl(user) || null}
-            name={displayName || user?.email || null}
+            name={displayName || user?.username || null}
             size="xl"
             toneClass="bg-ink text-paper"
           />

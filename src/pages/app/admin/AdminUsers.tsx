@@ -59,16 +59,16 @@ export default function AdminUsers() {
         patchRow(pending.user.id, { status: r.user.status, is_platform_admin: r.user.is_platform_admin });
         toast(
           pending.next === 'disabled'
-            ? `${r.user.email} disabled — sessions revoked.`
-            : `${r.user.email} re-enabled.`,
+            ? `${r.user.username} disabled — sessions revoked.`
+            : `${r.user.username} re-enabled.`,
         );
       } else {
         const r = await api.adminUserSetPlatformAdmin(pending.user.id, pending.grant);
         patchRow(pending.user.id, { status: r.user.status, is_platform_admin: r.user.is_platform_admin });
         toast(
           pending.grant
-            ? `${r.user.email} is now a platform admin.`
-            : `Platform admin revoked from ${r.user.email}.`,
+            ? `${r.user.username} is now a platform admin.`
+            : `Platform admin revoked from ${r.user.username}.`,
         );
       }
       setPending(null);
@@ -83,7 +83,7 @@ export default function AdminUsers() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SearchBox
-          placeholder="Search users by email…"
+          placeholder="Search users by username…"
           onSearch={(q) => {
             setQuery(q);
             setOffset(0);
@@ -127,10 +127,10 @@ export default function AdminUsers() {
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="min-w-0">
                               <p className="font-medium truncate">
-                                {u.display_name ?? u.email.split('@')[0]}
+                                {u.display_name ?? u.username}
                                 {isSelf && <span className="ml-1.5 text-[10px] text-ink/45">(you)</span>}
                               </p>
-                              <p className="font-mono text-[11px] text-ink/55 truncate">{u.email}</p>
+                              <p className="font-mono text-[11px] text-ink/55 truncate">{u.username}</p>
                             </div>
                             {u.is_platform_admin && <AdminBadge />}
                           </div>
@@ -239,8 +239,8 @@ function RowAction({
 }
 
 function confirmTitle(p: PendingAction): string {
-  if (p.kind === 'status') return p.next === 'disabled' ? `Disable ${p.user.email}?` : `Enable ${p.user.email}?`;
-  return p.grant ? `Make ${p.user.email} a platform admin?` : `Revoke platform admin from ${p.user.email}?`;
+  if (p.kind === 'status') return p.next === 'disabled' ? `Disable ${p.user.username}?` : `Enable ${p.user.username}?`;
+  return p.grant ? `Make ${p.user.username} a platform admin?` : `Revoke platform admin from ${p.user.username}?`;
 }
 
 function confirmLabel(p: PendingAction): string {

@@ -133,7 +133,7 @@ export function MobileNavDrawer({
         <div className="p-3 border-t border-ink/10">
           {user && (
             <p className="px-3 py-2 text-xs text-ink/55">
-              Signed in as <span className="text-ink/80">{user.email}</span>
+              Signed in as <span className="text-ink/80">{user.username}</span>
             </p>
           )}
           <div className="flex items-center justify-between px-3 py-2">

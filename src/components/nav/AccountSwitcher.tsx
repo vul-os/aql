@@ -120,7 +120,7 @@ export function AccountSwitcher() {
               <span>New location</span>
             </button>
             <p className="px-3 py-1.5 text-xs text-ink/55">
-              Signed in as <span className="text-ink">{user.email}</span>
+              Signed in as <span className="text-ink">{user.username}</span>
             </p>
             <button
               type="button"

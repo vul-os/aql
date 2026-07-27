@@ -6,7 +6,7 @@ export default function PermissionsMembers() {
       <DocLead
         kicker="02 · Concepts"
         title="Permissions & Members"
-        intro="Members are people invited onto an account by email; their phone number is what lets them text the gate. Roles control what they can do beyond opening it."
+        intro="Members are people invited onto an account by username; their phone number is what lets them text the gate. Roles control what they can do beyond opening it."
       />
 
       <DocSection heading="The four roles">
@@ -27,10 +27,28 @@ export default function PermissionsMembers() {
 
       <DocSection heading="Inviting members">
         <ol className="list-decimal pl-6 space-y-3">
-          <li>Members → <em>Invite</em>. You&rsquo;ll need the invitee&rsquo;s email and their phone number.</li>
+          <li>Members → <em>Invite</em>. You&rsquo;ll need a username for the invitee and their phone number — no email address, the hub doesn&rsquo;t have one for anybody.</li>
           <li>Pick a role: owner, admin, member or viewer.</li>
-          <li>They get an accept link, valid for 7 days. Accepting binds their phone number to the account — that&rsquo;s what lets them text the gate.</li>
+          <li>An accept token is generated, valid for 7 days. Accepting binds the invitee&rsquo;s phone number to the account — that&rsquo;s what lets them text the gate.</li>
         </ol>
+        <div className="rounded-2xl border border-gold/40 bg-gold/[0.06] px-5 py-4 sm:px-6 sm:py-5 mt-4">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-ink/55 font-mono">
+            Status: delivery not wired up
+          </p>
+          <p className="mt-2 text-[15px] text-ink/80 leading-relaxed">
+            This hub sends nothing on its own — no email, no SMS, no WhatsApp
+            message. By design the accept token is never handed back to the
+            inviter (so an admin session can&rsquo;t mint itself accounts just by
+            reading its own API response), and the reference gateway has no
+            outbound channel wired in yet to hand it to the invitee either. The
+            practical result: an invite created through the normal flow has no
+            path to the invitee at all today — nobody, on either side, gets the
+            accept link. It exists only as a hash in the database until a
+            delivery seam ships (an operator with direct database access can
+            recover it for a manual workaround; that&rsquo;s a dev/test escape
+            hatch, not something a real install should rely on).
+          </p>
+        </div>
       </DocSection>
 
       <DocSection heading="Programmatic invites">
@@ -38,21 +56,24 @@ export default function PermissionsMembers() {
   -H "Authorization: Bearer lintel_live_xxxxxxxxxxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "email": "lebogang@example.com",
+    "username": "lebogang",
     "phone_e164": "+27821234567",
     "role": "member"
   }'`}</CodeBlock>
         <CodeBlock lang="json">{`{
   "id": "inv_01HZ4D…",
-  "email_sent": false,
+  "username_sent": false,
   "whatsapp_sent": false
 }`}</CodeBlock>
         <p>
-          The accept token itself is never returned here — it&rsquo;s delivered straight
-          to the invitee, never to the inviter. <code>email_sent</code>/
-          <code>whatsapp_sent</code> report whether delivery is wired up on your
-          hub; a half-configured install still creates the invite, it just can&rsquo;t
-          tell the invitee about it yet.
+          The accept token itself is never returned here, by design — it&rsquo;s
+          meant to reach the invitee only, never the inviter.{' '}
+          <code>username_sent</code> and <code>whatsapp_sent</code> report
+          whether that delivery actually happened; today, on the reference
+          gateway, there is no channel wired in for either one, so both always
+          come back <code>false</code>. The invite is still created and
+          stored — it just doesn&rsquo;t reach anyone yet. See the delivery note
+          above.
         </p>
       </DocSection>
 

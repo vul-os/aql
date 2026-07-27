@@ -13,8 +13,8 @@ const roleStyles: Record<AccountMemberRow['role'], string> = {
   viewer: 'bg-gold/30 text-ink',
 };
 
-function initials(name: string | null, email: string): string {
-  const source = name && name.trim().length > 0 ? name : email.split('@')[0] ?? email;
+function initials(name: string | null, username: string): string {
+  const source = name && name.trim().length > 0 ? name : username;
   return source
     .split(/[\s.+_-]+/)
     .map((s) => s[0]?.toUpperCase() ?? '')
@@ -59,7 +59,7 @@ export default function MembersPage() {
       <PageHeader
         kicker="People"
         title="Members"
-        description="Anyone with a role on this account. Invite by email — they'll get a link to accept."
+        description="Anyone with a role on this account. Invite by username — this hub doesn't deliver anything automatically, so plan to tell them yourself."
         actions={
           <Button variant="ink" onClick={() => setInviting(true)}>
             Invite member
@@ -84,18 +84,18 @@ export default function MembersPage() {
       ) : (
         <Card className="p-0 overflow-hidden">
           {/* Mobile: card list. Tables don't fit comfortably on phones, and the
-              email column was the main offender. */}
+              username column was the main offender. */}
           <ul className="md:hidden divide-y divide-ink/10">
             {members.map((m) => (
               <li key={m.user_id} className="p-4 flex items-start gap-3">
                 <span className="grid h-9 w-9 place-items-center rounded-full bg-ink/10 text-ink text-xs font-medium shrink-0">
-                  {initials(m.display_name, m.email)}
+                  {initials(m.display_name, m.username)}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium truncate">
-                    {m.display_name ?? m.email.split('@')[0]}
+                    {m.display_name ?? m.username}
                   </p>
-                  <p className="text-xs text-ink/60 truncate mt-0.5">{m.email}</p>
+                  <p className="text-xs text-ink/60 truncate mt-0.5">{m.username}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span
                       className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] ${roleStyles[m.role]}`}
@@ -113,7 +113,7 @@ export default function MembersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-ink/10">
-                  {['Name', 'Email', 'Role', 'Status'].map((c) => (
+                  {['Name', 'Username', 'Role', 'Status'].map((c) => (
                     <th
                       key={c}
                       className="text-left px-6 py-4 text-[11px] uppercase tracking-[0.18em] text-ink/55 font-normal"
@@ -132,12 +132,12 @@ export default function MembersPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <span className="grid h-8 w-8 place-items-center rounded-full bg-ink/10 text-ink text-xs font-medium">
-                          {initials(m.display_name, m.email)}
+                          {initials(m.display_name, m.username)}
                         </span>
-                        <span className="font-medium">{m.display_name ?? m.email.split('@')[0]}</span>
+                        <span className="font-medium">{m.display_name ?? m.username}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-ink/70">{m.email}</td>
+                    <td className="px-6 py-4 text-ink/70">{m.username}</td>
                     <td className="px-6 py-4">
                       <span
                         className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] ${roleStyles[m.role]}`}
@@ -177,13 +177,13 @@ function InviteModal({
   onClose: () => void;
   onInvited: () => void;
 }) {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [phone, setPhone] = useState('+');
   const [role, setRole] = useState<AccountMemberRow['role']>('member');
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
-  const [delivery, setDelivery] = useState<{ email: boolean; whatsapp: boolean } | null>(null);
+  const [delivery, setDelivery] = useState<{ username: boolean; whatsapp: boolean } | null>(null);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -191,11 +191,11 @@ function InviteModal({
     setSubmitting(true);
     try {
       const result = await api.inviteCreate(accountId, {
-        email: email.trim().toLowerCase(),
+        username: username.trim().toLowerCase(),
         phone_e164: phone.replace(/\s+/g, ''),
         role,
       });
-      setDelivery({ email: result.email_sent, whatsapp: result.whatsapp_sent });
+      setDelivery({ username: result.username_sent, whatsapp: result.whatsapp_sent });
       setSent(true);
     } catch (err) {
       const msg = err instanceof ApiError 
@@ -210,18 +210,21 @@ function InviteModal({
 
   return (
     <Modal open onClose={onClose}>
-      <h2 className="font-display text-2xl mb-1">{sent ? 'Invite sent' : 'Invite a member'}</h2>
+      <h2 className="font-display text-2xl mb-1">{sent ? 'Invite created' : 'Invite a member'}</h2>
       {sent ? (
         <>
           <p className="text-sm text-ink/65 mt-2">
-            We've sent the invite to <span className="font-medium">{email}</span> and{' '}
+            Invite created for <span className="font-medium">{username}</span>, phone{' '}
             <span className="font-medium">{phone}</span>. It expires in 7 days.
           </p>
-          {delivery && (!delivery.email || !delivery.whatsapp) && (
-            <p className="text-xs text-terracotta-deep mt-3">
-              {delivery.email ? '' : 'Email delivery failed. '}
-              {delivery.whatsapp ? '' : 'WhatsApp delivery failed. '}
-              The invite was still created.
+          {/* Both flags are hardcoded false on the gateway today — no delivery
+              channel is wired up yet (see accounts.go's handleInviteCreate).
+              This is the honest, expected state rather than a failure, so it
+              doesn't use the error/terracotta styling used elsewhere. */}
+          {delivery && (!delivery.username || !delivery.whatsapp) && (
+            <p className="text-xs text-ink/50 mt-3">
+              Nothing was sent automatically — this hub has no delivery channel wired up yet.
+              Let {username} know directly that they've been invited.
             </p>
           )}
           <div className="flex justify-end mt-6">
@@ -233,18 +236,20 @@ function InviteModal({
       ) : (
         <>
           <p className="text-sm text-ink/60 mb-5">
-            They'll get an email and WhatsApp with a link to accept.
+            This hub doesn't deliver invites automatically yet — once created, tell them
+            directly that they've been added.
           </p>
           <form onSubmit={onSubmit} className="space-y-4">
             <label className="block">
-              <span className="text-sm font-medium text-ink/85">Email</span>
+              <span className="text-sm font-medium text-ink/85">Username</span>
               <input
-                type="email"
+                type="text"
                 required
                 autoFocus
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="member@example.com"
+                autoComplete="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="pat"
                 className="mt-1.5 w-full h-11 rounded-xl bg-paper-cool border border-ink/15 px-4 text-[15px] focus:outline-none focus:ring-2 focus:ring-ink"
               />
             </label>

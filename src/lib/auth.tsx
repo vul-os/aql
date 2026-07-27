@@ -19,7 +19,7 @@ import { ApiError, api, tokenStore, type MeResponse } from './api';
 // consumer ripped out in this pass — see api.ts's MeResponse doc comment.
 export type SessionUser = {
   id: string;
-  email: string;
+  username: string;
   name: string;
   avatar_url: string | null;
   avatar_cdn_url: string | null;
@@ -47,9 +47,9 @@ type AuthState = {
   signedIn: boolean;
   loading: boolean;
   error: string | null;
-  signInWithPassword: (email: string, password: string) => Promise<void>;
+  signInWithPassword: (username: string, password: string) => Promise<void>;
   registerWithPassword: (input: {
-    email: string;
+    username: string;
     password: string;
     display_name: string;
     phone_e164?: string;
@@ -95,12 +95,11 @@ function writeMeCache(value: CachedMe | null): void {
 const Ctx = createContext<AuthState | null>(null);
 
 function toSession(me: MeResponse): { user: SessionUser; accounts: SessionAccount[] } {
-  const fallbackName = me.user.email.split('@')[0] ?? me.user.email;
   return {
     user: {
       id: me.user.id,
-      email: me.user.email,
-      name: fallbackName,
+      username: me.user.username,
+      name: me.user.username,
       avatar_url: null,
       avatar_cdn_url: null,
       avatar_source: null,
@@ -192,9 +191,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshMe]);
 
   const signInWithPassword = useCallback(
-    async (email: string, password: string) => {
+    async (username: string, password: string) => {
       setError(null);
-      const res = await api.login({ email, password });
+      const res = await api.login({ username, password });
       tokenStore.set(res.tokens.access_token, res.tokens.refresh_token);
       await refreshMe();
     },
@@ -203,7 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerWithPassword = useCallback(
     async (input: {
-      email: string;
+      username: string;
       password: string;
       display_name: string;
       phone_e164?: string;

@@ -58,8 +58,8 @@ export default function AcceptInvite() {
       setTimeout(() => navigate('/app', { replace: true }), 800);
     } catch (err) {
       const msg = err instanceof ApiError
-        ? err.code === 'invite_email_mismatch'
-          ? 'This invitation was sent to a different email address. Sign in with that account to accept.'
+        ? err.code === 'invite_username_mismatch'
+          ? 'This invitation was sent to a different username. Sign in with that account to accept.'
           : err.code === 'invite_used'
             ? 'This invitation has already been accepted.'
             : err.code === 'invite_revoked'
@@ -97,8 +97,8 @@ export default function AcceptInvite() {
       {status === 'no-token' && (
         <>
           <p className="mt-2 sm:mt-3 text-[15px] text-ink/65 leading-relaxed">
-            This link doesn't carry an invitation token. Ask the sender to forward you the
-            original email.
+            This link doesn't carry an invitation token. Ask whoever invited you to send you the
+            invitation link again.
           </p>
           <p className="mt-5 sm:mt-6 text-sm text-ink/60">
             Already have an account?{' '}

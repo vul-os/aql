@@ -281,13 +281,13 @@ export type AuthTokens = {
 };
 
 export type LoginResponse = {
-  user: { id: string; email: string; is_platform_admin: boolean };
+  user: { id: string; username: string; is_platform_admin: boolean };
   tokens: AuthTokens;
   token_type: 'Bearer';
 };
 
 export type RegisterResponse = {
-  user: { id: string; email: string };
+  user: { id: string; username: string };
   account: { id: string; name: string };
   location: { id: string; name: string; slug: string | null };
   tokens: AuthTokens;
@@ -308,7 +308,7 @@ export type RefreshResponse = {
 export type MeResponse = {
   user: {
     id: string;
-    email: string;
+    username: string;
     is_platform_admin: boolean;
   };
   accounts: Array<{
@@ -325,7 +325,7 @@ export type CountryRef = {
 };
 
 export const api = {
-  login: (body: { email: string; password: string }) =>
+  login: (body: { username: string; password: string }) =>
     apiFetch<LoginResponse>('/auth/login', { method: 'POST', body }),
 
   // account_type and invite_token are UI-only concerns the gateway's
@@ -338,7 +338,7 @@ export const api = {
   // (see src/pages/Signup.tsx) — the gateway registers accounts+invites as
   // two independent steps, not one atomic register-and-join.
   register: (body: {
-    email: string;
+    username: string;
     password: string;
     display_name: string;
     phone_e164?: string;
@@ -350,7 +350,7 @@ export const api = {
     apiFetch<RegisterResponse>('/auth/register', {
       method: 'POST',
       body: {
-        email: body.email,
+        username: body.username,
         password: body.password,
         display_name: body.display_name,
         location_name: body.location_name,
@@ -384,11 +384,17 @@ export const api = {
       { method: 'PATCH', body },
     ),
 
-  // NOT IMPLEMENTED on the gateway — no password-reset/verify-email ceremony
-  // ported yet (see gateway/internal/httpapi/auth.go's doc comment: "the
-  // ceremony around them... is deferred").
-  forgotPassword: (email: string) =>
-    apiFetch<void>('/auth/forgot-password', { method: 'POST', body: { email } }),
+  // All three ARE served (gateway/internal/httpapi/authrecovery.go). This
+  // comment previously said they were not, which stopped being true when
+  // recovery landed.
+  //
+  // There is NO email in the ceremony, and there cannot be: the hub sends no
+  // mail. Recovery identifies a person by username and the reset token reaches
+  // them by whatever channel the install actually has — read authrecovery.go
+  // before assuming a link arrives anywhere on its own. There is likewise no
+  // "verify email" step, because there is no email address to verify.
+  forgotPassword: (username: string) =>
+    apiFetch<void>('/auth/forgot-password', { method: 'POST', body: { username } }),
   resetPassword: (token: string, new_password: string) =>
     apiFetch<void>('/auth/reset-password', { method: 'POST', body: { token, new_password } }),
   updatePassword: (current_password: string, new_password: string) =>
@@ -574,12 +580,65 @@ export const api = {
 
   engineHealth: () => apiFetch<EngineHealthResponse>('/engine/health'),
 
+  // Automations (gateway/internal/httpapi/automations.go). Admin-only,
+  // including reads: a rule states what the hardware does unattended, which is
+  // closer to the audit trail than to a meter reading. A 503
+  // automations_not_configured is the DEFAULT for a hub with no rule engine —
+  // not an error, and not a failed fetch.
+  automations: (accountId: string) =>
+    apiFetch<AutomationsListResponse>(`/accounts/${accountId}/automations`),
+
+  automationRuns: (accountId: string, limit?: number) =>
+    apiFetch<AutomationRunsResponse>(
+      `/accounts/${accountId}/automations/runs${limit ? `?limit=${limit}` : ''}`,
+    ),
+
+  automationSetEnabled: (accountId: string, ruleId: string, enabled: boolean) =>
+    apiFetch<AutomationRule>(
+      `/accounts/${accountId}/automations/${encodeURIComponent(ruleId)}/enabled`,
+      { method: 'POST', body: { enabled } },
+    ),
+
+  automationDelete: (accountId: string, ruleId: string) =>
+    apiFetch<void>(`/accounts/${accountId}/automations/${encodeURIComponent(ruleId)}`, {
+      method: 'DELETE',
+    }),
+
+  // Energy (gateway/internal/httpapi/energy.go). Read-only by design: samples
+  // come from a poller reading real meters, and an endpoint that injects them
+  // would be a way to forge a bill.
+  energyChannels: (accountId: string) =>
+    apiFetch<{ channels: EnergyChannel[]; tz: string }>(
+      `/accounts/${accountId}/energy/channels`,
+    ),
+
+  energySeries: (accountId: string, q: { grain?: string; from?: number; to?: number } = {}) => {
+    const p = new URLSearchParams();
+    if (q.grain) p.set('grain', q.grain);
+    if (q.from !== undefined) p.set('from', String(q.from));
+    if (q.to !== undefined) p.set('to', String(q.to));
+    const qs = p.toString();
+    return apiFetch<EnergySeriesResponse>(
+      `/accounts/${accountId}/energy/series${qs ? `?${qs}` : ''}`,
+    );
+  },
+
+  energyMix: (accountId: string, q: { from?: number; to?: number } = {}) => {
+    const p = new URLSearchParams();
+    if (q.from !== undefined) p.set('from', String(q.from));
+    if (q.to !== undefined) p.set('to', String(q.to));
+    const qs = p.toString();
+    return apiFetch<EnergyMixResponse>(
+      `/accounts/${accountId}/energy/mix${qs ? `?${qs}` : ''}`,
+    );
+  },
+
   // Members
   accountMembers: (accountId: string) =>
     apiFetch<{ members: AccountMemberRow[] }>(`/accounts/${accountId}/members`),
 
-  inviteCreate: (accountId: string, body: { email: string; role?: 'owner' | 'admin' | 'member' | 'viewer'; phone_e164: string }) =>
-    apiFetch<{ id: string; email_sent: boolean; whatsapp_sent: boolean }>(
+  inviteCreate: (accountId: string, body: { username: string; role?: 'owner' | 'admin' | 'member' | 'viewer'; phone_e164: string }) =>
+    apiFetch<{ id: string; username_sent: boolean; whatsapp_sent: boolean }>(
       `/accounts/${accountId}/invites`,
       { method: 'POST', body },
     ),
@@ -709,7 +768,7 @@ export type LocationLimits = {
     my_opens_today: number;
     members: Array<{
       user_id: string | null;
-      email: string | null;
+      username: string | null;
       opens_today: number;
     }>;
   };
@@ -820,7 +879,7 @@ export type AccountMemberRow = {
   user_id: string;
   role: 'owner' | 'admin' | 'member' | 'viewer';
   status: string;
-  email: string;
+  username: string;
   display_name: string | null;
 };
 
@@ -961,7 +1020,7 @@ export type AdminOverview = {
   };
   recent_signups: Array<{
     id: string;
-    email: string;
+    username: string;
     display_name: string | null;
     status: string;
     is_platform_admin: boolean;
@@ -1014,7 +1073,7 @@ export type AdminAccountDetail = {
   };
   members: Array<{
     user_id: string;
-    email: string;
+    username: string;
     display_name: string | null;
     role: string;
     status: string;
@@ -1031,7 +1090,7 @@ export type AdminAccountDetail = {
 
 export type AdminUserRow = {
   id: string;
-  email: string;
+  username: string;
   status: 'active' | 'disabled' | string;
   is_platform_admin: boolean;
   created_at: UnixSeconds;
@@ -1050,7 +1109,7 @@ export type AdminUsersResponse = {
 /** Shape returned by user-mutating admin endpoints. */
 export type AdminUserSummary = {
   id: string;
-  email: string;
+  username: string;
   status: string;
   is_platform_admin: boolean;
 };
@@ -1124,4 +1183,187 @@ export type MaintenanceCreateInput = {
   next_due_movement_m?: number;
   next_due_at?: string;
   next_due_in_days?: number;
+};
+
+// ── automations ─────────────────────────────────────────────────────────────
+//
+// gateway/internal/httpapi/automations.go. The layer that matters is the
+// ENGINE's, not this one: every safety property — the tier ceiling, the
+// cooldown, the failure breaker — lives in gateway/internal/automations and is
+// enforced identically for the scheduler. The console reads results and shows
+// refusals; it does not re-derive any of it.
+
+/** Trigger kinds the hub understands. A closed set; an unknown one is a hub
+ *  newer than this console, not a rule to guess at. */
+export type AutomationTriggerKind = 'schedule' | 'threshold' | 'event' | string;
+
+export type AutomationRule = {
+  id: string;
+  name: string;
+  enabled: boolean;
+  trigger: {
+    kind: AutomationTriggerKind;
+    schedule?: { minute_of_day: number; days: number; tz?: string };
+    threshold?: { device_key: string; metric: string; op: string; value: number };
+    event?: { device_key: string; name: string };
+  };
+  conditions: Array<{ device_key: string; metric: string; op: string; value: number }>;
+  action: {
+    device_key?: string;
+    zone?: string;
+    verb: string;
+    args?: Record<string, number>;
+  };
+  min_interval_seconds: number;
+  created_at: UnixSeconds;
+  updated_at: UnixSeconds;
+
+  /** The action's resolved safety tier, and the ceiling it was checked
+   *  against. BOTH are sent, because one without the other is not
+   *  interpretable — and hard-coding the ceiling in this console is exactly
+   *  how the two would drift. Never re-derive it here. */
+  action_tier: string;
+  max_action_tier: string;
+
+  created_by: string;
+  created_by_snapshot: string;
+
+  last_outcome: string;
+  last_fired_at: UnixSeconds;
+  last_occurrence_at: UnixSeconds;
+  consecutive_failures: number;
+
+  /** Present only when the failure breaker tripped, and then always with the
+   *  reason. A rule that went quiet without one leaves an admin nothing to
+   *  act on. */
+  disabled_at?: UnixSeconds;
+  disabled_reason?: string;
+};
+
+export type AutomationRun = {
+  id: string;
+  rule_id: string;
+  rule_name: string;
+  cause: string;
+  occurrence_at: UnixSeconds;
+  outcome: string;
+  reason: string;
+  device_key: string;
+  verb: string;
+  tier: string;
+  target_count: number;
+  /** Whether the run reached the access audit trail. Without this, an
+   *  unaudited run is indistinguishable from a missing audit entry. */
+  audited: boolean;
+  started_at: UnixSeconds;
+  finished_at: UnixSeconds;
+};
+
+export type AutomationsListResponse = {
+  rules: AutomationRule[];
+  max_action_tier: string;
+  /** Whether anything will actually FIRE these rules. Rules can be written
+   *  with the scheduler off, and a list that silently never runs looks
+   *  identical to one that works — so this must be rendered, not ignored. */
+  scheduler_running: boolean;
+};
+
+export type AutomationRunsResponse = { runs: AutomationRun[]; limit: number };
+
+// ── energy ──────────────────────────────────────────────────────────────────
+//
+// gateway/internal/httpapi/energy.go. The engine goes to real trouble never to
+// state a number it cannot support, and the honesty fields below are how that
+// survives the wire. A renderer that drops them turns a half-measured window
+// into a confident figure.
+
+export type EnergyChannel = {
+  device_key: string;
+  metric: string;
+  kind: string;
+  source: string;
+  flow: string;
+  label: string;
+  scale: number;
+  counter_max: number;
+  max_kw: number;
+  interval_seconds: number;
+  gap_tolerance_seconds: number;
+  enabled: boolean;
+  created_at: UnixSeconds;
+  updated_at: UnixSeconds;
+};
+
+export type EnergyBucket = {
+  device_key: string;
+  metric: string;
+  grain: string;
+  tz: string;
+  start: UnixSeconds;
+  end: UnixSeconds;
+
+  /** NULLABLE, and the null is load-bearing: an hour nobody measured and an
+   *  hour that used no electricity are different facts. Rendering null as 0
+   *  draws a confident low bar over an outage. */
+  kwh: number | null;
+  /** How much of kwh was interpolated across a gap. kwh minus this is the
+   *  measured floor. */
+  estimated_kwh: number;
+  coverage_seconds: number;
+  expected_seconds: number;
+
+  sample_count: number;
+  delta_count: number;
+  reset_count: number;
+  /** The single field a renderer may branch on: complete | partial |
+   *  estimated | empty. */
+  quality: string;
+  min_kw: number | null;
+  max_kw: number | null;
+  mean_kw: number | null;
+};
+
+export type EnergySeriesResponse = {
+  buckets: EnergyBucket[];
+  grain: string;
+  from: UnixSeconds;
+  to: UnixSeconds;
+  tz: string;
+  /** Rollups the background worker still owes. Non-zero means the tail of the
+   *  series may still move — the difference between "usage dropped" and "not
+   *  summed yet". */
+  pending_rollups: number;
+};
+
+export type EnergyMixResponse = {
+  from: UnixSeconds;
+  to: UnixSeconds;
+  tz: string;
+  totals: Array<{
+    source: string;
+    flow: string;
+    kwh: number;
+    estimated_kwh: number;
+    coverage_seconds: number;
+    expected_seconds: number;
+    reset_count: number;
+    channels: number;
+  }>;
+  supply_kwh: number;
+  sink_kwh: number;
+  net_consumption_kwh: number;
+  unattributed_kwh: number;
+  sub_meter_kwh: number;
+
+  /** The two flags to check BEFORE drawing a pie chart. complete=false means
+   *  some channel did not cover the window, so the slices do not add up to the
+   *  truth; attributed=false means there is not enough source information to
+   *  say where the energy came from. */
+  complete: boolean;
+  attributed: boolean;
+  estimated_kwh: number;
+  coverage_seconds: number;
+  expected_seconds: number;
+  reset_count: number;
+  channels: number;
 };
