@@ -159,13 +159,20 @@ export const FEATURES = [
   },
   {
     id: 'outbound-webhooks',
-    label: 'Outbound webhooks (third-party integrations subscribing to gateway events)',
-    docStatus: 'planned',
-    docRefs: ['No doc claims this ships; verified absent to guard against re-introduction of the claim.'],
-    evidence: [[
-      { root: 'gateway/internal', pattern: 'WebhookSubscription|OutboundWebhook|webhook_subscriptions', flags: 'i' },
-      { root: 'backend/src', pattern: 'WebhookSubscription|OutboundWebhook|webhook_subscriptions', flags: 'i' },
-    ]],
+    label: 'Outbound webhooks — HMAC-signed delivery of access events, with SSRF re-validation at send time',
+    docStatus: 'shipped',
+    docRefs: ['README.md — listed among the things that are no longer gaps'],
+    // Four separate pieces, because any one of them going missing turns this
+    // from a feature into a liability: the schema, the route that creates one,
+    // the signing, and the emit that makes it fire at all. A webhook system
+    // with no emit is inert; one with no signature is unauthenticated; one
+    // with no SSRF check is a request-forgery primitive.
+    evidence: [
+      { file: 'gateway/internal/store/migrations/0013_webhooks.sql', pattern: 'CREATE TABLE webhooks' },
+      { file: 'gateway/internal/httpapi/server.go', pattern: 'POST /v1/accounts/\\{id\\}/webhooks' },
+      { file: 'gateway/internal/httpapi/webhookdispatch.go', pattern: 'func signWebhook' },
+      { file: 'gateway/internal/httpapi/channels_open.go', pattern: 'emitAccessWebhook' },
+    ],
   },
   {
     id: 'gateway-analytics',

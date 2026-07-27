@@ -122,12 +122,20 @@ finished. The engine behind the other six is not built.**
   radio; the GATT peripheral glue exists only for **Linux/BlueZ** behind `-tags ble` and has
   **never been validated on hardware**. On every other platform the peripheral returns
   `ErrUnsupported`.
-- **Geofencing, online time-window rules, analytics endpoints, Google OAuth, outbound
-  webhooks, scoped API tokens, 2FA.** Some of these have console screens the hub does not
-  serve; the drift is tracked mechanically by a route-parity test. (Password reset IS
-  served. Email verification is not a gap — it was removed: identity here is a local
-  username, not an address, because an email address resolves through DNS to someone
-  else's server and this hub depends on nobody.)
+- **Geofencing, online time-window rules, analytics endpoints, Google OAuth, 2FA.** Some
+  of these have console screens the hub does not serve; the drift is tracked mechanically
+  by a route-parity test.
+
+  Three things that used to be on this list are not gaps any more, and are called out
+  because a "not built" list rots toward pessimism and nobody re-reads it. **Password
+  reset** is served. **Scoped API tokens** are served — hashed at rest, scope enforced by
+  a route wrapper rather than a handler check, and bounded by the holder's membership at
+  the time of use. **Outbound webhooks** are served and fire: HMAC-signed, with the
+  target re-validated against SSRF immediately before every delivery, because DNS belongs
+  to whoever owns the name and a webhook configured innocently in January is a
+  request-forgery primitive in March. **Email verification** is not a gap either — it was
+  removed on purpose, because an email address resolves through DNS to someone else's
+  server and this hub depends on nobody.
 
 Phase-by-phase status: **[ROADMAP.md](ROADMAP.md)**. Adversarial view:
 **[docs/THREAT-MODEL.md](docs/THREAT-MODEL.md)**.
