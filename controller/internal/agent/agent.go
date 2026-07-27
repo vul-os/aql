@@ -90,6 +90,17 @@ func New(opts Options) (*Agent, error) {
 	})
 	rel := opts.Relay
 	if rel == nil {
+		// The mock ACTUATES NOTHING and reports success for everything. That is
+		// correct for tests and the simulator and dangerous anywhere else: a
+		// command is acked, the hub writes an `opened` row into a hash-chained
+		// audit trail, and no gate moves.
+		//
+		// cmd/controller refuses to start when a relay was configured and could
+		// not be opened, so reaching here means nobody asked for one. Say so at
+		// WARN rather than INFO: an operator who wired a gate and forgot -relay
+		// will otherwise see a working-looking controller.
+		log.Warn("no relay configured; using the MOCK relay — commands will be " +
+			"acked and recorded as successful, and nothing physical will move")
 		rel = relay.NewMock(log)
 	}
 	a := &Agent{

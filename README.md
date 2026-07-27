@@ -147,12 +147,19 @@ finished. The engine behind the other six is not built.**
   happened is the two halves meeting: nothing here has been run against real controller
   hardware, and the BLE leg cannot be driven from this app at all. Treat it as untested
   end to end until someone stands at a gate with the network off.
-- **A GPIO relay driver validated on hardware.** The default controller build still uses
-  a mock relay that only logs. A real Linux character-device driver now exists behind
-  `-tags gpio` ([`controller/internal/relay/`](controller/internal/relay/)) and compiles
-  for Linux, but it has **never been run against a GPIO chip, a relay board or a gate** —
-  there is no such hardware in the development environment. Treat it as unproven: wiring
+- **A GPIO relay driver validated on hardware.** The Linux character-device driver
+  ([`controller/internal/relay/`](controller/internal/relay/)) is real, is selected with
+  `-relay <chip>:<line>` and is now reachable from the shipped binary — until this landed
+  nothing constructed it, so every controller ran the mock. It has still **never been run
+  against a GPIO chip, a relay board or a gate**; there is no such hardware here. Wiring
   it to a motor is the first time anyone will find out whether it is right.
+
+  What it will *not* do is lie. A controller told to drive a relay it cannot open refuses
+  to start, and there is deliberately no flag to soften that. The mock is not a degraded
+  relay — every actuation returns success, so the command is acked and the hub writes an
+  `opened` row into a hash-chained audit trail while the gate stands still. A gate that
+  fails to open is a fault someone fixes within the hour; a gate that reports opening
+  while standing still corrupts the record a dispute is later settled with.
 - **The BLE radio.** Framing, session and verification are real and unit-tested with no
   radio; the GATT peripheral glue exists only for **Linux/BlueZ** behind `-tags ble` and has
   **never been validated on hardware**. On every other platform the peripheral returns

@@ -41,6 +41,7 @@ func main() {
 		aps           = flag.String("access-points", "main", "comma-separated access points this controller serves")
 		insecure      = flag.Bool("insecure", false, "allow ws:// and http:// hub endpoints (dev only)")
 		ble           = flag.Bool("ble", false, "enable the BLE peripheral (requires a `-tags ble` Linux build)")
+		relaySpec     = flag.String("relay", "", "GPIO relay, `<chip>:<line>[,active-low][,bias=pull-up|pull-down|disabled][,sensor=<line>[,sensor-active-low][,sensor-debounce=20ms]]` (requires a `-tags gpio` Linux build); empty uses the mock relay, which actuates nothing")
 	)
 	flag.Parse()
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
@@ -57,6 +58,16 @@ func main() {
 			"hub", *hub, "ignored_gateway", *gatewayLegacy)
 	}
 
+	// Before anything else. A controller that cannot drive the relay it was
+	// told to drive must not reach the point of accepting commands — see
+	// relay.go for why falling back to the mock is the one unacceptable
+	// outcome.
+	rel, err := openRelay(*relaySpec, log)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "controller:", err)
+		os.Exit(1)
+	}
+
 	a, err := agent.New(agent.Options{
 		StateDir:      *stateDir,
 		GatewayURL:    *hub,
@@ -67,6 +78,7 @@ func main() {
 		AllowInsecure: *insecure,
 		Firmware:      firmware,
 		EnableBLE:     *ble,
+		Relay:         rel,
 	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "controller:", err)

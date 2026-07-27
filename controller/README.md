@@ -35,7 +35,7 @@ controller/
     state/                       # durable pairing (PINNED gateway key), lockdown, config, last-sync
     clock/                       # gateway-synced, monotonic-advanced clock
     noncestore/                  # persistent, bounded (1024) replay store, fail-closed
-    relay/                       # actuation seam: Relay/Sensors iface, Mock + gpio build-tag stub
+    relay/                       # actuation seam: Relay/Sensors iface, Mock, and the GPIO driver under -tags gpio
     command/                     # fail-closed command verification + actuation + cmd.ack + events
     grants/                      # offline-grant verification core (11-step, shared by LAN + BLE)
     framing/                     # BLE 4-byte LE length-prefix chunker/reassembler (8 KiB cap)
@@ -63,8 +63,8 @@ controller/
 | mDNS `_lintel._tcp` advertise + LAN HTTP grant transport | **Real** |
 | BLE **framing codec + session + verification** | **Real**, unit-tested at MTUs 23/185/512 |
 | BLE **radio** (GATT peripheral) | **Stub** — real BlueZ glue under `-tags ble` on Linux, **not hardware-validated**; `ErrUnsupported` elsewhere |
-| **GPIO relay driver** | **Stub** — `-tags gpio` scaffold that panics; default build uses the mock relay and logs actuations |
-| Position/tamper **sensors** | **Stub** — `Sensors` iface returns static values; wire real debounced GPIO inputs |
+| **GPIO relay driver** | **Real** under `-tags gpio` on Linux (character device, v2 uAPI), selected with `-relay <chip>:<line>`, **not hardware-validated**. Without `-relay` the build uses the mock relay, which acks everything and moves nothing |
+| Position/tamper **sensors** | **Real** under `-tags gpio` via `-relay …,sensor=<line>` (debounced GPIO input); the Mock returns static values |
 
 The long-poll fallback endpoint shape (`/poll`) is a documented convention
 (see `internal/transport/runner.go`) pending the gateway freezing it; the WSS
