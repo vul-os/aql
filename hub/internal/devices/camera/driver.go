@@ -32,6 +32,8 @@ type Driver struct {
 	requireHTTPS     bool
 	allowForeignHost bool
 	streamTTL        time.Duration
+	verifyStream     bool
+	rtspTimeout      time.Duration
 	ownClient        bool
 	now              func() time.Time
 
@@ -124,6 +126,8 @@ func New(cfg Config) (*Driver, error) {
 		requireHTTPS:     cfg.RequireHTTPS,
 		allowForeignHost: cfg.AcceptForeignServiceAddress,
 		streamTTL:        ttl,
+		verifyStream:     cfg.VerifyStream,
+		rtspTimeout:      timeout,
 		now:              time.Now,
 		cams:             map[string]*cameraState{},
 	}
@@ -370,15 +374,44 @@ func (d *Driver) Read(ctx context.Context, deviceID string) ([]devices.Reading, 
 		}
 		d.recordStream(deviceID, mediaAddr, prof, uri)
 	}
-	d.observe(deviceID, devices.AvailOnline, "answered; stream address resolved")
-
 	at := d.now()
-	return []devices.Reading{
+	readings := []devices.Reading{
 		{DeviceID: deviceID, Metric: "reachable", Value: 1, At: at},
 		{DeviceID: deviceID, Metric: "profile", Text: prof.Describe(), At: at},
-		// The address a stream would be at. Nothing connects to it.
 		{DeviceID: deviceID, Metric: "stream", Text: uri, At: at},
-	}, nil
+	}
+
+	if !d.verifyStream {
+		// The address ONVIF claimed, unverified. The summary says so rather
+		// than implying the stream was checked.
+		d.observe(deviceID, devices.AvailOnline, "answered; stream address resolved (not verified)")
+		return readings, nil
+	}
+
+	// Follow the address. This is the difference between "ONVIF gave us a URL"
+	// and "that URL streams H264" — and cameras routinely want different
+	// credentials on the media leg than on the device service, which is
+	// precisely the failure an operator otherwise discovers in VLC.
+	info, perr := Describe(ctx, uri, cred, d.rtspTimeout)
+	if perr != nil {
+		// DEGRADED, not offline. The camera answered ONVIF and named a stream;
+		// the stream is what did not work. Collapsing that to offline would
+		// send someone to check whether the camera is powered.
+		d.observe(deviceID, devices.AvailDegraded, "ONVIF answered; the stream did not: "+perr.Error())
+		readings = append(readings,
+			devices.Reading{DeviceID: deviceID, Metric: "stream_ok", Value: 0, At: at})
+		return readings, nil
+	}
+
+	d.observe(deviceID, devices.AvailOnline, "streaming "+info.Summary())
+	readings = append(readings,
+		devices.Reading{DeviceID: deviceID, Metric: "stream_ok", Value: 1, At: at},
+		devices.Reading{DeviceID: deviceID, Metric: "stream_codec", Text: info.VideoCodec(), At: at},
+		// Which auth the media leg demanded. "basic" means the password
+		// crossed the wire in cleartext, which an operator should be able to
+		// learn from the product rather than from a packet capture.
+		devices.Reading{DeviceID: deviceID, Metric: "stream_auth", Text: info.AuthUsed, At: at})
+	return readings, nil
 }
 
 // Health reports the driver's own last-known state. It issues no request — the

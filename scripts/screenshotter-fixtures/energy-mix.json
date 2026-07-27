@@ -1,0 +1,59 @@
+{
+  "from": "{{now-12h}}",
+  "to": "{{now-0h}}",
+  "tz": "Africa/Johannesburg",
+  "totals": [
+    {
+      "source": "grid",
+      "flow": "supply",
+      "kwh": 18.4,
+      "estimated_kwh": 0,
+      "coverage_seconds": 43200,
+      "expected_seconds": 43200,
+      "reset_count": 0,
+      "channels": 1
+    },
+    {
+      "source": "solar",
+      "flow": "supply",
+      "kwh": 9.2,
+      "estimated_kwh": 0,
+      "coverage_seconds": 43200,
+      "expected_seconds": 43200,
+      "reset_count": 0,
+      "channels": 1
+    },
+    {
+      "source": "battery",
+      "flow": "supply",
+      "kwh": 2.1,
+      "estimated_kwh": 0.3,
+      "coverage_seconds": 43200,
+      "expected_seconds": 43200,
+      "reset_count": 1,
+      "channels": 1
+    },
+    {
+      "source": "battery",
+      "flow": "sink",
+      "kwh": 3.5,
+      "estimated_kwh": 0,
+      "coverage_seconds": 43200,
+      "expected_seconds": 43200,
+      "reset_count": 0,
+      "channels": 1
+    }
+  ],
+  "supply_kwh": 29.7,
+  "sink_kwh": 3.5,
+  "net_consumption_kwh": 26.2,
+  "unattributed_kwh": 0,
+  "sub_meter_kwh": 0,
+  "complete": true,
+  "attributed": true,
+  "estimated_kwh": 0.3,
+  "coverage_seconds": 43200,
+  "expected_seconds": 43200,
+  "reset_count": 1,
+  "channels": 3
+}

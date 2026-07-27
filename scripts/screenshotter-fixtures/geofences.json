@@ -1,0 +1,26 @@
+{
+  "geofences": [
+    {
+      "id": "geo_01hz3maingate5residents2",
+      "account_id": "acct_silveroaks",
+      "access_point_id": "ap_maingate",
+      "location_id": null,
+      "lat": -25.853,
+      "long": 28.189,
+      "radius_m": 150,
+      "slack_m": 75,
+      "on_missing_location": "deny"
+    },
+    {
+      "id": "geo_01hz4estate7visitorover1",
+      "account_id": "acct_silveroaks",
+      "access_point_id": null,
+      "location_id": "loc_silveroaks",
+      "lat": -25.854,
+      "long": 28.190,
+      "radius_m": 300,
+      "slack_m": 100,
+      "on_missing_location": "allow"
+    }
+  ]
+}

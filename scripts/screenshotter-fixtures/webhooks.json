@@ -1,0 +1,24 @@
+{
+  "webhooks": [
+    {
+      "id": "wh_01hz9homeassistant4events",
+      "name": "Home Assistant events",
+      "url": "https://ha.silveroaks.local:8123/api/webhook/aql",
+      "events": ["access.opened", "access.denied"],
+      "allow_private": true,
+      "enabled": true,
+      "created_at": "{{now-55d}}"
+    },
+    {
+      "id": "wh_01hzaopsslackchannel7811",
+      "name": "Ops Slack channel",
+      "url": "https://hooks.slack.com/services/T000/B000/xxxxxxxxxxxxxxxxxxxxxxxx",
+      "events": ["access.opened"],
+      "allow_private": false,
+      "enabled": false,
+      "created_at": "{{now-120d}}",
+      "disabled_at": "{{now-6d}}",
+      "disabled_reason": "5 consecutive failed deliveries"
+    }
+  ]
+}

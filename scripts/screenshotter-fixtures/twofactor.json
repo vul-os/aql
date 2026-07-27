@@ -1,0 +1,11 @@
+{
+  "enrolled": true,
+  "active": true,
+  "pending": false,
+  "algorithm": "SHA1",
+  "digits": 6,
+  "period_seconds": 30,
+  "activated_at": "{{now-95d}}",
+  "created_at": "{{now-95d}}",
+  "recovery_codes_remaining": 7
+}

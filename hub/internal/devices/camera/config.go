@@ -64,6 +64,19 @@ type Config struct {
 	// security note before deciding that is fine.
 	RequireHTTPS bool
 
+	// VerifyStream makes Read follow the resolved address with an RTSP
+	// DESCRIBE, so the driver reports what the camera ACTUALLY streams rather
+	// than the address ONVIF claimed for it. See rtsp.go.
+	//
+	// Off by default, and that is a cost decision rather than a safety one: a
+	// probe is one extra TCP connection and one round trip per refresh, against
+	// a device class that is often on a slow link and supports very few
+	// concurrent sessions. A hub polling twenty cameras every five minutes
+	// should opt into that, not inherit it.
+	//
+	// It never receives media, holds no session, and does not decode anything.
+	VerifyStream bool
+
 	// AcceptForeignServiceAddress lets a camera name a media service, or return
 	// a stream address, on a host other than its own. See DiscoveryConfig for
 	// the same switch applied to discovery, and for what it gives up.

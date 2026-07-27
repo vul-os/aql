@@ -158,10 +158,22 @@ Built: an ONVIF driver (`hub/internal/devices/camera/`) that discovers cameras v
 WS-Discovery, authenticates with WS-UsernameToken digest, and asks a camera for the RTSP
 address of a chosen encoder profile.
 
-Be precise about where that stops, because the package doc is: **there is no RTSP client.**
-It never opens an RTSP connection, never sends DESCRIBE or SETUP or PLAY, and never
-receives a frame. It obtains and hands over a stream *address*. Live view and recording —
-anything that touches a pixel — are not built.
+There is also an RTSP client, and it does exactly one thing: **DESCRIBE**. Turn it on with
+`VerifyStream` and the driver follows the address it resolved — authenticating with digest,
+or basic where a camera offers nothing else — asks what the stream is, and reports the
+answer: `H264 video · digest auth`. It never sends SETUP or PLAY, never receives a frame,
+and holds no session.
+
+That one request is the difference between "ONVIF handed us a URL" and "that URL streams,
+and these credentials work on it". Cameras routinely want a different account on the media
+leg than on the device service, and without the probe an operator finds that out in VLC
+rather than here. A camera whose ONVIF answers but whose stream does not reports as
+**degraded** — it is reachable and it is not working, and both extremes lose that.
+
+**Live view and recording are still not built.** Anything that touches a pixel needs a real
+camera to develop against and a storage design this repo does not have: where clips live,
+for how long, who may see them, what happens when the disk fills, and what a resident is
+told when retention silently drops the evening they care about.
 
 Robot control beyond a status row, and alerting tied to real sensor or camera events, are
 not built either.

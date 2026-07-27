@@ -116,6 +116,98 @@ function buildMockRoutes({ admin = false } = {}) {
     { method: 'GET', re: /^\/admin\/limits$/, body: () => loadFixture('admin-limits.json') },
     { method: 'GET', re: /^\/admin\/audit$/, body: () => loadFixture('admin-audit.json') },
     { method: 'GET', re: /^\/admin\/audit\/actions$/, body: () => loadFixture('admin-audit-actions.json') },
+    // Device engine. `engine: false` is the honest DEFAULT for a hub with no
+    // driver configured, and every page handles it — but it is the wrong
+    // fixture HERE, because the Energy page in the same shot shows metering
+    // history, and metering history comes FROM the engine via the poller. A
+    // screenshot showing months of readings beside "no device engine is
+    // configured" is internally incoherent, and a shop window that contradicts
+    // itself is worse than one that shows an empty state.
+    //
+    // So the fixture is a configured hub with the meters the energy fixtures
+    // actually reference (grid-meter-1 is the device_key in energy-series.json).
+    {
+      method: 'GET',
+      re: /^\/engine\/devices$/,
+      body: () =>
+        JSON.stringify({
+          engine: true,
+          devices: [
+            {
+              key: 'modbus:grid-meter-1',
+              driver: 'modbus',
+              id: 'grid-meter-1',
+              kind: 'energy',
+              name: 'Main incomer',
+              zone: 'Utility',
+              capabilities: ['energy.meter'],
+              availability: 'online',
+              summary: '2.41 kW',
+            },
+            {
+              key: 'modbus:solar-inverter',
+              driver: 'modbus',
+              id: 'solar-inverter',
+              kind: 'energy',
+              name: 'Solar inverter',
+              zone: 'Roof',
+              capabilities: ['energy.meter'],
+              availability: 'online',
+              summary: '3.10 kW',
+            },
+            {
+              key: 'mqtt:kitchen-lamp',
+              driver: 'mqtt',
+              id: 'kitchen-lamp',
+              kind: 'lighting',
+              name: 'Kitchen lamp',
+              zone: 'Interior',
+              capabilities: ['light.dimmable'],
+              availability: 'online',
+              summary: '62% · warm',
+            },
+            {
+              key: 'mqtt:front-door',
+              driver: 'mqtt',
+              id: 'front-door',
+              kind: 'sensor',
+              name: 'Front door',
+              zone: 'Exterior',
+              capabilities: ['sensor.read'],
+              // Not every device is healthy on a real hub, and the console
+              // renders degraded distinctly. Showing only green would hide the
+              // part of the UI that matters when something is wrong.
+              availability: 'degraded',
+              summary: 'battery 12%',
+            },
+          ],
+        }),
+    },
+    // Automations (hub/internal/httpapi/automations.go).
+    { method: 'GET', re: /^\/accounts\/[^/]+\/automations$/, body: () => loadFixture('automations.json') },
+    // Energy (hub/internal/httpapi/energy.go) — series carries the honest
+    // gap (a null-kwh bucket) and a partial-quality bucket; mix is complete +
+    // attributed so the proportional source chart draws.
+    { method: 'GET', re: /^\/accounts\/[^/]+\/energy\/series(\?.*)?$/, body: () => loadFixture('energy-series.json') },
+    { method: 'GET', re: /^\/accounts\/[^/]+\/energy\/mix(\?.*)?$/, body: () => loadFixture('energy-mix.json') },
+    // Access rules — two independent mechanisms, two routes.
+    { method: 'GET', re: /^\/accounts\/[^/]+\/time-windows$/, body: () => loadFixture('time-windows.json') },
+    { method: 'GET', re: /^\/accounts\/[^/]+\/geofences$/, body: () => loadFixture('geofences.json') },
+    // Scoped API tokens (hub/internal/httpapi/tokens.go).
+    { method: 'GET', re: /^\/accounts\/[^/]+\/api-tokens$/, body: () => loadFixture('api-tokens.json') },
+    // Outbound webhooks (hub/internal/httpapi/webhooks.go).
+    { method: 'GET', re: /^\/accounts\/[^/]+\/webhooks$/, body: () => loadFixture('webhooks.json') },
+    // Two-factor status (hub/internal/httpapi/twofactor.go) — the ACTIVE
+    // state, so Settings' TwoFactorSection renders its populated panel.
+    { method: 'GET', re: /^\/auth\/2fa$/, body: () => loadFixture('twofactor.json') },
+    // /phones/me/phones has NO route on the gateway at all (see api.ts's
+    // phones() doc comment) — the real hub answers it with the embedded
+    // portal's SPA fallback: 200 + index.html, not a 404. Settings' Contact
+    // channels section only reads that correctly (isUnavailable()) when the
+    // response is genuinely non-JSON; a fixture 404 here would surface as a
+    // raw "not_found" fragment in the screenshot instead of the honest "isn't
+    // available on this hub build yet" card.
+    { method: 'GET', re: /^\/phones\/me\/phones$/, spaFallback: true },
   ];
 }
 
@@ -142,6 +234,16 @@ async function installApiMocks(context, opts = {}) {
           status: 404,
           contentType: 'application/json',
           body: JSON.stringify({ error: 'not_found' }),
+        });
+        return;
+      }
+      if (match.spaFallback) {
+        // Mirrors the embedded portal's real catch-all (see UNAVAILABLE_CODE's
+        // doc comment in src/lib/api.ts): a 2xx that isn't JSON, never a 404.
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/html',
+          body: '<!doctype html><html><body>Aql</body></html>',
         });
         return;
       }
@@ -337,10 +439,19 @@ async function main() {
     const desktopShots = [
       { path: '/', file: 'landing-hero.png', settleMs: 1_400, expectText: 'Aql' },
       { path: '/app/devices', file: 'portal-devices.png', expectText: 'Front Gate Camera' },
-      // NB: DemoStat labels are CSS-uppercased and innerText follows text-transform,
-      // so assert on untransformed prose (same trap as the admin shot below).
-      { path: '/app/energy', file: 'portal-energy.png', expectText: 'per-circuit load' },
-      { path: '/app/automations', file: 'portal-automations.png', expectText: 'Dusk lights' },
+      // Energy and Automations are wired to LIVE hub data now (energy/automations
+      // fixtures below), not the src/lib/demoData.ts fixture they used to read —
+      // so these two used to assert on demo-only strings ('per-circuit load',
+      // 'Dusk lights') that no longer exist on either page. Both new assertions
+      // come from the live fixtures instead.
+      // NB: StatBlock's label is CSS-uppercased and innerText follows
+      // text-transform, so assert on the untransformed hint prose beneath it,
+      // not the "MEASURED THIS WINDOW" style label (same trap as the admin
+      // shot below).
+      { path: '/app/energy', file: 'portal-energy.png', expectText: 'the floor — what meters actually recorded' },
+      // The rule name itself — proves the live automations fixture rendered,
+      // not just the page chrome. Rule names aren't CSS-transformed.
+      { path: '/app/automations', file: 'portal-automations.png', expectText: 'Dusk perimeter lights' },
       { path: '/docs', file: 'docs.png' },
       { path: '/security', file: 'security.png' },
       { path: '/app', file: 'portal-dashboard.png', expectText: 'Recent activity' },
@@ -355,6 +466,24 @@ async function main() {
         // text-transform), so assert on the untransformed panel heading.
         expectText: 'Daily opens',
         scrollTo: '[data-shot="location-limits"]',
+      },
+      // Access rules — geofences (a door property) + time windows (a person
+      // property). The note text below is fixture data, proving both the
+      // geofence and time-window fetches actually landed live.
+      { path: '/app/access-rules', file: 'portal-access-rules.png', expectText: 'Day contractor — gate only' },
+      // Scoped API tokens — asserts on a live token row's name.
+      { path: '/app/api-tokens', file: 'portal-api-tokens.png', expectText: 'Home Assistant bridge' },
+      // Outbound webhooks — asserts on a live webhook row's name.
+      { path: '/app/webhooks', file: 'portal-webhooks.png', expectText: 'Home Assistant events' },
+      // Settings — scrolled to the two-factor section (new since the last
+      // shot set), the one thing on this page most worth showing populated.
+      // No data-shot hook exists on TwoFactorSection (it isn't in this file's
+      // edit scope), so scrollTo targets it by its own heading text instead.
+      {
+        path: '/app/settings',
+        file: 'portal-settings.png',
+        expectText: 'Signing in here now needs your password and a code.',
+        scrollTo: 'text=Two-factor authentication',
       },
     ];
     // Operator console — captured in a separate context whose /auth/me mock

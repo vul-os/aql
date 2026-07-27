@@ -23,10 +23,20 @@
 //
 // No decoding. No transcoding. No recording. No live view. No snapshots. No
 // ffmpeg, no CGO, no external dependency of any kind — every byte of this
-// package is standard library. There is no RTSP client here: it never opens an
-// RTSP connection, never sends DESCRIBE or SETUP or PLAY, never negotiates a
-// transport, never receives a frame. The only thing it knows about RTSP is how
-// to recognise and validate a URL that starts with it.
+// package is standard library.
+//
+// There IS an RTSP client, and it does exactly one thing: DESCRIBE (rtsp.go).
+// It opens the connection, authenticates — digest, or basic where a camera
+// offers nothing else — asks the camera what the stream is, parses the SDP, and
+// disconnects. It never sends SETUP or PLAY, never negotiates a transport,
+// never receives a frame, and holds no session.
+//
+// That one request is the difference between "ONVIF handed us a URL" and "that
+// URL streams H264 and these credentials work on it", which is the question
+// someone wiring up a camera actually has. Cameras routinely want a different
+// account on the media leg than on the device service, and without a probe an
+// operator discovers that in VLC rather than from this product. It is off by
+// default (Config.VerifyStream) on cost grounds, not safety ones.
 //
 // That boundary is a decision, not an oversight. Everything above is testable
 // without a camera — a Probe is a datagram and a parse, and the media calls are

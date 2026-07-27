@@ -1,0 +1,29 @@
+{
+  "time_windows": [
+    {
+      "id": "tw_01hz1kagiso4gate6day7ctr8",
+      "account_id": "acct_silveroaks",
+      "user_id": "usr_kagiso",
+      "access_point_id": "ap_maingate",
+      "location_id": null,
+      "tz": "Africa/Johannesburg",
+      "windows": [{ "days": "mon-fri", "from": "06:00", "to": "19:00" }],
+      "note": "Day contractor — gate only",
+      "created_at": "{{now-38d}}"
+    },
+    {
+      "id": "tw_01hz2guard9night3shift1x",
+      "account_id": "acct_silveroaks",
+      "user_id": "usr_guard",
+      "access_point_id": null,
+      "location_id": "loc_silveroaks",
+      "tz": "Africa/Johannesburg",
+      "windows": [
+        { "days": "mon-sun", "from": "18:00", "to": "24:00" },
+        { "days": "mon-sun", "from": "00:00", "to": "06:00" }
+      ],
+      "note": "Guard house — night shift only",
+      "created_at": "{{now-90d}}"
+    }
+  ]
+}

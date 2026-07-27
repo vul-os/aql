@@ -229,8 +229,11 @@ protocol driver of any kind is present in this repository.
 ## Phase 5 — Security & bots (not built)
 
 - [x] ONVIF discovery and stream-address resolution (`hub/internal/devices/camera/`)
-- [ ] Camera live view and recording — there is **no RTSP client**: the driver never opens
-      a connection, never sends DESCRIBE, and moves no pixels
+- [x] RTSP reachability probe (`VerifyStream`) — DESCRIBE, digest/basic auth, SDP parse, so
+      the hub reports what a camera actually streams instead of an address it never touched.
+      Tested against an in-process RTSP server; never run against a real camera
+- [ ] Camera live view and recording — no SETUP, no PLAY, no frame is ever received. Needs
+      hardware to develop against and a retention design this repo does not have
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
 - [ ] Rate-limiting and scoping on movement commands, so a compromised client cannot drive

@@ -238,8 +238,9 @@ servers, and none has touched a real meter, relay board, radio or gate. Wiring o
 up is the first time anyone finds out whether it's right.
 
 **Some of it isn't built.** Matter, Modbus RTU, camera live view and recording
-(the ONVIF driver resolves stream addresses; there is no RTSP client) and mDNS
-discovery are open. [ROADMAP.md](ROADMAP.md) tracks them line by line.
+(the driver probes a stream and reports what it carries; it never receives a
+frame) and mDNS discovery are open. [ROADMAP.md](ROADMAP.md) tracks them line by
+line.
 
 `npm run check:claims` checks 36 feature claims in these docs against the code and
 fails when one drifts. It's how the two paragraphs above stay true.
