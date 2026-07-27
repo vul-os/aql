@@ -117,10 +117,19 @@ finished. The engine behind the other six is not built.**
   decoding, no ffmpeg. It has also never seen a real camera — the tests drive a loopback
   responder, which proves the emitter and parser agree with each other, not that hardware
   agrees with either. Not wired into `cmd/gateway`.
-- **The non-access device screens run on a demo dataset.** The console's device, energy and
-  automations views are real, interactive UI over a built-in in-memory dataset
-  (`src/lib/demoData.ts`) — twelve fictional devices across the seven kinds, marked as demo
-  at the point of use. Nothing behind them talks to hardware.
+- **Physical hardware behind any of it.** The console's automations and energy screens now
+  read the hub — live rules from `/v1/accounts/{id}/automations`, live consumption from
+  `/v1/accounts/{id}/energy/*` — and the device screen reads the device engine. What sits
+  behind those endpoints in every test so far is a mock driver or a loopback responder, not
+  a meter, a lamp or a mower. The remaining demo dataset (`src/lib/demoData.ts`) drives
+  Overview, the Devices fallback and the landing page, and is marked with a chip at the
+  point of use.
+
+  The two screens carry their honesty through rather than flattening it: an unmeasured
+  hour draws as a gap, never a zero bar; a source mix is only drawn proportionally when the
+  hub says it is both complete and attributed; and rules that exist while the scheduler is
+  stopped say so at the top of the page, because a list of rules that silently never fires
+  looks exactly like one that works.
 - **Offline emergency access proven against a real controller.** Every part now exists:
   the wire contract and its vectors, the controller's eleven-step verification, the hub's
   issuance endpoint, and — new — the app half

@@ -195,7 +195,7 @@ protocol driver of any kind is present in this repository.
       automations engine, which is deliberately kept out of that path
 - [ ] Any rule that has actually driven physical hardware — the only devices exercised so
       far are the mock driver's
-- [ ] The console's automations screen reading live rules instead of the demo dataset
+- [x] The console's automations screen reading live rules instead of the demo dataset
 
 ---
 
@@ -210,7 +210,7 @@ protocol driver of any kind is present in this repository.
       hour is `null`, never `0`
 - [ ] A real meter. None of this has been read from physical hardware
 - [ ] Inverter ingestion specifically — the model covers it, no driver speaks to one
-- [ ] The console's energy screen reading live buckets instead of the demo 24h chart
+- [x] The console's energy screen reading live buckets instead of the demo 24h chart
 
 ---
 

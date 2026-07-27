@@ -580,6 +580,159 @@ export const api = {
 
   engineHealth: () => apiFetch<EngineHealthResponse>('/engine/health'),
 
+  /**
+   * Sign out of every session, everywhere.
+   *
+   * The hub has served this since sessions were built and nothing called it,
+   * so a person who suspected their account was compromised had no way to cut
+   * the other sessions off. That is a security control being unreachable, which
+   * is worse than it being absent — the feature is documented as existing.
+   */
+  logoutAll: () => apiFetch<{ ok: boolean; revoked: number }>('/auth/logout-all', {
+    method: 'POST',
+  }),
+
+  /**
+   * Verify the audit hash chain.
+   *
+   * site/docs and the Security page both describe this endpoint by name as the
+   * way to check that no row was altered. Nothing called it, so the claim was
+   * true about the hub and false about the product anyone could actually use.
+   */
+  adminAuditVerify: () => apiFetch<AuditVerifyResult>('/admin/audit/verify'),
+
+  /** Every account this user belongs to. /auth/me carries a summary; this is
+   *  the full list with the fields the switcher needs. */
+  accountsList: () => apiFetch<{ accounts: AccountRow[] }>('/accounts'),
+
+  accountCreate: (body: { name: string; country_code: string; location_name?: string }) =>
+    apiFetch<AccountRow>('/accounts', { method: 'POST', body }),
+
+  /** Fire one rule now. Safe for the same reason the scheduler is: RunNow goes
+   *  through Fire, which re-resolves the action and re-checks it against the
+   *  tier ceiling, so it cannot reach a verb the scheduler could not. */
+  automationRunNow: (accountId: string, ruleId: string) =>
+    apiFetch<AutomationRun>(
+      `/accounts/${accountId}/automations/${encodeURIComponent(ruleId)}/run`,
+      { method: 'POST' },
+    ),
+
+  /** One rule's run history, as opposed to the whole account's feed. */
+  automationRuleRuns: (accountId: string, ruleId: string, limit?: number) =>
+    apiFetch<AutomationRunsResponse>(
+      `/accounts/${accountId}/automations/${encodeURIComponent(ruleId)}/runs` +
+        (limit ? `?limit=${limit}` : ''),
+    ),
+
+  // ── surfaces the hub serves that the console had no client for ────────────
+  //
+  // All five below were built, tested and routed on the gateway, and api.ts
+  // declared nothing for any of them — so no screen could reach a working
+  // feature. routeParity cannot catch that shape: it checks that every call the
+  // console makes targets a real route, never that a real route has a caller.
+  // The gap only shows up by reading server.go against this file.
+
+  // Scoped API tokens (gateway/internal/httpapi/tokens.go). The secret is
+  // returned EXACTLY ONCE, in the 201 — there is no read path that reveals it
+  // again, by design. A caller that loses it revokes and mints another.
+  apiTokens: (accountId: string) =>
+    apiFetch<{ tokens: ApiTokenRow[] }>(`/accounts/${accountId}/api-tokens`),
+
+  apiTokenCreate: (
+    accountId: string,
+    body: { name: string; scopes: ApiTokenScope[]; expires_in_days?: number; never_expires?: boolean },
+  ) => apiFetch<ApiTokenCreated>(`/accounts/${accountId}/api-tokens`, { method: 'POST', body }),
+
+  apiTokenRevoke: (accountId: string, tokenId: string) =>
+    apiFetch<ApiTokenRow>(
+      `/accounts/${accountId}/api-tokens/${encodeURIComponent(tokenId)}/revoke`,
+      { method: 'POST' },
+    ),
+
+  // Two-factor (gateway/internal/httpapi/twofactor.go). Enrolment is two
+  // steps on purpose: enroll returns a secret and an otpauth URI, activate
+  // proves the person can actually generate a code. A one-step enable would
+  // lock out anyone whose authenticator clock is wrong.
+  twoFactorStatus: () => apiFetch<TwoFactorStatus>('/auth/2fa'),
+
+  twoFactorEnroll: () => apiFetch<TwoFactorEnrollment>('/auth/2fa/enroll', { method: 'POST' }),
+
+  twoFactorEnrollCancel: () => apiFetch<void>('/auth/2fa/enroll', { method: 'DELETE' }),
+
+  twoFactorActivate: (totp_code: string) =>
+    apiFetch<TwoFactorActivated>('/auth/2fa/activate', { method: 'POST', body: { totp_code } }),
+
+  twoFactorDisable: (body: { totp_code?: string; recovery_code?: string }) =>
+    apiFetch<{ enrolled: boolean; active: boolean }>('/auth/2fa/disable', { method: 'POST', body }),
+
+  // Outbound webhooks (gateway/internal/httpapi/webhooks.go). Admin-only: a
+  // webhook is a standing instruction to POST a signed record of every gate
+  // opening to an address of the configurer's choosing.
+  webhooks: (accountId: string) =>
+    apiFetch<{ webhooks: WebhookRow[] }>(`/accounts/${accountId}/webhooks`),
+
+  webhookCreate: (
+    accountId: string,
+    body: { name: string; url: string; events: string[]; allow_private?: boolean },
+  ) => apiFetch<WebhookCreated>(`/accounts/${accountId}/webhooks`, { method: 'POST', body }),
+
+  webhookDelete: (accountId: string, webhookId: string) =>
+    apiFetch<void>(`/accounts/${accountId}/webhooks/${encodeURIComponent(webhookId)}`, {
+      method: 'DELETE',
+    }),
+
+  // Time-window rules (gateway/internal/httpapi/timewindows.go) — when a given
+  // member may open. Enforced inside the open path's choke point, not by the
+  // automations engine.
+  timeWindows: (accountId: string) =>
+    apiFetch<{ rules: TimeWindowRule[] }>(`/accounts/${accountId}/time-windows`),
+
+  timeWindowCreate: (
+    accountId: string,
+    body: {
+      user_id: string;
+      access_point_id?: string;
+      location_id?: string;
+      tz: string;
+      windows: GrantWindow[];
+      note?: string;
+    },
+  ) => apiFetch<TimeWindowRule>(`/accounts/${accountId}/time-windows`, { method: 'POST', body }),
+
+  timeWindowDelete: (accountId: string, ruleId: string) =>
+    apiFetch<void>(`/accounts/${accountId}/time-windows/${encodeURIComponent(ruleId)}`, {
+      method: 'DELETE',
+    }),
+
+  // Geofence rules (gateway/internal/httpapi/geofence.go).
+  //
+  // READ THAT FILE'S HEADER BEFORE BUILDING UI ON THIS. The position a fence
+  // is tested against comes from the client and NOTHING verifies it. It is a
+  // convenience and a mistake-preventer, not a security control, and no copy
+  // this console renders may imply otherwise.
+  geofences: (accountId: string) =>
+    apiFetch<{ rules: GeofenceRule[] }>(`/accounts/${accountId}/geofences`),
+
+  geofenceCreate: (
+    accountId: string,
+    body: {
+      access_point_id?: string;
+      location_id?: string;
+      lat?: number;
+      long?: number;
+      radius_m: number;
+      slack_m?: number;
+      on_missing_location?: 'deny' | 'allow' | string;
+      note?: string;
+    },
+  ) => apiFetch<GeofenceRule>(`/accounts/${accountId}/geofences`, { method: 'POST', body }),
+
+  geofenceDelete: (accountId: string, ruleId: string) =>
+    apiFetch<void>(`/accounts/${accountId}/geofences/${encodeURIComponent(ruleId)}`, {
+      method: 'DELETE',
+    }),
+
+
   // Automations (gateway/internal/httpapi/automations.go). Admin-only,
   // including reads: a rule states what the hardware does unattended, which is
   // closer to the audit trail than to a meter reading. A 503
@@ -1366,4 +1519,146 @@ export type EnergyMixResponse = {
   expected_seconds: number;
   reset_count: number;
   channels: number;
+};
+
+// ── scoped API tokens ───────────────────────────────────────────────────────
+
+/** The closed scope set (store.APITokenScopes). An unknown scope is a hard
+ *  400, never a silent drop — a caller who asked for a capability this build
+ *  does not implement must not walk away believing they got it. */
+export type ApiTokenScope = 'access:read' | 'access:open';
+
+export type ApiTokenRow = {
+  id: string;
+  account_id: string;
+  user_id: string;
+  username: string;
+  name: string;
+  scopes: ApiTokenScope[];
+  never_expires: boolean;
+  created_at: UnixSeconds;
+  expires_at: UnixSeconds | null;
+  revoked_at: UnixSeconds | null;
+};
+
+/** The 201 body. `token` is present HERE AND NOWHERE ELSE — there is no read
+ *  path that returns it again. A UI that does not show it immediately has
+ *  thrown it away. */
+export type ApiTokenCreated = ApiTokenRow & { token: string; token_note?: string };
+
+// ── two-factor ──────────────────────────────────────────────────────────────
+
+export type TwoFactorStatus = {
+  enrolled: boolean;
+  active: boolean;
+  pending: boolean;
+  algorithm?: string;
+  digits?: number;
+  period_seconds?: number;
+  activated_at?: UnixSeconds;
+  created_at?: UnixSeconds;
+  recovery_codes_remaining?: number;
+};
+
+/** Enrolment step one. Both the secret and the recovery codes are shown ONCE.
+ *  The flags say so explicitly rather than leaving it to a comment nobody
+ *  reads. */
+export type TwoFactorEnrollment = {
+  secret: string;
+  otpauth_uri: string;
+  algorithm: string;
+  digits: number;
+  period_seconds: number;
+  secret_shown_once: boolean;
+};
+
+export type TwoFactorActivated = {
+  active: boolean;
+  recovery_codes: string[];
+  recovery_codes_shown_once: boolean;
+};
+
+// ── outbound webhooks ───────────────────────────────────────────────────────
+
+export type WebhookRow = {
+  id: string;
+  name: string;
+  url: string;
+  events: string[];
+  allow_private: boolean;
+  enabled: boolean;
+  created_at: UnixSeconds;
+  /** Present only when the dispatcher retired the endpoint, and then always
+   *  with the reason — an endpoint that went quiet without one leaves an
+   *  operator nothing to act on. */
+  disabled_at?: UnixSeconds;
+  disabled_reason?: string;
+};
+
+/** The 201 body. `secret` appears once and can never be retrieved again. */
+export type WebhookCreated = WebhookRow & { secret: string; secret_note?: string };
+
+// ── time-window and geofence rules ──────────────────────────────────────────
+
+/** One weekly window: `days` is a compact weekday string, `from`/`to` are
+ *  local wall-clock times. Shared with offline grants (keys.GrantWindow), so
+ *  an online window and a window inside a grant mean the same thing. */
+export type GrantWindow = { days: string; from: string; to: string };
+
+export type TimeWindowRule = {
+  id: string;
+  account_id: string;
+  user_id: string;
+  access_point_id: string | null;
+  location_id: string | null;
+  tz: string;
+  windows: GrantWindow[];
+  note: string;
+  created_at: UnixSeconds;
+};
+
+export type GeofenceRule = {
+  id: string;
+  account_id: string;
+  access_point_id: string | null;
+  location_id: string | null;
+  lat: number | null;
+  long: number | null;
+  radius_m: number;
+  slack_m: number;
+  /** What happens when the client sends no position at all. The hub's default
+   *  is to deny; a UI offering "allow" must be explicit that it widens who
+   *  gets in. */
+  on_missing_location: string;
+};
+
+/**
+ * Result of the audit-chain verification endpoint.
+ *
+ * Per-TABLE, not one flat count: access_logs and admin_audit_log are separate
+ * hash chains and either can break independently. A UI that collapses them into
+ * a single ok/not-ok loses which trail was altered, which is the first thing
+ * anyone investigating needs.
+ *
+ * A break says the chain WAS altered. It does not say by whom, and it is not a
+ * preventive control — an attacker who edits a row and recomputes every hash
+ * after it can still rewrite history. site/docs says so; no copy here may
+ * imply more.
+ */
+export type AuditVerifyResult = {
+  ok: boolean;
+  chains: Array<{
+    table: string;
+    rows_checked: number;
+    ok: boolean;
+    broken_at?: { index: number; row_id: string; reason: string };
+  }>;
+};
+
+export type AccountRow = {
+  id: string;
+  name: string;
+  country_code: string;
+  role?: string;
+  created_at: UnixSeconds;
 };
