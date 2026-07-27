@@ -69,6 +69,31 @@ func Open(dir string) (*Store, error) {
 // Close closes the underlying database.
 func (s *Store) Close() error { return s.db.Close() }
 
+// DB returns the handle Open created. It is a deliberate, narrow hole in this
+// package's encapsulation, and it exists for one reason.
+//
+// Two engines ship in this binary that own tables in this same SQLite file
+// (migrations 0010 and 0011) but must NOT depend on this package: each
+// declares its own three-method handle interface (ExecContext, QueryContext,
+// QueryRowContext) precisely so that the hash-chained, append-only audit
+// tables are unreachable from it — the rule engine writes its trail only
+// through WriteAdminAudit, and handing it a *Store would put every
+// audit-table method one dot away from a path that actuates hardware. So the
+// dependency is inverted: they take a bare handle, and something has to hand
+// them one.
+//
+// It must be the SAME handle, not a second sql.Open on the same file. Open
+// sets SetMaxOpenConns(1) because SQLite permits exactly one writer; a second
+// pool would not serialise with this one, it would queue against it and fail
+// on busy_timeout under concurrent writes.
+//
+// Contract for callers: this is for handing to a sibling engine that owns its
+// own tables, at startup, from cmd/gateway. It is not a way to reach tenant
+// data — every account-scoped read and write goes through this package's
+// methods, which is where the tenancy rule in the package comment is
+// enforced — and nothing in the HTTP surface calls it.
+func (s *Store) DB() *sql.DB { return s.db }
+
 // DBNow returns the database clock (unix seconds), proving the handle is live
 // — the /health probe (backend selected now() from Postgres for the same
 // purpose). A query error here is what flips /health to ok:false.

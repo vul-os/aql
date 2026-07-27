@@ -268,7 +268,7 @@ func TestRunRefusesPublicBindWithoutOptIn(t *testing.T) {
 	log := discardLogger()
 
 	dir := filepath.Join(t.TempDir(), "should-not-be-created")
-	err := run(dir, "0.0.0.0:0", "", "", false, log)
+	err := run(config{dataDir: dir, listen: "0.0.0.0:0"}, log)
 	if err == nil {
 		t.Fatal("run() with a public bind and behindProxy=false: want error, got nil")
 	}

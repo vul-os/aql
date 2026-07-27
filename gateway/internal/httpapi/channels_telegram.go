@@ -34,14 +34,32 @@ func (s *Server) handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_json")
 		return
 	}
-	ctx := r.Context()
+	s.processTGUpdate(r.Context(), update)
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+// processTGUpdate is THE Telegram dispatch — the one place an update becomes an
+// intent, whichever transport carried it. The webhook route calls it after its
+// secret-token check; the long-polling loop
+// (channels.TelegramPoller.Handle, see channels_telegram_polling.go) calls it
+// with what getUpdates returned. Everything that decides anything — identity
+// resolution, the inbound dedupe, the verb/picker logic and the fail-closed
+// GateVerb machinery — hangs below this function precisely so there is exactly
+// one copy of it. A transport that grew its own copy of the open path is how
+// the two drift and how one of them ends up missing a safety fix.
+//
+// Fail-closed on shape: an update that is neither a callback nor a non-bot
+// message actuates nothing. There is no "otherwise" branch and no inference.
+func (s *Server) processTGUpdate(ctx contextT, update *channels.TGUpdate) {
+	if update == nil {
+		return
+	}
 	switch {
 	case update.CallbackQuery != nil:
 		s.processTGCallback(ctx, update.CallbackQuery)
 	case update.Message != nil && update.Message.From != nil && !update.Message.From.IsBot:
 		s.processTGMessage(ctx, update.Message)
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 func (s *Server) processTGMessage(ctx contextT, msg *channels.TGMessage) {
