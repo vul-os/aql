@@ -37,7 +37,7 @@ type Options struct {
 	Log           *slog.Logger
 	AllowInsecure bool   // ws://+http:// endpoints (tests/dev)
 	Firmware      string // reported in hw + boot events
-	EnableBLE     bool   // requires `-tags ble` build on Linux
+	EnableBLE     bool   // requires a `-tags ble` build on Linux or Windows
 }
 
 // Agent is an assembled controller.

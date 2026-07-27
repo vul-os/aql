@@ -118,9 +118,12 @@ hub's issuance endpoint):
 - [ ] **GPIO relay driver.** `controller/internal/relay/gpio.go` is a `-tags gpio` stub
       whose `Pulse`/`Hold`/`Release` all panic by design; the default build logs instead of
       actuating. No build has ever driven real hardware in this repo's tests
-- [ ] **BLE radio validation.** The GATT peripheral glue exists only for Linux/BlueZ behind
-      `-tags ble` and has never run on hardware; every other platform returns
-      `ErrUnsupported`
+- [ ] **BLE radio validation.** The GATT peripheral glue builds for Linux (BlueZ) and
+      Windows (WinRT) behind `-tags ble` — one portable file, since every call is the
+      `tinygo.org/x/bluetooth` GATT-server API and the library carries both backings. It
+      has never run on hardware on either. darwin returns `ErrUnsupported`: CoreBluetooth
+      offers peripheral mode, that library does not bind it, and writing a CGO binding
+      that cannot be tested here would be worse than the gap
 - [ ] Controller position/tamper sensors return static values
 
 **Console screens ahead of their backend** (tracked mechanically by the route-parity test):

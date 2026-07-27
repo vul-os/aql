@@ -1,8 +1,19 @@
-//go:build ble && linux
+//go:build ble && (linux || windows)
 
-// Real BlueZ (Linux/Pi) radio glue — compiled with `-tags ble` on Linux
-// only. STATUS: compiles and follows the tinygo.org/x/bluetooth v0.15.0
-// GATT-server API, but has NOT been validated against real hardware; the
+// Real GATT-server radio glue — compiled with `-tags ble` on Linux (BlueZ)
+// and Windows (WinRT).
+//
+// One file for both, because there is nothing platform-specific in it: every
+// call below is the portable tinygo.org/x/bluetooth API, and the library
+// carries the per-platform backing (gatts_linux.go, gatts_windows.go). This
+// file used to be named start_ble_linux.go, and Go's IMPLICIT filename
+// constraint — a `_linux.go` suffix is Linux-only whatever the //go:build line
+// says — was the only thing keeping it off Windows. The name was the
+// restriction, not the code.
+//
+// STATUS: compiles for both targets (verified by cross-compilation) and
+// follows the v0.15.0 GATT-server API, but has NOT been validated against real
+// hardware on either; the
 // framing/session/verification layers underneath are fully tested without
 // a radio. Known limitations of this stack (documented, acceptable for the
 // single-user-at-the-gate scenario):

@@ -40,7 +40,7 @@ func main() {
 		lanAddr       = flag.String("lan", ":8737", "LAN grant listener address (empty to disable)")
 		aps           = flag.String("access-points", "main", "comma-separated access points this controller serves")
 		insecure      = flag.Bool("insecure", false, "allow ws:// and http:// hub endpoints (dev only)")
-		ble           = flag.Bool("ble", false, "enable the BLE peripheral (requires a `-tags ble` Linux build)")
+		ble           = flag.Bool("ble", false, "enable the BLE peripheral (requires a `-tags ble` build on Linux or Windows)")
 		relaySpec     = flag.String("relay", "", "GPIO relay, `<chip>:<line>[,active-low][,bias=pull-up|pull-down|disabled][,sensor=<line>[,sensor-active-low][,sensor-debounce=20ms]]` (requires a `-tags gpio` Linux build); empty uses the mock relay, which actuates nothing")
 	)
 	flag.Parse()

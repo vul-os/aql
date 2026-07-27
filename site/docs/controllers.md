@@ -30,10 +30,12 @@ proves the money path end to end.
   process exit or panic → gate closed. **No build of this agent has ever actuated real
   hardware in this repository's tests.**
 - **BLE radio** — the framing codec, the session layer and grant verification are real
-  and unit-tested with no radio present, but the GATT peripheral glue exists **only for
-  Linux/BlueZ behind `-tags ble`** (every other platform gets a stub returning
-  `ErrUnsupported`) and has **never been validated on hardware**.
-- **Position/tamper sensors** — the `Sensors` interface returns static values today.
+  and unit-tested with no radio present. The GATT peripheral glue builds for **Linux
+  (BlueZ) and Windows (WinRT) behind `-tags ble`** and has **never been validated on
+  hardware** on either; darwin gets a stub returning `ErrUnsupported`, because the
+  Bluetooth library binds no peripheral API there.
+- **Position/tamper sensors** — real debounced GPIO inputs under `-tags gpio`, selected
+  with `-relay …,sensor=<line>`; the mock relay still returns static values.
 
 Build and drive it without any hardware:
 

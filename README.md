@@ -161,9 +161,17 @@ finished. The engine behind the other six is not built.**
   fails to open is a fault someone fixes within the hour; a gate that reports opening
   while standing still corrupts the record a dispute is later settled with.
 - **The BLE radio.** Framing, session and verification are real and unit-tested with no
-  radio; the GATT peripheral glue exists only for **Linux/BlueZ** behind `-tags ble` and has
-  **never been validated on hardware**. On every other platform the peripheral returns
-  `ErrUnsupported`.
+  radio. The GATT peripheral glue builds for **Linux (BlueZ) and Windows (WinRT)** behind
+  `-tags ble` and has **never been validated on hardware on either**. darwin returns
+  `ErrUnsupported`: CoreBluetooth offers peripheral mode, `tinygo.org/x/bluetooth` does
+  not bind it, and writing a CGO binding that cannot be tested here would be worse than
+  the gap.
+
+  Windows was not a port. The backend is one portable file over the library's
+  GATT-server API, and what confined it to Linux was the *filename* — Go applies an
+  implicit build constraint from a `_linux.go` suffix that beats the `//go:build` line, so
+  the tag was never consulted anywhere else. Renaming it was the change; CI now
+  cross-builds every platform and tag combination, because that failure is silent.
 - **Google OAuth.** The console has a screen the hub does not serve; the drift is tracked
   mechanically by a route-parity test.
 

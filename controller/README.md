@@ -40,7 +40,7 @@ controller/
     grants/                      # offline-grant verification core (11-step, shared by LAN + BLE)
     framing/                     # BLE 4-byte LE length-prefix chunker/reassembler (8 KiB cap)
     blesession/                  # open→challenge→proof→result sequencing over framing + grants
-    bleperiph/                   # BLE GATT peripheral (real glue behind `-tags ble` on Linux)
+    bleperiph/                   # BLE GATT peripheral (real glue behind `-tags ble` on Linux + Windows)
     lanserver/                   # LAN HTTP grant transport + mDNS advertise
     mdns/                        # minimal std-lib _lintel._tcp responder (name is wire, see mdns.go)
     events/                      # durable event queue (JSONL ring, reserved grant partition) + Recorder
@@ -62,7 +62,7 @@ controller/
 | WSS transport (RFC 6455 client, challenge/auth, backoff, long-poll) | **Real**, tested against a fake WS gateway |
 | mDNS `_lintel._tcp` advertise + LAN HTTP grant transport | **Real** |
 | BLE **framing codec + session + verification** | **Real**, unit-tested at MTUs 23/185/512 |
-| BLE **radio** (GATT peripheral) | **Stub** — real BlueZ glue under `-tags ble` on Linux, **not hardware-validated**; `ErrUnsupported` elsewhere |
+| BLE **radio** (GATT peripheral) | **Real** under `-tags ble` on Linux (BlueZ) and Windows (WinRT) — one portable file over the library's GATT-server API — **not hardware-validated on either**; `ErrUnsupported` on darwin and elsewhere |
 | **GPIO relay driver** | **Real** under `-tags gpio` on Linux (character device, v2 uAPI), selected with `-relay <chip>:<line>`, **not hardware-validated**. Without `-relay` the build uses the mock relay, which acks everything and moves nothing |
 | Position/tamper **sensors** | **Real** under `-tags gpio` via `-relay …,sensor=<line>` (debounced GPIO input); the Mock returns static values |
 
@@ -100,7 +100,7 @@ go run ./cmd/controller \
 
 Subsequent runs need only `--state`; pairing is durable. `--lan :8737`
 serves offline grants on the LAN (default on); `--ble` enables the BLE
-peripheral (requires a `-tags ble` Linux build); `--insecure` permits
+peripheral (requires a `-tags ble` build on Linux or Windows); `--insecure` permits
 `ws://`/`http://` for dev.
 
 ### The simulator
@@ -126,7 +126,7 @@ go run ./cmd/controller-sim --ble-demo
 
 ```
 go build ./...                 # default (no external deps)
-go build -tags ble ./...       # with the BLE radio glue (Linux/BlueZ real; stub elsewhere)
+go build -tags ble ./...       # with the BLE radio glue (Linux + Windows real; stub on darwin)
 go vet ./... && gofmt -l .     # clean
 go test ./...                  # all green
 ```

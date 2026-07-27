@@ -101,6 +101,30 @@ jobs:
       - name: go test
         working-directory: controller
         run: go test ./...
+      # The build tags are where this module's platform support actually lives,
+      # and a tag mistake is silent: the code compiles, the feature is simply
+      # absent. The BLE peripheral spent its life Linux-only because the file
+      # was named start_ble_linux.go — Go's IMPLICIT filename constraint beats
+      # the //go:build line, and nothing on a Linux runner could notice.
+      #
+      # Cross-compilation is cheap and catches exactly that.
+      - name: cross-build the optional backends
+        working-directory: controller
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          set -eux
+          for goos in linux windows darwin; do
+            GOOS=$goos GOARCH=amd64 go build ./...
+            GOOS=$goos GOARCH=amd64 go build -tags ble ./...
+          done
+          # The GPIO relay is genuinely Linux-only (character-device ioctls);
+          # it must still COMPILE with the tag set on other platforms, because
+          # the config parsing and state machine are portable and only Open
+          # returns ErrUnsupported.
+          for goos in linux windows darwin; do
+            GOOS=$goos GOARCH=amd64 go build -tags gpio ./...
+          done
 
   e2e-browser:
     name: e2e-browser (real Chromium against a real hub binary)
