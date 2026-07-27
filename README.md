@@ -158,17 +158,18 @@ off to whatever the hub owns. Today the intent vocabulary is `open`, `close` and
 replies, because gates are the only device class there is to command. A resident texting
 `open` and a gate swinging is the working instance of a wider idea.
 
-> **The chat rail is moving to [Ephor](https://github.com/vul-os/ephor).** The adapters
-> that terminate WhatsApp, Slack and Telegram are being lifted out of Aql and into Ephor,
-> the coordinator implementation in the KOTVA family — the component whose job is bridging
-> legacy rails. In the target shape Ephor terminates the rail and hands the hub an
-> authorised command; the hub does what only it can do: check the rules, sign it, actuate.
-> Ephor is separate and swappable — run your own, or point at one. **That move is in
-> progress**: texting a gate open works today, but the adapter plumbing in
-> `gateway/internal/channels/` is transitional, not the long-term answer. Aql's hub is not
-> a KOTVA gateway — it bridges chat rails into its own local domain; Ephor is the
-> gateway/coordinator implementation in that family. See
-> [docs/KOTVA-ALIGNMENT.md](docs/KOTVA-ALIGNMENT.md).
+> **The three chat rails are shipped and supported.** WhatsApp, Slack and Telegram live in
+> the hub, in `gateway/internal/channels/`, tested and in use — they are not deprecated and
+> nothing is being removed. Slack ships in two shapes: the Events API webhook, and Socket
+> Mode, where the hub dials **out** and needs no public URL at all.
+>
+> There is a separate, **entirely unbuilt** design in which an external coordinator
+> terminates the rail and hands the hub an authorised command instead —
+> [docs/EPHOR-CHAT-SEAM.md](docs/EPHOR-CHAT-SEAM.md). It is an **optional, experimental**
+> path ([Ephor](https://github.com/vul-os/ephor) is `pre-alpha` by its own README badge),
+> not the successor to the rails above. Naming note: Aql's hub is not a KOTVA gateway — it
+> bridges chat rails into its own local domain; the gateway/coordinator role in that family
+> is a different component's job. See [docs/KOTVA-ALIGNMENT.md](docs/KOTVA-ALIGNMENT.md).
 
 **One honest caveat, whichever component terminates the rail.** A resident texting `open`
 is trusting **Meta, Slack or Telegram** with that message. Something has to read the
@@ -244,7 +245,7 @@ waiting on the driver seam.
 ```mermaid
 %%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-monospace, SFMono-Regular, Menlo, monospace','primaryColor':'transparent','primaryBorderColor':'#14b8a6','primaryTextColor':'#8f969e','lineColor':'#8a8f98','nodeBorder':'#5f8f8a','edgeLabelBackground':'transparent','clusterBorder':'#3f8f86','clusterBkg':'transparent'}}}%%
 flowchart LR
-    chat["Chat rail<br/>WhatsApp · Slack · Telegram<br/>(moving to Ephor)"]
+    chat["Chat rail<br/>WhatsApp · Slack · Telegram<br/>(shipped, in the hub)"]
     console["Web console / desktop app"]
     subgraph box["your box"]
         hub["Aql hub<br/>(one Go binary)<br/>state · rules · signing · audit"]
@@ -295,11 +296,11 @@ is the operator's responsibility.
 | [Overview](site/docs/overview.md) | What Aql is, what's built, what isn't |
 | [Getting started](site/docs/getting-started.md) | From nothing to a hub with a gate on it |
 | [FAQ](site/docs/faq.md) | Straight answers — including how it differs from Home Assistant |
-| [Run a hub](site/docs/self-host.md) · [Ingress](site/docs/ingress.md) | Install, config, reachability, backup, upgrade |
+| [Run a hub](site/docs/self-host.md) · [Reachability](site/docs/reachability.md) · [Public URL & TLS](site/docs/ingress.md) | Install, config, what a home hub actually needs, backup, upgrade |
 | [Instance admin](site/docs/admin.md) · [Rate limits & quotas](site/docs/limits.md) · [Troubleshooting](site/docs/troubleshooting.md) | Operating a hub |
 | [Devices](site/docs/devices.md) | The seven device kinds, the driver seam, and what of it exists |
 | [Controllers](site/docs/controllers.md) · [Emergency access](site/docs/emergency-access.md) | The access module: wiring, pairing, and the offline grant path |
-| [Chat channels](site/docs/channels.md) · [Linking WhatsApp](site/docs/linking-whatsapp.md) | Chat as an input surface, and where that rail is going |
+| [Chat channels](site/docs/channels.md) · [Linking WhatsApp](site/docs/linking-whatsapp.md) | Chat as an input surface: the three shipped rails and how to attach them |
 | [Architecture](site/docs/architecture.md) · [Security](site/docs/security.md) · [API](site/docs/api.md) · [Screenshots](site/docs/screenshots.md) | Reference |
 
 **Deep reference** — for contributors and auditors: [`docs/`](docs/) holds the
@@ -330,8 +331,8 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) and [ARCHITECTURE.md](ARCHITECTURE.md) b
 changing anything structural.
 
 Two naming notes. First, **the hub's directory is `gateway/` but the hub is not a
-gateway** — in the KOTVA family that word names the legacy-rail coordinator role, which is
-Ephor's job, not Aql's. The path, the Go module path and the binary name keep their
+gateway** — in the KOTVA family that word names the legacy-rail coordinator role, a
+separate component's job, not Aql's. The path, the Go module path and the binary name keep their
 spelling as compat surface; the product noun is *hub*. Second, the `LINTEL_*` environment
 variables, the `lintel.db` filename and the controller's `_lintel._tcp` mDNS service keep
 their pre-merge names on purpose — they are a deployment and wire contract for hubs and
@@ -345,7 +346,8 @@ Aql is one half of a pair, and a member of a family:
 - **[Zana](https://github.com/vul-os/zana)** — the body: open-hardware designs for the
   devices Aql controls (robot mower, sensor nodes, security &amp; cleaning bots).
 - **[Ephor](https://github.com/vul-os/ephor)** — the coordinator/gateway implementation in
-  the KOTVA family; where Aql's chat rail is moving.
+  the KOTVA family. `pre-alpha`; an optional, experimental alternative rail terminator and
+  one of several ways to get a public URL. Aql depends on none of it.
 
 ## License
 

@@ -26,7 +26,7 @@ decentralization, made visible.
 
 ```
 resident ── "open" ──► chat rail (WhatsApp / Slack / Telegram)
-                              │ moving to Ephor — see below
+                              │ adapters in gateway/internal/channels/
                               ▼
         ┌──────────────── HUB — one Go binary · SQLite ────────────────┐
         │  input seam → open-path choke point → device hub → audit     │
@@ -45,17 +45,20 @@ resident ── "open" ──► chat rail (WhatsApp / Slack / Telegram)
                      relay closes → 🚧 gate opens
 ```
 
-> **The chat rail is moving to [Ephor](https://github.com/vul-os/ephor).** The adapters
-> that terminate WhatsApp, Slack and Telegram are being lifted out of Aql and into Ephor,
-> the coordinator implementation in the KOTVA family — the component whose job is bridging
-> legacy rails. In the target shape Ephor terminates the rail and hands the hub an
-> authorised command; the hub checks the rules, signs, and actuates. Ephor is separate and
-> swappable. **That move is in progress**: texting a gate open works today, but the adapter
-> plumbing inside the hub is transitional and the Ephor-backed path is not shipped either.
+> **The chat adapters are in the hub and stay there.** WhatsApp, Slack and Telegram are
+> shipped, tested and supported in `gateway/internal/channels/`, behind two small
+> interfaces: `Channel` (webhook-shaped) and `DialChannel` (the hub dials out, as Slack
+> Socket Mode does).
+>
+> There is a separate, **entirely unbuilt** design in which an external coordinator
+> terminates the rail and hands the hub an authorised command instead —
+> [`docs/EPHOR-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/EPHOR-CHAT-SEAM.md).
+> Treat it as an optional, experimental direction ([Ephor](https://github.com/vul-os/ephor)
+> is `pre-alpha` by its own README badge), not as the successor to the rails above.
 > Note the naming — Aql's hub is *not* a KOTVA gateway; it bridges chat rails into its own
-> local domain, and the gateway/coordinator role in that family is Ephor's. The `gateway/`
-> directory keeps its spelling only because the path, module path and binary name are
-> compat surface.
+> local domain, and the gateway/coordinator role in that family is a different component's
+> job. The `gateway/` directory keeps its spelling only because the path, module path and
+> binary name are compat surface.
 
 The desktop app talks HTTPS to the hub for admin — and, by design, would talk directly
 to the controller over LAN/BLE with an offline-verifiable grant in an emergency. That
@@ -114,13 +117,15 @@ them — the *controller* does, at redemption time. Geofencing does not exist in
 
 ## Reachability
 
-The hub binds a listener and speaks **plain HTTP, full stop** — it has no TLS or ACME
-code of its own, and it refuses to bind a non-loopback address unless you explicitly
-declare that TLS is terminated upstream. Three ways to be reachable, in increasing order
-of self-sufficiency:
+Ingress is **configuration, not a component**: there is no reachability service to run,
+and the hub's entire interest in the subject is one string, `LINTEL_PUBLIC_URL`, which it
+never dials and never validates. The listener speaks **plain HTTP, full stop** — no TLS
+or ACME code of its own — and it refuses to bind a non-loopback address unless you
+explicitly declare that TLS is terminated upstream. Three ways to be reachable, in
+increasing order of self-sufficiency:
 
 1. **Direct** — a public IP or VPS, behind your own reverse proxy (Caddy, nginx, Traefik)
-   that holds the certificate. See [Ingress & reachability](ingress.md) for a working
+   that holds the certificate. See [Public URL & TLS](ingress.md) for a working
    Caddy example.
 2. **Any tunnel you already trust** — cloudflared, Tailscale Funnel, ngrok — run beside
    the binary; these terminate TLS at their own edge or local agent and forward plain
@@ -130,8 +135,7 @@ of self-sufficiency:
    Slack rail can dial out too (Socket Mode: with an `xapp-…` app-level token the
    connection is a single outbound WebSocket), so a LAN-only hub with no reachable address
    runs a chat rail end to end. Only WhatsApp webhooks, the Telegram webhook, and off-LAN
-   console access need a public URL. Which component holds that outbound socket is what the
-   move to Ephor changes.
+   console access need a public URL. Full breakdown: [Reachability](reachability.md).
 
 ## The contracts that must not break
 

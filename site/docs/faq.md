@@ -36,17 +36,19 @@ emergency-access path works on the controller and the hub but **not on a phone**
 on a resident's device requests, holds or presents a grant, so that path does not run end
 to end. See [Devices](devices.md) and [Emergency access](emergency-access.md).
 
-### Where is the chat side going?
+### Are the chat rails going away?
 
-Out of Aql. The adapters that terminate WhatsApp, Slack and Telegram are moving into
-**[Ephor](https://github.com/vul-os/ephor)**, the coordinator implementation in the KOTVA
-family, whose job is bridging legacy rails. In the target shape Ephor terminates the rail
-and hands the hub an authorised command; the hub checks the rules, signs it, and actuates.
-Ephor is separate and swappable — run your own or point at one.
+No. WhatsApp, Slack and Telegram are **shipped and supported** in the hub
+(`gateway/internal/channels/`), they are tested, and nothing is being removed.
 
-**That move is in progress.** Texting a gate open works today; the plumbing that does it is
-transitional, and the Ephor-backed path is not shipped either. See
-[Chat channels](channels.md).
+There is a designed alternative in which an external coordinator —
+**[Ephor](https://github.com/vul-os/ephor)**, the KOTVA family's rail-bridging component —
+terminates the rail and hands the hub an authorised command instead. **None of it is
+built**, and Ephor is `pre-alpha` by its own README badge, so it is an optional,
+experimental path for people who want it, not a replacement for the rails you can use
+today. The design is
+[`docs/EPHOR-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/EPHOR-CHAT-SEAM.md);
+what actually runs is [Chat channels](channels.md).
 
 ### How is it different from Home Assistant?
 
@@ -84,6 +86,21 @@ in [Security](security.md) and the repository's
 The controller keeps verifying and actuating while the hub is unreachable, and queues its
 events to reconcile later. The hub itself needs no internet for the console path. What
 does *not* work offline today is the phone-based emergency open — see above.
+
+### I run this at home with no static IP. What do I actually need?
+
+Nothing — unless you want WhatsApp, or console access from outside your LAN.
+
+Controllers dial **out** to the hub, so gate hardware needs no inbound port and works
+behind CGNAT or on a 4G SIM. Slack Socket Mode dials out too, so a Pi on your LAN with no
+public address runs Slack end to end. Offline grants need no network at all.
+
+WhatsApp is the one rail that genuinely requires a public HTTPS endpoint, because Meta's
+Cloud API is webhook-only. If you need one, the hub does not care where it comes from —
+ngrok, cloudflared, a Tailscale funnel, a small VPS running nginx, or a relay someone else
+operates all end with you pasting a URL into `LINTEL_PUBLIC_URL`. Whatever provides that
+URL also terminates TLS, because the hub speaks plain HTTP only.
+See [Reachability](reachability.md).
 
 ### What hardware does it support?
 
@@ -124,7 +141,8 @@ Meta's per-conversation fees billed directly to you. Slack and Telegram cost not
 ### Why is the hub's directory called `gateway/` if it isn't a gateway?
 
 Because the path is compat surface and the word got taken. In the KOTVA family "gateway"
-names the legacy-rail coordinator role — [Ephor](https://github.com/vul-os/ephor)'s job.
+names the legacy-rail coordinator role — a separate component's job, filled by
+[Ephor](https://github.com/vul-os/ephor).
 Aql's hub is not that: it bridges chat rails into its own local domain. The directory, the
 Go module path and the binary name keep their old spelling so builds and deployments do not
 break; in prose, the thing is a **hub**.

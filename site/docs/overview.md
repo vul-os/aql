@@ -51,8 +51,9 @@ actually in each.
 > **Two naming notes.**
 >
 > **The hub lives in `gateway/`, but it is not a gateway.** In the KOTVA family that word
-> names the legacy-rail coordinator role — the job [Ephor](https://github.com/vul-os/ephor)
-> does. Aql's hub bridges chat rails into its own local domain; it is not that component.
+> names the legacy-rail coordinator role — a separate job, filled by
+> [Ephor](https://github.com/vul-os/ephor). Aql's hub bridges chat rails into its own
+> local domain; it is not that component.
 > The directory path, the Go module path and the binary name keep their spelling because
 > they are compat surface. In prose, the thing is a **hub**.
 >
@@ -94,14 +95,11 @@ The intent vocabulary is currently `open`, `close` and picker replies, because g
 the only device class there is to command. Lights, cameras, mowers, meters and bots are
 the roadmap, not a shipped capability.
 
-> **The chat rail is moving to [Ephor](https://github.com/vul-os/ephor).** The adapters
-> that terminate WhatsApp, Slack and Telegram are being lifted out of Aql and into Ephor,
-> the coordinator implementation in the KOTVA family — the component whose job is bridging
-> legacy rails. In the target shape Ephor terminates the rail and hands the hub an
-> authorised command; the hub does what only it can do: check the rules, sign it, actuate.
-> Ephor is separate and swappable — run your own, or point at one. **That move is in
-> progress**: texting a gate open works today, but the wiring described in
-> [Chat channels](channels.md) is what a hub does now, not the long-term answer.
+> **The WhatsApp, Slack and Telegram rails are shipped and supported.** They live in the
+> hub, in `gateway/internal/channels/`, and they are what [Chat channels](channels.md)
+> documents. A *designed but unbuilt* alternative would move rail termination into an
+> external coordinator — [`docs/EPHOR-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/EPHOR-CHAT-SEAM.md)
+> — and that is an optional, experimental path, not a replacement for the rails above.
 
 Whichever component terminates the rail, the exposure is the same: the chat platform sees
 the plaintext of every message, because something has to read it to act on it. The web
@@ -131,11 +129,14 @@ held back, MIT OR Apache-2.0.
 - **Bring your own channel credentials.** Slack takes minutes; WhatsApp needs your own
   verified Meta business number (a WABA), and Meta bills you directly for your own
   conversations. See [Chat channels](channels.md).
-- **Reachability is your choice**: a public IP behind your own reverse proxy or a
-  TLS-terminating tunnel (the hub itself speaks plain HTTP only — see
-  [Ingress & reachability](ingress.md)), any tunnel you already trust running beside the
-  binary — or no public URL at all, since controllers dial out and the Slack rail can dial
-  out too. Full breakdown: [Ingress & reachability](ingress.md).
+- **Reachability is a config string, not a component.** Most installs need **no public URL
+  at all**: controllers dial out, Slack Socket Mode dials out, and offline grants need no
+  network. If you want WhatsApp or off-LAN console access you need a URL, and any of
+  ngrok, cloudflared, a Tailscale funnel, a small VPS running nginx, or a relay someone
+  else operates will produce one — the hub only ever sees the string you paste into
+  `LINTEL_PUBLIC_URL`. Whatever provides it also terminates TLS, because the hub speaks
+  plain HTTP only. Full breakdown: [Reachability](reachability.md); how-to:
+  [Public URL & TLS](ingress.md).
 
 ## Zana — the open-hardware companion
 

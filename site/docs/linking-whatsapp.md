@@ -5,12 +5,12 @@ Meta gates it behind business verification. This chapter is what it takes to bri
 own number to your hub. (If you want to be texting your gate *today*, start with
 Slack — minutes, not days — and add WhatsApp when the WABA clears.)
 
-> **This wiring is transitional.** WhatsApp, along with Slack and Telegram, is being
-> lifted out of Aql and into [Ephor](https://github.com/vul-os/ephor), the KOTVA-family
-> coordinator that terminates legacy chat rails — that move is in progress, not done.
-> Everything below is accurate for the hub as it stands today; see
-> [Chat channels](channels.md#whatsapp-meta-cloud-api) for the full picture of where
-> this is headed.
+> **WhatsApp is the one rail that genuinely needs a public HTTPS endpoint**, because
+> Meta's Cloud API is webhook-only — there is no polling mode to fall back to. The hub
+> does not care what provides that endpoint: a tunnel, your own reverse proxy or a relay
+> someone else runs all reduce to a URL in `LINTEL_PUBLIC_URL`, and whatever provides it
+> also terminates TLS. See [Reachability](reachability.md), and
+> [Public URL & TLS](ingress.md) for the how-to.
 
 Once linked, the flow is simple: residents text your number, Meta's Cloud API delivers
 the webhook, and the hub routes each message by its sender:

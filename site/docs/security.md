@@ -13,9 +13,9 @@ there is only one binary.
 | Command integrity | Ed25519-signed commands with nonce + expiry; the controller pins the hub's key at pairing |
 | Pairing | Claim-token flow: admin creates a claim, the device redeems it once, keys are exchanged |
 | Emergency grants | Short-TTL signed capability bound to the app's keypair; nonce challenge-response — **controller-side verification and hub-side issuance are both real and conformance-tested; the app doesn't request/present a grant yet, see below** |
-| Channel ingress | Per-channel verification (Meta HMAC, Slack signed-request scheme + replay window, Telegram secret-token header) — fail closed; this adapter code is mid-move out of Aql and into [Ephor](https://github.com/vul-os/ephor), see **What we deliberately don't claim** below |
+| Channel ingress | Per-channel verification (Meta HMAC, Slack signed-request scheme + replay window, Telegram secret-token header) — fail closed, and done **by the hub itself**, so whatever forwards the request to it cannot forge one |
 | Tenancy | Tenant-isolated at the query layer — app-layer org scoping on every SQLite query in the Go hub, including the rate-limit and quota counters |
-| Transport | Plain HTTP — the binary has no TLS/ACME code at all. TLS is the operator's job: a reverse proxy or a TLS-terminating tunnel in front of the hub. `-listen` refuses to bind a non-loopback address on its own — see [Ingress & reachability](ingress.md) |
+| Transport | Plain HTTP — the binary has no TLS/ACME code at all. TLS is the operator's job: a reverse proxy or a TLS-terminating tunnel in front of the hub. `-listen` refuses to bind a non-loopback address on its own — see [Reachability](reachability.md) |
 | Audit | Hash-chained, tamper-*evident* event log: every open, denial, pairing and config change, with append-only DB triggers and a verify command that works against a cold backup — see **Tamper-evident audit log** below for exactly what that does and doesn't guarantee |
 | Login | Per-IP and per-account brute-force throttles on login/register/refresh/admin-claim, fail-closed; live per-request session revocation; a "log out everywhere" endpoint — see **Login & session security** below |
 | Abuse limits | Cooldowns, hourly caps and optional per-location quotas at one choke point — see [Rate limits & quotas](limits.md) |
@@ -191,10 +191,11 @@ deliberately narrow:
 ## What we deliberately don't claim
 
 - Aql is not end-to-end encrypted messaging — chat channels are WhatsApp's and
-  Slack's infrastructure, and the hub must read messages to act on them. The chat
-  adapters themselves are moving out of Aql and into [Ephor](https://github.com/vul-os/ephor)
-  (in progress, not shipped) — that relocates *where* the plaintext is handled, not
-  whether it's exposed: a third party still sees the message either way.
+  Slack's infrastructure, and the hub must read messages to act on them. A designed but
+  unbuilt alternative would move rail termination into an external coordinator
+  ([`docs/EPHOR-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/EPHOR-CHAT-SEAM.md));
+  that would relocate *where* the plaintext is handled, not whether it's exposed — a third
+  party still sees the message either way.
 - Your hub is as secure as the machine it runs on. Back up your data directory —
   but know what's actually in it: alongside `lintel.db` it holds `gateway_ed25519.seed`
   (the Ed25519 key that signs every open/close command this hub ever sends — steal

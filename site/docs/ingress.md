@@ -1,71 +1,42 @@
-# Ingress & reachability
+# Public URL & TLS
 
-The hub binds a listener and speaks **plain HTTP, full stop** — it has no TLS or
-ACME code of its own, no tunnel client built in, no relay protocol wired into the
-binary, and no dependency on any vendor to run. What you need beyond that depends
-entirely on which channel you attach — this chapter is the honest, option-by-option
-breakdown.
+This chapter is the how-to for the one case where a hub needs a public HTTPS endpoint:
+you want **WhatsApp**, or you want **console access from outside your LAN**.
 
-> **TLS is entirely the operator's responsibility.** The hub binary cannot
-> terminate TLS by itself — grep the source and there's no `autocert`, no
-> `ListenAndServeTLS`, nothing. Every option below that reaches the public internet
-> assumes something *else* — a reverse proxy you run, or a tunnel that terminates TLS
-> at its own edge — sits in front of the hub's plain-HTTP listener. Bind `-listen`
-> to a public address with nothing in front of it and you're serving the admin portal,
-> the login endpoint and the signing API over cleartext HTTP — credentials, JWTs and
-> refresh tokens included. Option (a) below shows a working reverse-proxy setup.
+If you are not sure whether you need one at all, start with
+[Reachability](reachability.md) — it answers "I run this at home with no static IP, what
+do I actually need?" and for most installs the answer is *nothing*. This page assumes you
+have already decided you want a URL, and covers how to get one and what TLS obligations
+come with it.
 
-## The one thing driving all of this: Meta's Cloud API is webhook-only
+> **TLS is entirely the operator's responsibility.** The hub has no TLS or ACME code of
+> its own — grep the source and there is no `autocert`, no `ListenAndServeTLS`, nothing.
+> Every option below assumes something *else* — a reverse proxy you run, or a tunnel that
+> terminates TLS at its own edge — sits in front of the hub's plain-HTTP listener. The
+> binary refuses to bind a non-loopback address without `-behind-proxy` for exactly this
+> reason (`gateway/cmd/gateway/main.go:159`): binding a public interface with nothing in
+> front would serve the admin portal, the login endpoint and the signing API in
+> cleartext — credentials, JWTs and refresh tokens included.
 
-WhatsApp is the hard channel to reason about, precisely because of how Meta built it.
+## Why WhatsApp is the one that forces this
+
 The **WhatsApp Cloud API only speaks webhooks** — Meta's servers make an outbound HTTPS
-`POST` to *your* hub every time someone messages your number. There is no
-long-poll or socket alternative Meta offers; if you want WhatsApp, Meta must be able to
-reach a public HTTPS URL you control. That single fact is the entire reason a
-self-hosted Aql install might need a public endpoint at all.
+`POST` to *your* hub every time someone messages your number. There is no long-poll or
+socket alternative Meta offers; if you want WhatsApp, Meta must be able to reach a public
+HTTPS URL you control. That single fact is the entire reason a self-hosted Aql install
+might need a public endpoint at all.
 
-Nothing else in Aql requires this. Controllers dial **out** to the hub
-(WebSocket), so gate hardware never needs to be reachable. And two chat channels are
-designed to need no inbound connection whatsoever — see below.
+Nothing else in Aql requires it. Controllers dial **out** to the hub, Slack Socket Mode
+dials out to Slack, and offline grants need no network whatsoever. The full rail-by-rail
+breakdown is in [Reachability](reachability.md).
 
-## Channels that need ZERO ingress
+Whatever you put in front is a **dumb pipe** — it holds no keys and makes no
+authorisation decision. The hub verifies Meta's `X-Hub-Signature-256` itself before
+acting on anything (`gateway/internal/channels/channels.go:194`), so a compromised or
+third-party-operated ingress can drop or delay messages but cannot forge an open. That
+reasoning, in full, is in [Reachability](reachability.md#whatever-you-put-there-is-a-dumb-pipe-not-a-gateway).
 
-> **The chat rail is in transition.** The adapters that terminate WhatsApp, Slack and
-> Telegram are moving out of Aql and into [Ephor](https://github.com/vul-os/ephor) —
-> the coordinator implementation in the KOTVA family, whose job is bridging legacy
-> rails. In the target shape Ephor terminates the rail and hands the hub an authorised
-> command; the hub does what only it can do — check the rules, sign, actuate. That
-> move is **in progress**: the ingress picture below is what a hub needs today, not
-> the long-term answer.
-
-These need nothing public at all — not a port, not a tunnel, not a domain:
-
-- **Slack Socket Mode** — **shipped.** The hub opens a single **outbound** WebSocket
-  to Slack (`apps.connections.open` → dial the returned `wss://` URL) and receives every
-  event over it. Slack never connects to you. Set `SLACK_APP_TOKEN` (an `xapp-…` token)
-  and it's on; leave it unset and Slack falls back to the Events API webhook (see
-  [Chat channels](channels.md)).
-- **Telegram long-polling** — Telegram's Bot API supports `getUpdates` polling as an
-  alternative to registering a webhook, entirely outbound, no public URL needed. It's
-  the natural zero-ingress path for Telegram and is on the roadmap for this channel;
-  *today* Aql's Telegram integration (opens fully wired through the shared pipeline)
-  receives updates via webhook (see [Chat channels](channels.md)), so it still needs a
-  reachable URL for now.
-
-With Slack Socket Mode a hub on a LAN Pi with no public IP, no port-forward and no
-domain name already runs Slack end to end, serves the portal on the LAN, and drives
-controllers — a genuinely complete installation with nothing exposed to the internet.
-Once Telegram long-polling lands, that channel joins it.
-Controllers already dial out today (WebSocket push, with long-poll as a fallback
-transport — the `proto/` contracts are transport-agnostic by design), so they never
-need ingress regardless. Only the WhatsApp channel needs a public HTTPS endpoint
-unconditionally, and remote (off-LAN) portal/app access needs one if you want it.
-
-## Getting a public HTTPS endpoint for WhatsApp (or remote portal access)
-
-Three honest options, in the order most self-hosters reach for them:
-
-### (a) Public bind + your own reverse proxy — no tunnel, no third party
+## (a) Public bind + your own reverse proxy — no tunnel, no third party
 
 The simplest option if you already have a VPS, a static IP, or a router you can
 port-forward on: point a DNS name at the box and run a reverse proxy (Caddy, nginx,
@@ -97,7 +68,7 @@ loop besides the proxy — you own the whole path from Meta to your hub.
   patched — firewall rules, port forwarding on CGNAT-free connections, certificate
   renewal (automatic with Caddy, cron/certbot with nginx).
 
-### (b) Any tunnel you already trust — including self-hosted `vulos-relayd`
+## (b) Any tunnel you already trust
 
 If your box has no public IP (home connection, CGNAT, a Pi behind a residential
 router), a tunnel forwards a public HTTPS endpoint to your local hub port. Nothing
@@ -109,13 +80,12 @@ comfortable operating:
   (e.g. `http://localhost:8080`), done. These terminate TLS at their own edge or local
   agent and forward plain HTTP the rest of the way over loopback — that matches the
   hub exactly as it is, no separate reverse proxy needed.
-- **`vulos-relayd`** — the open-source reverse-tunnel daemon behind Ephor
-  (WSS + yamux, SSRF-guarded). It's MIT-licensed and **self-hostable with no account
-  needed** — you run the client agent yourself, beside the
-  hub, the same way you'd run any other tunnel here. It terminates the WSS tunnel
-  locally and forwards plain HTTP to the hub over loopback — the same pattern as
-  the others. It's listed alongside them because it happens to exist and is a solid
-  option, not because Aql depends on it.
+- **`vulos-relayd`** — the open-source reverse-tunnel daemon (WSS + yamux, SSRF-guarded).
+  It's MIT-licensed and **self-hostable with no account needed** — you run the client
+  agent yourself, beside the hub, the same way you'd run any other tunnel here. It
+  terminates the WSS tunnel locally and forwards plain HTTP to the hub over loopback —
+  the same pattern as the others. It's listed alongside them because it happens to exist
+  and is a solid option, not because Aql depends on it.
 
 One thing this doesn't cover: a tunnel run in **raw TCP / SNI-passthrough** mode (e.g.
 `frp` configured for TCP passthrough rather than its HTTP proxy mode) forwards the
@@ -130,40 +100,32 @@ locally; don't point a raw passthrough tunnel straight at the hub's listener.
 - Trade-off: one more moving part to operate; outages in the tunnel take your WhatsApp
   channel down even if the hub is healthy.
 
-### (c) Ephor — a hosted option
+## (c) A tunnel someone else operates
 
-If you'd rather not run and monitor a tunnel yourself, **Ephor** is a hosted version of
-the same `vulos-relayd` software — the reachability broker your box dials out to. Point
-the hub at it the same way you'd point it at any other tunnel, and someone else
-operates the reachability fabric for you. Ephor is open source and self-hostable, so
-you can just as well run your own instead of using a hosted instance.
+If you'd rather not run and monitor a tunnel yourself, someone can operate one for you.
+The **Vulos relay** and **[Ephor](https://github.com/vul-os/ephor)'s reachability
+adapter** are the in-family versions of the same `vulos-relayd` model — the broker your
+box dials out to. Point the hub at one the same way you'd point it at any other tunnel.
 
-- Costs: nothing if you self-host Ephor; whatever the operator charges if you use a
-  hosted instance.
+Both are open source and self-hostable, so you can just as well run your own instead.
+Note that Ephor is **`pre-alpha` by its own README badge**; treat it as an experimental
+option, not a recommended default, and prefer (a) or (b) for anything you depend on.
+
+- Costs: nothing if you self-host; whatever the operator charges if you use a hosted
+  instance.
 - Trade-off: none technically — it's the same tunnel model as (b), just operated for
-  you. It's an *option*, never a requirement: Aql has no code path that assumes
-  Ephor exists, and every self-host guide in this repo works without it.
-
-## Where this leaves each channel
-
-| Channel | Ingress needed? | Notes |
-| --- | --- | --- |
-| Slack (Socket Mode) | **None** | **Shipped** — outbound WSS only; set `SLACK_APP_TOKEN` |
-| Telegram (long-polling) | **None** | Outbound HTTP polling only — roadmap for this channel |
-| Slack (Events API) | Public HTTPS | The default when no `SLACK_APP_TOKEN` is set — see [Chat channels](channels.md) |
-| Telegram (webhook, today's default) | Public HTTPS | Opens fully wired; until long-polling lands, see [Chat channels](channels.md) |
-| WhatsApp (Meta Cloud API) | **Public HTTPS, always** | Meta's design — see above, no way around it |
-| Portal / app access from off-LAN | Public HTTPS (optional) | Only if residents/staff need it outside the property |
-| Controllers | **None** | Always dial out to the hub |
+  you, plus the maturity caveat above. It's an *option*, never a requirement: Aql has no
+  code path that assumes any of it exists, and every self-host guide in this repo works
+  without it.
 
 ## The suite rule this follows
 
-Aql has no hard runtime dependency on any Vulos product, ever — it is a
-standalone, MIT-licensed system that runs to completion with nothing but a box and,
-optionally, your own channel credentials. Ephor shows up here strictly as one
-*feature-scoped* ingress option for a single channel (WhatsApp), competing on equal
-footing with cloudflared, frp, and a self-run `vulos-relayd`. Nothing breaks, degrades,
-or nags you if you never touch it.
+Aql has no hard runtime dependency on any Vulos product, ever — it is a standalone,
+MIT-licensed system that runs to completion with nothing but a box and, optionally,
+your own channel credentials. `vulos-relayd`, the Vulos relay and Ephor show up here
+strictly as *feature-scoped* options for a single rail (WhatsApp), competing on equal
+footing with cloudflared, nginx and a port-forward. Nothing breaks, degrades, or nags you
+if you never touch them.
 
-Full self-host walkthrough: [Run a hub](self-host.md). Per-channel setup:
-[Chat channels](channels.md).
+Full self-host walkthrough: [Run a hub](self-host.md). Per-rail setup:
+[Chat channels](channels.md). Do-I-even-need-this: [Reachability](reachability.md).

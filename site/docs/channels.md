@@ -13,28 +13,29 @@ design intent, not a shipped capability — see
 [Devices](devices.md). The full command surface is documented in
 [`docs/CHAT-COMMANDS.md`](https://github.com/vul-os/aql/blob/main/docs/CHAT-COMMANDS.md).
 
-> **The chat rail is moving to Ephor.** The adapters that terminate WhatsApp, Slack and
-> Telegram are being lifted out of Aql and into [Ephor](https://github.com/vul-os/ephor),
-> the coordinator implementation in the KOTVA family — the component whose job is
-> bridging legacy rails. In the target shape a resident texts a channel, Ephor terminates
-> that rail and hands the hub an authorised command, and the hub does what only it can
-> do: check the rules, sign it, actuate. Ephor is separate and swappable — run your own
-> or point at one. **That move is in progress.** Texting a gate open works today; the
-> wiring described in this chapter is what a hub does now, not the long-term answer.
-> Aql's hub is not a KOTVA gateway — it bridges chat rails to its own local domain; Ephor
-> is the gateway/coordinator implementation in that family (see
+> **The three rails below are shipped and supported.** WhatsApp, Slack and Telegram are
+> in the hub, in `gateway/internal/channels/`, working and tested. They are not going
+> anywhere and they are not deprecated — configure them and text your gate open today.
+>
+> There is a *designed, optional* alternative in which a separate coordinator terminates
+> the rail and hands the hub an authorised command instead — see
+> [`docs/EPHOR-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/EPHOR-CHAT-SEAM.md).
+> **Nothing of it is built**, and [Ephor](https://github.com/vul-os/ephor) is `pre-alpha`
+> by its own README badge, so it is an experimental path for people who want it, never a
+> requirement and never a replacement for what is documented here. A naming note that
+> often confuses people: Aql's hub is not a KOTVA gateway — it bridges chat rails to its
+> own local domain, and the gateway/coordinator role in that family is a separate job
+> (see
 > [`docs/KOTVA-ALIGNMENT.md`](https://github.com/vul-os/aql/blob/main/docs/KOTVA-ALIGNMENT.md)).
-> The adapter code below still lives in the hub, in `gateway/internal/channels/`, while
-> that move happens.
 
 Identity is keyed on `(channel, external id)` — not phone-number-only — so one person
 can be reachable on WhatsApp and Slack at once without being two people in your records.
 
 | Channel | Identity | Status | Self-host friction |
 | --- | --- | --- | --- |
-| WhatsApp | phone number | **Works today — transitional** — Meta Cloud API | **High** — verified Meta business + WABA + number |
-| Slack | member id | **Works today — transitional** — Events API **and** Socket Mode | Minutes — an app manifest + signing secret |
-| Telegram | chat id | **Works today — transitional** — opens wired through the shared pipeline | Minutes — a BotFather token + webhook secret |
+| WhatsApp | phone number | **Shipped** — Meta Cloud API | **High** — verified Meta business + WABA + number |
+| Slack | member id | **Shipped** — Events API **and** Socket Mode | Minutes — an app manifest + signing secret |
+| Telegram | chat id | **Shipped** — opens wired through the shared pipeline | Minutes — a BotFather token + webhook secret |
 | Discord | user id | **Not built** — roadmap, no code | Minutes — a bot token, once it exists |
 | DMTAP | keypair / `name@domain` | **Not built** — a `DialChannel` scaffold exists whose only transport implementation fails closed | — |
 
@@ -72,9 +73,9 @@ for gate pickers.
 The full walkthrough, including number advice and failure modes, is in
 [Linking WhatsApp](linking-whatsapp.md). WhatsApp is the one channel that always needs
 a public HTTPS endpoint — Meta's Cloud API only speaks webhooks, there is no
-alternative — see [Ingress & reachability](ingress.md) for the honest options (public
-bind, any tunnel including a self-hosted `vulos-relayd`, or the hosted Ephor
-convenience).
+alternative. [Reachability](reachability.md) covers whether you need one at all;
+[Public URL & TLS](ingress.md) covers the options for getting one (your own reverse
+proxy, any tunnel you already trust, or one someone else operates).
 
 ### The non-conformant escape hatch: a self-hosted bridge
 
@@ -168,7 +169,7 @@ SLACK_APP_TOKEN=xapp-…   # optional — presence enables Socket Mode (no publi
 
 With no `SLACK_APP_TOKEN`, the hub stays on the Events API webhook
 (`/webhooks/slack`), which needs a reachable URL. Either mode works; Socket Mode is the
-one that needs zero ingress — see [Ingress & reachability](ingress.md).
+one that needs zero ingress — see [Reachability](reachability.md).
 
 Residents then DM the app — or use a channel you allow — with `open`. Their Slack
 member id is their identity; invite members from the portal's **Members** page by id or
@@ -190,10 +191,10 @@ Telegram is wired to the **real open path** in the hub:
   re-enters the same verdict path. Every chat and message is recorded and the shared
   per-sender flood throttle applies.
 
-Long-polling (`getUpdates`) — an entirely outbound alternative that needs **no public
-URL at all** — is on the roadmap for this channel; today's wiring is the webhook path
-below, so Telegram currently needs a reachable URL. See
-[Ingress & reachability](ingress.md).
+- **In progress** — an opt-in long-polling engine (`getUpdates`), an entirely outbound
+  alternative that needs **no public URL at all**, is being built for this channel. It is
+  **not shipped**: today's wiring is the webhook path below, so Telegram currently needs a
+  reachable URL. See [Reachability](reachability.md).
 
 Setup:
 
@@ -241,11 +242,15 @@ The seam is deliberately small: resolve sender → identity, message → intent,
 send. Every open on every channel funnels through the one open-path choke point — a
 channel decides how to ask and how to reply, never whether the gate may open.
 
-That said, `gateway/internal/channels/` is not where a new rail belongs going forward.
-As described above, the three working channels are moving out of Aql and into
-[Ephor](https://github.com/vul-os/ephor) — the coordinator that terminates chat rails
-for the whole KOTVA family. If you want Signal, SMS or another rail, the shape to copy
-is the same channel seam (resolve sender → identity, message → intent, reply → send),
-but the place to build it is Ephor, not a new file under the hub. Contributions and
-design discussion are welcome on [GitHub](https://github.com/vul-os/aql) — Aql's code is
-MIT.
+`gateway/internal/channels/` is where a new rail goes. There are two interfaces to pick
+from: `Channel` for a webhook-shaped provider (the hub verifies an inbound POST), and
+`DialChannel` for a subscribe-shaped one where the hub dials out instead — Slack Socket
+Mode is the worked example of the second. If you want Signal, SMS or another rail, copy
+whichever shape matches.
+
+(A separate, unbuilt design puts rail termination in an external coordinator instead —
+[`docs/EPHOR-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/EPHOR-CHAT-SEAM.md).
+It is a design for an option, not a reason to hold off building a rail here.)
+
+Contributions and design discussion are welcome on
+[GitHub](https://github.com/vul-os/aql) — Aql's code is MIT.

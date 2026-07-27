@@ -2,6 +2,18 @@ package automations
 
 import (
 	"time"
+
+	// Embed the IANA timezone database in the binary.
+	//
+	// This is stdlib, not a new dependency, and it costs roughly 450 KB of
+	// binary size. It is worth it here: a schedule is written in local time
+	// ("at seven"), and time.LoadLocation otherwise depends on the HOST having
+	// /usr/share/zoneinfo. The shipped image (distroless static) does carry
+	// tzdata, but a self-hoster building a scratch image, or running on a
+	// minimal box, would get a gateway where every timezone-bearing rule
+	// refuses to save. Failing closed there is correct but useless; carrying
+	// the data is better than being correct about not having it.
+	_ "time/tzdata"
 )
 
 // Schedule is a time-of-day on chosen weekdays, in a named timezone.

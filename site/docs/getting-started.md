@@ -55,8 +55,8 @@ detail.
    > only by a manually-dispatched workflow.
    >
    > The hub **refuses to bind a non-loopback address** unless you pass `-behind-proxy`
-   > — it serves plain HTTP and has no TLS of its own. See
-   > [Ingress & reachability](ingress.md).
+   > — it serves plain HTTP and has no TLS of its own. On a LAN-only install you need
+   > nothing else: see [Reachability](reachability.md).
 
    Details, reachability options and backups in [Run a hub](self-host.md).
 2. **Claim the admin account.** Open the console and sign up — the first account you

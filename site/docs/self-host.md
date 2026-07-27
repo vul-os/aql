@@ -24,8 +24,7 @@ bills you directly).
 > core now: auth, accounts / locations / access points, controller pairing and the
 > WebSocket device hub, the signed open path, the admin console, rate limits and quotas,
 > visitor grants, the tamper-evident audit log, offline-grant issuance, and texting
-> `open` works today over WhatsApp, Slack or Telegram (the rail that terminates those
-> platforms is moving to Ephor, in progress — see **Configuration** below) —
+> `open` works today over WhatsApp, Slack or Telegram —
 > 60 HTTP routes, 219 Go tests, all green. **Building from source is the reliable
 > path today** — see the commands below.
 >
@@ -102,7 +101,7 @@ ones:
 
 | Variable | What it does |
 | --- | --- |
-| `LINTEL_PUBLIC_URL` | The URL the world reaches you at. Used for webhooks, invite links, the app. |
+| `LINTEL_PUBLIC_URL` | The URL the world reaches you at — a bare string, used to build webhook, invite and app links. The hub never dials or validates it, so it does not care whether a tunnel, a reverse proxy or a relay produced it. Leave it unset on a LAN-only install. See [Reachability](reachability.md). |
 | `LINTEL_DATA_DIR` | Where `lintel.db` and keys live. Back this directory up. |
 | `WHATSAPP_*` / `SLACK_*` / `TELEGRAM_*` | Per-channel credentials (e.g. `SLACK_SIGNING_SECRET`, `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN` for Socket Mode) — see [Chat channels](channels.md). |
 | `ADMIN_CLAIM_TOKEN` | One-time secret to claim the **instance admin** seat on first run — redeemable exactly once, dead forever after; unset = nobody can claim. See [Instance admin](admin.md). |
@@ -112,13 +111,11 @@ ones:
 | `RATE_ACCOUNT_OPENS_PER_HOUR` | Successful opens per account per hour — runaway-integration ceiling (default 500; `0` = kill switch). |
 | `LINTEL_BEHIND_PROXY` | Permits binding a non-loopback `-listen` address (default `false` — the hub otherwise refuses to start on one). Only set this when TLS is genuinely terminated upstream by a reverse proxy or tunnel; see **Reachability** below. |
 
-> **The chat rail is in transition.** The adapters that terminate WhatsApp, Slack and
-> Telegram are moving out of Aql and into [Ephor](https://github.com/vul-os/ephor) —
-> the coordinator implementation in the KOTVA family, whose job is bridging legacy
-> rails. In the target shape Ephor terminates the rail and hands the hub an authorised
-> command; the hub does what only it can do — check the rules, sign, actuate. That
-> move is **in progress**: the `WHATSAPP_* / SLACK_* / TELEGRAM_*` variables above are
-> what a hub reads today, not the long-term answer.
+> **The `WHATSAPP_* / SLACK_* / TELEGRAM_*` variables are the supported way to attach a
+> chat rail.** Those three adapters are shipped and tested in the hub. A designed but
+> **unbuilt** alternative would have an external coordinator terminate the rail instead
+> ([`docs/EPHOR-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/EPHOR-CHAT-SEAM.md));
+> it is an optional, experimental direction, not something these variables are waiting on.
 
 The five variables above are abuse/quota guards, not billing — semantics, denial
 behaviour and tuning advice are in [Rate limits & quotas](limits.md).
@@ -200,9 +197,9 @@ Pick whichever of these fits your life:
   (e.g. `frp`'s TCP passthrough, rather than its HTTP proxy mode) forwards
   still-encrypted bytes all the way to the hub, which has nothing to decrypt them
   with — put your own reverse proxy (as above) behind a passthrough tunnel if you want
-  that shape. Aql has no structural dependency on any provider — **Ephor**
-  (the hosted version of `vulos-relayd`) is one option among these, never a
-  requirement.
+  that shape. Aql has no structural dependency on any provider — the **Vulos relay** and
+  **Ephor**'s reachability adapter are options among these, never a requirement. Each one
+  just ends with you setting `LINTEL_PUBLIC_URL`; the hub cannot tell them apart.
 - **No public URL at all** — a hub on the estate LAN as a complete installation,
   and this is **real today**. Controllers dial out, and Slack **Socket Mode** ships:
   set `SLACK_APP_TOKEN` (an `xapp-…` token) and the hub dials out to Slack over an
@@ -210,7 +207,7 @@ Pick whichever of these fits your life:
   Discord's bot gateway will dial out the same way when it lands. Without
   `SLACK_APP_TOKEN`, Slack falls back to the **Events API** webhook (`/webhooks/slack`),
   which needs a reachable URL — as do **WhatsApp webhooks** (Meta must reach you, since
-  the Cloud API is webhook-only — see [Ingress & reachability](ingress.md) for the full
+  the Cloud API is webhook-only — see [Reachability](reachability.md) for the full
   breakdown), the Telegram webhook, and **portal/app access from outside the property**.
 
 Controllers connect to the hub too — but they dial out from the gate side, so they
@@ -222,7 +219,7 @@ Slack is the five-minute path; WhatsApp needs a verified Meta business number (W
 Discord is coming. All of it is covered step-by-step in [Chat channels](channels.md),
 and the WABA process in detail in [Linking WhatsApp](linking-whatsapp.md). If you're
 deciding whether you need a public URL at all for the channels you want, see
-[Ingress & reachability](ingress.md).
+[Reachability](reachability.md).
 
 ## Backup and restore
 
