@@ -46,15 +46,31 @@ export const FEATURES = [
   // overclaims, now correctly marked in the docs. This check's job is to
   // make sure nobody re-overclaims them by accident, and to catch the day
   // any of them actually ships (evidence appears → docs must be updated).
+  // ── geofence enforcement shipped 2026-07-27: gateway/internal/store/
+  // geofence.go + migration 0015, enforced inside the LogAccess choke point,
+  // with POST/GET/DELETE /v1/accounts/{id}/geofences to manage the rules.
+  //
+  // ⚠ DOC DEBT, OPEN. This entry is flipped to 'shipped' because the CODE now
+  // exists and this checker's job is to catch exactly that divergence. The
+  // prose in README.md, ARCHITECTURE.md §8, site/index.html, site/docs/
+  // security.md, site/docs/getting-started.md, site/docs/troubleshooting.md
+  // and src/pages/docs/GeofenceSafety.tsx still says "designed, not built" and
+  // is now WRONG — undersell rather than overclaim, but wrong. Those files
+  // were outside the shipping change's file scope; someone must update them.
+  //
+  // When they are updated, the one thing that copy MUST keep saying is that
+  // this is a convenience and not a security control: the position it tests is
+  // client-supplied and unverified, so it stops mistakes, not attackers (see
+  // gateway/internal/store/geofence.go's package comment for the full claim).
   {
     id: 'geofencing',
-    label: 'Geofencing (block opens outside a per-location radius)',
-    docStatus: 'planned',
+    label: 'Geofencing (block opens outside a per-access-point/per-location radius)',
+    docStatus: 'shipped',
     docRefs: [
-      'README.md — "Geofencing ... isn\'t implemented in either the Go gateway or the reference backend yet (🔨)"',
-      'ARCHITECTURE.md §8 Feature roadmap',
-      'site/index.html — "Geofence safety <span class=soon>planned</span>"',
-      'site/docs/security.md — "Status: designed, not implemented"',
+      'gateway/internal/store/geofence.go — package comment: what it buys, and what it explicitly does not',
+      'gateway/internal/store/migrations/0015_geofence.sql — the geofence_rules table',
+      'gateway/internal/store/openpath.go — the check inside LogAccess, after time windows, before the limit block',
+      'STALE, needs updating: README.md, ARCHITECTURE.md §8, site/index.html, site/docs/security.md, site/docs/getting-started.md, site/docs/troubleshooting.md, src/pages/docs/GeofenceSafety.tsx',
     ],
     evidence: [{ root: 'gateway/internal', pattern: 'geofenc', flags: 'i' }],
   },
@@ -202,13 +218,21 @@ export const FEATURES = [
   },
   {
     id: '2fa',
-    label: 'Two-factor authentication',
-    docStatus: 'planned',
-    docRefs: ['site/docs/troubleshooting.md — "there is no 2FA to lose — lintel doesn\'t have it"'],
-    evidence: [[
-      { root: 'gateway/internal', pattern: 'TOTP|totp|two.?factor|MFA\\b', flags: 'i' },
-      { root: 'backend/src', pattern: 'TOTP|totp|two.?factor|MFA\\b', flags: 'i' },
-    ]],
+    label: 'Two-factor authentication (TOTP), opt-in per user, with single-use recovery codes',
+    docStatus: 'shipped',
+    docRefs: [
+      'ROADMAP.md — listed as done',
+      'ARCHITECTURE.md — the residual is now "loses BOTH password and recovery codes"',
+      'site/docs/troubleshooting.md, site/docs/faq.md',
+    ],
+    // Three pieces. A secret with no activation gate locks people out of their
+    // own hub; recovery codes minted anywhere but activation mean 2FA can be on
+    // with no escape hatch. Both are worse than no 2FA.
+    evidence: [
+      { file: 'gateway/internal/store/migrations/0016_two_factor.sql', pattern: 'CREATE TABLE user_totp' },
+      { file: 'gateway/internal/httpapi/server.go', pattern: '2fa/activate' },
+      { file: 'gateway/internal/store/twofactor.go', pattern: 'ClaimSecondFactorAndIssueRefresh' },
+    ],
   },
   {
     id: 'csv-export',

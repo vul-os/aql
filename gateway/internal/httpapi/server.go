@@ -196,6 +196,17 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("POST /v1/auth/reset-password", s.handleResetPassword)
 	mux.Handle("POST /v1/auth/update-password", s.requireAuth(s.handleUpdatePassword))
 
+	// two-factor authentication (see twofactor.go). All four are session-only
+	// — an API token can never enrol, activate or remove a second factor,
+	// because requireAuth accepts JWTs only. The login-side gate is not a
+	// route: it lives inside POST /v1/auth/login above, so there is no way to
+	// reach a session without passing it.
+	mux.Handle("GET /v1/auth/2fa", s.requireAuth(s.handleTwoFactorStatus))
+	mux.Handle("POST /v1/auth/2fa/enroll", s.requireAuth(s.handleTwoFactorEnroll))
+	mux.Handle("DELETE /v1/auth/2fa/enroll", s.requireAuth(s.handleTwoFactorEnrollCancel))
+	mux.Handle("POST /v1/auth/2fa/activate", s.requireAuth(s.handleTwoFactorActivate))
+	mux.Handle("POST /v1/auth/2fa/disable", s.requireAuth(s.handleTwoFactorDisable))
+
 	// instance admin first-run claim (spec: backend/src/routes/admin.ts)
 	mux.Handle("GET /v1/admin/claim", s.requireAuth(s.handleClaimState))
 	mux.Handle("POST /v1/admin/claim", s.requireAuth(s.handleClaim))
@@ -274,6 +285,16 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("GET /v1/accounts/{id}/time-windows", s.requireAuth(s.handleTimeWindowsList))
 	mux.Handle("POST /v1/accounts/{id}/time-windows", s.requireAuth(s.handleTimeWindowCreate))
 	mux.Handle("DELETE /v1/accounts/{id}/time-windows/{ruleID}", s.requireAuth(s.handleTimeWindowDelete))
+
+	// Geofence rules (see geofence.go): an optional radius around a door or a
+	// site, outside which an open is refused. Writes are admin-only; the list
+	// is readable by ANY member, because a fence binds everyone identically
+	// and a resident refused at the gate needs to be able to see why. Note
+	// that this is a convenience, not a security control — the position it
+	// tests is client-supplied and unverified (store/geofence.go).
+	mux.Handle("GET /v1/accounts/{id}/geofences", s.requireAuth(s.handleGeofencesList))
+	mux.Handle("POST /v1/accounts/{id}/geofences", s.requireAuth(s.handleGeofenceCreate))
+	mux.Handle("DELETE /v1/accounts/{id}/geofences/{ruleID}", s.requireAuth(s.handleGeofenceDelete))
 
 	// analytics (see analytics.go) — READ-ONLY summaries over the append-only,
 	// hash-chained audit rows. Session-auth only, member-gated per subject,

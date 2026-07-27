@@ -104,6 +104,12 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 type loginReq struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	// Second factor, when the account has one (twofactor.go). Embedded
+	// rather than exchanged for an intermediate challenge token: the
+	// password is presented again alongside the code, so there is no
+	// short-lived half-authenticated credential to steal or replay. A
+	// client that omits these gets 401 totp_required and retries with both.
+	twoFactorInput
 }
 
 // POST /v1/auth/login
@@ -162,7 +168,16 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusUnauthorized, "invalid_credentials")
 		return
 	}
-	tokens, ok := s.issueTokensCtx(w, r, u)
+	// Second factor (twofactor.go). Returns (nil, true) — proceed with no
+	// claim — for a user with no ACTIVE TOTP factor, which is what keeps this
+	// path byte-for-byte unchanged for everyone who has not enrolled. When a
+	// factor IS active, the claim is spent inside the same transaction as the
+	// refresh-token insert below, never as a separate step.
+	claim, ok := s.secondFactorGate(w, r, u, req.twoFactorInput)
+	if !ok {
+		return
+	}
+	tokens, ok := s.issueTokensClaimed(w, r, u, claim)
 	if !ok {
 		return
 	}
@@ -286,18 +301,13 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// issueTokensCtx issues access+refresh with the request context.
+// issueTokensCtx issues access+refresh with the request context, for the
+// paths where no second factor can be in play — registration, where the
+// account is milliseconds old and cannot have enrolled one.
+//
+// It delegates to issueTokensClaimed (twofactor.go) with a nil claim rather
+// than holding its own copy of the insert, so there is exactly ONE funnel that
+// mints a session and no way to add a login path that quietly skips a claim.
 func (s *Server) issueTokensCtx(w http.ResponseWriter, r *http.Request, u *store.User) (map[string]any, bool) {
-	access, err := SignJWT(s.cfg.JWTSecret, u.ID, u.Username, u.IsPlatformAdmin, accessTTL)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal")
-		return nil, false
-	}
-	refresh := randomToken()
-	if err := s.store.InsertRefreshToken(r.Context(), store.NewID(), store.NewID(), u.ID,
-		hashToken(refresh), time.Now().Add(refreshTTL).Unix()); err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal")
-		return nil, false
-	}
-	return map[string]any{"access_token": access, "refresh_token": refresh}, true
+	return s.issueTokensClaimed(w, r, u, nil)
 }

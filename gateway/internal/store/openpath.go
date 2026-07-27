@@ -221,8 +221,10 @@ type LogAccessArgs struct {
 // vocabulary: rate_limited | quota_exceeded | account_suspended |
 // user_disabled — plus this gateway's three time-window reasons
 // (outside_time_window | time_window_invalid | time_window_unavailable, see
-// timewindows.go), kept as separate strings precisely so an operator can tell
-// a schedule lockout from a throttle in the audit trail.
+// timewindows.go) and four geofence reasons (outside_geofence |
+// geofence_location_required | geofence_invalid | geofence_unavailable, see
+// geofence.go), kept as separate strings precisely so an operator can tell a
+// schedule lockout from a fence from a throttle in the audit trail.
 type LogAccessResult struct {
 	Allowed     bool
 	Reason      string
@@ -234,10 +236,11 @@ type LogAccessResult struct {
 
 // LogAccess runs the full verdict + audit for one gate command:
 // access-point resolution, account-suspension check, live user-status check,
-// time-window rules, rate limits + quotas (open only — 'close' is the safe
-// direction and is never limited, never quota-denied and never
-// window-restricted: someone who got in must be able to get out, whatever the
-// hour), then the audit row. Denials are audit-logged with
+// time-window rules, geofence rules, rate limits + quotas (open only —
+// 'close' is the safe direction and is never limited, never quota-denied,
+// never window-restricted and never geofenced: someone who got in must be
+// able to get out, whatever the hour and wherever their phone thinks they
+// are), then the audit row. Denials are audit-logged with
 // success=0 and error=reason; the caller translates the verdict per channel
 // (429 + Retry-After over HTTP, honest chat replies on channels).
 //
@@ -307,6 +310,37 @@ func (s *Store) LogAccess(ctx context.Context, envCfg RateLimitConfig, args LogA
 	if args.Command == "open" && args.UserID != "" {
 		if d := s.CheckTimeWindows(ctx, ap.AccountID, args.UserID, ap.ID, ap.LocationID, 0); !d.Allowed {
 			return deny(d.Reason, d.RetryAfterS, "")
+		}
+	}
+
+	// Geofence rules: WHERE the requester SAYS they are (geofence.go). Placed
+	// here for two reasons, and the position is again the whole design:
+	//
+	//   - LAST of the authorisation checks, because it is the weakest claim in
+	//     the stack. Every check above rests on something the gateway can
+	//     verify — a session, an account row, a user's status, a stored
+	//     schedule against the gateway's own clock. This one rests on
+	//     coordinates a phone chose to send, which nothing verifies. When a
+	//     stronger check would also have denied, the audit row must carry the
+	//     stronger reason; 'outside_geofence' on a suspended account would be
+	//     true and useless.
+	//   - BEFORE the limit block, for the identical reason the window check is:
+	//     that block CONSUMES counters and claims the cooldown, and denials
+	//     never consume.
+	//
+	// Unlike the window check this applies to VISITORS too (no UserID
+	// condition): a fence is a property of the door, not of a person, and a
+	// one-off grant does not make its holder exempt from where the gate is.
+	//
+	// Nothing above or below was reordered or weakened. With no rule stored
+	// this is one indexed read that returns nothing and allows — an install
+	// that does not use geofencing behaves exactly as it did before.
+	if args.Command == "open" {
+		if d := s.CheckGeofence(ctx, ap.AccountID, ap.ID, ap.LocationID, args.Lat, args.Long); !d.Allowed {
+			// No RetryAfterS: waiting does not fix being in the wrong place,
+			// and inventing a number here would render as "try again in ~N
+			// min" on every chat rail.
+			return deny(d.Reason, 0, "")
 		}
 	}
 

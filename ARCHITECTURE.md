@@ -31,7 +31,7 @@ exist and which are design intent. The condensed operator-facing tour is
 | **Device engine** — drivers, discovery, telemetry, automations, energy | **Not built.** No Matter, MQTT, Zigbee, ONVIF, Modbus or Z-Wave code exists |
 | **Phone-side offline grants** | **Not built.** The contract, controller verification and hub issuance are real; nothing on a phone presents a grant |
 | Chat rail | **In transition.** Moving out of Aql into [Ephor](https://github.com/vul-os/ephor); the adapters in `gateway/internal/channels/` are transitional (§3a) |
-| Geofencing, online time-window rules, analytics API, outbound webhooks, scoped API tokens, 2FA | **Not built** |
+| Google OAuth | **Not built** |
 
 ### The seven device kinds
 
@@ -413,7 +413,12 @@ Full detail, including what "works with any hardware" does and does not mean:
 - **No per-access-point maintenance backend.** The console posts to routes that do not
   exist; the hub returns fixed nulls.
 - **No outbound webhooks and no scoped API tokens.** Integrations authenticate as a user.
-- **No 2FA, and no in-band recovery for a lost sole instance-admin password.**
+- **A sole instance-admin who loses BOTH their password and their recovery codes** has no
+  in-band route back in. 2FA itself ships (TOTP, opt-in per user, ten single-use recovery
+  codes shown once at activation), and the last resort on a self-hosted box is a SQL
+  update against `lintel.db` with the server stopped — a strictly higher bar than the
+  login it protects. Losing console access never locks anyone out of a *building*:
+  controllers hold their own pinned keys and offline grants exist for exactly this.
 
 The console↔hub drift above is at least mechanically tracked: `src/lib/__tests__/
 routeParity.test.ts` diffs every frontend call against the hub's real registered routes

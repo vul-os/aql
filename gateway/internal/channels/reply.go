@@ -33,6 +33,17 @@ func DenialMessage(reason string, retryAfterS int64, publicURL string) string {
 			return fmt.Sprintf("Your access to this gate is not open right now — it opens again in ~%d min.", mins)
 		}
 		return fmt.Sprintf("Your access to this gate is not open right now — it opens again in ~%d h.", (mins+59)/60)
+	case "outside_geofence":
+		// retryAfterS is always 0 here: waiting does not move you, so the
+		// "~N min" phrasing every other denial uses would be actively
+		// misleading. Tell them the one thing that changes the outcome.
+		return "This gate only opens when you're near it, and your phone says you're not. Try again at the gate."
+	case "geofence_location_required":
+		// The denial every chat-rail user hits, because no rail sends
+		// coordinates. Name the fix rather than the fault.
+		return "This gate needs your location to open, and none was sent. Open it from the app with location on, or ask your admin."
+	case "geofence_invalid", "geofence_unavailable":
+		return "This gate's location rule could not be checked, so the gate was not opened. This is a setup problem — contact your admin."
 	case "time_window_invalid", "time_window_unavailable":
 		// The schedule could not be evaluated, so the open was refused rather
 		// than let through. Say that it is a configuration fault and not the

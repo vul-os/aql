@@ -38,13 +38,29 @@ doesn't need to trust the path — including any tunnel you put in front.
 
 ## Geofence safety
 
-**Status: designed, not implemented.** Nothing below runs yet — there is no
-geofencing code in the hub today, and no time-window rule engine either (weekly
-windows exist only inside offline grants, and are evaluated by the controller). This
-section
-describes the intended design so operators know what's coming and implementers know
-the target; treat it as a spec, not a live control, until this notice is removed. See
-the [README](https://github.com/vul-os/aql#features) for current, verified status.
+**Both now run.** Geofence rules and online time-window rules are enforced inside the
+open path's choke point, alongside the limits and quotas. Weekly windows are no longer
+offline-only: the same window vocabulary a grant carries is now evaluated by the hub for
+everyday opens too.
+
+**But read this before relying on the geofence.** It is a convenience and a
+mistake-preventer, **not a security control**, and the distinction is not a technicality.
+The coordinates come from a phone, over a chat rail or an API call, and a phone can claim
+to be anywhere. Nothing about them is verified or verifiable. A geofence stops a resident
+opening the wrong gate from the sofa; it does not stop anyone who is trying. Building it
+was worth doing because the mistake is common — but an operator who treats it as a
+barrier has been misled, and it is worse to have it and believe in it than not to have it.
+
+Two consequences worth knowing up front:
+
+- **No chat rail sends coordinates today.** So a fenced gate with the default
+  `on_missing_location: deny` refuses WhatsApp, Telegram, Slack and Discord outright. The
+  `allow` setting exists for operators who need those rails, and is a deliberate choice
+  rather than a silent default.
+- **A slack allowance, not a reported accuracy, absorbs GPS error.** Honouring a
+  client-reported accuracy figure would let any caller widen any fence to any size by
+  claiming a bad fix — turning the one mitigation for GPS error into the easiest way to
+  defeat the feature.
 
 A geofence stops people from opening your gate when they're nowhere near it. It's
 optional and per-location: off by default for houses, on by default for complexes.

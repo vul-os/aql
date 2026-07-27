@@ -122,8 +122,8 @@ finished. The engine behind the other six is not built.**
   radio; the GATT peripheral glue exists only for **Linux/BlueZ** behind `-tags ble` and has
   **never been validated on hardware**. On every other platform the peripheral returns
   `ErrUnsupported`.
-- **Geofencing, Google OAuth, 2FA.** Some of these have console screens the hub does not
-  serve; the drift is tracked mechanically by a route-parity test.
+- **Google OAuth.** The console has a screen the hub does not serve; the drift is tracked
+  mechanically by a route-parity test.
 
   Three things that used to be on this list are not gaps any more, and are called out
   because a "not built" list rots toward pessimism and nobody re-reads it. **Password

@@ -132,7 +132,12 @@ hub's issuance endpoint):
 - [x] **Password reset** (forgot / reset / update)
 - [ ] Analytics and per-access-point maintenance
 - [ ] Google OAuth
-- [ ] 2FA, and any in-band recovery for a lost sole instance-admin password
+- [x] **2FA (TOTP)** — opt-in per user, enrol-prove-activate so a half-enrolled secret
+      never gates login, ±1 step of skew, replay refused by a monotonic last-step, and ten
+      single-use recovery codes minted in the same transaction as activation so 2FA is
+      never on without an escape hatch
+- [ ] A `gateway 2fa disable --user` subcommand, so the last-resort recovery is not a
+      manual SQL update
 
 ---
 

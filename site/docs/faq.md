@@ -117,9 +117,10 @@ best with Aql. That goal is not reflected in shipped code.
 ### Is it production-ready?
 
 The access-control path is real, tested, and honest about its edges — but it is pre-1.0,
-the GPIO driver is unwritten, the BLE radio has never run on hardware, and there is no
-2FA and no recovery for a lost sole-admin password. Read [Security](security.md) and the
-threat model before you put it on a gate people depend on.
+the GPIO driver has never driven a relay, the BLE radio has never run on hardware, and a
+sole admin who loses both their password and their 2FA recovery codes has no in-band way
+back in. Read [Security](security.md) and the threat model before you put it on a gate
+people depend on.
 
 **And a non-negotiable:** Aql must never be the only way out of a building. Fire and
 building codes require code-compliant fail-safe egress hardware regardless of what any

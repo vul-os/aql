@@ -123,7 +123,7 @@ sign up first, then redeem. `GET /admin/claim` tells you where you stand:
 **I'm locked out of the only admin account.**
 The API refuses to disable or demote the *last* active instance admin precisely so
 this can't happen through Aql itself — but it can't protect you from a lost
-password (there is no 2FA to lose — Aql doesn't have it). Honestly: there is no
+password, or both that and your ten recovery codes if you enrolled in 2FA. Honestly: there is no
 in-band recovery. Regaining
 the seat requires direct access to the hub's database (set the admin flag on
 another active user yourself) — which is also why "who can touch the host" *is*
