@@ -582,6 +582,24 @@ export const api = {
   engineHealth: () => apiFetch<EngineHealthResponse>('/engine/health'),
 
   /**
+   * Browse the LAN for controllers advertising themselves over mDNS.
+   *
+   * POST because it puts multicast on the network and takes seconds — the
+   * wrong shape for something a browser might prefetch or retry. Admin-only:
+   * the result is a map of what is on the network.
+   *
+   * Render `note` with the results, always. mDNS is unauthenticated by
+   * construction, so a discovered controller is an address to check rather
+   * than a device to trust, and a list of found devices is exactly where
+   * someone reaches for a one-click "add".
+   */
+  discoverControllers: (accountId: string) =>
+    apiFetch<{ controllers: DiscoveredController[]; note: string }>(
+      `/accounts/${accountId}/discover/controllers`,
+      { method: 'POST' },
+    ),
+
+  /**
    * The four KOTVA §26.3 fields per chat rail.
    *
    * Unauthenticated by design: the fields exist so someone can compare rails
@@ -1702,4 +1720,18 @@ export type RailDirection = {
   /** Field 4: who sees plaintext. Never "nobody" on any of these rails. */
   exposure: string;
   note?: string;
+};
+
+/** A controller that answered an mDNS browse. Not paired, and not trusted. */
+export type DiscoveredController = {
+  instance: string;
+  /** From the TXT record — which controller answered. Empty is a reason to be
+   *  suspicious: a real controller always advertises one. */
+  device_id: string;
+  /** host:port for its LAN grant listener. */
+  addr: string;
+  proto: string;
+  /** TXT keys this hub did not recognise, carried through so a newer
+   *  controller's extra metadata is visible rather than dropped. */
+  extra?: Record<string, string>;
 };

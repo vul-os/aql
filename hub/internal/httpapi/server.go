@@ -322,6 +322,11 @@ func (s *Server) Router() http.Handler {
 	// and a resident refused at the gate needs to be able to see why. Note
 	// that this is a convenience, not a security control — the position it
 	// tests is client-supplied and unverified (store/geofence.go).
+	// LAN controller discovery (see discovery.go). POST, not GET: a browse puts
+	// multicast on the operator's network and takes seconds, which is the wrong
+	// shape for something a browser may prefetch or retry.
+	mux.Handle("POST /v1/accounts/{id}/discover/controllers", s.requireAuth(s.handleDiscoverControllers))
+
 	// Rail disclosures (see disclosure.go). Deliberately unauthenticated: the
 	// four §26.3 fields exist so someone can compare adapters BEFORE choosing
 	// one, and there is nothing account-specific in what the platforms do.

@@ -171,8 +171,13 @@ protocol driver of any kind is present in this repository.
       zigbee2mqtt's retained `bridge/devices` announcement and proposes candidates
       with their evidence. It writes no config and registers nothing: a capability
       decides which verbs the engine will route, so that stays a human's call
-- [ ] mDNS/SSDP discovery, and Zigbee pairing (turning join on is an actuation with a
-      real security consequence, not a discovery side effect)
+- [x] mDNS controller discovery — the controller has advertised `_lintel._tcp` for a
+      while and nothing listened; `hub/internal/discovery` is the other half, served at
+      `POST /v1/accounts/{id}/discover/controllers`. It pairs nothing: mDNS is
+      unauthenticated, so a found controller is an address to check and a claim token is
+      still typed by a human
+- [ ] SSDP/UPnP discovery, and Zigbee pairing (turning join on is an actuation with a real
+      security consequence, not a discovery side effect)
       replacing the demo dataset with live device state
 - [ ] Bring the existing access module onto the same internal device model, so `access` is
       one kind among seven rather than a parallel stack
