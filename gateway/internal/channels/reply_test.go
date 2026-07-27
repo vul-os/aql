@@ -64,3 +64,63 @@ func TestMissingLocationIsDistinctFromBeingTooFarAway(t *testing.T) {
 		t.Fatal("a missing location and a distant one must not read the same")
 	}
 }
+
+// The structural fix. Three features shipped a denial that read as a rate
+// limit, because DenialMessage's default branch silently absorbed any reason it
+// did not know. This asserts every reason the open path can produce has copy of
+// its own — so the fourth one fails here rather than in front of a resident.
+func TestEveryDenialReasonHasItsOwnMessage(t *testing.T) {
+	rateLimited := DenialMessage("rate_limited", 600, "https://x")
+	seen := map[string]string{}
+	for _, reason := range DenialReasons() {
+		msg := DenialMessage(reason, 600, "https://x")
+
+		if strings.Contains(msg, reason) {
+			t.Errorf("%s falls through to the unknown-reason fallback — it has no "+
+				"message of its own, so a resident is shown a reason code", reason)
+		}
+		if reason != "rate_limited" && msg == rateLimited {
+			t.Errorf("%s is word-for-word the rate-limit message; that is the bug "+
+				"this test exists to prevent", reason)
+		}
+		if prev, dup := seen[msg]; dup && !deliberatelyShared(reason, prev) {
+			t.Errorf("%s and %s render identically, so a resident cannot tell "+
+				"which happened: %q", reason, prev, msg)
+		}
+		seen[msg] = reason
+	}
+}
+
+// The fallback must not invent a cause. It can say the gate did not open,
+// because that is certainly true, and nothing else.
+func TestUnknownReasonFallbackInventsNothing(t *testing.T) {
+	msg := DenialMessage("some_future_reason", 600, "https://x")
+	low := strings.ToLower(msg)
+	for _, lie := range []string{"too many", "try again in", "limit reached", "suspended"} {
+		if strings.Contains(low, lie) {
+			t.Errorf("the fallback claims %q for an unknown reason: %q", lie, msg)
+		}
+	}
+	if !strings.Contains(msg, "some_future_reason") {
+		t.Error("the fallback should surface the reason code, so an operator " +
+			"reading a screenshot can act on it")
+	}
+}
+
+// Two pairs share copy on purpose: from the resident's side, a rule that is
+// invalid and one that could not be evaluated are the same problem — the gate
+// did not open and an operator has to fix something. They cannot act on the
+// difference, so splitting the message would be detail for its own sake. The
+// distinction is preserved where it is useful, in the audit row.
+func deliberatelyShared(a, b string) bool {
+	pairs := [][2]string{
+		{"time_window_invalid", "time_window_unavailable"},
+		{"geofence_invalid", "geofence_unavailable"},
+	}
+	for _, p := range pairs {
+		if (a == p[0] && b == p[1]) || (a == p[1] && b == p[0]) {
+			return true
+		}
+	}
+	return false
+}

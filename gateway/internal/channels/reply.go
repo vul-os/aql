@@ -49,12 +49,42 @@ func DenialMessage(reason string, retryAfterS int64, publicURL string) string {
 		// than let through. Say that it is a configuration fault and not the
 		// resident's, because otherwise they will keep trying.
 		return "This gate's access schedule could not be checked, so the gate was not opened. This is a setup problem — contact your admin."
-	default: // rate_limited
+	case "rate_limited":
 		mins := (retryAfterS + 59) / 60
 		if mins < 1 {
 			mins = 1
 		}
 		return fmt.Sprintf("Too many opens — try again in ~%d min.", mins)
+	}
+
+	// UNKNOWN REASON. This branch used to be `default: // rate_limited`, and
+	// three separate features shipped through it: schedule denials, then
+	// geofence denials, each telling a resident "Too many opens — try again in
+	// ~N min." The minutes were right and the cause was a lie, and in the
+	// geofence case it told them to do the one thing that could not possibly
+	// work, because waiting does not move you closer to a gate.
+	//
+	// A default that silently absorbs new reasons is a fail-open in the copy.
+	// So the fallback now says only what is certainly true — the gate did not
+	// open, and here is the reason code — rather than inventing a cause. It is
+	// worse prose and it cannot lie. DenialReasons() plus the test in
+	// reply_test.go make a missing case a build-time failure rather than a
+	// message a resident acts on.
+	if reason == "" {
+		return "The gate was not opened. Contact your admin if that looks wrong."
+	}
+	return fmt.Sprintf("The gate was not opened (%s). Contact your admin if that looks wrong.", reason)
+}
+
+// DenialReasons is every reason the open path can produce. It exists so a test
+// can assert each one has a message, which is the only thing that stops a
+// fourth feature quietly reusing someone else's copy.
+func DenialReasons() []string {
+	return []string{
+		"account_suspended", "user_disabled", "quota_exceeded", "rate_limited",
+		"outside_time_window", "time_window_invalid", "time_window_unavailable",
+		"outside_geofence", "geofence_location_required",
+		"geofence_invalid", "geofence_unavailable",
 	}
 }
 
