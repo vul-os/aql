@@ -71,13 +71,24 @@ finished. The engine behind the other six is not built.**
 
 ### 🔨 Not built
 
-- **A driver for any real device network.** The device-engine *seam* now exists
-  ([`gateway/internal/devices/`](gateway/internal/devices/)) — an internal device model, a
-  closed capability/verb catalogue with safety tiers, a registry, and a generic
-  HTTP/webhook driver that can drive a device with a REST endpoint. What does **not**
-  exist is a driver speaking Matter, Zigbee, Z-Wave, Modbus or ONVIF to a real device
-  network; an MQTT client is in progress and not yet wired to the seam. So the only
-  device class the hub drives end to end today is still a gate/door/barrier controller.
+- **A driver for Matter, or a native Zigbee or Z-Wave radio.** The device-engine seam
+  exists ([`gateway/internal/devices/`](gateway/internal/devices/)) — an internal device
+  model, a closed capability/verb catalogue with safety tiers, and a registry — and three
+  drivers are wired into the binary behind `-device-drivers`: **HTTP/webhook** (any device
+  with a REST endpoint), **ONVIF camera**, and **MQTT**.
+
+  MQTT reaches further than its name suggests, and an earlier version of this README was
+  wrong about why. Zigbee and Z-Wave were listed here as blocked on radio hardware. They
+  are not: the near-universal deployment is a bridge — `zigbee2mqtt`, or `zwave-js-ui` —
+  that owns the radio and republishes every device onto MQTT, so the hub needs no radio at
+  all. The real barrier was narrower and entirely ours: those bridges publish a JSON
+  object per device (`{"state":"ON","brightness":254,"linkquality":72}`) and the driver
+  could only read a bare number or a bare string. A per-metric JSON field selector closes
+  it, so **Zigbee and Z-Wave hardware behind a bridge is reachable today**.
+
+  What is still genuinely missing: Matter, a Modbus driver (the frame/decode layer is
+  written, the `Driver` is not), and device discovery. Untested against physical hardware
+  — reachable in the protocol sense is not the same as verified in someone's house.
 - **Automations running against real devices.** The runtime exists and is tested
   ([`gateway/internal/automations/`](gateway/internal/automations/)) — rule object,
   scheduler with restart survival, execution engine, and a hard ceiling that refuses to
@@ -286,7 +297,7 @@ flowchart LR
     chat --> hub
     console --> hub
     hub -->|"Ed25519-signed command<br/>outbound wss ⇦ dial-out"| ctl
-    eng -.->|"Matter · MQTT · Zigbee<br/>ONVIF · Modbus · HTTP"| future
+    eng -->|"HTTP · MQTT · ONVIF<br/>(Zigbee/Z-Wave via bridge)"| future
     zana["Zana hardware<br/>(open devices, run best on Aql)"]
     zana -.-> eng
 ```

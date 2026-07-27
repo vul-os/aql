@@ -264,12 +264,25 @@ Aql actuates the physical world, so some commands need care a dashboard would no
 
 Stated plainly so nobody mistakes design intent for a control:
 
-- No device drivers (Matter, MQTT, Zigbee, ONVIF, Modbus) — so no device-onboarding
-  threat surface, and no defence for one.
-- No automations runtime.
-- No energy-metering ingestion.
+- **No Matter driver, and no native Zigbee or Z-Wave radio.** Three drivers do ship —
+  HTTP/webhook, ONVIF camera, MQTT — and Zigbee/Z-Wave hardware is reachable through a
+  bridge (`zigbee2mqtt`, `zwave-js-ui`) that republishes onto MQTT. Those are a real
+  onboarding surface and are defended: every driver validates its whole config at
+  construction, capabilities are a closed catalogue, and a verb above the engine's tier
+  ceiling is refused rather than attempted. A Modbus `Driver` does not exist (the
+  frame/decode layer does), and there is no device discovery — every device is configured
+  by hand, which is a smaller attack surface than pairing, deliberately.
+- **No HTTP surface for automations or energy.** Both runtimes exist, are tested, and run
+  as background workers when configured (`internal/automations/`, `internal/energy/`).
+  Neither is reachable over the API: there is no endpoint to create a rule or read a
+  meter. So an automation cannot be created, altered or triggered by a request — which
+  removes a threat surface rather than defending one, and is not a shipped feature.
 - No phone-side offline-grant client — the emergency path does not run end to end.
-- No geofencing and no time-window rules — nothing to bypass, and nothing enforcing them.
+- **Geofencing and time-window rules do ship** and are enforced on the open path
+  (`internal/httpapi/geofence.go`, `timewindows.go`). They are stated here rather than
+  omitted because an earlier revision of this section listed them as not built, which is
+  a worse error than the reverse: it tells a reader not to look for a bypass in code that
+  is live.
 - No 2FA on hub accounts, and **no in-band recovery for a lost sole instance-admin
   password**. Regaining the seat requires direct database access, which is also why "who
   can touch the host" *is* your real admin list. Grant a second admin early.

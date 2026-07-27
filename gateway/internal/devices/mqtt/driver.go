@@ -98,6 +98,7 @@ package mqtt
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -161,6 +162,7 @@ type route struct {
 	deviceID string
 	metric   string
 	text     bool
+	field    string
 }
 
 // sample is one cached telemetry value.
@@ -235,7 +237,7 @@ func New(cfg Config) (*Driver, error) {
 
 		for _, st := range dc.State {
 			d.routes = append(d.routes, route{
-				filter: st.Topic, deviceID: dc.ID, metric: st.Metric, text: st.Text,
+				filter: st.Topic, deviceID: dc.ID, metric: st.Metric, text: st.Text, field: st.Field,
 			})
 			if q, seen := subQoS[st.Topic]; !seen || st.QoS > q {
 				subQoS[st.Topic] = st.QoS
@@ -608,6 +610,27 @@ func (d *Driver) onMessage(topic string, payload []byte, at time.Time) {
 			delete(d.samples[r.deviceID], r.metric)
 			continue
 		}
+		// A JSON field selector turns a bridge's per-device object into a
+		// single metric. See StateTopic.Field: this is what makes zigbee2mqtt
+		// and zwave-js-ui readable, which is most of the Zigbee and Z-Wave
+		// hardware anyone actually runs.
+		if r.field != "" {
+			var doc any
+			if err := json.Unmarshal(trimmed, &doc); err != nil {
+				logs = append(logs, fmt.Sprintf("mqtt: device %q metric %q: payload is not JSON but a field selector is set; sample dropped",
+					r.deviceID, r.metric))
+				continue
+			}
+			got, ok := jsonField(doc, r.field)
+			if !ok {
+				// A field the bridge did not publish this time is absent, not
+				// zero and not stale. Forget rather than guess: zigbee2mqtt
+				// omits keys a device has not reported since it joined.
+				delete(d.samples[r.deviceID], r.metric)
+				continue
+			}
+			trimmed = got
+		}
 		if r.text {
 			d.samples[r.deviceID][r.metric] = sample{text: string(trimmed), at: at}
 			continue
@@ -721,3 +744,41 @@ func missingEvidence(t devices.Tier) string {
 	}
 	return "nothing confirms the device received it"
 }
+
+// jsonField resolves a dotted path in a decoded JSON document and renders the
+// value as the bytes the normal payload path would have received. The grammar
+// mirrors httpdev's deliberately: one path syntax in the product, not two.
+//
+// A bool renders as "1"/"0" so a Zigbee contact sensor publishing
+// {"contact":true} can be read as a number, and a string renders as itself so
+// {"state":"ON"} works with Text.
+func jsonField(doc any, path string) ([]byte, bool) {
+	cur := doc
+	for _, seg := range strings.Split(path, ".") {
+		m, ok := cur.(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		cur, ok = m[seg]
+		if !ok {
+			return nil, false
+		}
+	}
+	switch v := cur.(type) {
+	case string:
+		return []byte(v), true
+	case float64:
+		return []byte(strconv.FormatFloat(v, 'f', -1, 64)), true
+	case bool:
+		if v {
+			return []byte("1"), true
+		}
+		return []byte("0"), true
+	}
+	// null, an object or an array is not a reading. Absent beats invented.
+	return nil, false
+}
+
+// jsonUnmarshal is a thin alias so tests can decode fixtures with the same
+// decoder the driver uses.
+func jsonUnmarshal(b []byte, v any) error { return json.Unmarshal(b, v) }

@@ -109,6 +109,26 @@ type StateTopic struct {
 	// Text carries the payload through as Reading.Text instead of parsing it as
 	// a number. Use it for "docked", "patrol", "locked".
 	Text bool
+	// Field extracts one value from a JSON payload by dotted path, instead of
+	// treating the whole payload as the value.
+	//
+	// This is what makes the common Zigbee and Z-Wave deployments reachable.
+	// Neither needs a radio in the hub: the near-universal setup is a bridge —
+	// zigbee2mqtt, or zwave-js-ui — that owns the radio and republishes every
+	// device onto MQTT. But those bridges publish a JSON object per device,
+	//
+	//	zigbee2mqtt/kitchen-lamp  ->  {"state":"ON","brightness":254,"linkquality":72}
+	//
+	// so a driver that can only read a bare number or a bare string cannot see
+	// any of it. One dotted path per metric is the whole difference between
+	// "MQTT devices" and "most of the Zigbee and Z-Wave hardware people
+	// actually own".
+	//
+	// Empty means the payload IS the value, which is what a plain sensor
+	// publishing "21.5" does. Dotted keys are not addressable; the grammar is
+	// deliberately the same minimal one httpdev uses, so there is one path
+	// syntax in the product rather than two.
+	Field string
 }
 
 // Command binds one catalogue verb to one outbound topic and payload.
@@ -294,6 +314,13 @@ func validateDevice(dc DeviceConfig) []string {
 			add("metric %q is declared twice", st.Metric)
 		}
 		metrics[st.Metric] = true
+		// A field selector that can never resolve is an operator typo worth
+		// refusing now. Silently reading nothing forever is the failure mode
+		// this catches: a metric that is simply always absent looks identical
+		// to a device that has not reported.
+		if err := checkField(st.Field); err != nil {
+			add("state topic %q: %v", st.Topic, err)
+		}
 		if err := ValidateFilter(st.Topic); err != nil {
 			add("state topic: %v", err)
 		}
@@ -439,4 +466,22 @@ func render(tmpl string, vars map[string]string) (string, error) {
 // no exponent, no trailing zeros.
 func formatNumber(v float64) string {
 	return strconv.FormatFloat(v, 'f', -1, 64)
+}
+
+// checkField rejects a JSON field path that cannot resolve. Empty is valid and
+// means the payload IS the value, which is what a plain sensor publishing
+// "21.5" does.
+func checkField(path string) error {
+	if path == "" {
+		return nil
+	}
+	if strings.HasPrefix(path, ".") || strings.HasSuffix(path, ".") {
+		return fmt.Errorf("field %q has an empty leading or trailing segment", path)
+	}
+	for _, seg := range strings.Split(path, ".") {
+		if seg == "" {
+			return fmt.Errorf("field %q has an empty segment", path)
+		}
+	}
+	return nil
 }

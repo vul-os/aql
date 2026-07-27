@@ -21,7 +21,7 @@ func TestResolveWhatsAppEngineFailsClosedToCloud(t *testing.T) {
 		{"", WhatsAppEngineCloud},
 		{"cloud", WhatsAppEngineCloud},
 		{"CLOUD", WhatsAppEngineCloud},
-		{"brige", WhatsAppEngineCloud},  // typo must NOT fall through to bridge
+		{"brige", WhatsAppEngineCloud},    // typo must NOT fall through to bridge
 		{"Bridge ", WhatsAppEngineBridge}, // exact word, case/whitespace-insensitive
 		{"bridge", WhatsAppEngineBridge},
 		{"BRIDGE", WhatsAppEngineBridge},

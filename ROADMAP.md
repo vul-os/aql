@@ -153,11 +153,13 @@ protocol driver of any kind is present in this repository.
       console renders generically, with no protocol-specific code
 - [ ] Driver/adapter seam so a protocol can be added without touching the console:
   - [ ] Matter
-  - [ ] MQTT
-  - [ ] Zigbee
-  - [ ] ONVIF (IP cameras)
-  - [ ] Modbus
-  - [ ] Generic HTTP/webhook
+  - [x] MQTT — wired into the binary as `-device-drivers mqtt`
+  - [x] Zigbee / Z-Wave via a bridge (`zigbee2mqtt`, `zwave-js-ui`) over MQTT. No radio
+        in the hub; a per-metric JSON field selector reads the bridge's per-device object.
+        Not yet exercised against physical hardware.
+  - [x] ONVIF (IP cameras)
+  - [ ] Modbus — frame/decode layer written, `Driver` not yet implemented
+  - [x] Generic HTTP/webhook
 - [ ] Discovery (mDNS/SSDP, Zigbee pairing, MQTT topic scan, ONVIF probe, manual add)
       replacing the demo dataset with live device state
 - [ ] Bring the existing access module onto the same internal device model, so `access` is

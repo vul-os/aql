@@ -103,6 +103,7 @@ import (
 	"github.com/vul-os/aql/gateway/internal/devices"
 	"github.com/vul-os/aql/gateway/internal/devices/camera"
 	"github.com/vul-os/aql/gateway/internal/devices/httpdev"
+	"github.com/vul-os/aql/gateway/internal/devices/mqtt"
 	"github.com/vul-os/aql/gateway/internal/energy"
 	"github.com/vul-os/aql/gateway/internal/httpapi"
 	"github.com/vul-os/aql/gateway/internal/keys"
@@ -590,6 +591,7 @@ func (h *hub) close() {
 const (
 	deviceDriverHTTP   = "http"
 	deviceDriverCamera = "camera"
+	deviceDriverMQTT   = "mqtt"
 )
 
 // defaultDeviceRefresh is how often every driver is re-discovered. Five
@@ -599,7 +601,7 @@ const (
 const defaultDeviceRefresh = 5 * time.Minute
 
 func knownDeviceDrivers() []string {
-	return []string{deviceDriverCamera, deviceDriverHTTP}
+	return []string{deviceDriverCamera, deviceDriverHTTP, deviceDriverMQTT}
 }
 
 // resolveDeviceDrivers turns the raw -device-drivers value into the set of
@@ -623,7 +625,7 @@ func resolveDeviceDrivers(raw string) (enabled, unknown []string) {
 			continue
 		}
 		switch name {
-		case deviceDriverHTTP, deviceDriverCamera:
+		case deviceDriverHTTP, deviceDriverCamera, deviceDriverMQTT:
 			if !seen[name] {
 				seen[name] = true
 				enabled = append(enabled, name)
@@ -654,6 +656,7 @@ func resolveDeviceDrivers(raw string) (enabled, unknown []string) {
 type deviceFile struct {
 	HTTP   *httpdev.Config `json:"http"`
 	Camera *camera.Config  `json:"camera"`
+	MQTT   *mqtt.Config    `json:"mqtt"`
 }
 
 func loadDeviceFile(path string) (deviceFile, error) {
@@ -681,6 +684,15 @@ func buildDeviceDriver(name string, file deviceFile) (devices.Driver, error) {
 			return nil, errors.New(`the device config has no "http" object`)
 		}
 		d, err := httpdev.New(*file.HTTP)
+		if err != nil {
+			return nil, err
+		}
+		return d, nil
+	case deviceDriverMQTT:
+		if file.MQTT == nil {
+			return nil, errors.New(`the device config has no "mqtt" object`)
+		}
+		d, err := mqtt.New(*file.MQTT)
 		if err != nil {
 			return nil, err
 		}
