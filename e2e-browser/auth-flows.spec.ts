@@ -26,13 +26,13 @@ test.afterAll(async () => {
 
 async function connectAndSignUp(
   page: import('@playwright/test').Page,
-  email: string,
+  username: string,
 ): Promise<void> {
   await page.goto(gw.url('/signup'));
   await page.getByLabel('Hub URL', { exact: true }).fill(gw.baseUrl);
   await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await page.getByLabel('Your name', { exact: true }).fill('Auth Flow Tester');
-  await page.getByLabel('Email', { exact: true }).fill(email);
+  await page.getByLabel('Username', { exact: true }).fill(username);
   await page.getByRole('textbox', { name: 'Password' }).fill('correct horse battery staple 1');
   await page.getByRole('button', { name: 'Continue →', exact: true }).click();
   await page.getByRole('button', { name: 'Continue →', exact: true }).click(); // account-kind step
@@ -46,9 +46,9 @@ async function connectAndSignUp(
 test('logout clears the session locally and server-side, and protected routes bounce to /login', async ({
   page,
 }) => {
-  await connectAndSignUp(page, `e2e-logout-${Date.now()}@example.com`);
+  await connectAndSignUp(page, `e2e-logout-${Date.now()}`);
 
-  expect(await page.evaluate(() => localStorage.getItem('lintel.access_token'))).not.toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('aql.access_token'))).not.toBeNull();
 
   const logoutResponsePromise = page.waitForResponse(
     (r) => r.url() === gw.url('/v1/auth/logout') && r.request().method() === 'POST',
@@ -59,8 +59,8 @@ test('logout clears the session locally and server-side, and protected routes bo
   expect(logoutResponse.status()).toBe(200);
 
   await expect(page).toHaveURL(`${gw.baseUrl}/login`);
-  expect(await page.evaluate(() => localStorage.getItem('lintel.access_token'))).toBeNull();
-  expect(await page.evaluate(() => localStorage.getItem('lintel.refresh_token'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('aql.access_token'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('aql.refresh_token'))).toBeNull();
 
   // Not just a client-side illusion: hitting a protected route again must
   // still bounce to /login (no stale in-memory auth state surviving nav).
@@ -69,16 +69,16 @@ test('logout clears the session locally and server-side, and protected routes bo
 });
 
 test('a stale access token triggers a transparent 401 -> refresh -> retry', async ({ page }) => {
-  await connectAndSignUp(page, `e2e-refresh-${Date.now()}@example.com`);
+  await connectAndSignUp(page, `e2e-refresh-${Date.now()}`);
 
-  const originalRefresh = await page.evaluate(() => localStorage.getItem('lintel.refresh_token'));
+  const originalRefresh = await page.evaluate(() => localStorage.getItem('aql.refresh_token'));
   expect(originalRefresh).not.toBeNull();
 
   // Corrupt the access token so the next authenticated request 401s, while
   // leaving the real refresh token in place — this is "access token expired
   // mid-session" without waiting out the real 15-minute TTL.
   await page.evaluate(() => {
-    localStorage.setItem('lintel.access_token', 'corrupted.not-a-real.jwt');
+    localStorage.setItem('aql.access_token', 'corrupted.not-a-real.jwt');
   });
   // The 401 below is this test's deliberate premise, not a bug — but
   // Chromium logs any non-2xx fetch response to the console as an "error"
@@ -124,12 +124,63 @@ test('a stale access token triggers a transparent 401 -> refresh -> retry', asyn
   await expect.poll(() => meStatuses).toContain(401);
   await expect.poll(() => meStatuses).toContain(200);
 
-  const newAccess = await page.evaluate(() => localStorage.getItem('lintel.access_token'));
-  const newRefresh = await page.evaluate(() => localStorage.getItem('lintel.refresh_token'));
+  const newAccess = await page.evaluate(() => localStorage.getItem('aql.access_token'));
+  const newRefresh = await page.evaluate(() => localStorage.getItem('aql.refresh_token'));
   expect(newAccess).not.toBe('corrupted.not-a-real.jwt');
   expect(newAccess).toEqual(expect.any(String));
   // Refresh tokens rotate on every use (family reuse-detection, per
   // hub/internal/httpapi/auth.go's handleRefresh) — the pre-corruption
   // refresh token must no longer be the active one.
   expect(newRefresh).not.toBe(originalRefresh);
+});
+
+// The upgrade path for everyone who was already running this.
+//
+// Browser storage keys moved from `lintel.*` to `aql.*` when the repo stopped
+// being lintel. src/lib/storageKeys.ts migrates them forward on read, and
+// src/lib/__tests__/storageKeys.test.ts covers that against an in-memory stub —
+// but nothing had ever exercised it in a real browser against a real hub, which
+// is where it actually has to work.
+//
+// The failure it guards against is silent and unpleasant: every existing user
+// signed out on upgrade, their chosen hub forgotten, with no error anywhere to
+// explain it. "It logged me out and forgot my server" is a bug report nobody
+// would connect to a directory rename.
+test('a browser holding the old lintel.* keys is migrated, not signed out', async ({ page }) => {
+  await connectAndSignUp(page, `e2e-migrate-${Date.now()}`);
+
+  // Take the real session this browser just established and put it back under
+  // the OLD names, exactly as an install from before the rename would hold it.
+  const session = await page.evaluate(() => {
+    const access = localStorage.getItem('aql.access_token');
+    const refresh = localStorage.getItem('aql.refresh_token');
+    const hub = localStorage.getItem('aql.gateway_url');
+    localStorage.clear();
+    if (access) localStorage.setItem('lintel.access_token', access);
+    if (refresh) localStorage.setItem('lintel.refresh_token', refresh);
+    if (hub) localStorage.setItem('lintel.gateway_url', hub);
+    return { access, refresh, hub };
+  });
+  expect(session.access, 'no session to migrate — the sign-up helper changed').not.toBeNull();
+  expect(session.hub, 'no stored hub URL to migrate').not.toBeNull();
+
+  await page.goto(gw.url('/app'));
+
+  // Still signed in: the app read the legacy keys rather than finding nothing.
+  await expect(page).toHaveURL(/\/app(\/|$)/);
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+  const after = await page.evaluate(() => ({
+    newAccess: localStorage.getItem('aql.access_token'),
+    oldAccess: localStorage.getItem('lintel.access_token'),
+    newHub: localStorage.getItem('aql.gateway_url'),
+  }));
+
+  // Migrated FORWARD, not merely read. The old key is gone, so the fallback
+  // runs at most once per browser rather than becoming permanent by neglect.
+  expect(after.newAccess, 'the session was read but never rewritten under the new key').toBe(
+    session.access,
+  );
+  expect(after.oldAccess, 'the legacy key survived; the fallback would run forever').toBeNull();
+  expect(after.newHub, 'the chosen hub was not carried across').toBe(session.hub);
 });

@@ -59,10 +59,14 @@ const KNOWN_UNAVAILABLE_V1_PATHS = new Set([
   '/v1/phones/me/phones',
   '/v1/auth/me/slack',
   '/v1/auth/me/profile',
-  '/v1/auth/forgot-password',
-  '/v1/auth/reset-password',
-  '/v1/auth/verify-email',
-  '/v1/auth/google/start',
+  // NOT here any more, because the hub serves them now:
+  //   /v1/auth/forgot-password, /v1/auth/reset-password,
+  //   /v1/auth/update-password  (hub/internal/httpapi/authrecovery.go)
+  // Leaving them allowlisted would have meant a regression on the recovery
+  // path could not fail this suite.
+  //
+  // /v1/auth/verify-email is gone entirely rather than moved: there is no
+  // email in this product, so there is nothing to verify and no route to miss.
 ]);
 const KNOWN_UNAVAILABLE_V1_PREFIXES = ['/v1/analytics/'];
 

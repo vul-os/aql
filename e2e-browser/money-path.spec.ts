@@ -21,7 +21,10 @@ test.afterAll(async () => {
 });
 
 const RUN_ID = Date.now();
-const EMAIL = `e2e-money-${RUN_ID}@example.com`;
+// A USERNAME, not an email. This product has no email identity: the hub
+// authenticates by username and its validator refuses whitespace and control
+// characters but requires no '@'.
+const USERNAME = `e2e-money-${RUN_ID}`;
 const PASSWORD = 'correct horse battery staple 1';
 const DISPLAY_NAME = 'Money Path Tester';
 const LOCATION_NAME = 'E2E Test House';
@@ -45,7 +48,7 @@ test('sign up, sign in, create a location + access point, attempt an open, read 
 
   // ── Step 1/3 — account basics ─────────────────────────────────────────
   await page.getByLabel('Your name', { exact: true }).fill(DISPLAY_NAME);
-  await page.getByLabel('Email', { exact: true }).fill(EMAIL);
+  await page.getByLabel('Username', { exact: true }).fill(USERNAME);
   await page.getByRole('textbox', { name: 'Password' }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Continue →', exact: true }).click();
 
@@ -94,7 +97,7 @@ test('sign up, sign in, create a location + access point, attempt an open, read 
   const loginResponsePromise = page.waitForResponse(
     (r) => r.url() === gw.url('/v1/auth/login') && r.request().method() === 'POST',
   );
-  await page.getByLabel('Email', { exact: true }).fill(EMAIL);
+  await page.getByLabel('Username', { exact: true }).fill(USERNAME);
   await page.getByRole('textbox', { name: 'Password' }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   const loginResponse = await loginResponsePromise;
