@@ -321,7 +321,7 @@ function AccountDrawer({
                         {e.access_point_name ?? e.location_name ?? '—'}
                       </span>
                       <span className="font-mono text-ink/50 truncate max-w-[38%] hidden sm:inline">
-                        {e.user_email ?? '—'}
+                        {e.user_username ?? '—'}
                       </span>
                     </li>
                   ))}

@@ -497,7 +497,7 @@ export default function Overview() {
                   </span>
                   <Verdict command={a.command} success={a.success} />
                   <span className="font-medium truncate">
-                    {a.actor_email ?? <span className="text-ink/55">unknown</span>}
+                    {a.actor_username ?? <span className="text-ink/55">unknown</span>}
                   </span>
                   <span className="text-ink/65 flex-1 min-w-0 truncate hidden md:inline">
                     {a.access_point_name ?? a.location_name ?? '—'}

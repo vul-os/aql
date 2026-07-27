@@ -138,7 +138,7 @@ function AccessLog() {
                       </Td>
                       <Td className="text-ink/70 text-xs">{e.account_name ?? '—'}</Td>
                       <Td className="font-mono text-xs text-ink/60">
-                        <span className="truncate block max-w-[200px]">{e.user_email ?? '—'}</span>
+                        <span className="truncate block max-w-[200px]">{e.user_username ?? '—'}</span>
                       </Td>
                       <Td className="font-mono text-[10px] uppercase text-ink/45">{e.source ?? '—'}</Td>
                     </tr>
@@ -192,7 +192,7 @@ function ActionLog() {
                       {fmtDateTime(a.created_at)}
                     </Td>
                     <Td className="font-mono text-xs text-ink/70">
-                      <span className="truncate block max-w-[200px]">{a.actor_email ?? '—'}</span>
+                      <span className="truncate block max-w-[200px]">{a.actor_username ?? '—'}</span>
                     </Td>
                     <Td>
                       <span className="font-mono text-xs text-ink/85">{a.action}</span>

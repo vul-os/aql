@@ -838,7 +838,7 @@ export type AccountSummary = {
     source: string | null;
     access_point_name: string | null;
     location_name: string | null;
-    actor_email: string | null;
+    actor_username: string | null;
   }>;
 };
 
@@ -1001,7 +1001,7 @@ export type AdminAccessLogEntry = {
   access_point_id: string | null;
   access_point_name: string | null;
   user_id: string | null;
-  user_email: string | null;
+  user_username: string | null;
 };
 
 export type AdminAccountDetail = {
@@ -1098,7 +1098,7 @@ export type AdminAuditResponse = {
 export type AdminAuditActionRow = {
   id: string;
   actor_user_id: string | null;
-  actor_email: string | null;
+  actor_username: string | null;
   action: string;
   target_kind: string | null;
   target_id: string | null;
