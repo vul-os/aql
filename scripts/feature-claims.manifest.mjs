@@ -447,6 +447,44 @@ export const FEATURES = [
     ],
   },
   {
+    // Added after a doc bug that no check could have caught: README,
+    // getting-started and self-host all listed password reset as
+    // unimplemented, for a feature that ships. The checker handles that
+    // direction fine — 'shipped' with no evidence fails — but only for claims
+    // it knows about, and this one was simply absent. A claim nobody wrote
+    // down is a claim nothing verifies, and the "not built" list rots toward
+    // pessimism because nobody re-reads a list of things that do not exist.
+    id: 'password-recovery',
+    label: 'Account recovery — forgot-password, reset-password and update-password are served',
+    docStatus: 'shipped',
+    docRefs: [
+      'README.md — password reset is NOT listed among the unimplemented gaps',
+      'site/docs/self-host.md — honest-gaps note no longer claims there is no password-reset route',
+      'site/docs/getting-started.md — not-implemented list excludes it',
+    ],
+    evidence: [
+      { file: 'gateway/internal/httpapi/server.go', pattern: '"POST /v1/auth/forgot-password"' },
+      { file: 'gateway/internal/httpapi/server.go', pattern: '"POST /v1/auth/reset-password"' },
+      { file: 'gateway/internal/httpapi/server.go', pattern: '"POST /v1/auth/update-password"' },
+    ],
+  },
+  {
+    // Identity here is a LOCAL username. Email was removed rather than
+    // deferred, so this claim guards the removal staying removed: a
+    // reintroduced email column or verify route would fail it.
+    id: 'no-email-identity',
+    label: 'No email identity and no email verification — users are identified by a local username',
+    docStatus: 'planned',
+    docRefs: [
+      'gateway/internal/store/migrations/0001_baseline.sql — users.username, and why it is not an address',
+      'README.md — email verification described as removed, not missing',
+    ],
+    evidence: [
+      { file: 'gateway/internal/store/migrations/0001_baseline.sql', pattern: 'email\\s+TEXT NOT NULL UNIQUE' },
+      { file: 'gateway/internal/httpapi/server.go', pattern: 'verify-email' },
+    ],
+  },
+  {
     id: 'logout-all',
     label: '"Log out everywhere" — POST /v1/auth/logout-all revokes every refresh-token family for the calling user',
     docStatus: 'shipped',
