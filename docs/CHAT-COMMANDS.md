@@ -13,14 +13,30 @@
 
 ## 0. The problem
 
-lintel's chat layer resolves exactly one verb. In the WhatsApp handler that is
-literally two substring tests:
+The chat layer resolves exactly one verb. Free text is still decided by two
+substring tests, but they now sit behind a type rather than loose in a handler:
 
 ```go
-isClose := strings.Contains(body, "close")
-isOpen  := strings.Contains(body, "open")
+func TextGateVerb(body string) (GateVerb, bool) {
+	switch {
+	case strings.Contains(body, "close"):
+		return VerbClose, true
+	case strings.Contains(body, "open"):
+		return VerbOpen, true
+	}
+	return verbUnset, false
+}
 ```
-— `gateway/internal/httpapi/channels_whatsapp.go:137-138`
+— `TextGateVerb`, `gateway/internal/channels/verb.go`
+
+> **Note.** When this document was written the pair lived inline in the WhatsApp
+> handler as `isClose`/`isOpen` booleans, and a body naming neither verb fell
+> through to `open`. Two later passes (`e10c06a`, `c5c697b`) closed that: the
+> verb is now a `GateVerb` whose unexported zero value renders *close*, and
+> `ok == false` means the body asked for neither, so the reply is the welcome
+> menu rather than an actuation. Parts of §2.2 below describe defects that are
+> now fixed in code; they are kept because the reasoning still explains why the
+> current shape is what it is.
 
 Slack and Telegram are stricter still — an exact-match switch, everything else
 falls through to the help menu (`gateway/internal/httpapi/channels_slack.go:139`,
@@ -37,7 +53,7 @@ if args.Command != "open" && args.Command != "close" {
 Aql's device model is heterogeneous by design: an ID, a kind, a zone, a state,
 and a set of commands/telemetry per device (`docs/ARCHITECTURE.md:96-127`),
 demonstrated today by twelve demo devices spanning Camera, Lighting, Robot,
-Climate, Energy, Sensor and Access kinds (`src/lib/data.ts:17-30`).
+Climate, Energy, Sensor and Access kinds (`src/lib/demoData.ts`).
 
 This spec generalises "a chat message actuates a device" from one verb on one
 device class to a verb registry over Aql's device model — **without** loosening
@@ -91,7 +107,7 @@ The tier is derived, never parsed. A message cannot assert its own risk level.
 
 Aql already models a device as *"an ID, a kind, a zone, a state, and a set of
 commands/telemetry"* (`docs/ARCHITECTURE.md:100-101`), and the console's shape
-is `{id, name, kind, zone, state, read, detail, seen}` (`src/lib/data.ts:6-15`).
+is `{id, name, kind, zone, state, read, detail, seen}` (`src/lib/demoData.ts`).
 
 **PROPOSAL.** Add one field to that internal shape — `capabilities: []CapabilityID`
 — and keep everything else. A capability is a named, versioned bundle of verbs
@@ -243,7 +259,7 @@ Four specific failures, all verifiable in the current code:
 candidate whose name is a substring of the message
 (`channels/whatsapp.go:269-276`). Against lintel's homogeneous gate list that is
 usually right. Against Aql's demo fleet it is not: "open the gate" substring-matches
-both `Gate Lock` and `Front Gate Camera` (`src/lib/data.ts:18`, `:28`). First-match
+both `Gate Lock` and `Front Gate Camera` (`src/lib/demoData.ts`). First-match
 is a fail-**open** on ambiguity, and it is the single most important behaviour to
 change.
 
@@ -285,7 +301,7 @@ against `Gate Lock` (capability `access.barrier`) and `Front Gate Camera`
 (capability `camera.*`, no `open` verb) has exactly one candidate, not two.
 
 **Stage 2 — scope narrowing.** The existing location filter
-(`channels_whatsapp.go:149`) generalises to Aql's `zone` (`src/lib/data.ts:6-15`)
+(`channels_whatsapp.go:149`) generalises to Aql's `zone` (`src/lib/demoData.ts`)
 layered under the gateway's `location` (`store/channels.go:39-42`):
 site → zone → device. Match a mentioned scope, filter, re-check.
 
@@ -606,7 +622,7 @@ map of the property.
 fingerprint and a schedule. A device list is a floor plan with equipment names.
 "Is anyone home" never has to be asked directly to be answered — the demo
 dataset already contains an `Away arm` automation whose trigger is *"everyone
-leaves"* (`src/lib/data.ts:50`), and reporting its state reports occupancy.
+leaves"* (`src/lib/demoData.ts`), and reporting its state reports occupancy.
 
 ### 4.4 Rules for read paths
 
@@ -622,7 +638,7 @@ leaves"* (`src/lib/data.ts:50`), and reporting its state reports occupancy.
    are on; showing 3." Depth lives in the console — the existing pattern of
    pointing at the portal (`channels/reply.go:22`).
 3. **No raw telemetry.** No series, no per-circuit breakdowns
-   (`src/lib/data.ts:57-65`), no coordinates, no camera state, no lock history.
+   (`src/lib/demoData.ts`), no coordinates, no camera state, no lock history.
 4. **Separate counter.** `query_1h`, its own scope. A query burst must not
    consume the `opens_1h` budget, or a reconnaissance flood becomes a
    denial-of-open against a member standing at their own gate. A query burst is
@@ -685,12 +701,12 @@ Exhaustively:
 4. **Fleet inventories, floor plans, zone maps** — anything that enumerates the
    property in one message.
 5. **Occupancy and presence facts**, including automation states that imply them
-   (`src/lib/data.ts:50`), unless opted in per location (§4.4 rule 6).
+   (`src/lib/demoData.ts`), unless opted in per location (§4.4 rule 6).
 6. **Security posture and lock state** for anything not being acted on in that
    exact exchange.
 7. **Audit-log contents, member rosters, other members' activity.**
 8. **Anything that narrows a physical attack** — schedules ("mower runs at
-   06:00", `src/lib/data.ts:51`), maintenance windows, controller offline
+   06:00", `src/lib/demoData.ts`), maintenance windows, controller offline
    status framed as an availability gap.
 
 ### 5.4 Identifiers in chat payloads are hints, never capabilities
