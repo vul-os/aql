@@ -158,7 +158,11 @@ protocol driver of any kind is present in this repository.
         in the hub; a per-metric JSON field selector reads the bridge's per-device object.
         Not yet exercised against physical hardware.
   - [x] ONVIF (IP cameras)
-  - [ ] Modbus — frame/decode layer written, `Driver` not yet implemented
+  - [x] Modbus TCP — read-only, and structurally so: config accepts only
+        capabilities whose whole verb set is `TierRead`, so the registry can never
+        route an actuating verb to one. No RTU (needs a serial port, which cannot
+        be tested); the common serial deployment is already reachable through a
+        TCP-to-RTU bridge
   - [x] Generic HTTP/webhook
 - [ ] Discovery (mDNS/SSDP, Zigbee pairing, MQTT topic scan, ONVIF probe, manual add)
       replacing the demo dataset with live device state

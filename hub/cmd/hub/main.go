@@ -103,6 +103,7 @@ import (
 	"github.com/vul-os/aql/hub/internal/devices"
 	"github.com/vul-os/aql/hub/internal/devices/camera"
 	"github.com/vul-os/aql/hub/internal/devices/httpdev"
+	"github.com/vul-os/aql/hub/internal/devices/modbus"
 	"github.com/vul-os/aql/hub/internal/devices/mqtt"
 	"github.com/vul-os/aql/hub/internal/energy"
 	"github.com/vul-os/aql/hub/internal/httpapi"
@@ -608,6 +609,7 @@ const (
 	deviceDriverHTTP   = "http"
 	deviceDriverCamera = "camera"
 	deviceDriverMQTT   = "mqtt"
+	deviceDriverModbus = "modbus"
 )
 
 // defaultDeviceRefresh is how often every driver is re-discovered. Five
@@ -617,7 +619,7 @@ const (
 const defaultDeviceRefresh = 5 * time.Minute
 
 func knownDeviceDrivers() []string {
-	return []string{deviceDriverCamera, deviceDriverHTTP, deviceDriverMQTT}
+	return []string{deviceDriverCamera, deviceDriverHTTP, deviceDriverModbus, deviceDriverMQTT}
 }
 
 // resolveDeviceDrivers turns the raw -device-drivers value into the set of
@@ -641,7 +643,7 @@ func resolveDeviceDrivers(raw string) (enabled, unknown []string) {
 			continue
 		}
 		switch name {
-		case deviceDriverHTTP, deviceDriverCamera, deviceDriverMQTT:
+		case deviceDriverHTTP, deviceDriverCamera, deviceDriverMQTT, deviceDriverModbus:
 			if !seen[name] {
 				seen[name] = true
 				enabled = append(enabled, name)
@@ -673,6 +675,7 @@ type deviceFile struct {
 	HTTP   *httpdev.Config `json:"http"`
 	Camera *camera.Config  `json:"camera"`
 	MQTT   *mqtt.Config    `json:"mqtt"`
+	Modbus *modbus.Config  `json:"modbus"`
 }
 
 func loadDeviceFile(path string) (deviceFile, error) {
@@ -700,6 +703,15 @@ func buildDeviceDriver(name string, file deviceFile) (devices.Driver, error) {
 			return nil, errors.New(`the device config has no "http" object`)
 		}
 		d, err := httpdev.New(*file.HTTP)
+		if err != nil {
+			return nil, err
+		}
+		return d, nil
+	case deviceDriverModbus:
+		if file.Modbus == nil {
+			return nil, errors.New(`the device config has no "modbus" object`)
+		}
+		d, err := modbus.New(*file.Modbus)
 		if err != nil {
 			return nil, err
 		}

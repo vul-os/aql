@@ -1,6 +1,6 @@
 # Aql hub
 
-The whole lintel server as **one Go binary**: channels, rules, portal, API,
+The whole hub as **one Go binary**: channels, rules, portal, API,
 device hub, audit — backed by **one SQLite file**. See `../ARCHITECTURE.md`
 for the full picture; the Cloudflare Workers backend in `../backend/` is the
 behavioral spec this is being ported from.
@@ -156,8 +156,8 @@ crashing — exactly the backend's behaviour.
 ## Build / run / test
 
 ```sh
-go build ./cmd/hub        # or: make build
-go test ./...                 # or: make test
+go build -o aql-hub ./cmd/hub   # or: make build
+go test ./...                        # or: make test
 ./aql-hub -data ./data -listen :8080
 ```
 
@@ -170,6 +170,11 @@ Config (flags override env):
 | `-public-url` | `AQL_PUBLIC_URL` | — | external base URL (webhooks, links) |
 | `-admin-claim-token` | `ADMIN_CLAIM_TOKEN` | — | one-shot admin claim; empty = claiming disabled |
 | `-behind-proxy` | `AQL_BEHIND_PROXY` | `false` | permit binding a non-loopback `-listen` address — only set this when TLS is terminated upstream by a reverse proxy; see **Deployment & TLS** below |
+
+Every `AQL_*` variable above still accepts its old `LINTEL_*` name: if `AQL_DATA_DIR` is
+unset, the hub reads `LINTEL_DATA_DIR` instead and logs a `WARN` naming both, once, after
+startup (`lookupEnv`/`warnLegacyEnv` in `cmd/hub/env.go`). The old names are deprecated —
+no removal date has been decided — so an install still typing `LINTEL_*` keeps working.
 
 First-boot claim flow: register a user, then
 `POST /v1/admin/claim {"token": "<ADMIN_CLAIM_TOKEN>"}` with that user's
@@ -293,7 +298,7 @@ trigger.
 
 ## Porting map (backend route → hub package)
 
-| Backend (spec) | Gateway | Status |
+| Backend (spec) | Hub | Status |
 | --- | --- | --- |
 | `routes/auth.ts` register/login/refresh/logout/me | `internal/httpapi/auth.go` | core done (verify-email, password reset, Google OAuth, profile patch pending) |
 | `routes/admin.ts` claim | `internal/httpapi/admin.go` | done |

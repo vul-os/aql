@@ -86,8 +86,16 @@ finished. The engine behind the other six is not built.**
   could only read a bare number or a bare string. A per-metric JSON field selector closes
   it, so **Zigbee and Z-Wave hardware behind a bridge is reachable today**.
 
-  What is still genuinely missing: Matter, a Modbus driver (the frame/decode layer is
-  written, the `Driver` is not), and device discovery. Untested against physical hardware
+  Modbus TCP joined them, read-only by construction rather than by promise: its config
+  accepts only capabilities whose entire verb set is `TierRead`, so the registry will not
+  route an actuating verb to one of those devices at all. A partly-answering device
+  reports as *degraded* rather than online or offline, because a meter whose power
+  register reads while its energy register times out is a real state and both extremes
+  lose it.
+
+  What is still genuinely missing: Matter, Modbus RTU (it needs a serial port, so it
+  cannot be tested — and the common serial deployment already works through a TCP-to-RTU
+  bridge), and device discovery. Untested against physical hardware
   — reachable in the protocol sense is not the same as verified in someone's house.
 - **Automations moving anything real.** The runtime is built, tested and now managed over
   HTTP ([`hub/internal/automations/`](hub/internal/automations/),

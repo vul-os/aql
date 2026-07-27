@@ -13,7 +13,7 @@
 ## Why this exists
 
 DMTAP ([spec](https://github.com/vul-os/dmtap), [reference implementation](https://github.com/vul-os/envoir))
-is attractive as a lintel channel because a MOTE is MLS-authenticated end to
+is attractive as an Aql channel because a MOTE is MLS-authenticated end to
 end: an "open" command signed by the member's own DMTAP identity key, with no
 third party in the delivery path and none of WhatsApp Cloud API's per-message
 cost or 24-hour-window / template restrictions on hub-initiated replies.

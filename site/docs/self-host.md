@@ -11,11 +11,14 @@ nothing to configure and nothing to pay us. Your costs are your own: a VPS or a 
 Meta's per-conversation fees if you run a WhatsApp channel on your own number (Meta
 bills you directly).
 
-> **Naming.** The binary, its environment variables and its SQLite file still use the
-> name `lintel` — that is Aql's access-control half under its pre-merge name, kept
-> deliberately because those names are a deployment contract for hubs and controllers
-> already in the field. Everything user-facing is Aql; see
-> [Overview](overview.md).
+> **Naming.** The hub's directory, Go module and binary are `hub/`,
+> `github.com/vul-os/aql/hub` and `aql-hub` — not `gateway` (a different product's word:
+> Ephor's, in the KOTVA family) and not `lintel` (a repo that no longer exists). Its
+> environment variables are `AQL_*`; the old `LINTEL_*` names still work as a deprecated
+> fallback — see **Configuration** below. The SQLite file and the controller's mDNS
+> service kept their pre-merge names outright (`lintel.db`, `_lintel._tcp`): that is not
+> a naming choice, it's a deployment contract for hubs and controllers already in the
+> field. Everything user-facing is Aql; see [Overview](overview.md).
 
 ## Install
 
@@ -110,6 +113,14 @@ ones:
 | `RATE_CHAT_MSGS_PER_MIN` | Inbound chat messages per sender per minute before the bot goes quiet (default 10). |
 | `RATE_ACCOUNT_OPENS_PER_HOUR` | Successful opens per account per hour — runaway-integration ceiling (default 500; `0` = kill switch). |
 | `AQL_BEHIND_PROXY` | Permits binding a non-loopback `-listen` address (default `false` — the hub otherwise refuses to start on one). Only set this when TLS is genuinely terminated upstream by a reverse proxy or tunnel; see **Reachability** below. |
+
+> **The old `LINTEL_*` names still work.** Every `AQL_*` variable above has a `LINTEL_*`
+> predecessor from before this repo absorbed lintel and became Aql. If an `AQL_*`
+> variable is unset, the hub reads its `LINTEL_*` predecessor instead and logs a `WARN`
+> naming both, once, after startup (`hub/cmd/hub/env.go`) — so upgrading an existing
+> install doesn't silently break it. The old names are deprecated; no removal date has
+> been decided, so there's no deadline to migrate against, just no reason to keep typing
+> the old ones once you know.
 
 > **The `WHATSAPP_* / SLACK_* / TELEGRAM_*` variables are the supported way to attach a
 > chat rail.** Those three adapters are shipped and tested in the hub. A designed but

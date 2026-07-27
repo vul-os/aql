@@ -27,6 +27,14 @@ func TestEveryAdvertisedDriverCanBeConstructed(t *testing.T) {
 			"Name":"Gate cam","ServiceAddress":"https://cam.example/onvif/device_service"}]}}`,
 		// The realistic zigbee2mqtt shape: a bridge owns the radio and
 		// republishes a JSON object per device, and Field picks one value out.
+		// A realistic meter: power as a float32 pair, energy as a uint32
+		// counter — the shape almost every real Modbus device uses.
+		deviceDriverModbus: `{"modbus":{"ID":"modbus","Devices":[{"ID":"meter-main",
+			"Name":"Main incomer","Kind":"energy","Capabilities":["energy.meter"],
+			"Address":"127.0.0.1:502","UnitID":1,
+			"Reads":[{"Function":3,"Start":100,"Count":4,"Metrics":[
+			  {"Metric":"kw","Address":100,"Type":"f32","Order":"abcd"},
+			  {"Metric":"kwh","Address":102,"Type":"u32","Order":"abcd","Scale":0.01}]}]}]}}`,
 		deviceDriverMQTT: `{"mqtt":{"DriverID":"mqtt","BrokerAddr":"broker.example:1883",
 			"ClientID":"aql","CommandQoS":2,"Devices":[{"ID":"m1","Name":"Kitchen lamp","Kind":"lighting","Capabilities":["light.dimmable"],
 			"State":[{"Topic":"zigbee2mqtt/kitchen-lamp","Metric":"brightness",
