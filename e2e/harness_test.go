@@ -23,7 +23,7 @@ import (
 
 // ---------------------------------------------------------------------------
 // Build: the harness runs the REAL shipped binaries, so TestMain compiles them
-// once from the sibling modules (../gateway, ../controller). See README.md for
+// once from the sibling modules (../hub, ../controller). See README.md for
 // why this is subprocess-over-the-wire and not an in-process import.
 // ---------------------------------------------------------------------------
 
@@ -48,7 +48,7 @@ func buildAndRun(m *testing.M) (int, error) {
 		return 1, fmt.Errorf("getwd: %w", err)
 	}
 	repo := filepath.Dir(wd) // .../aql
-	hubDir := filepath.Join(repo, "gateway")
+	hubDir := filepath.Join(repo, "hub")
 	controllerDir := filepath.Join(repo, "controller")
 
 	binDir, err := os.MkdirTemp("", "aql-e2e-bin-")
@@ -57,7 +57,7 @@ func buildAndRun(m *testing.M) (int, error) {
 	}
 	defer os.RemoveAll(binDir)
 
-	hubBin = filepath.Join(binDir, "aql-gateway")
+	hubBin = filepath.Join(binDir, "aql-hub")
 	controllerBin = filepath.Join(binDir, "aql-controller")
 	simBin = filepath.Join(binDir, "aql-controller-sim")
 
@@ -241,9 +241,14 @@ type tenant struct {
 // location) and claims platform-admin so audit endpoints are reachable.
 func (gw *gateway) register(t *testing.T) *tenant {
 	t.Helper()
-	email := "owner-" + randHex(6) + "@example.com"
+	// A USERNAME, not an email. This product has no email identity, and
+	// readJSON calls DisallowUnknownFields — so sending `email` does not get
+	// ignored, it 400s the whole request. That is exactly how the console broke
+	// login for a while, and this harness held the same bug: it was never run
+	// after the rename, only `go vet`-ed.
+	username := "owner-" + randHex(6)
 	st, body, raw := httpJSON(t, http.MethodPost, gw.url+"/v1/auth/register", "", map[string]any{
-		"email": email, "password": "correct horse battery",
+		"username": username, "password": "correct horse battery",
 		"display_name": "Owner", "location_name": "HQ", "country_code": "ZA",
 	})
 	if st != 201 {
@@ -461,7 +466,7 @@ func startSim(t *testing.T, gw *gateway, deviceID, claimToken string) *sim {
 
 	// Wait for the hub WS connect (implies paired + clock synced, so an
 	// offline grant is judged on lockdown, not stale_clock).
-	if !c.logs.waitLines(1, 25*time.Second, "gateway connected") {
+	if !c.logs.waitLines(1, 25*time.Second, "hub connected") {
 		t.Fatalf("sim never connected to gateway; log:\n%s", c.logs.String())
 	}
 	c.waitLAN(t)
