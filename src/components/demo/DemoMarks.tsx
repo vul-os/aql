@@ -79,16 +79,41 @@ export function LiveChip({
   );
 }
 
+/**
+ * For a device the device engine reported (/v1/engine/devices).
+ *
+ * Real, like a hub row, and coloured the same — but named separately because
+ * the two are not interchangeable to anyone debugging: a Hub row is an access
+ * point or its paired controller on the signed-command path, an Engine row
+ * came from a configured driver. Both are hardware; neither is a fixture.
+ */
+export function EngineChip({
+  className,
+  label = 'Engine',
+  title = "Reported by the device engine on your hub — a real device, discovered by a configured driver. Not fixture data.",
+}: {
+  className?: string;
+  label?: string;
+  title?: string;
+}) {
+  return <LiveChip className={className} label={label} title={title} />;
+}
+
 /** A short "why this does nothing / where this came from" line. */
 export function InertNote({ children, className }: { children: ReactNode; className?: string }) {
   return <p className={cn('text-xs text-ink/45 leading-relaxed', className)}>{children}</p>;
 }
 
+// 'unknown' is drawn hollow rather than as another filled grey dot: it means
+// "the engine has not heard from this device", which a reader must be able to
+// tell apart from 'off' (a device known to be off) and from 'alert' (a device
+// known to be down) at a glance, not only by reading the label.
 const STATE_DOT: Record<DeviceState, string> = {
   live: 'bg-moss',
   warn: 'bg-gold',
   alert: 'bg-terracotta',
   off: 'bg-ink/25',
+  unknown: 'bg-transparent ring-1 ring-slate',
 };
 
 const STATE_LABEL: Record<DeviceState, string> = {
@@ -96,6 +121,7 @@ const STATE_LABEL: Record<DeviceState, string> = {
   warn: 'attention',
   alert: 'alert',
   off: 'off',
+  unknown: 'not reported',
 };
 
 /**

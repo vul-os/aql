@@ -2,12 +2,14 @@
 // (`src/routes/+page.svelte` at commit bf99a4d) and merged with the real,
 // gateway-backed dashboard that replaced it.
 //
-// Two kinds of thing share this screen on purpose: what your gateway actually
-// reports (opens today, access points, recent activity, locations) and what
-// the built-in demo dataset stands in for until the device engine exists
-// (fleet tiles for the other six device kinds, power draw, alerts, the event
-// log). Each is marked where it sits — <DemoChip /> on the fixture panels,
-// nothing on the real ones. See src/components/demo/DemoMarks.tsx.
+// Three kinds of thing share this screen on purpose: what your gateway
+// reports (opens today, access points, recent activity, locations), what the
+// device engine reports (live device tiles, chipped "Engine"), and what the
+// built-in demo dataset still stands in for (power draw, alerts, the event
+// log, and fleet tiles for kinds no driver on this hub serves). Each is
+// marked where it sits — <DemoChip /> on the fixture panels, <EngineChip />
+// on engine-backed ones, nothing on the gateway's own. See
+// src/components/demo/DemoMarks.tsx.
 //
 // Deliberately NOT ported from the Svelte original: its "Live signal" wave,
 // which re-randomised on a 1s interval. A chart that moves is a chart that
@@ -18,7 +20,15 @@ import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/Card';
 import { AccessPointAction } from '@/components/access/AccessPointAction';
 import { CreateAccessPointModal } from '@/components/access/CreateAccessPointModal';
-import { DemoChip, InertNote, StateDot } from '@/components/demo/DemoMarks';
+import { DemoChip, EngineChip, InertNote, StateDot } from '@/components/demo/DemoMarks';
+import {
+  availabilityState,
+  engineFleet,
+  engineNotice,
+  kindLabel,
+  summaryLine,
+  type EngineFleet,
+} from '@/components/demo/engineState';
 import { useAuth } from '@/lib/auth';
 import {
   api,
@@ -85,6 +95,9 @@ export default function Overview() {
   const [summary, setSummary] = useState<AccountSummary | null>(null);
   const [locations, setLocations] = useState<LocationRow[]>([]);
   const [accessPoints, setAccessPoints] = useState<AccessPointDetail[]>([]);
+  // The device engine, or the honest reason there isn't one. Never throws and
+  // never blocks the dashboard — see engineFleet().
+  const [engine, setEngine] = useState<EngineFleet | null>(null);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCreateAp, setShowCreateAp] = useState(false);
@@ -105,6 +118,7 @@ export default function Overview() {
   const load = useCallback(async () => {
     if (!currentAccount) return;
     setDataLoaded(false);
+    void engineFleet().then(setEngine);
     try {
       // Summary isn't available on every gateway (see isRealSummary above) —
       // its absence must never block locations/access points from loading,
@@ -155,6 +169,18 @@ export default function Overview() {
 
   const greeting = greetForHour(new Date().getHours());
   const firstName = user?.name?.split(' ')[0] ?? 'there';
+
+  // Fleet arithmetic. "Reporting" counts only devices the engine says are
+  // online: a device whose availability is unknown (never heard from since the
+  // engine started) is in the total but not in the reporting count, because
+  // nobody has heard from it.
+  const engineDevices = engine?.devices ?? [];
+  const engineReporting = engineDevices.filter(
+    (d) => availabilityState(d.availability) === 'live',
+  ).length;
+  const fleetTotal = accessPoints.length + engineDevices.length + demoDevices.length;
+  const fleetReporting = accessPoints.length + engineReporting + DEMO_REPORTING;
+  const engineLine = engine ? engineNotice(engine) : null;
 
   // Wait for data before deciding which screen to show — avoids flash.
   if (!dataLoaded) {
@@ -262,13 +288,13 @@ export default function Overview() {
           <Card className="p-4 sm:p-5">
             <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-ink/55">Devices</p>
             <p className="font-display text-3xl sm:text-4xl mt-1.5 sm:mt-2 leading-none tabular-nums">
-              {accessPoints.length + DEMO_REPORTING}
-              <span className="text-sm text-ink/40 ml-1.5">
-                / {accessPoints.length + demoDevices.length}
-              </span>
+              {fleetReporting}
+              <span className="text-sm text-ink/40 ml-1.5">/ {fleetTotal}</span>
             </p>
             <p className="text-[10px] sm:text-xs text-ink/55 mt-1 sm:mt-1.5 leading-snug">
-              {accessPoints.length} on your hub · {demoDevices.length} demo
+              {accessPoints.length} on your hub
+              {engineDevices.length > 0 && ` · ${engineDevices.length} engine`} ·{' '}
+              {demoDevices.length} demo
             </p>
           </Card>
 
@@ -334,9 +360,7 @@ export default function Overview() {
           <div className="flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-ink/8">
             <div>
               <p className="text-[10px] uppercase tracking-[0.18em] text-ink/55">Fleet</p>
-              <p className="text-[11px] text-ink/45 mt-0.5">
-                {accessPoints.length + demoDevices.length} devices · 7 kinds
-              </p>
+              <p className="text-[11px] text-ink/45 mt-0.5">{fleetTotal} devices · 7 kinds</p>
             </div>
             <Link to="/app/devices" className="text-sm text-ink/60 hover:text-ink shrink-0">
               All devices →
@@ -362,7 +386,31 @@ export default function Overview() {
                 </p>
               </li>
             ))}
-            {demoDevices.slice(0, 9 - Math.min(accessPoints.length, 3)).map((d) => (
+            {engineDevices.slice(0, 6).map((d) => (
+              <li key={d.key} className="bg-paper-cool p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2 min-w-0">
+                    <StateDot state={availabilityState(d.availability)} />
+                    <span className="text-[10px] uppercase tracking-[0.16em] text-ink/45 truncate">
+                      {kindLabel(d.kind)}
+                    </span>
+                  </span>
+                  <EngineChip label="Engine" />
+                </div>
+                <Link
+                  to="/app/devices"
+                  className="block mt-1.5 text-sm text-ink truncate hover:underline"
+                >
+                  {d.name}
+                </Link>
+                <p className="mt-1.5 font-mono text-[11px] text-ink/55 truncate">
+                  {summaryLine(d)}
+                </p>
+              </li>
+            ))}
+            {demoDevices
+              .slice(0, Math.max(0, 9 - Math.min(accessPoints.length, 3) - Math.min(engineDevices.length, 6)))
+              .map((d) => (
               <li key={d.id} className={cn('bg-paper-cool p-4', d.state === 'off' && 'opacity-60')}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="flex items-center gap-2 min-w-0">
@@ -378,11 +426,13 @@ export default function Overview() {
               </li>
             ))}
           </ul>
-          <div className="px-5 sm:px-6 py-4 border-t border-ink/8">
+          <div className="px-5 sm:px-6 py-4 border-t border-ink/8 space-y-2">
             <InertNote>
-              Access tiles are live — they open a real gate. The rest are fixture rows: Aql&rsquo;s
-              device engine (discovery, driver adapters, telemetry) is ROADMAP Phase 1.
+              Access tiles are live — they open a real gate. Tiles chipped &ldquo;Engine&rdquo;
+              are live too: real devices your hub&rsquo;s device engine reported. Tiles chipped
+              &ldquo;Demo&rdquo; are fixture rows and read no hardware.
             </InertNote>
+            {engineLine && <InertNote>{engineLine}</InertNote>}
           </div>
         </Card>
 

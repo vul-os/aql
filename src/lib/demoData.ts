@@ -1,10 +1,21 @@
 // DEMO DATASET — not live, not fetched, not persisted.
 //
 // Ported verbatim (shapes and values) from Aql's pre-fold SvelteKit console
-// (`src/lib/data.ts` at commit bf99a4d). There is no device engine behind any
-// of this: ROADMAP Phase 1 ("Rust device/telemetry engine", "driver-adapter
-// seam", "device discovery replacing the demo dataset") is not built. Nothing
-// in this file talks to a gateway, a controller, or a socket.
+// (`src/lib/data.ts` at commit bf99a4d). Nothing in this file talks to a
+// gateway, a controller, or a socket — every value below was typed by a human.
+//
+// A device engine now EXISTS (gateway/internal/devices, exposed at
+// /v1/engine/*), and the console renders whatever it reports as live, chipped
+// "Engine". That did not make this file live. It stays for two reasons and
+// both are marked at the point of use:
+//
+//   1. A hub with no device config has no engine at all (`engine: false`) —
+//      the default. These rows show the shape of a populated fleet next to
+//      that, chipped "Demo data".
+//   2. Nothing here beyond the device list has an engine behind it: the event
+//      log, the automation rules, the circuits and the energy series have no
+//      endpoint at all (rule engine = ROADMAP Phase 3, meter ingestion =
+//      Phase 4).
 //
 // This is ONE kind of data in the portal, not a separate section of it. Aql's
 // screens (Overview, Devices, Automations, Energy) mix it with real,
@@ -14,7 +25,18 @@
 // wire these shapes to endpoints that do not exist; the real engine will
 // replace this module behind the same types.
 
-export type DeviceState = 'live' | 'warn' | 'alert' | 'off';
+/**
+ * The shared status vocabulary for a device row, whatever its source.
+ *
+ * 'unknown' is never produced by this fixture — every row below has a state
+ * someone typed. It exists for LIVE engine devices whose availability is the
+ * empty string, i.e. devices.AvailUnknown: "the engine has not heard from this
+ * device since it started". That is a third thing, not a synonym for 'off' and
+ * emphatically not 'alert'; collapsing it would make a device that has never
+ * reported look like one that is known down. See availabilityState() in
+ * src/components/demo/engineState.ts.
+ */
+export type DeviceState = 'live' | 'warn' | 'alert' | 'off' | 'unknown';
 
 export interface Device {
   id: string;

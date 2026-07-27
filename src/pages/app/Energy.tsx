@@ -1,16 +1,30 @@
 // Energy — Aql's metering screen.
 //
-// Every figure here comes from the built-in demo dataset: there is no meter,
-// inverter or battery ingestion (ROADMAP Phase 4). Each panel carries its own
-// demo chip and its own note saying what would have to exist for it to be
-// real. The curve is seeded, not animated — a chart that ticks is a chart
-// claiming to measure something.
+// One panel here can be real: if the hub's device engine has a device with the
+// energy.meter capability, its readings are shown at the top, chipped
+// "Engine". Everything below that — the 24h curve, the source mix, the
+// circuits, the headline stats — is still the built-in demo dataset, because
+// there is no metering *pipeline*: no historical rollups, no source-mix
+// accounting, no per-circuit ingestion (ROADMAP Phase 4). Each of those panels
+// carries its own demo chip and its own note.
+//
+// The curve is seeded, not animated — a chart that ticks is a chart claiming
+// to measure something.
 
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { PageHeader } from './AppLayout';
 import { Card, StatBlock } from '@/components/ui/Card';
 import { ENERGY_AXIS_MAX_KW, circuits, path, series } from '@/lib/demoData';
-import { DemoChip, InertNote, Meter } from '@/components/demo/DemoMarks';
+import { DemoChip, EngineChip, InertNote, Meter, StateDot } from '@/components/demo/DemoMarks';
+import {
+  availabilityState,
+  engineFleet,
+  engineNotice,
+  readingValue,
+  summaryLine,
+  type EngineFleet,
+} from '@/components/demo/engineState';
+import { api, friendlyApiError, type EngineDevice, type EngineReading } from '@/lib/api';
 
 // 48 half-hour samples = the last 24 hours. Seeded, so the same curve renders
 // on every load — a demo panel that never pretends to tick.
@@ -37,8 +51,10 @@ export default function EnergyPage() {
       <PageHeader
         kicker="Metering"
         title="Energy"
-        description="Draw, generation and per-circuit load for the whole site. Every figure below is fixture data until meter ingestion lands."
+        description="Draw, generation and per-circuit load for the whole site. Live meters your device engine reports are at the top; everything below them is fixture data until meter ingestion lands."
       />
+
+      <LiveMeters />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6">
         <DemoStat label="Now drawing" value="2.41" unit="kW" />
@@ -103,6 +119,142 @@ export default function EnergyPage() {
       </Card>
     </>
   );
+}
+
+// ── live meters (real: device-engine-backed) ────────────────────────────────
+
+/** Devices whose readings are genuinely metering: the energy.meter capability. */
+const METER_CAPABILITY = 'energy.meter';
+
+/**
+ * The only panel on this screen that can be real.
+ *
+ * When the engine reports metering devices, their readings are shown as they
+ * came back. When it doesn't, this says which of the four reasons applies —
+ * an engine that isn't configured (the default), a hub too old to serve it, a
+ * failed request, or an engine with no meters. It never quietly falls through
+ * to the fixture below and lets the reader assume it was live.
+ */
+function LiveMeters() {
+  const [fleet, setFleet] = useState<EngineFleet | null>(null);
+  const [readings, setReadings] = useState<Record<string, EngineReading[] | { error: string }>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    void engineFleet().then(async (f) => {
+      if (cancelled) return;
+      setFleet(f);
+      const meters = f.devices.filter(isMeter).slice(0, 8);
+      for (const m of meters) {
+        try {
+          const res = await api.engineReadings(m.key);
+          if (!cancelled) setReadings((prev) => ({ ...prev, [m.key]: res.readings ?? [] }));
+        } catch (err) {
+          if (!cancelled) {
+            setReadings((prev) => ({
+              ...prev,
+              [m.key]: { error: friendlyApiError(err, 'Could not read this meter.') },
+            }));
+          }
+        }
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (fleet === null) return null;
+
+  const meters = fleet.devices.filter(isMeter);
+  const notice = engineNotice(fleet);
+
+  if (meters.length === 0) {
+    return (
+      <Card className="mb-6 py-4">
+        <div className="flex items-start gap-3">
+          <span className="mt-1.5 shrink-0">
+            <StateDot state={fleet.status === 'error' ? 'alert' : 'unknown'} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-ink/55">Live meters</p>
+            <p className="mt-1 text-sm text-ink/70 leading-relaxed">
+              {notice ??
+                'Your device engine is running, but none of the devices it reports is a meter.'}{' '}
+              Everything below is fixture data.
+            </p>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="mb-6 p-0 overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-ink/8">
+        <span className="inline-flex items-center gap-3">
+          <span className="text-[10px] uppercase tracking-[0.18em] text-ink/55">Live meters</span>
+          <EngineChip />
+        </span>
+        <span className="text-[10px] uppercase tracking-[0.18em] text-ink/40">
+          {meters.length} reporting to your hub
+        </span>
+      </div>
+      <ul className="divide-y divide-ink/8">
+        {meters.map((m) => {
+          const r = readings[m.key];
+          return (
+            <li key={m.key} className="px-6 py-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-3">
+                <span className="inline-flex items-center gap-2 min-w-0">
+                  <StateDot state={availabilityState(m.availability)} />
+                  <span className="text-sm text-ink truncate">{m.name}</span>
+                  {m.zone && (
+                    <span className="text-[10px] uppercase tracking-[0.16em] text-ink/40 truncate">
+                      {m.zone}
+                    </span>
+                  )}
+                </span>
+                <span className="font-mono text-xs text-ink/55 truncate">{summaryLine(m)}</span>
+              </div>
+              {r === undefined && <p className="mt-2 text-xs text-ink/45">Reading…</p>}
+              {r && 'error' in r && <p className="mt-2 text-xs text-terracotta-deep">{r.error}</p>}
+              {Array.isArray(r) && r.length === 0 && (
+                <p className="mt-2 text-xs text-ink/45">The driver returned no readings.</p>
+              )}
+              {Array.isArray(r) && r.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1">
+                  {r.map((reading) => (
+                    <span
+                      key={`${reading.metric}-${reading.at}`}
+                      className="inline-flex items-baseline gap-2"
+                    >
+                      <span className="text-[10px] uppercase tracking-[0.16em] text-ink/45">
+                        {reading.metric}
+                      </span>
+                      <span className="font-mono text-sm text-ink/85 tabular-nums">
+                        {readingValue(reading)}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <div className="px-6 py-4 border-t border-ink/8">
+        <InertNote>
+          Read from your hub just now — units are whatever the driver reported. The panels below
+          are not: they are fixture data and say so.
+        </InertNote>
+      </div>
+    </Card>
+  );
+}
+
+function isMeter(d: EngineDevice): boolean {
+  return d.capabilities.includes(METER_CAPABILITY) || d.kind === 'energy';
 }
 
 /** A readout that is entirely fixture data — the chip sits on the number. */

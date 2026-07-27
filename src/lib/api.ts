@@ -112,6 +112,38 @@ export type RateLimitDenial = {
   retryAfterS: number;
 };
 
+// ── device-engine error vocabulary ─────────────────────────────────────────
+//
+// gateway/internal/httpapi/engine.go answers an actuation with one of a small
+// set of codes, and two of them are NOT failures in the sense a toast implies.
+// They get named narrowing helpers here so no call site has to remember the
+// status/code pair, and so the difference can be unit-tested.
+
+/**
+ * 409 from POST /engine/execute: the verb sits above the confirm ceiling
+ * (hazardous motion — blades, barriers under load) and the hub wants a second
+ * deliberate act. This is a *step in the flow*, not an error: the correct UI is
+ * a confirmation, then the same request again with `confirm: true`.
+ */
+export function isConfirmRequired(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 409 && err.code === 'confirm_required';
+}
+
+/**
+ * 502 `indeterminate`: the driver could not establish whether the action
+ * happened. Never render this as "failed" — a person told an open failed will
+ * press it again, and the open may already have happened. See
+ * devices.ErrIndeterminate.
+ */
+export function isIndeterminate(err: unknown): boolean {
+  return err instanceof ApiError && err.code === 'indeterminate';
+}
+
+/** 502 `unreachable`: the device could not be contacted; nothing happened. */
+export function isUnreachable(err: unknown): boolean {
+  return err instanceof ApiError && err.code === 'unreachable';
+}
+
 /**
  * Narrow an unknown error to a 429 denial. Returns the denial reason and a
  * clean retry hint (seconds, ≥1) or null when the error is anything else.
@@ -515,6 +547,33 @@ export const api = {
   deviceCreate: (body: { location_id: string; label?: string; claim_ttl_seconds?: number }) =>
     apiFetch<DeviceCreateResponse>('/devices', { method: 'POST', body }),
 
+  // Device engine (gateway/internal/httpapi/engine.go). Distinct from the
+  // /devices routes above: those are the *controllers* paired to access points
+  // (signed-command path, real today). These are the six other device kinds,
+  // served by whatever drivers the hub operator configured.
+  //
+  // `engine: false` in the response is the DEFAULT — a hub with no device
+  // config has no engine, which is not an error and not a failed fetch. Call
+  // sites must say so rather than rendering an empty list. See
+  // engineFleet() in src/components/demo/engineState.ts, which narrows all
+  // four outcomes (live / not configured / route absent / fetch failed).
+  engineDevices: () => apiFetch<EngineDevicesResponse>('/engine/devices'),
+
+  engineReadings: (key: string) =>
+    apiFetch<EngineReadingsResponse>(`/engine/devices/${encodeURIComponent(key)}/readings`),
+
+  // `confirm` is a deliberate second act, not a permission: the hub refuses a
+  // hazardous-motion verb with 409 confirm_required until it is set, so the
+  // honest flow is to send without it, catch that 409 (isConfirmRequired), ask
+  // the person, and resend. Never send confirm: true speculatively.
+  engineExecute: (key: string, body: { verb: string; args?: Record<string, number>; confirm?: boolean }) =>
+    apiFetch<EngineExecuteResponse>(`/engine/devices/${encodeURIComponent(key)}/execute`, {
+      method: 'POST',
+      body: { verb: body.verb, args: body.args ?? {}, confirm: body.confirm ?? false },
+    }),
+
+  engineHealth: () => apiFetch<EngineHealthResponse>('/engine/health'),
+
   // Members
   accountMembers: (accountId: string) =>
     apiFetch<{ members: AccountMemberRow[] }>(`/accounts/${accountId}/members`),
@@ -687,6 +746,74 @@ export type DeviceCreateResponse = {
   status: string;
   claim_token: string;
   claim_expires_at: UnixSeconds;
+};
+
+// ── device engine ───────────────────────────────────────────────────────────
+
+/**
+ * What the engine currently believes about a device, reported VERBATIM by the
+ * gateway (engineDeviceJSON in engine.go deliberately does not normalise it).
+ *
+ * The empty string is load-bearing: it is devices.AvailUnknown — "the engine
+ * has not heard from this device since it started". That is NOT offline, and
+ * rendering the two the same makes a device that has never reported look like
+ * one that is known down. Typed as a union with a `string` escape so a value a
+ * newer gateway adds doesn't fail to parse — unrecognised values are rendered
+ * as unknown, never as online.
+ */
+export type EngineAvailability = '' | 'online' | 'offline' | 'degraded' | (string & {});
+
+/** One of devices.Kind (model.go). Lower-case on the wire. */
+export type EngineKind =
+  | 'camera'
+  | 'lighting'
+  | 'robot'
+  | 'climate'
+  | 'energy'
+  | 'sensor'
+  | 'access'
+  | (string & {});
+
+export type EngineDevice = {
+  /** Globally unique `driver:deviceID`. The id every engine route speaks. */
+  key: string;
+  driver: string;
+  kind: EngineKind;
+  name: string;
+  zone: string;
+  /** Catalogue capability ids (devices/capability.go), e.g. "light.dimmable". */
+  capabilities: string[];
+  availability: EngineAvailability;
+  /** Short human-readable state for a list row. Presentational; never parsed. */
+  summary: string;
+  last_seen: UnixSeconds;
+};
+
+export type EngineDevicesResponse = {
+  devices: EngineDevice[];
+  /** false = no device engine is configured on this hub. Default, not an error. */
+  engine: boolean;
+};
+
+/** `value` and `text` are mutually exclusive — the gateway sends exactly one. */
+export type EngineReading = {
+  metric: string;
+  at: UnixSeconds;
+  value?: number;
+  text?: string;
+};
+
+export type EngineReadingsResponse = { readings: EngineReading[] };
+
+export type EngineExecuteResponse = {
+  ok: boolean;
+  /** The tier the hub resolved the verb at, e.g. "reversible". */
+  tier: string;
+};
+
+export type EngineHealthResponse = {
+  engine: boolean;
+  drivers: Record<string, { ok: boolean; detail: string; since: UnixSeconds }>;
 };
 
 export type AccountMemberRow = {
