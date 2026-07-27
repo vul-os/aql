@@ -637,7 +637,7 @@ export const api = {
   // returned EXACTLY ONCE, in the 201 — there is no read path that reveals it
   // again, by design. A caller that loses it revokes and mints another.
   apiTokens: (accountId: string) =>
-    apiFetch<{ tokens: ApiTokenRow[] }>(`/accounts/${accountId}/api-tokens`),
+    apiFetch<{ api_tokens: ApiTokenRow[] }>(`/accounts/${accountId}/api-tokens`),
 
   apiTokenCreate: (
     accountId: string,
@@ -686,7 +686,7 @@ export const api = {
   // member may open. Enforced inside the open path's choke point, not by the
   // automations engine.
   timeWindows: (accountId: string) =>
-    apiFetch<{ rules: TimeWindowRule[] }>(`/accounts/${accountId}/time-windows`),
+    apiFetch<{ time_windows: TimeWindowRule[] }>(`/accounts/${accountId}/time-windows`),
 
   timeWindowCreate: (
     accountId: string,
@@ -712,7 +712,7 @@ export const api = {
   // convenience and a mistake-preventer, not a security control, and no copy
   // this console renders may imply otherwise.
   geofences: (accountId: string) =>
-    apiFetch<{ rules: GeofenceRule[] }>(`/accounts/${accountId}/geofences`),
+    apiFetch<{ geofences: GeofenceRule[] }>(`/accounts/${accountId}/geofences`),
 
   geofenceCreate: (
     accountId: string,

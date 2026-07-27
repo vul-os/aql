@@ -35,6 +35,7 @@ export const ACCESS_NAV_ITEMS: NavItem[] = [
   { to: '/app/members', label: 'Members' },
   { to: '/app/grants', label: 'Temp access' },
   { to: '/app/analytics', label: 'Analytics' },
+  { to: '/app/access-rules', label: 'Access rules' },
   { to: '/app/webhooks', label: 'Webhooks' },
   { to: '/app/api-tokens', label: 'API tokens' },
   { to: '/app/settings', label: 'Settings' },

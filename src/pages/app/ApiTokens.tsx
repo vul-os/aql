@@ -117,7 +117,7 @@ export default function ApiTokensPage() {
     if (!currentAccount) return;
     try {
       const r = await api.apiTokens(currentAccount.id);
-      setState({ status: 'live', tokens: r.tokens });
+      setState({ status: 'live', tokens: r.api_tokens });
     } catch (err) {
       setState(classifyListError(err));
     }

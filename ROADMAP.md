@@ -167,7 +167,12 @@ protocol driver of any kind is present in this repository.
         be tested); the common serial deployment is already reachable through a
         TCP-to-RTU bridge
   - [x] Generic HTTP/webhook
-- [ ] Discovery (mDNS/SSDP, Zigbee pairing, MQTT topic scan, ONVIF probe, manual add)
+- [x] ONVIF probe (WS-Discovery) and MQTT bridge scan — `mqtt.Scan` reads
+      zigbee2mqtt's retained `bridge/devices` announcement and proposes candidates
+      with their evidence. It writes no config and registers nothing: a capability
+      decides which verbs the engine will route, so that stays a human's call
+- [ ] mDNS/SSDP discovery, and Zigbee pairing (turning join on is an actuation with a
+      real security consequence, not a discovery side effect)
       replacing the demo dataset with live device state
 - [ ] Bring the existing access module onto the same internal device model, so `access` is
       one kind among seven rather than a parallel stack

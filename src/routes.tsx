@@ -67,6 +67,7 @@ const routes: RouteObject[] = [
       { path: 'members', element: wrap(() => import('@/pages/app/Members')), errorElement },
       { path: 'analytics', element: wrap(() => import('@/pages/app/Analytics')), errorElement },
       { path: 'grants', element: wrap(() => import('@/pages/app/Grants')), errorElement },
+      { path: 'access-rules', element: wrap(() => import('@/pages/app/AccessRules')), errorElement },
       { path: 'api-tokens', element: wrap(() => import('@/pages/app/ApiTokens')), errorElement },
       { path: 'webhooks', element: wrap(() => import('@/pages/app/Webhooks')), errorElement },
       { path: 'settings', element: wrap(() => import('@/pages/app/Settings')), errorElement },
