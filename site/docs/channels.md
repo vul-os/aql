@@ -43,6 +43,18 @@ can be reachable on WhatsApp and Slack at once without being two people in your 
 > largest privacy exposure in the system and it is documented plainly in
 > [Security](security.md) and the repository's threat model.
 
+The full per-rail disclosure — initiation class, inbound transport, price shape and who
+sees plaintext, stated per direction and per deployment mode — is
+[`proto/rails.md`](https://github.com/vul-os/aql/blob/main/proto/rails.md), the format
+[KOTVA §26.3](https://github.com/vul-os/kotva/blob/main/26-legacy-adapters.md) requires.
+Two things there are worth knowing before you pick a rail:
+
+- **Every rail is inbound-triggered.** The hub cannot message a resident who has never
+  messaged it. There is no rail on which Aql can cold-call.
+- **Slack Socket Mode is the only rail needing no public endpoint.** WhatsApp and Telegram
+  both arrive by webhook, so they need a reachable HTTPS address; Socket Mode holds an
+  outbound WebSocket and works behind CGNAT with no hostname at all.
+
 ## WhatsApp (Meta Cloud API)
 
 The primary channel, and the hard one to self-host. The short version:

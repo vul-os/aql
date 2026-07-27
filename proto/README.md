@@ -7,10 +7,17 @@ be added, nothing can be removed or change meaning within a major version.
 
 | Contract | File | Parties |
 | --- | --- | --- |
-| Pairing | [pairing.md](pairing.md) | gateway ⇄ controller |
-| Signed commands | [commands.md](commands.md) | gateway → controller |
-| Offline grants | [grants.md](grants.md) | gateway → app → controller |
-| Controller events | [events.md](events.md) | controller → gateway |
+| Pairing | [pairing.md](pairing.md) | hub ⇄ controller |
+| Signed commands | [commands.md](commands.md) | hub → controller |
+| Offline grants | [grants.md](grants.md) | hub → app → controller |
+| Controller events | [events.md](events.md) | controller → hub |
+| Chat rail disclosure | [rails.md](rails.md) | hub ⇄ chat platform |
+
+`rails.md` is the odd one out: it is a **disclosure**, not a wire format. The four
+contracts above say what bytes cross a link we control; `rails.md` says what a link we
+*don't* control can and cannot do, and who reads the plaintext on it — the four fields
+[KOTVA §26.3](https://github.com/vul-os/kotva/blob/main/26-legacy-adapters.md) requires
+every adapter to declare. It lives here because it constrains the same boundary.
 
 Status: **v0 draft** — to be implemented by the Go gateway port. v1 freezes when the
 first third-party controller firmware ships.
