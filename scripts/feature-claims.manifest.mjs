@@ -243,8 +243,8 @@ export const FEATURES = [
   },
   {
     id: 'energy-metering',
-    label: 'Energy metering — meter/inverter ingestion, rollups, source-mix accounting',
-    docStatus: 'planned',
+    label: 'Energy-metering engine code exists (NOT that any meter is polled in a running hub — nothing constructs a poller in cmd/gateway)',
+    docStatus: 'shipped',
     docRefs: [
       'README.md — "Energy metering. No ingestion, no rollups, no source-mix accounting."',
       'ROADMAP.md Phase 4',
@@ -257,8 +257,8 @@ export const FEATURES = [
   },
   {
     id: 'camera-pipeline',
-    label: 'Camera pipeline — live view or recording (ONVIF/RTSP)',
-    docStatus: 'planned',
+    label: 'ONVIF discovery / stream-address resolution code exists (NOT live view, NOT recording — there is no RTSP client and no pixel ever moves)',
+    docStatus: 'shipped',
     docRefs: [
       'README.md — "The camera pipeline. No live view, no recording, no ONVIF/RTSP code."',
       'ROADMAP.md Phase 5',

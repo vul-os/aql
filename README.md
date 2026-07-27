@@ -79,8 +79,21 @@ finished. The engine behind the other six is not built.**
   network; an MQTT client is in progress and not yet wired to the seam. So the only
   device class the hub drives end to end today is still a gate/door/barrier controller.
 - **The automations runtime.** No rule object, no scheduler, no execution engine.
-- **Energy metering.** No ingestion, no rollups, no source-mix accounting.
-- **The camera pipeline.** No live view, no recording, no ONVIF/RTSP code.
+- **Energy metering wired into the hub.** The engine exists and is tested
+  ([`gateway/internal/energy/`](gateway/internal/energy/)) — 60s ingestion, hour/day/month
+  rollups, source-mix accounting, counter wrap-vs-reset detection, and gaps represented as
+  *absent* rather than zero (`KWh` is a nullable pointer precisely so a renderer that
+  forgets the distinction crashes instead of drawing a confident low bar). What is missing
+  is wiring: nothing constructs a poller in `cmd/gateway`, and there is no HTTP surface, so
+  no meter is read in a running hub.
+- **The camera pipeline.** ONVIF *discovery* now exists
+  ([`gateway/internal/devices/camera/`](gateway/internal/devices/camera/)) — WS-Discovery
+  probe, reachability, and stream-address resolution, so the hub can find a camera and
+  learn where its stream *would* come from. There is **no RTSP client**: it never opens a
+  connection, never sends DESCRIBE, and moves no pixels. No live view, no recording, no
+  decoding, no ffmpeg. It has also never seen a real camera — the tests drive a loopback
+  responder, which proves the emitter and parser agree with each other, not that hardware
+  agrees with either. Not wired into `cmd/gateway`.
 - **The non-access device screens run on a demo dataset.** The console's device, energy and
   automations views are real, interactive UI over a built-in in-memory dataset
   (`src/lib/demoData.ts`) — twelve fictional devices across the seven kinds, marked as demo

@@ -21,7 +21,10 @@ import (
 type Config struct {
 	// DriverID is the devices.Driver id and the prefix of every device key it
 	// produces. It must be stable across restarts. Defaults to "mqtt"; give a
-	// second broker a distinct id ("mqtt:plantroom").
+	// second broker a distinct id ("mqtt-plantroom"). It may not contain a
+	// colon: the registry recovers a driver id by splitting a device key at its
+	// first one, so an id containing a colon indexes devices under a driver
+	// that was never registered. New refuses it.
 	DriverID string
 
 	// BrokerAddr is host:port. Required.
