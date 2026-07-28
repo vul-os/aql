@@ -294,16 +294,25 @@ Stated plainly so nobody mistakes design intent for a control:
   start a mower belonging to someone else. That was demonstrated against the mock driver,
   not merely inferred from the routes.
 
-  What now stands in for tenancy is a hub-wide authority test
-  (`hub/internal/httpapi/engine.go`): the engine is hub-wide, so a caller must be the
-  instance admin, or a member of the hub's **only** account — the case where "everyone on
-  this hub" and "everyone in this account" are the same people and the question does not
-  arise. The single-household deployment is unaffected. A multi-account hub now refuses
-  with a distinct code rather than an empty fleet, because "you may not see these" and
-  "there are none" are different answers.
+  Ownership is now recorded rather than inferred (`0021_device_ownership.sql`). An
+  account admin CLAIMS a device the engine actually reports; first claim wins, enforced by
+  a primary key rather than a check-then-insert two admins would race through; a second
+  account's claim is refused rather than allowed to take over; and release is how a device
+  changes hands. On a multi-account hub a caller sees and drives exactly what their
+  accounts have claimed. An unclaimed device belongs to nobody, and "nobody owns it" is
+  not "anybody may drive it" — that equivalence was the original hole.
 
-  This is a gate, not a model. Real per-device ownership is on the roadmap and is product
-  design, not something to infer inside an authorization check.
+  Two deliberate limits. The single-household deployment claims nothing and is unchanged:
+  one account means "everyone on this hub" and "everyone in this account" are the same
+  people. And engine *health* keeps the hub-wide gate, because it reports DRIVER state —
+  is the broker connected, is the PLC answering — which is a property of the hub's
+  plumbing, not of any one device; there is no honest way to show a member the half of an
+  MQTT connection that carries their lamp.
+
+  What a claim is NOT is proof. Nobody can demonstrate a lamp is theirs; they can only say
+  so first, and be recorded doing it. That is the same trust-on-first-use shape as
+  controller pairing, and it is safe for the same reason: the first assertion is
+  deliberate and audited, and every later one is refused.
 - **No HTTP surface for automations or energy.** Both runtimes exist, are tested, and run
   as background workers when configured (`internal/automations/`, `internal/energy/`).
   Neither is reachable over the API: there is no endpoint to create a rule or read a

@@ -425,6 +425,13 @@ func (s *Server) Router() http.Handler {
 	// member; execute is an actuation and carries the tier ceiling and the
 	// hazardous-motion confirm described in engine.go.
 	mux.Handle("GET /v1/engine/devices", s.requireAuth(s.handleEngineDevices))
+
+	// Device ownership (see deviceclaims.go). Account-admin only: a claim
+	// decides who may actuate a physical device from then on, which is the
+	// same class of act as creating an access point.
+	mux.Handle("GET /v1/accounts/{id}/devices/claimable", s.requireAuth(s.handleClaimableDevices))
+	mux.Handle("POST /v1/accounts/{id}/devices/claims", s.requireAuth(s.handleDeviceClaimCreate))
+	mux.Handle("DELETE /v1/accounts/{id}/devices/claims/{key}", s.requireAuth(s.handleDeviceClaimDelete))
 	mux.Handle("GET /v1/engine/devices/{key}/readings", s.requireAuth(s.handleEngineReadings))
 	mux.Handle("POST /v1/engine/devices/{key}/execute", s.requireAuth(s.handleEngineExecute))
 	mux.Handle("GET /v1/engine/health", s.requireAuth(s.handleEngineHealth))

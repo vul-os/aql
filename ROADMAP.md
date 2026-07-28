@@ -32,7 +32,7 @@ reference for how every other device kind should eventually work: a versioned wi
 contract, a device that verifies rather than trusts, and an audit trail you can check
 after the fact.
 
-**The hub** (`hub/`) — one Go binary, SQLite inside, **109 HTTP routes over 19
+**The hub** (`hub/`) — one Go binary, SQLite inside, **112 HTTP routes over 20
 migrations, and more than 870 tests green** across 16 packages:
 
 - [x] Accounts, locations, access points, members with roles, invites
@@ -229,14 +229,22 @@ and none has met physical hardware.
       still typed by a human
 - [ ] SSDP/UPnP discovery, and Zigbee pairing (turning join on is an actuation with a real
       security consequence, not a discovery side effect)
-- [ ] **Per-device ownership.** The engine has no tenancy: a device discovered from a
-      broker, a PLC or an ONVIF probe carries no account, so nothing can say whose it is.
-      A hub-wide authority gate stands in for it today — instance admin, or a member of
-      the hub's only account — which closes the cross-account hole (a second account could
-      enumerate and actuate every device, mower included) without inventing an attribution
-      inside an authorization check. A real model needs a product decision about how a
-      driver-discovered device acquires an owner, and it is the prerequisite for a
-      multi-account hub having usable device screens at all
+- [x] **Per-device ownership.** A device discovered from a broker, a PLC or an ONVIF
+      probe carries no account, so ownership cannot be inferred — it is ASSERTED. An
+      account admin claims a device the engine actually reports, first claim wins
+      (enforced by a primary key, not a check-then-insert two admins would race through),
+      a second account's claim is refused rather than allowed to take over, and release is
+      how a device legitimately changes hands. On a multi-account hub a caller sees and
+      drives exactly what their accounts have claimed; an unclaimed device belongs to
+      nobody, and "nobody owns it" does not mean "anybody may drive it". The
+      single-household deployment claims nothing and is unchanged. Engine *health* keeps
+      the hub-wide gate deliberately: it reports driver state, not device state, and there
+      is no honest way to show a member the half of an MQTT connection that carries their
+      lamp
+- [ ] A console surface for claiming — the routes exist (`GET
+      /v1/accounts/{id}/devices/claimable`, `POST|DELETE .../devices/claims`) and the
+      Devices screen does not yet offer them, so on a multi-account hub claiming is
+      currently an API call
 - [ ] Bring the existing access module onto the same internal device model, so `access` is
       one kind among seven rather than a parallel stack
 - [ ] Extend the input surfaces' intent vocabulary past `open`/`close` so chat and the
