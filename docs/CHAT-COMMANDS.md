@@ -450,6 +450,22 @@ WhatsApp command adds a step and no security — the same platform sees both
 halves (§5). Cross-rail approval is the only step-up that is honest given the
 exposure boundary, and it needs no new dependency: the console already exists.
 
+**This is not a contradiction of the link codes.** Identity linking does send a
+code over chat, deliberately, and it is a different claim. A link code binds an
+identity ONCE — it answers "which member is this account?" — and it is not
+step-up: it authorizes no command, and having linked grants exactly the access
+the member already had.
+
+The exposure boundary is unchanged by it, and that is worth saying plainly
+rather than letting a ceremony read as an upgrade. A platform that reads every
+message can read a link code, and a platform that can inject a message
+appearing to come from an account can spend one. Neither ceremony defends
+against the platform itself, and neither claims to; what they defend against is
+one member claiming another's account, which is the attack that actually
+happens. Anyone whose threat model includes Meta should not be opening gates
+over WhatsApp at all — which is what the disclosure table exists to tell them
+before they choose.
+
 **Time window (PROPOSAL).** T4 verbs are refused unless an operator has *armed*
 a window for that `(device, verb)` from the console — "the mower may be started
 from chat for the next 30 minutes". Outside the window, chat T4 is refused with

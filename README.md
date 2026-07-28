@@ -213,6 +213,12 @@ Until a member does this, their messages are **ignored rather than refused** —
 which is exactly what "the bot doesn't answer me" looks like, so the console
 flags an unverified number distinctly.
 
+The ceremony does not change the exposure boundary above. A platform that reads
+every message can read a link code, and one that can inject a message appearing
+to come from an account can spend one. What it stops is one member claiming
+another's account — the attack that actually happens — not the platform itself,
+and it does not pretend otherwise.
+
 | Rail | Receives via | Behind CGNAT | Cost | Who reads it |
 |---|---|---|---|---|
 | **WhatsApp** | webhook | ✗ needs an HTTPS endpoint | free in · metered out on the Cloud API; free both ways on the bridge | Meta, always — plus you |

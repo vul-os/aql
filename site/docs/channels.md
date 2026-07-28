@@ -49,6 +49,11 @@ the console says so where it shows them.
 Until a member links, their messages are **ignored rather than refused** — which is what
 "the bot doesn't answer me" looks like from the outside.
 
+Linking does not change the exposure boundary in the warning below. A platform that reads
+every message can read a link code, and one that can inject a message appearing to come
+from an account can spend one. The ceremony stops one member claiming another's account —
+the attack that actually happens — and nothing about the platform.
+
 | Channel | Identity | Status | Self-host friction |
 | --- | --- | --- | --- |
 | WhatsApp | phone number | **Shipped** — Meta Cloud API | **High** — verified Meta business + WABA + number |
