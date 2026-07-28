@@ -93,6 +93,16 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 - [ ] DMTAP channel stays a scaffold with a fail-closed transport until there is a real
       wire format. Do not present it as a channel.
 
+## drift guards — audited for vacuous passes
+Every source-scanning test was checked by breaking its extraction and seeing whether it
+noticed. naming.test.ts did NOT: four of its five guards passed with walk() returning
+nothing, including the one keeping the gateway→hub rename from regressing. Fixed with a
+floor on every walk. safetyCopy, responseShape and routeParity all fail correctly —
+their assertions are "this is present" or they carry explicit sanity floors.
+- The shape to watch: "collect offenders, assert the list is empty" passes perfectly on
+  an empty scan. "assert this sentence is present" fails safely. Prefer the second, and
+  where the first is necessary, assert the scan found something first.
+
 ## second copies of hub-owned vocabularies — swept
 The console restates several lists the hub owns. Found three by accident (metric hints
 13 names behind the drivers; capability→controls complete only by luck; rail disclosure),
