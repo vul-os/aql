@@ -205,6 +205,39 @@ console.log('wrote keys.json');
     ...signedVec('controller', { ...wsAuthBody, ts: T0 - 200 }),
   });
 
+  // ts more than 90 s AHEAD of the gateway clock. The mirror of
+  // ws-auth-stale-ts, and until it existed the not_yet_valid branch of the
+  // normative order had no vector on either side — a clock-skew window that is
+  // only half tested is a window with one side unbounded.
+  vectors.push({
+    name: 'ws-auth-future-ts',
+    desc: 'ts more than 90 s ahead of the gateway clock.',
+    expect: 'reject',
+    reason: 'not_yet_valid',
+    check: { now: T0 + 20, challenge: wsChallenge, device_id: DEVICE_ID },
+    ...signedVec('controller', { ...wsAuthBody, ts: T0 + 200 }),
+  });
+
+  // A validly signed ws.auth that names a DIFFERENT device than the one the
+  // connection is authenticating. The signature verifies (it is the enrolled
+  // controller key), the cnonce is live, the timestamp is fresh — everything
+  // passes except the binding between the signed message and the device it
+  // claims to be.
+  //
+  // This branch had no vector because the controller's own hub-side reference
+  // verifier could not express it: VerifyWSAuth took no expected device id, so
+  // it structurally could not compare one. Two implementations of the same
+  // fail-closed check, differing in what they were even capable of refusing,
+  // and no vector able to notice.
+  vectors.push({
+    name: 'ws-auth-wrong-device',
+    desc: 'Correctly signed and fresh, but device_id is not the device being authenticated.',
+    expect: 'reject',
+    reason: 'wrong_device',
+    check: { now: T0 + 3, challenge: wsChallenge, device_id: DEVICE_ID },
+    ...signedVec('controller', { ...wsAuthBody, device_id: OTHER_DEVICE_ID }),
+  });
+
   writeVectors('pairing.json', { ...HEADER('pairing.md'), vectors });
 }
 

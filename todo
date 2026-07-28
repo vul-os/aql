@@ -82,6 +82,12 @@ hub serves. Adding an entry back is a real decision, not bookkeeping.
 - [ ] revoke-a-controller endpoint (no DELETE on /v1/devices yet)
 - [ ] API docs with python/go/curl examples
 
+## conformance
+- [ ] The uncalled-exported-symbol sweep that found this turned up ~40 candidates in
+      hub/ and controller/. Most are legitimate (test helpers, functional options,
+      build-tagged constructors, encoding/json interface methods) but several look like
+      superseded store methods — store/tenants.go has six. Work the list.
+
 ## security / ops
 - [ ] grant revocation beyond "wait for the TTL" (accepted v0 non-goal today)
 - [ ] OS-keychain credential vault for device/service secrets — ROADMAP Phase 2. Today

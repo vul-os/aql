@@ -70,8 +70,8 @@ green**:
 
 **Contracts and harnesses:**
 
-- [x] `proto/` — pairing, commands, grants and events, with **61 conformance vectors /
-      68 checks** consumed by both implementations and an independent `verify.mjs`
+- [x] `proto/` — pairing, commands, grants and events, with **63 conformance vectors /
+      70 checks** consumed by both implementations and an independent `verify.mjs`
 - [x] `e2e/` — boots the real hub and controller binaries and drives the open path over
       the wire, including adversarial cases
 - [x] `e2e-browser/` — Playwright against the real hub binary with the embedded console

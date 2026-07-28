@@ -136,8 +136,19 @@ function evalControllerSigned(obj, pub) {
 }
 
 function evalWsAuth(obj, check) {
-  // pairing.md "WebSocket auth"
+  // pairing.md "WebSocket auth", in the normative order.
+  //
+  // The typ/v and device_id checks were both absent here for a long time, and
+  // this file is the INDEPENDENT verifier — the one whose whole job is to
+  // disagree with the implementations rather than inherit their gaps. It
+  // agreed with them instead: three verifiers of one fail-closed check, and
+  // only the hub's production VerifyAuth compared the signed device_id to the
+  // device being authenticated.
+  if (obj.typ !== 'ws.auth' || obj.v !== 0) return rej('badsig');
   if (!verifyObject(obj, KEYS.controller.pub)) return rej('badsig');
+  // After the signature, deliberately: refusing on device_id first would
+  // answer "is this a device you know" to anyone who can send bytes.
+  if (obj.device_id !== check.device_id) return rej('wrong_device');
   if (obj.cnonce !== check.challenge.cnonce) return rej('cnonce_unknown');
   if (check.now > check.challenge.exp) return rej('cnonce_expired');
   if (Math.abs(obj.ts - check.now) > SKEW)

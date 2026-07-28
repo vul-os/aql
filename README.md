@@ -169,7 +169,7 @@ npm test                         # 199 frontend tests
 npm run check:claims             # every doc claim, checked against the code
 
 cd hub && go build ./... && go vet ./... && go test ./...
-node proto/vectors/verify.mjs    # 68 protocol vector checks
+node proto/vectors/verify.mjs    # 70 protocol vector checks
 ```
 
 ---

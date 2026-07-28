@@ -134,7 +134,7 @@ go test ./...                  # all green
 Every `proto/vectors/` file is consumed by the suite:
 
 - **jcs** — byte-compares our canonicalizer against every `canonical` field
-  across all 5 vector files (61 vectors).
+  across all 5 vector files (63 vectors).
 - **wire** — reproduces every vector signature byte-for-byte; runs the
   `ws.auth` accept/reject matrix; proves our ack/event builders match.
 - **command** — the full accept/reject matrix (23 command vectors) through the

@@ -115,7 +115,7 @@ func TestRunnerFullSession(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		if err := wire.VerifyWSAuth(ctrlPub, authRaw, &ch, time.Now().Unix(), map[string]bool{}); err != nil {
+		if err := wire.VerifyWSAuth(ctrlPub, authRaw, deviceID, &ch, time.Now().Unix(), map[string]bool{}); err != nil {
 			t.Errorf("ws.auth rejected: %v", err)
 			return
 		}

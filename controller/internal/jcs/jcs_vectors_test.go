@@ -64,8 +64,8 @@ func TestCanonicalBytesAllVectors(t *testing.T) {
 			}
 		}
 	}
-	if vectors != 61 {
-		t.Errorf("expected 61 vectors across the five files, saw %d", vectors)
+	if vectors != 63 {
+		t.Errorf("expected 63 vectors across the five files, saw %d", vectors)
 	}
 	if total < 61 {
 		t.Errorf("expected ≥61 canonical comparisons, did %d", total)

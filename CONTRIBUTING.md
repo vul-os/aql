@@ -13,7 +13,7 @@ about what is shipped versus what is only designed.
 | `hub/` | The hub: one Go binary, SQLite inside — chat channels, the open path, the embedded console, the API, the device hub, the audit log |
 | `controller/` | The reference gate-device agent, its own Go module — pairing, signed-command verification, offline grants, events |
 | `e2e/` | Cross-module Go harness that boots the real hub and controller binaries and drives them over the wire |
-| `proto/` | The versioned wire contracts plus `vectors/` conformance fixtures (61 vectors, 68 checks) |
+| `proto/` | The versioned wire contracts plus `vectors/` conformance fixtures (63 vectors, 70 checks) |
 | `src/` | The React 19 + Vite console — embedded into the hub binary and wrapped by the desktop shell |
 | `src-tauri/` | The Tauri v2 desktop shell (thin: one IPC command today) |
 | `e2e-browser/` | Playwright suite that drives the **real** hub binary with the embedded console |
@@ -62,7 +62,7 @@ Run these before opening a PR; CI (`.github/workflows/ci.yml`) runs the same set
 | `go test ./...` | `controller/` | 45 tests |
 | `go test ./...` | `e2e/` | Cross-module, real binaries over the wire |
 | `cargo fmt --check` / `cargo clippy` | `src-tauri/` | Only if you touched the Rust shell |
-| `node proto/vectors/verify.mjs` | root | Independently re-verifies all 61 conformance vectors |
+| `node proto/vectors/verify.mjs` | root | Independently re-verifies all 63 conformance vectors |
 
 ## Ground rules
 

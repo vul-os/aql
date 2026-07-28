@@ -73,7 +73,7 @@ last path is only three-quarters built; see [Emergency access](emergency-access.
 | **controller** (`controller/`) | The unit wired to the gate relay; verifies signatures, drives the motor | **Shipped** — 45 tests green; GPIO relay and BLE radio still unvalidated | Go, std-lib first, own module |
 | **e2e** (`e2e/`) | Cross-module harness: boots the real hub + controller binaries and proves the open path over the wire | **Shipped** | Go, subprocess-driven |
 | **console / app** (`src/`, `src-tauri/`) | Web console embedded in the hub, plus a Tauri v2 desktop shell with a hub picker | **Shipped** (admin surfaces) | React 19 · Vite · Tauri v2 |
-| **proto** (`proto/`) | The versioned wire contracts + conformance vectors | **Shipped** — 61 vectors, 68 checks | Markdown + JSON fixtures |
+| **proto** (`proto/`) | The versioned wire contracts + conformance vectors | **Shipped** — 63 vectors, 70 checks | Markdown + JSON fixtures |
 | **device engine** (`hub/internal/devices/`) | Registry behind a driver seam; `http`, `modbus` (TCP), `mqtt`, `camera` (ONVIF) | **Shipped, default off** — no registry unless `-device-drivers` names one. No radio in the hub — Zigbee and Z-Wave arrive over a bridge. No Matter, no robot driver, no camera pipeline | Go |
 
 ### One implementation, no second server
@@ -142,7 +142,7 @@ increasing order of self-sufficiency:
 ## The contracts that must not break
 
 Deployed hardware is forever, so these wire contracts are versioned from day one and
-covered by 61 conformance vectors (68 checks) in `proto/vectors/`, consumed by both the
+covered by 63 conformance vectors (70 checks) in `proto/vectors/`, consumed by both the
 hub and the controller:
 
 1. **Pairing** — claim-token redemption, key exchange, pinning of the hub key

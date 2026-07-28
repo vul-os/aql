@@ -145,7 +145,7 @@ func TestWSAuthVectors(t *testing.T) {
 			t.Fatalf("%s: challenge: %v", v.Name, err)
 		}
 		used := map[string]bool{}
-		err := wire.VerifyWSAuth(pubs["controller"], v.Object, &ch, v.Check.Now, used)
+		err := wire.VerifyWSAuth(pubs["controller"], v.Object, v.Check.DeviceID, &ch, v.Check.Now, used)
 		switch v.Expect {
 		case "accept":
 			if err != nil {
@@ -164,7 +164,7 @@ func TestWSAuthVectors(t *testing.T) {
 				t.Errorf("%s: SignWSAuth sig mismatch\n got %v\nwant %v", v.Name, m["sig"], want["sig"])
 			}
 			// Replay of the same cnonce must now fail.
-			if err2 := wire.VerifyWSAuth(pubs["controller"], v.Object, &ch, v.Check.Now, used); err2 == nil {
+			if err2 := wire.VerifyWSAuth(pubs["controller"], v.Object, v.Check.DeviceID, &ch, v.Check.Now, used); err2 == nil {
 				t.Errorf("%s: cnonce reuse accepted", v.Name)
 			}
 		case "reject":
@@ -176,8 +176,13 @@ func TestWSAuthVectors(t *testing.T) {
 			}
 		}
 	}
-	if ran != 5 {
-		t.Errorf("expected 5 ws.auth vectors, ran %d", ran)
+	// A count guard, so a vector added to pairing.json cannot be silently
+	// skipped here and leave this side of the contract unchecked. It has
+	// already earned itself once: ws-auth-wrong-device and ws-auth-future-ts
+	// were added to cover two branches of the normative order that had no
+	// vector, and this line is what said so.
+	if ran != 7 {
+		t.Errorf("expected 7 ws.auth vectors, ran %d", ran)
 	}
 }
 

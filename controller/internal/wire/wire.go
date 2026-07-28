@@ -267,18 +267,40 @@ type WSAuth struct {
 }
 
 // VerifyWSAuth runs the hub-side fail-closed verification of a ws.auth
-// answer (proto/pairing.md §WebSocket auth): sig against the enrolled
-// controller key, cnonce issued/unexpired/single-use, |ts − now| ≤ 90 s.
+// answer (proto/pairing.md §WebSocket auth), in the normative order: message
+// shape, sig against the enrolled controller key, the device the message
+// CLAIMS to be, cnonce issued/unexpired/single-use, |ts − now| ≤ 90 s.
 // The controller ships this so its simulator (and tests) can play the
 // gateway role against the conformance vectors; `used` may be nil when
 // single-use tracking is handled by the caller.
-func VerifyWSAuth(pub ed25519.PublicKey, raw []byte, ch *WSChallenge, now int64, used map[string]bool) error {
-	if err := VerifyRaw(pub, raw); err != nil {
-		return err
-	}
+//
+// deviceID is the device the connection is authenticating — the one whose key
+// `pub` belongs to. It used to be absent, and that was not a missing argument
+// but a missing CHECK: without it this could not compare the signed device_id
+// to anything, so a validly signed answer naming a different device passed.
+// The hub's own VerifyAuth has always refused that (wrong_device), which meant
+// two implementations of one fail-closed check differed in what they were
+// capable of refusing, and no conformance vector could notice — because the
+// vector that would have caught it could not be written against this
+// signature. proto/vectors/pairing.json's ws-auth-wrong-device is that vector.
+func VerifyWSAuth(pub ed25519.PublicKey, raw []byte, deviceID string, ch *WSChallenge, now int64, used map[string]bool) error {
 	var a WSAuth
 	if err := json.Unmarshal(raw, &a); err != nil {
 		return &Reject{ReasonBadSig}
+	}
+	// Shape before signature, as the hub does: a message that is not a ws.auth
+	// at all is not made one by carrying a good signature.
+	if a.Typ != "ws.auth" || a.V != 0 {
+		return &Reject{ReasonBadSig}
+	}
+	if err := VerifyRaw(pub, raw); err != nil {
+		return err
+	}
+	// AFTER the signature, deliberately. Refusing on device_id before checking
+	// the signature would answer "is this a device you know" to anyone who can
+	// send bytes.
+	if a.DeviceID != deviceID {
+		return &Reject{ReasonWrongDevice}
 	}
 	if ch == nil || a.Cnonce != ch.Cnonce {
 		return &Reject{ReasonCnonceUnknown}
