@@ -3,6 +3,9 @@
 package relay
 
 import (
+	"os"
+	"regexp"
+	"strings"
 	"testing"
 	"unsafe"
 )
@@ -16,6 +19,13 @@ import (
 // They verify the ARGUMENTS. They cannot verify that the kernel accepts
 // them: no ioctl in this package has been executed against a running kernel
 // by this tree's authors.
+//
+// They also only check the architecture they RUN on, which in CI is amd64
+// while a controller runs on ARM. gpio_abi_static.go asserts the same numbers
+// as constant expressions, so the ordinary cross-compile checks them for
+// linux/arm64, linux/arm and linux/386 too. Keep the two in step: this file is
+// the readable one that names the field and reports every mismatch at once,
+// that one is the one that covers the target.
 
 func TestABIStructSizes(t *testing.T) {
 	// Sizes from <linux/gpio.h>, uAPI v2. Identical on 32- and 64-bit
@@ -212,4 +222,66 @@ func TestCstr(t *testing.T) {
 	if got := cstr(full[:]); got != "abcd" {
 		t.Errorf("cstr(unterminated) = %q", got)
 	}
+}
+
+// The two ABI files must cover the same ground.
+//
+// gpio_abi_test.go (this file) checks the architecture it runs on;
+// gpio_abi_static.go checks every architecture the cross-build targets. A
+// struct added here and not there is checked on amd64 and nowhere else — which
+// is precisely the gap that motivated the static file, reappearing one struct
+// at a time.
+//
+// Compared by NAME rather than by count, so adding one and removing another
+// cannot balance out.
+func TestABIAssertionsCoverTheSameStructsAndFields(t *testing.T) {
+	runtimeSrc := readSource(t, "gpio_abi_test.go")
+	staticSrc := readSource(t, "gpio_abi_static.go")
+
+	sizeOf := regexp.MustCompile(`unsafe\.Sizeof\((\w+)\{\}\)`)
+	offsetOf := regexp.MustCompile(`unsafe\.Offsetof\((\w+)\{\}\.(\w+)\)`)
+
+	names := func(src string, re *regexp.Regexp) map[string]bool {
+		out := map[string]bool{}
+		for _, m := range re.FindAllStringSubmatch(src, -1) {
+			out[strings.Join(m[1:], ".")] = true
+		}
+		return out
+	}
+
+	for _, tc := range []struct {
+		what string
+		re   *regexp.Regexp
+	}{
+		{"struct sizes", sizeOf},
+		{"field offsets", offsetOf},
+	} {
+		here, there := names(runtimeSrc, tc.re), names(staticSrc, tc.re)
+		// A regex that matched nothing would make this pass silently.
+		if len(here) < 5 || len(there) < 5 {
+			t.Fatalf("%s: extracted %d here and %d there; the pattern stopped matching",
+				tc.what, len(here), len(there))
+		}
+		for n := range here {
+			if !there[n] {
+				t.Errorf("%s: %s is asserted at runtime but not in gpio_abi_static.go, "+
+					"so it is unchecked on arm, arm64 and 386", tc.what, n)
+			}
+		}
+		for n := range there {
+			if !here[n] {
+				t.Errorf("%s: %s is asserted in gpio_abi_static.go but not here; add the "+
+					"readable case so a mismatch names the field", tc.what, n)
+			}
+		}
+	}
+}
+
+func readSource(t *testing.T, name string) string {
+	t.Helper()
+	b, err := os.ReadFile(name)
+	if err != nil {
+		t.Fatalf("read %s: %v", name, err)
+	}
+	return string(b)
 }

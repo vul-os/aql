@@ -160,6 +160,31 @@ jobs:
           for goos in linux windows darwin; do
             GOOS=$goos GOARCH=amd64 go build -tags gpio ./...
           done
+          # ARM is where a controller actually runs, and 32-bit ARM is where
+          # the GPIO uAPI layout could plausibly differ: Go aligns uint64 to 4
+          # bytes on arm and 386, not 8. gpio_abi_static.go asserts every
+          # kernel struct size and field offset as a CONSTANT expression, so
+          # these builds are what verify the layout on the architectures the
+          # product ships to — the runtime tests only ever see the runner's
+          # amd64.
+          for goarch in arm64 arm 386; do
+            GOOS=linux GOARCH=$goarch go build -tags gpio ./...
+          done
+      # Building a tagged backend proves it compiles. It does NOT run the tests
+      # written for it, and `go test ./...` above cannot: a file behind
+      # //go:build gpio is invisible without the tag. Three test files —
+      # gpio_test.go, gpio_abi_test.go, gpio_linux_test.go — had therefore never
+      # executed in CI at all, including the ones pinning the kernel ABI struct
+      # sizes and ioctl request numbers that the driver's correctness rests on.
+      #
+      # They run on the Linux runner, which is also the only place
+      # gpio_linux_test.go compiles.
+      - name: go test (optional backends)
+        working-directory: controller
+        run: |
+          set -eux
+          go test -tags gpio ./...
+          go test -tags ble ./...
 
   e2e-browser:
     name: e2e-browser (real Chromium against a real hub binary)

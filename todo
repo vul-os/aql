@@ -29,7 +29,12 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       (gatts_other.go is a nine-line stub), so macOS is a BLE central only.
 - [ ] GPIO relay validation on real hardware — the driver exists behind `-tags gpio` and
       has never driven a chip, a relay board or a gate. Fail-safe spec: normally-open,
-      line drops on exit/panic.
+      line drops on exit/panic. The uAPI layout IS now verified on linux/arm64, arm and
+      386 at compile time (gpio_abi_static.go), so what remains is genuinely the radio
+      and the relay board, not the struct definitions.
+- LESSON: CI built the tagged backends but never TESTED them. `go test ./...` cannot see
+      a file behind //go:build gpio, so three test files had never run in the pipeline.
+      A tagged backend needs both a build step and a test step.
 - [x] Present an offline grant over LAN from a browser. The controller now allows the
       ONE origin of the hub console it paired with (lanserver/cors.go), so an
       http-served console can complete the handshake. Desktop shell unchanged.
