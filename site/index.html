@@ -171,6 +171,18 @@ code{font-family:var(--font-mono);font-size:.88em}
 }
 :root[data-theme='dark'] .nav a.nav-cta{color:#141210;background:#f5efe6}
 .nav a.nav-cta:hover{background:var(--terracotta);color:#fafaf8}
+/* Part-of-the-suite badge. Sits outside .nav so it survives the breakpoint
+   that hides the links — the suite relationship is worth keeping visible at
+   more widths than the section anchors are. */
+.vulos-badge{
+  display:none;align-items:center;gap:8px;padding:6px 13px 6px 8px;
+  border:1px solid var(--ink-whisper);border-radius:999px;
+  font-size:12.5px;color:var(--ink-faint);text-decoration:none;white-space:nowrap;
+  transition:border-color .18s,color .18s;
+}
+.vulos-badge:hover{border-color:var(--terracotta);color:var(--ink)}
+.vulos-badge img{width:18px;height:18px;border-radius:5px;display:block}
+@media(min-width:720px){.vulos-badge{display:inline-flex}}
 @media(min-width:960px){.nav{display:flex}}
 .theme-btn,.menu-btn{
   display:grid;place-items:center;width:36px;height:36px;border-radius:999px;
@@ -298,8 +310,21 @@ code{font-family:var(--font-mono);font-size:.88em}
 .dev:hover{background:var(--paper-warm)}
 .dev-live{border-color:color-mix(in srgb,var(--terracotta) 40%,transparent);background:var(--paper-cool)}
 .dev-live:hover{background:color-mix(in srgb,var(--terracotta) 6%,var(--paper-cool))}
-.dev .d-ic{display:grid;place-items:center;width:42px;height:42px;border-radius:var(--radius-arch);border:1.5px solid var(--ink-whisper);color:var(--ink-faint);margin-bottom:16px}
-.dev-live .d-ic{border-color:color-mix(in srgb,var(--terracotta) 45%,transparent);color:var(--terracotta)}
+/* Solid, larger, and at full ink rather than the faint tier the body copy
+   sits in. These are the seven kinds the whole product is organised around; an
+   outline glyph at 19px in --ink-faint reads as a bullet rather than as the
+   subject of the section. */
+.dev .d-ic{
+  display:grid;place-items:center;width:54px;height:54px;border-radius:var(--radius-arch);
+  border:1px solid var(--ink-whisper);background:var(--paper-cool);
+  color:var(--ink);margin-bottom:18px;
+}
+.dev .d-ic svg{width:26px;height:26px;display:block}
+.dev-live .d-ic{
+  border-color:color-mix(in srgb,var(--terracotta) 38%,transparent);
+  background:color-mix(in srgb,var(--terracotta) 10%,var(--paper-cool));
+  color:var(--terracotta);
+}
 .dev h3{font-family:var(--font-display);font-variation-settings:"SOFT" 30;font-size:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .dev p{margin-top:8px;font-size:14px;line-height:1.65;color:var(--ink-faint)}
 .dev .d-proto{margin-top:auto;padding-top:18px;font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);opacity:.8}
@@ -489,6 +514,9 @@ code{font-family:var(--font-mono);font-size:.88em}
         <a href="https://github.com/vul-os/aql" rel="noopener">GitHub</a>
         <a class="nav-cta" href="docs.html#/self-host">Run your hub</a>
       </nav>
+      <a class="vulos-badge" href="https://vulos.org" rel="noopener" title="Aql is part of the vulos suite">
+        <img src="./assets/vulos-logo.png" alt="" aria-hidden="true">Part of vulos
+      </a>
       <button class="theme-btn" id="themeToggle" type="button" aria-label="Toggle dark mode">
         <svg class="ic-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
           <circle cx="12" cy="12" r="4.6"/>
@@ -710,32 +738,38 @@ code{font-family:var(--font-mono);font-size:.88em}
         A house or a whole facility under one roof: seven device kinds, one internal model,
         one audit log, one place to look. Underneath sits a driver-adapter seam — pluggable
         protocol adapters over a single model — so a new class of hardware is a driver, not
-        a rewrite. Access control is the kind that runs end to end today; the engine behind
-        the other six is designed and not written, and the
+        a rewrite. That engine is running: four drivers ship (MQTT, Modbus TCP, generic HTTP,
+        ONVIF), and with them energy metering and the automations runtime. What varies by kind
+        is how far the path goes — a meter is read end to end, a camera is discovered but not
+        yet streamed, a robot has no driver at all. The
         <a href="#status" style="color:var(--terracotta)">ledger</a> spells that out line by line.
       </p>
     </div>
 
     <div class="dev-grid">
       <div class="dev reveal">
-        <span class="d-ic" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="12" rx="2.5"/><circle cx="12" cy="13" r="3.4"/><path d="M8 7l1.6-2.6h4.8L16 7"/></svg></span>
-        <h3>Cameras <span class="tag tag-planned">planned</span></h3>
-        <p>Live view, recording and event-driven alerting from IP cameras, feeding the same
-        rules and the same audit log as everything else on the hub. Designed against the
-        driver seam; no code yet.</p>
+        <span class="d-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.3 3.4a1 1 0 0 0-.85.47L7.2 5.9H4.6A2.6 2.6 0 0 0 2 8.5v9A2.6 2.6 0 0 0 4.6 20h14.8A2.6 2.6 0 0 0 22 17.5v-9a2.6 2.6 0 0 0-2.6-2.6h-2.6l-1.25-2.03a1 1 0 0 0-.85-.47Zm2.7 5.3a4.4 4.4 0 1 1 0 8.8 4.4 4.4 0 0 1 0-8.8Zm0 2a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8Z"/></svg></span>
+        <h3>Cameras <span class="tag tag-partial">driver ships &middot; no video</span></h3>
+        <p>The ONVIF driver finds cameras by WS-Discovery, authenticates, and asks one for the
+        RTSP address of a chosen profile — then verifies the stream is really flowing and
+        counts what it loses. Decoding a frame is the part that isn't written: live view and
+        recording need a real camera in front of them, and a retention policy for footage that
+        doesn't exist yet would be the wrong order.</p>
         <div class="d-proto">onvif &middot; rtsp</div>
       </div>
 
       <div class="dev reveal">
-        <span class="d-ic" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 12.5a6 6 0 1 1 9 0c-1.1 1.4-1.6 2.4-1.7 3.8h-5.6c-.1-1.4-.6-2.4-1.7-3.8Z"/><path d="M9.7 19.4h4.6"/></svg></span>
-        <h3>Lighting <span class="tag tag-planned">planned</span></h3>
-        <p>The bread-and-butter surface — on, off, dim, scene, groups — behind the same one
-        device model as everything else, so an automation can't tell a fixture from a fleet.</p>
+        <span class="d-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 0-4.2 12.6c.7.53 1.1 1.2 1.2 2.02l.1.88h5.8l.1-.88c.1-.82.5-1.49 1.2-2.02A7 7 0 0 0 12 2Z"/><path d="M9.4 19.1h5.2a1 1 0 0 1 0 2H9.4a1 1 0 0 1 0-2Z"/></svg></span>
+        <h3>Lighting <span class="tag tag-partial">via mqtt today</span></h3>
+        <p>On, off and dim work now through the MQTT driver — including anything a
+        <code>zigbee2mqtt</code> bridge republishes — behind the same device model as
+        everything else, so an automation can't tell a fixture from a fleet. What's missing is
+        a dedicated driver: scenes and groups are still whatever your bridge exposes.</p>
         <div class="d-proto">matter &middot; zigbee &middot; mqtt</div>
       </div>
 
       <div class="dev reveal">
-        <span class="d-ic" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8.5" width="17" height="8.5" rx="2.6"/><circle cx="8" cy="19.5" r="2.1"/><circle cx="16" cy="19.5" r="2.1"/><path d="M8.5 8.5V5.4M15.5 8.5V5.4"/></svg></span>
+        <span class="d-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 2.6a1 1 0 0 1 1 1V6h5V3.6a1 1 0 1 1 2 0V6h.9A3.1 3.1 0 0 1 20.5 9.1v5.3a3.1 3.1 0 0 1-3.1 3.1H6.6a3.1 3.1 0 0 1-3.1-3.1V9.1A3.1 3.1 0 0 1 6.6 6h.9V3.6a1 1 0 0 1 1-1ZM9 10a1.4 1.4 0 1 0 0 2.8A1.4 1.4 0 0 0 9 10Zm6 0a1.4 1.4 0 1 0 0 2.8A1.4 1.4 0 0 0 15 10Z"/><circle cx="7.8" cy="19.9" r="2.1"/><circle cx="16.2" cy="19.9" r="2.1"/></svg></span>
         <h3>Robots <span class="tag tag-planned">planned</span></h3>
         <p>Mowers, security patrol and cleaning bots as first-class fleet members with status,
         tasking and run history — the part a consumer smart-home hub never reaches for, and
@@ -744,34 +778,38 @@ code{font-family:var(--font-mono);font-size:.88em}
       </div>
 
       <div class="dev reveal">
-        <span class="d-ic" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.4 13.6V4.8a2.6 2.6 0 0 1 5.2 0v8.8a4.8 4.8 0 1 1-5.2 0Z"/><path d="M12 9.4v4.8"/></svg></span>
-        <h3>Climate <span class="tag tag-planned">planned</span></h3>
-        <p>Thermostats, valves, humidity and ventilation — setpoints and schedules that answer
-        to the same rules engine as the lights and the gate, not to four vendor apps.</p>
+        <span class="d-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.8a3.6 3.6 0 0 0-3.6 3.6v7.7a5.8 5.8 0 1 0 7.2 0V5.4A3.6 3.6 0 0 0 12 1.8Zm0 5.4a1 1 0 0 1 1 1v7.05a2.2 2.2 0 1 1-2 0V8.2a1 1 0 0 1 1-1Z"/></svg></span>
+        <h3>Climate <span class="tag tag-partial">via mqtt &middot; modbus</span></h3>
+        <p>Setpoints are a capability the engine already carries, reachable over MQTT or
+        Modbus, and they answer to the same rules engine as the lights and the gate rather
+        than to four vendor apps. Humidity and ventilation are read today; scheduling them is
+        the automations runtime, which is running.</p>
         <div class="d-proto">matter &middot; mqtt &middot; modbus</div>
       </div>
 
       <div class="dev reveal">
-        <span class="d-ic" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 16.5a8.4 8.4 0 0 1 16.8 0"/><path d="M12 16.5 17 10"/><circle cx="12" cy="16.5" r="1.3"/></svg></span>
-        <h3>Energy <span class="tag tag-planned">planned</span></h3>
-        <p>Meter and inverter ingestion, historical rollups and a source mix of solar, grid
-        and battery — measured off real readings, not estimated. Nothing here is built yet.</p>
+        <span class="d-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.3 1.9a.9.9 0 0 1 .77 1.32L11.4 9h4.9a.9.9 0 0 1 .7 1.47l-8.2 10.1a.9.9 0 0 1-1.57-.8L8.9 13.4H4.3a.9.9 0 0 1-.72-1.44l8.3-11a.9.9 0 0 1 .72-.36Z"/></svg></span>
+        <h3>Energy <span class="tag tag-shipped">runs end to end</span></h3>
+        <p>Meter ingestion, hourly and daily rollups, and a source mix of solar, grid and
+        battery — measured off real readings, never estimated. Every bucket carries how much
+        of it was actually observed, so an hour nobody measured reports nothing rather than
+        zero. Raw samples are pruned on a retention window; the counter endpoints a bill is
+        argued from are kept.</p>
         <div class="d-proto">modbus &middot; inverter apis</div>
       </div>
 
       <div class="dev reveal">
-        <span class="d-ic" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="16.5" r="1.8"/><path d="M8 13a5.6 5.6 0 0 1 8 0"/><path d="M4.8 9.6a10.4 10.4 0 0 1 14.4 0"/></svg></span>
-        <h3>Sensors <span class="tag tag-planned">planned</span></h3>
+        <span class="d-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="3.1"/><path d="M7.4 4.9a1 1 0 0 1 1.16 1.63 6.8 6.8 0 0 0 0 10.94A1 1 0 0 1 7.4 19.1a8.8 8.8 0 0 1 0-14.2Zm9.2 0a8.8 8.8 0 0 1 0 14.2 1 1 0 0 1-1.16-1.63 6.8 6.8 0 0 0 0-10.94A1 1 0 0 1 16.6 4.9Z"/><path d="M4.2 1.7A1 1 0 0 1 5.4 3.3a11.6 11.6 0 0 0 0 17.4 1 1 0 0 1-1.2 1.6 13.6 13.6 0 0 1 0-20.6Zm15.6 0a13.6 13.6 0 0 1 0 20.6 1 1 0 0 1-1.2-1.6 11.6 11.6 0 0 0 0-17.4 1 1 0 0 1 1.2-1.6Z" opacity=".45"/></svg></span>
+        <h3>Sensors <span class="tag tag-partial">read today</span></h3>
         <p>Motion, contact, temperature, humidity, water level, tamper — the inputs an
-        automations runtime needs before it is worth having. Discovery and live state sit in
-        the same engine phase.</p>
+        automations runtime needs before it is worth having, and that runtime is running.
+        Reads work now over MQTT and Modbus; the Modbus side is read-only by construction,
+        refusing at config time any capability that could actuate.</p>
         <div class="d-proto">matter &middot; mqtt &middot; zigbee &middot; http</div>
       </div>
 
       <div class="dev dev-live dev-wide reveal">
-        <span class="d-ic" aria-hidden="true">
-          <svg width="19" height="19" viewBox="0 0 64 64" fill="none"><path d="M14 50 V32 a18 18 0 0 1 36 0 V50 H40 V32 a8 8 0 0 0 -16 0 V50 Z" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </span>
+        <span class="d-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.2a6.6 6.6 0 0 0-6.6 6.6v1.6H4.9A1.9 1.9 0 0 0 3 12.3v7.6a1.9 1.9 0 0 0 1.9 1.9h14.2a1.9 1.9 0 0 0 1.9-1.9v-7.6a1.9 1.9 0 0 0-1.9-1.9h-.5V8.8A6.6 6.6 0 0 0 12 2.2Zm0 2a4.6 4.6 0 0 1 4.6 4.6v1.6H7.4V8.8A4.6 4.6 0 0 1 12 4.2Zm0 9.1a2 2 0 0 1 .9 3.79V19a.9.9 0 0 1-1.8 0v-1.91A2 2 0 0 1 12 13.3Z"/></svg></span>
         <div class="d-body">
           <h3>Access <span class="tag tag-shipped">runs end to end</span></h3>
           <p>Gates, doors and barriers — the seventh kind, and the first one that is real all
@@ -795,21 +833,27 @@ code{font-family:var(--font-mono);font-size:.88em}
     <div class="chat-grid">
       <div class="chat-copy reveal">
         <span class="eyebrow kicker">Chat as an input surface</span>
-        <h2 class="display">Text a channel.<br><em>Act on a device.</em></h2>
+        <h2 class="display">Text a channel.<br><em>Reach the hub.</em></h2>
         <p style="margin-top:22px;max-width:29rem;color:var(--ink-faint);line-height:1.7">
-          Chat isn't the product — it's the input surface across the hub with the lowest
-          possible friction. Nobody installs anything: someone messages a channel they
-          already have open, the hub resolves who they are, runs your rules, and signs a
-          command. Opening a gate is the verb that works today, because access is the module
-          that's real; reaching the other six kinds this way is device-engine work.
+          Chat isn't the product — it's the input surface across the whole hub with the lowest
+          possible friction. Nobody installs anything: someone messages a channel they already
+          have open, the hub resolves who they are, runs your rules, and acts. The hub behind
+          it drives gates, meters, lights and climate; the console reaches all of them today.
+        </p>
+        <p style="margin-top:16px;max-width:29rem;color:var(--ink-faint);line-height:1.7">
+          <b style="color:var(--ink)">Through chat specifically, the verbs are open and close.</b>
+          Ask it to turn on a light and it says so plainly and points at the console, rather
+          than showing you a gate menu and letting you think it understood. Widening that
+          vocabulary is the next piece of work, and it is deliberately gated on the safety
+          ladder below — every verb carries a tier, and an unattended surface is not handed
+          one it hasn't earned.
         </p>
         <p style="margin-top:16px;max-width:29rem;color:var(--ink-faint);line-height:1.7;font-size:14px">
           The channel rails themselves are moving out of Aql and into
           <a href="https://github.com/vul-os/ephor" rel="noopener" style="color:var(--terracotta)">Ephor</a>,
-          a separate, swappable component you run or point at. That move is in progress — so
-          the honest line is the resident-facing one: text a channel, a device acts. Aql's
-          side of it is fixed either way: the hub authorises and signs, and it is the only
-          thing that decides.
+          a separate, swappable component you run or point at. That move is in progress —
+          Aql's side of it is fixed either way: the hub authorises and signs, and it is the
+          only thing that decides.
         </p>
         <ul class="tick-list">
           <li><span>The hub is the only authority — a channel is a transport, never a permission.</span></li>
@@ -894,59 +938,102 @@ code{font-family:var(--font-mono);font-size:.88em}
     </div>
 
     <div class="how-illo reveal" aria-hidden="true">
-      <svg viewBox="0 0 720 320" preserveAspectRatio="xMidYMid meet">
-        <!-- phone -->
-        <g transform="translate(40 50)">
-          <rect width="140" height="240" rx="22" fill="var(--band)"/>
-          <rect x="8" y="8" width="124" height="224" rx="16" fill="var(--paper-cool)"/>
-          <rect x="56" y="14" width="28" height="4" rx="2" fill="var(--ink)" opacity="0.4"/>
-          <g transform="translate(20 60)">
-            <rect width="80" height="28" rx="14" fill="var(--terracotta)"/>
-            <text x="14" y="18" fill="#fafaf8" font-family="Inter" font-size="12" font-weight="500">open</text>
-          </g>
-          <g transform="translate(20 100)">
-            <rect width="100" height="28" rx="14" fill="var(--band)"/>
-            <text x="10" y="18" fill="var(--band-text)" font-family="Inter" font-size="11">opened &middot; 1.8s</text>
-          </g>
+      <!-- The signed-command path, drawn as a spec sheet rather than a scene.
+           Each stage names the artifact it produces, because the artifacts are
+           the argument: an intent is just a request until something signs it,
+           and the signature is what the relay checks. The offline lane below is
+           the same drawing with the hub removed, which is the whole point of
+           it. -->
+      <svg viewBox="0 0 760 378" preserveAspectRatio="xMidYMid meet" font-family="Inter">
+
+        <!-- ============ online lane ============ -->
+        <text x="24" y="30" font-size="10" letter-spacing="1.6" fill="var(--ink)" opacity=".55">ONLINE PATH</text>
+        <line x1="24" y1="40" x2="736" y2="40" stroke="var(--ink)" stroke-width="1" opacity=".12"/>
+
+        <!-- 1. intent -->
+        <g transform="translate(24 60)">
+          <rect width="150" height="96" rx="14" fill="var(--paper-cool)" stroke="var(--ink)" stroke-width="1.4" opacity=".95"/>
+          <text x="14" y="26" font-size="10" letter-spacing="1.2" fill="var(--terracotta)">01 &middot; INTENT</text>
+          <text x="14" y="50" font-size="14" fill="var(--ink)" font-weight="600">&ldquo;open&rdquo;</text>
+          <text x="14" y="70" font-size="11" fill="var(--ink)" opacity=".62">chat &middot; console &middot; api</text>
+          <text x="14" y="86" font-size="10" fill="var(--ink)" opacity=".45">no authority of its own</text>
         </g>
-        <!-- signal arc through checkpoints -->
-        <path d="M180 164 C 280 70, 480 70, 610 130" fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="3 5"/>
-        <circle cx="180" cy="164" r="2.5" fill="var(--ink)"/>
-        <g font-family="Inter" font-size="10" fill="var(--ink)">
-          <g>
-            <line x1="272" y1="110" x2="272" y2="92" stroke="var(--ink)" stroke-width="1" opacity="0.4"/>
-            <circle cx="272" cy="110" r="6" fill="var(--gold)" stroke="var(--ink)" stroke-width="1.5"/>
-            <text x="253" y="84" opacity="0.75" font-weight="500">verified</text>
-          </g>
-          <g>
-            <line x1="385" y1="88" x2="385" y2="70" stroke="var(--ink)" stroke-width="1" opacity="0.4"/>
-            <circle cx="385" cy="88" r="6" fill="var(--terracotta)" stroke="var(--ink)" stroke-width="1.5"/>
-            <text x="372" y="62" opacity="0.75" font-weight="500">rules</text>
-          </g>
-          <g>
-            <line x1="502" y1="96" x2="502" y2="78" stroke="var(--ink)" stroke-width="1" opacity="0.4"/>
-            <circle cx="502" cy="96" r="6" fill="var(--signal)" stroke="var(--ink)" stroke-width="1.5"/>
-            <text x="490" y="70" opacity="0.75" font-weight="500">signed</text>
-          </g>
+        <path d="M182 108 H214" stroke="var(--ink)" stroke-width="1.4" opacity=".5"/>
+        <path d="M208 103 l7 5 -7 5Z" fill="var(--ink)" opacity=".5"/>
+
+        <!-- 2. the hub -->
+        <g transform="translate(222 52)">
+          <rect width="196" height="112" rx="14" fill="var(--band)"/>
+          <text x="16" y="26" font-size="10" letter-spacing="1.2" fill="var(--gold)">02 &middot; THE HUB DECIDES</text>
+          <text x="16" y="50" font-size="12.5" fill="var(--band-text)">membership &middot; rules</text>
+          <text x="16" y="70" font-size="12.5" fill="var(--band-text)">limits &middot; quotas &middot; windows</text>
+          <line x1="16" y1="82" x2="180" y2="82" stroke="var(--band-text)" stroke-width="1" opacity=".25"/>
+          <text x="16" y="99" font-size="11" fill="var(--gold)">then, and only then, it signs</text>
         </g>
-        <!-- gate -->
-        <g transform="translate(540 90)">
-          <path d="M-10 100 V60 a80 40 0 0 1 160 0 V100" fill="none" stroke="var(--ink)" stroke-width="2"/>
-          <rect x="0" y="100" width="140" height="80" fill="none" stroke="var(--ink)" stroke-width="2"/>
-          <line x1="20" y1="100" x2="20" y2="180" stroke="var(--ink)" stroke-width="2"/>
-          <line x1="40" y1="100" x2="40" y2="180" stroke="var(--ink)" stroke-width="2"/>
-          <line x1="60" y1="100" x2="60" y2="180" stroke="var(--ink)" stroke-width="2"/>
-          <line x1="80" y1="100" x2="80" y2="180" stroke="var(--ink)" stroke-width="2"/>
-          <line x1="100" y1="100" x2="100" y2="180" stroke="var(--ink)" stroke-width="2"/>
-          <line x1="120" y1="100" x2="120" y2="180" stroke="var(--ink)" stroke-width="2"/>
-          <circle cx="70" cy="40" r="6" fill="var(--terracotta)" stroke="var(--ink)" stroke-width="1.5"/>
+        <path d="M426 108 H458" stroke="var(--ink)" stroke-width="1.4" opacity=".5"/>
+        <path d="M452 103 l7 5 -7 5Z" fill="var(--ink)" opacity=".5"/>
+
+        <!-- 3. the envelope: the artifact that actually travels -->
+        <g transform="translate(466 60)">
+          <rect width="150" height="96" rx="14" fill="var(--paper-cool)" stroke="var(--terracotta)" stroke-width="1.6"/>
+          <text x="14" y="26" font-size="10" letter-spacing="1.2" fill="var(--terracotta)">03 &middot; ENVELOPE</text>
+          <text x="14" y="48" font-size="11" font-family="ui-monospace,monospace" fill="var(--ink)">ed25519 sig</text>
+          <text x="14" y="66" font-size="11" font-family="ui-monospace,monospace" fill="var(--ink)">nonce &middot; exp</text>
+          <text x="14" y="86" font-size="10" fill="var(--ink)" opacity=".45">replay-proof, short-lived</text>
         </g>
-        <!-- dot pattern flourish -->
-        <g fill="var(--ink)" opacity="0.15">
-          <circle cx="250" cy="270" r="1.4"/><circle cx="270" cy="278" r="1.4"/><circle cx="290" cy="268" r="1.4"/>
-          <circle cx="310" cy="280" r="1.4"/><circle cx="330" cy="272" r="1.4"/><circle cx="350" cy="282" r="1.4"/>
-          <circle cx="370" cy="270" r="1.4"/><circle cx="390" cy="279" r="1.4"/><circle cx="410" cy="269" r="1.4"/>
+        <path d="M624 108 H656" stroke="var(--ink)" stroke-width="1.4" opacity=".5"/>
+        <path d="M650 103 l7 5 -7 5Z" fill="var(--ink)" opacity=".5"/>
+
+        <!-- 4. controller + relay -->
+        <g transform="translate(664 60)">
+          <rect width="72" height="96" rx="14" fill="var(--paper-cool)" stroke="var(--ink)" stroke-width="1.4"/>
+          <text x="12" y="26" font-size="10" letter-spacing="1.2" fill="var(--terracotta)">04</text>
+          <text x="12" y="46" font-size="11" fill="var(--ink)" font-weight="600">verify</text>
+          <text x="12" y="64" font-size="11" fill="var(--ink)" font-weight="600">pulse</text>
+          <circle cx="24" cy="80" r="4.5" fill="var(--signal)"/>
+          <text x="34" y="84" font-size="9" fill="var(--ink)" opacity=".55">relay</text>
         </g>
+
+        <!-- what the controller refuses to trust -->
+        <g transform="translate(222 176)">
+          <text x="0" y="12" font-size="10.5" fill="var(--ink)" opacity=".62">
+            The controller trusts the key it pinned at pairing — not the network, not the sender.
+          </text>
+          <text x="0" y="30" font-size="10.5" fill="var(--ink)" opacity=".62">
+            Every decision, allowed or denied, lands in a hash-chained audit log in the same second.
+          </text>
+        </g>
+
+        <!-- ============ offline lane ============ -->
+        <line x1="24" y1="228" x2="736" y2="228" stroke="var(--ink)" stroke-width="1" opacity=".12"/>
+        <text x="24" y="252" font-size="10" letter-spacing="1.6" fill="var(--ink)" opacity=".55">OFFLINE PATH &middot; NO HUB REACHABLE</text>
+
+        <g transform="translate(24 266)">
+          <rect width="150" height="72" rx="14" fill="var(--paper-cool)" stroke="var(--ink)" stroke-width="1.4"/>
+          <text x="14" y="24" font-size="10" letter-spacing="1.2" fill="var(--gold)">GRANT ON PHONE</text>
+          <text x="14" y="44" font-size="11" fill="var(--ink)">signed in advance</text>
+          <text x="14" y="61" font-size="10" fill="var(--ink)" opacity=".45">bounded by its own exp</text>
+        </g>
+        <path d="M182 302 H214" stroke="var(--ink)" stroke-width="1.4" stroke-dasharray="4 4" opacity=".5"/>
+        <path d="M208 297 l7 5 -7 5Z" fill="var(--ink)" opacity=".5"/>
+
+        <g transform="translate(222 266)">
+          <rect width="196" height="72" rx="14" fill="var(--paper-cool)" stroke="var(--ink)" stroke-width="1.4" stroke-dasharray="5 4"/>
+          <text x="16" y="24" font-size="10" letter-spacing="1.2" fill="var(--ink)" opacity=".5">THE HUB IS NOT HERE</text>
+          <text x="16" y="46" font-size="11" fill="var(--ink)" opacity=".7">lan or bluetooth, direct</text>
+          <text x="16" y="63" font-size="10" fill="var(--ink)" opacity=".45">nothing to ask, nothing to wait for</text>
+        </g>
+        <path d="M426 302 H656" stroke="var(--ink)" stroke-width="1.4" stroke-dasharray="4 4" opacity=".5"/>
+        <path d="M650 297 l7 5 -7 5Z" fill="var(--ink)" opacity=".5"/>
+
+        <g transform="translate(664 266)">
+          <rect width="72" height="72" rx="14" fill="var(--paper-cool)" stroke="var(--terracotta)" stroke-width="1.6"/>
+          <text x="12" y="24" font-size="10" letter-spacing="1.2" fill="var(--terracotta)">SAME</text>
+          <text x="12" y="42" font-size="11" fill="var(--ink)" font-weight="600">verify</text>
+          <text x="12" y="59" font-size="11" fill="var(--ink)" font-weight="600">pulse</text>
+        </g>
+
+        <text x="222" y="358" font-size="10.5" fill="var(--ink)" opacity=".62">The controller checks the same signature against the same pinned key.</text>
       </svg>
     </div>
 
