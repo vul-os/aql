@@ -507,6 +507,34 @@ export async function probeController(
   }
 }
 
+/**
+ * Which of these gates has a controller answering right now.
+ *
+ * Probes each DISTINCT address once — several gates commonly sit behind one
+ * controller, and asking it three times to answer one question is rude to a
+ * device that may be a Pi on a windowsill — then reports the gates whose
+ * address answered.
+ *
+ * All probes run together. This is called while somebody is standing at a
+ * gate; doing them in sequence would multiply a 1.5s timeout by however many
+ * addresses are unreachable, which is exactly the case where the wait is
+ * longest and the person is most likely to give up on the app and climb the
+ * wall.
+ */
+export async function reachableGates(
+  statuses: GateStatus[],
+  opts: { timeoutMs?: number; fetchImpl?: typeof fetch } = {},
+): Promise<GateStatus[]> {
+  const addresses = [...new Set(statuses.map((g) => g.address))];
+  const answered = new Map<string, boolean>();
+  await Promise.all(
+    addresses.map(async (addr) => {
+      answered.set(addr, await probeController(addr, opts));
+    }),
+  );
+  return statuses.filter((g) => answered.get(g.address) === true);
+}
+
 export type GateStatus = {
   /**
    * The hub this gate belongs to — its pinned key. Access-point ids are

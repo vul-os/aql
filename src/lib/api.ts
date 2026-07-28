@@ -12,6 +12,7 @@ import { KEYS, read as storageRead, remove as storageRemove, write as storageWri
 // serves is the contract; routeParity.test.ts pins this client to it.
 
 import { gatewayFetch, getApiBaseUrl } from './hub';
+import { reportHubReachability } from './hubReachability';
 
 const ACCESS_KEY = KEYS.access;
 const REFRESH_KEY = KEYS.refresh;
@@ -267,10 +268,15 @@ export async function apiFetch<T>(path: string, init: FetchInit = {}): Promise<T
   // one that hit its own timeout, says nothing about whether the hub is up.
   const attempt = async (): Promise<Response> => {
     try {
-      return await doRequest();
+      const res = await doRequest();
+      // A response of any status means the hub answered. Even a 500 proves it
+      // is there, which is the only thing this observation is about.
+      reportHubReachability('reachable');
+      return res;
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') throw err;
       if (err instanceof Error && err.name === 'AbortError') throw err;
+      reportHubReachability('unreachable');
       throw new ApiError(0, HUB_UNREACHABLE_CODE);
     }
   };

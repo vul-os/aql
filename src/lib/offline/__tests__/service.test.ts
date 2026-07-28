@@ -46,6 +46,7 @@ const {
   allGateStatuses,
   freshness,
   probeController,
+  reachableGates,
 } = await import('../service');
 const { recordId, saveGrantRecord } = await import('../vault');
 
@@ -285,5 +286,86 @@ describe('probeController', () => {
     const { impl, calls } = recordingFetch({ status: 200 } as Response);
     expect(await probeController('https://gate.example', { fetchImpl: impl })).toBe(false);
     expect(calls).toHaveLength(0);
+  });
+});
+
+// ── reachableGates ─────────────────────────────────────────────────────────
+//
+// What the emergency banner counts. Getting this wrong in either direction is
+// bad in a specific way: over-reporting puts someone in front of a gate that
+// will not open, under-reporting sends them away from one that would have.
+
+describe('reachableGates', () => {
+  function gate(id: string, address: string) {
+    return { address, accessPoint: { id }, hubPubkey: 'hub', verdict: null, addressKnown: true };
+  }
+
+  function probeStub(live: string[]) {
+    const asked: string[] = [];
+    const impl = (async (url: string | URL) => {
+      const u = String(url);
+      asked.push(u);
+      const ok = live.some((a) => u.startsWith(`http://${a}`));
+      return { status: ok ? 405 : 502 } as Response;
+    }) as unknown as typeof fetch;
+    return { impl, asked };
+  }
+
+  it('asks each distinct address once, however many gates sit behind it', async () => {
+    const { impl, asked } = probeStub(['10.0.0.9:8737']);
+    const gates = [
+      gate('ap_front', '10.0.0.9:8737'),
+      gate('ap_side', '10.0.0.9:8737'),
+      gate('ap_back', '10.0.0.9:8737'),
+    ] as never[];
+
+    const live = await reachableGates(gates, { fetchImpl: impl });
+
+    // Three gates, one controller — a Pi on a windowsill should be asked one
+    // question, not three.
+    expect(asked).toHaveLength(1);
+    expect(live).toHaveLength(3);
+  });
+
+  it('returns only the gates whose controller answered', async () => {
+    const { impl } = probeStub(['10.0.0.9:8737']);
+    const gates = [
+      gate('ap_home', '10.0.0.9:8737'),
+      gate('ap_office', '10.0.0.50:8737'),
+    ] as never[];
+
+    const live = await reachableGates(gates, { fetchImpl: impl });
+    expect(live.map((g) => g.accessPoint.id)).toEqual(['ap_home']);
+  });
+
+  it('reports none when nothing answers', async () => {
+    const { impl } = probeStub([]);
+    const gates = [gate('ap_home', '10.0.0.9:8737')] as never[];
+    // This is the train case: the hub is unreachable because nothing is
+    // reachable, and no banner should appear.
+    expect(await reachableGates(gates, { fetchImpl: impl })).toEqual([]);
+  });
+
+  it('probes concurrently rather than one timeout after another', async () => {
+    let inFlight = 0;
+    let peak = 0;
+    const impl = (async () => {
+      inFlight += 1;
+      peak = Math.max(peak, inFlight);
+      await new Promise((r) => setTimeout(r, 5));
+      inFlight -= 1;
+      return { status: 405 } as Response;
+    }) as unknown as typeof fetch;
+
+    const gates = [
+      gate('a', '10.0.0.1:8737'),
+      gate('b', '10.0.0.2:8737'),
+      gate('c', '10.0.0.3:8737'),
+    ] as never[];
+    await reachableGates(gates, { fetchImpl: impl });
+
+    // Sequential probing multiplies the timeout by the number of unreachable
+    // addresses — worst exactly when someone is waiting at a gate.
+    expect(peak).toBe(3);
   });
 });

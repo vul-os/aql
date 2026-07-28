@@ -134,8 +134,16 @@ hub's issuance endpoint):
 - [ ] **The two halves meeting on real hardware.** Every part now exists and is tested
       in isolation; none of it has been run against a real controller. Until someone
       stands at a gate with the network off, treat this as unproven
-- [ ] An emergency-access screen that appears when the hub is unreachable and a paired
-      controller is in range
+- [x] An emergency-access screen that appears when the hub is unreachable and a paired
+      controller is in range. All three conditions are observed, not assumed: the hub is
+      known unreachable from ordinary traffic (apiFetch reports it; there is no poll, and
+      `unknown` before the first request is its own state so a cold start is not an
+      emergency), this device actually holds a grant, and a controller answered a probe.
+      The probe is `GET /grant/open`, which the LAN server does not route and answers 405
+      — the alternatives all cost something, and a liveness check must cost the thing it
+      probes nothing. The banner says a controller is *responding*, never that the gate
+      will open: the probe carries no signature, so identity is still settled at the gate
+      against the controller's pinned hub key
 - [ ] Grant revocation semantics beyond "wait for expiry" (currently an accepted v0
       non-goal)
 

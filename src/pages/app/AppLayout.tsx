@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Link, Navigate, Outlet } from 'react-router-dom';
 import { AppSidebar } from '@/components/nav/AppSidebar';
 import { AppTopBar } from '@/components/nav/AppTopBar';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { CreateLocationModal } from '@/components/locations/CreateLocationModal';
+import { useEmergencyOffer } from '@/lib/offline/useEmergencyOffer';
 
 export default function AppLayout() {
-  const { signedIn, loading, currentAccount, setCurrentAccount, refreshMe } = useAuth();
+  const { signedIn, loading, currentAccount, setCurrentAccount, refreshMe, user } = useAuth();
+  const emergency = useEmergencyOffer(user?.id ?? null);
   // null = still checking, false = has locations, true = needs setup
   const [needsLocationSetup, setNeedsLocationSetup] = useState<boolean | null>(null);
 
@@ -66,6 +68,42 @@ export default function AppLayout() {
       <div className="flex-1 min-w-0 flex flex-col">
         <AppTopBar />
         <main className="flex-1 px-4 sm:px-6 lg:px-10 py-6 sm:py-10 max-w-[1400px] w-full mx-auto">
+          {/* The one banner that earns its place, and only under conditions it
+              has actually observed: the hub is not answering, this device
+              holds a grant, and a controller replied to a probe. See
+              useEmergencyOffer for why all three are required — the second
+              stops a dead-end offer, the third stops this firing on a train.
+
+              The wording is bounded by what the probe can prove. Something is
+              answering at that address; nothing here has verified it is the
+              paired controller, because the probe carries no signature. So
+              this says a controller is responding and stops short of saying
+              the gate will open — that is settled at the gate, against the
+              hub key the controller pinned. */}
+          {emergency.offer && (
+            <div
+              role="alert"
+              className="mb-6 rounded-2xl border border-gold/50 bg-gold/[0.08] px-5 py-4 sm:px-6 sm:py-5"
+            >
+              <p className="text-[11px] uppercase tracking-[0.18em] text-ink/55 font-mono">
+                Hub not answering
+              </p>
+              <p className="mt-2 text-[15px] text-ink/85 leading-relaxed">
+                This console can&rsquo;t reach your hub, but{' '}
+                {emergency.gatesInRange === 1
+                  ? 'a controller is responding'
+                  : `${emergency.gatesInRange} controllers are responding`}{' '}
+                on this network. You can open a gate directly with a grant this device already
+                holds.
+              </p>
+              <Link
+                to="/app/emergency"
+                className="mt-3 inline-flex items-center rounded-full bg-ink text-paper px-4 h-10 text-sm"
+              >
+                Open emergency access
+              </Link>
+            </div>
+          )}
           {/* WhatsApp-connect and Slack-identity nudge banners used to live
               here. Removed: they called client methods that pointed at routes
               the hub does not serve, so they could never succeed and would
