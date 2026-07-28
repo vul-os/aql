@@ -18,7 +18,7 @@ import { Footer } from '@/components/landing/Footer';
 import { LinkButton, Button } from '@/components/ui/Button';
 import { useAuth } from '@/lib/auth';
 import { getApiBaseUrl, openGatewayPicker } from '@/lib/hub';
-import { DEMO_KINDS, REAL_KIND } from '@/lib/demoData';
+import { DEVICE_KINDS, REAL_KIND } from '@/lib/deviceKinds';
 
 export default function Landing() {
   return (
@@ -142,10 +142,11 @@ function Entry() {
 
 // ── 2. the seven device kinds, and which one is real ────────────────────────
 
-// Aql's device model has seven kinds. Six of them are the device engine,
-// which is designed and not built; access control is the one that runs from
-// the intent to the relay today. The list is derived from the same model the
-// console renders (src/lib/demoData.ts) so it cannot drift from it.
+// Aql's device model has seven kinds. Six are served by the device engine —
+// which is built, ships off by default, and does not have a driver for every
+// one of them; access control is the kind that runs from the intent to the
+// relay today and does not go through the engine at all. The list comes from
+// src/lib/deviceKinds.ts, which a test pins to the engine's own catalogue.
 const BLURBS: Record<string, string> = {
   Camera: 'Live view, recording and event-driven alerting.',
   Lighting: 'On, off, dim, scene and groups, behind one device model.',
@@ -156,7 +157,7 @@ const BLURBS: Record<string, string> = {
   Access: 'Gates, doors and barriers — a paired controller pulses the relay on an Ed25519-signed command it verifies against a key it pinned itself.',
 };
 
-const KINDS = [...DEMO_KINDS, REAL_KIND];
+const KINDS = DEVICE_KINDS;
 
 function DeviceKinds() {
   return (

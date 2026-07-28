@@ -10,7 +10,7 @@ import (
 	"github.com/vul-os/aql/hub/internal/store"
 )
 
-// Locations + quotas, porting backend/src/routes/locations.ts.
+// Locations + quotas, porting the Workers backend's locations.ts.
 
 var locationTypes = map[string]bool{"house": true, "complex": true, "building": true, "other": true}
 

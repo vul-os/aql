@@ -72,7 +72,7 @@ func register(t *testing.T, h http.Handler, username string) (access, refresh st
 func TestHealth(t *testing.T) {
 	h := newTestServer(t, "")
 	rec, out := doJSON(t, h, "GET", "/health", "", nil)
-	// Shape parity with backend/src/app.ts so the Tauri picker
+	// The health shape the hub picker expects, so the picker
 	// (src/lib/hub.ts testGatewayUrl) accepts it: {ok, env, db_now}.
 	if rec.Code != 200 || out["ok"] != true || out["version"] != "test" {
 		t.Errorf("health: %d %v", rec.Code, out)

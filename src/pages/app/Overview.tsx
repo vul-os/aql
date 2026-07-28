@@ -6,7 +6,7 @@
 // reports directly (opens today, access points, recent activity, locations),
 // what the device engine reports (live device tiles, chipped "Engine"), and
 // what the energy meter reports (power draw). None of it is fixture data —
-// see src/components/demo/engineState.ts and src/components/demo/liveState.ts
+// see src/components/device/engineState.ts and src/components/device/liveState.ts
 // for how each source's ABSENCE (no engine configured, no meter, a forbidden
 // read, a broken fetch) is told apart from an empty-but-live answer, and
 // printed as a verbatim notice rather than collapsed into a blank panel.
@@ -20,7 +20,7 @@ import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/Card';
 import { AccessPointAction } from '@/components/access/AccessPointAction';
 import { CreateAccessPointModal } from '@/components/access/CreateAccessPointModal';
-import { EngineChip, InertNote, StateDot } from '@/components/demo/DemoMarks';
+import { EngineChip, InertNote, StateDot } from '@/components/device/StatusMarks';
 import {
   availabilityState,
   engineFleet,
@@ -28,8 +28,8 @@ import {
   kindLabel,
   summaryLine,
   type EngineFleet,
-} from '@/components/demo/engineState';
-import { bucketCaveat, energyNotice, energyState, type EnergyState } from '@/components/demo/liveState';
+} from '@/components/device/engineState';
+import { bucketCaveat, energyNotice, energyState, type EnergyState } from '@/components/device/liveState';
 import { useAuth } from '@/lib/auth';
 import {
   api,
@@ -95,7 +95,7 @@ export default function Overview() {
   // never blocks the dashboard — see engineFleet().
   const [engine, setEngine] = useState<EngineFleet | null>(null);
   // The energy meter, or the honest reason there isn't one. Never throws
-  // either — see energyState() in components/demo/liveState.ts.
+  // either — see energyState() in components/device/liveState.ts.
   const [energy, setEnergy] = useState<EnergyState | null>(null);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);

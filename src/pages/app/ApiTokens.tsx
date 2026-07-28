@@ -84,7 +84,7 @@ function formatDate(sec: number | null): string {
 
 // ── list-load state ─────────────────────────────────────────────────────────
 //
-// Same shape of honesty as src/components/demo/liveState.ts, sized to what
+// Same shape of honesty as src/components/device/liveState.ts, sized to what
 // this route can actually answer. There is no "not configured" state here —
 // unlike automations or energy, scoped tokens aren't an optional runtime, so
 // a 503 has no special meaning and just falls into `error`. `forbidden` and

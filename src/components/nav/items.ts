@@ -10,10 +10,10 @@ export type NavItem = { to: string; label: string; end?: boolean };
  * is the kind that works end to end today, which makes it the best module,
  * not the product.
  *
- * Honesty lives per item inside these screens, not in the nav label: panels
- * and rows fed by src/lib/demoData.ts carry a <DemoChip />, gateway-backed
- * ones don't, and controls with no engine behind them are disabled with a
- * ROADMAP note. See src/components/demo/DemoMarks.tsx.
+ * Honesty lives per item inside these screens, not in the nav label: rows say
+ * whether they come from the device engine or the hub's access path, and
+ * controls with no engine behind them are disabled with a ROADMAP note. See
+ * src/components/device/StatusMarks.tsx.
  */
 export const APP_NAV_ITEMS: NavItem[] = [
   { to: '/app', label: 'Overview', end: true },

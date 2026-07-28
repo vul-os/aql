@@ -10,7 +10,8 @@ import (
 	"github.com/vul-os/aql/hub/internal/store"
 )
 
-// Accounts + members + invites, porting backend/src/routes/accounts.ts.
+// Accounts + members + invites, porting the Workers backend's accounts.ts
+// (deleted — see this package's comment).
 //
 // Tenancy is app-layer: every handler resolves the caller's membership role
 // in the target account FIRST (s.memberRole) and 404s for non-members —

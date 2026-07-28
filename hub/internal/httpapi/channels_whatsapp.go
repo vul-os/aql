@@ -1,7 +1,7 @@
 package httpapi
 
 // WhatsApp webhook — the full conversational contract from
-// backend/src/routes/whatsapp.ts, ported onto the Go channel seam: GET verify
+// The Workers backend's whatsapp.ts, ported onto the Go channel seam: GET verify
 // challenge, POST with fail-closed HMAC, phone_number_id filtering, message-id
 // dedupe, flood throttle (bot goes quiet, webhook still 200), interactive list
 // picker for multiple access points, location select, welcome / linked

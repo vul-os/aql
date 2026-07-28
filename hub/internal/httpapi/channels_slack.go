@@ -3,7 +3,7 @@ package httpapi
 // Slack — Events API webhook (+ interactions) AND Socket Mode share this one
 // code path: handleSlackSocketEnvelope feeds Socket Mode frames into the same
 // processSlackEvent / processSlackInteraction the webhooks use. Port of
-// backend/src/routes/slack.ts (hardened signature check, block_actions
+// the Workers backend's slack.ts (hardened signature check, block_actions
 // open_gate → verdict), with the open running through the shared choke point.
 
 import (

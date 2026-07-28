@@ -3,7 +3,7 @@ package channels
 // Slack — two modes from one implementation. This file owns the Events API +
 // interactions wire (verify, parse, block rendering); socketmode.go dials the
 // zero-URL Socket Mode connection and feeds the SAME payloads back through the
-// httpapi handler. Port of backend/src/routes/slack.ts (block_actions
+// httpapi handler. Port of the Workers backend's slack.ts (block_actions
 // open_gate → verdict, hardened signature check).
 
 import (

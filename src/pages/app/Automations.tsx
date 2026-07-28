@@ -20,7 +20,7 @@
 //
 // A hub with no rule engine, a hub whose rule engine is not configured, an
 // admin-only read a member can't see, and a genuinely failed fetch are four
-// different sentences — see src/components/demo/liveState.ts, which narrows
+// different sentences — see src/components/device/liveState.ts, which narrows
 // all of them so this page never has to guess which one happened.
 //
 // The access-control module has its own real automation surface — time
@@ -42,11 +42,11 @@ import {
   schedulerWarning,
   trippedRules,
   type AutomationsState,
-} from '@/components/demo/liveState';
-import { InertNote } from '@/components/demo/DemoMarks';
+} from '@/components/device/liveState';
+import { InertNote } from '@/components/device/StatusMarks';
 import { fromUnix } from '@/lib/time';
 import RuleEditor from '@/components/automations/RuleEditor';
-import { engineFleet, type EngineFleet } from '@/components/demo/engineState';
+import { engineFleet, type EngineFleet } from '@/components/device/engineState';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 

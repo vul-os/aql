@@ -40,7 +40,7 @@ import {
   type AutomationRuleInput,
   type EngineDevice,
 } from '@/lib/api';
-import { controlsFor, type EngineControl } from '@/components/demo/engineState';
+import { controlsFor, type EngineControl } from '@/components/device/engineState';
 
 type TriggerKind = 'schedule' | 'threshold' | 'event';
 type CompareOp = 'above' | 'below' | 'at_least' | 'at_most';
@@ -256,7 +256,7 @@ export default function RuleEditor({
   }, [devices]);
 
   // Verb suggestions only — a hint for the datalist, never a filter. Reuses
-  // the presentation-only capability→verb table src/components/demo/
+  // the presentation-only capability→verb table src/components/device/
   // engineState.ts already maintains for the live device-execute screen; that
   // table explicitly carries no tier information (see its own header
   // comment), which is exactly the property this form needs: it can suggest

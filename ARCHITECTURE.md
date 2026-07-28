@@ -27,20 +27,24 @@ exist and which are design intent. The condensed operator-facing tour is
 | Controller agent (`controller/`) — pairing, signed commands, grants, events | **Built.** 45 Go tests green. GPIO relay driver and BLE radio are **not** |
 | Wire contracts (`proto/`) | **Built.** 61 conformance vectors, 68 checks, consumed by both sides |
 | Cross-module harness (`e2e/`) | **Built.** Boots real binaries and drives the open path over the wire |
-| Web console + desktop shell (`src/`, `src-tauri/`) | **Built** for admin surfaces. The device / energy / automations screens run on a demo dataset; there is no emergency-access screen |
-| **Device engine** — drivers, discovery, telemetry, automations, energy | **Not built.** No Matter, MQTT, Zigbee, ONVIF, Modbus or Z-Wave code exists |
-| **Phone-side offline grants** | **Not built.** The contract, controller verification and hub issuance are real; nothing on a phone presents a grant |
+| Web console + desktop shell (`src/`, `src-tauri/`) | **Built.** Admin surfaces, the device / energy / automations screens over the real engine, and an emergency-access screen that requests and stores an offline grant |
+| **Device engine** — drivers, discovery, telemetry, automations, energy | **Built, default off.** Registry behind a driver seam; `http`, `modbus` (TCP), `mqtt` and `camera` (ONVIF) drivers; automations and energy on top. No radio in the hub — Zigbee and Z-Wave arrive over a bridge. No Matter, no robot driver, and the camera driver receives no frames |
+| **Phone-side offline grants** | **Half built.** The console requests and stores a grant (proven end to end against a real hub); *presenting* one still needs the LAN or BLE, which a browser tab cannot do |
 | Chat rail | **In transition.** Moving out of Aql into [Ephor](https://github.com/vul-os/ephor); the adapters in `hub/internal/channels/` are transitional (§3a) |
 | Google OAuth | **Not built** |
 
 ### The seven device kinds
 
 Aql's device model has seven kinds — **camera, lighting, robot, climate, energy, sensor,
-access**. Six of them are visible today only through the console's demo dataset
-(`src/lib/demoData.ts`: twelve fictional devices, marked as demo at the point of use),
-because the engine that would populate them from real hardware is §8 and does not exist.
-**Access** is the exception: it has a real wire contract, a real device agent and a real
-audit trail, and it is the reference shape for how the other six should eventually work.
+access**. Five of them can be populated from real hardware today through the engine (§8),
+by whichever driver fits: MQTT, Modbus TCP, generic HTTP, or ONVIF for cameras. **Robot**
+is the one kind with no driver at all. **Camera** is real but partial — discovery and
+readings, no video.
+
+**Access** is the exception in the other direction: it is the most complete kind and the
+only one that does not go through the engine. It has a real wire contract, a real device
+agent and a real audit trail, and it remains the reference shape — bringing it onto the
+same internal model is still ahead.
 
 ---
 
@@ -357,36 +361,41 @@ contract for hubs and controllers already in the field.
 
 ---
 
-## 8. The device engine — designed, not started
+## 8. The device engine
 
-This section is the product, and it is the part that does not exist yet. "One hub owns
-everything" — cameras, lighting, robots, climate, energy, sensors, alongside the access
-control that already works — rests on a device engine that **is not present in code**. No
-protocol driver of any kind exists in this repository.
+"One hub owns everything" — cameras, lighting, robots, climate, energy, sensors, alongside
+the access control that already works — rests on a device engine. That engine now exists
+in `hub/internal/devices`: a registry behind a driver seam, with a capability catalogue
+that decides what a device may be asked to do.
 
-The intended shape is a single internal device abstraction (id, kind, zone, state,
-commands, telemetry) that every driver maps onto, with discovery in front of it and a
-protocol-agnostic console behind it. Planned adapters: Matter, MQTT, Zigbee, ONVIF,
-Modbus, generic HTTP/webhook. An automations runtime (`trigger → condition → action`) and
-energy ingestion sit on top of the same device state.
+**It is off by default, and constructs nothing until asked.** A hub started without
+`-device-drivers` builds no registry, starts no poller and opens no socket. That is not a
+safety afterthought — it is asserted by a test (`hub/cmd/hub/wiring_default_off_test.go`)
+that fails if a registry is ever built without one.
+
+Four drivers ship: generic HTTP/webhook, Modbus TCP (read-only), MQTT (including a
+zigbee2mqtt bridge scan), and ONVIF cameras. An automations runtime
+(`trigger → condition → action`, §9) and energy ingestion sit on the same device state.
+
+**What is not built, stated as plainly as the rest.** No Matter. No radio in the hub —
+Zigbee and Z-Wave are reached through a `zigbee2mqtt` or `zwave-js-ui` bridge that owns
+the radio and republishes to MQTT, which is a deliberate choice rather than a gap. No
+robot driver, so one of the seven kinds has no path at all. No camera pipeline: the ONVIF
+driver discovers
+cameras, resolves stream addresses and probes them with RTSP, and has never received a
+frame. `docs/CAMERA-RETENTION.md` is the design that has to exist first, and it is design
+only.
 
 **Access is the shape to copy, not the exception to it.** The access module already proves
 the parts that are hard to retrofit: a versioned wire contract with conformance vectors, a
 device that verifies a signature instead of trusting its network, and an audit row written
-in the same transaction as the decision. Bringing the access path onto the same internal
-device model — so `access` is one kind among seven rather than a parallel stack — is part
-of this phase.
+in the same transaction as the decision. It still runs as a parallel stack; bringing it
+onto the same internal device model — so `access` is one kind among seven — is the part of
+this phase that has not happened.
 
-**Where it lands is undecided.** Two plausible homes: the Go hub, which already owns
-persistence, audit and the open path and runs on the always-on box; or the Rust core in
-`src-tauri/`, which today exposes exactly one IPC command (`system_pulse`, host
-telemetry) and is not even called by the frontend. The hub is the likelier answer.
-Nothing has been committed.
-
-Until then the console's device, energy and automations views read `src/lib/demoData.ts` —
-twelve fictional devices across the seven kinds, mixed into screens that also carry real
-access data and therefore marked as demo at the point of use rather than page-wide. They
-are the shape of the target, not a capability.
+**Where it lives: the Go hub.** It owns persistence, audit and the open path, and it runs
+on the always-on box. The Rust core in `src-tauri/` was the alternative and is not it; it
+exposes one IPC command (`system_pulse`, host telemetry) that the frontend does not call.
 
 Full detail, including what "works with any hardware" does and does not mean:
 [`site/docs/devices.md`](site/docs/devices.md).

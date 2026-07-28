@@ -28,13 +28,14 @@ contracts have 61 conformance vectors (68 checks) that both sides are tested aga
 
 ### What can't it do?
 
-No device drivers (Matter, MQTT, Zigbee, ONVIF, Modbus), no automations runtime, no
-energy metering, no camera pipeline, no robot control — so six of the seven device kinds
-exist only as a **demo dataset** in the console (`src/lib/demoData.ts`, marked as demo
-wherever it appears). No geofencing and no time-window rules for online opens. The offline
-emergency-access path works on the controller and the hub but **not on a phone** — nothing
-on a resident's device requests, holds or presents a grant, so that path does not run end
-to end. See [Devices](devices.md) and [Emergency access](emergency-access.md).
+No Matter, no robot driver, and no camera pipeline — the ONVIF driver discovers cameras and probes
+their streams but receives no frames. The device engine itself, the automations runtime
+and energy metering are built, and all three are off unless you configure them.
+
+The offline emergency-access path is **half done**: the console requests and stores a
+grant against a real hub, but *presenting* one talks straight to the controller on the
+LAN or over BLE, which a browser tab cannot do. See [Devices](devices.md) and
+[Emergency access](emergency-access.md).
 
 ### Are the chat rails going away?
 

@@ -14,7 +14,7 @@ import (
 	"github.com/vul-os/aql/hub/internal/store"
 )
 
-// Auth endpoints — the skeleton subset of backend/src/routes/auth.ts. Real
+// Auth endpoints, inherited in shape from the Workers backend's auth.ts. Real
 // argon2id hashing and real token issuance; the ceremony around them
 // (username verification, password reset, Google OAuth, invites) is deferred.
 

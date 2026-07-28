@@ -74,8 +74,7 @@ last path is only three-quarters built; see [Emergency access](emergency-access.
 | **e2e** (`e2e/`) | Cross-module harness: boots the real hub + controller binaries and proves the open path over the wire | **Shipped** | Go, subprocess-driven |
 | **console / app** (`src/`, `src-tauri/`) | Web console embedded in the hub, plus a Tauri v2 desktop shell with a hub picker | **Shipped** (admin surfaces) | React 19 · Vite · Tauri v2 |
 | **proto** (`proto/`) | The versioned wire contracts + conformance vectors | **Shipped** — 61 vectors, 68 checks | Markdown + JSON fixtures |
-| **device engine** | Protocol drivers, discovery, telemetry, automations, energy — six of the seven device kinds | **Not built** | — |
-| **console demo data** | The device / energy / automations figures, from `src/lib/demoData.ts` | **Demo only** — marked as such at the point of use | TypeScript, in-memory |
+| **device engine** (`hub/internal/devices/`) | Registry behind a driver seam; `http`, `modbus` (TCP), `mqtt`, `camera` (ONVIF) | **Shipped, default off** — no registry unless `-device-drivers` names one. No radio in the hub — Zigbee and Z-Wave arrive over a bridge. No Matter, no robot driver, no camera pipeline | Go |
 
 ### One implementation, no second server
 

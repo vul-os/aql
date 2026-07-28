@@ -10,7 +10,7 @@ import (
 )
 
 // Access points (and, from stage 3, the open path + temporary grants),
-// porting backend/src/routes/access.ts.
+// porting the Workers backend's access.ts.
 
 var apKinds = map[string]bool{"gate": true, "door": true, "barrier": true, "other": true}
 

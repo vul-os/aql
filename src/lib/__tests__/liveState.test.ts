@@ -13,7 +13,7 @@ import {
   trippedRules,
   type AutomationsState,
   type EnergyState,
-} from '@/components/demo/liveState';
+} from '@/components/device/liveState';
 import type { AutomationRule, EnergyBucket, EnergyMixResponse } from '@/lib/api';
 
 // These are the rules that decide what a person is TOLD when a runtime is not

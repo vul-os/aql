@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// First-run instance-admin claim, porting backend/src/routes/admin.ts
+// First-run instance-admin claim, porting the Workers backend's admin.ts
 // GET/POST /admin/claim semantics:
 //
 //   - authenticated but deliberately NOT admin-gated (it bootstraps the admin)

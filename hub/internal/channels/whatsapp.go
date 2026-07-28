@@ -1,7 +1,7 @@
 package channels
 
 // WhatsApp (Meta Cloud API) — the primary channel and the full conversational
-// contract from backend/src/routes/whatsapp.ts: interactive list picker for
+// contract inherited from the Workers backend's whatsapp.ts: interactive list picker for
 // multiple access points, location select, welcome / linked-locations,
 // unlinked signup prompt, visitor grants, honest denial replies, message-id
 // dedupe and phone_number_id filtering. This file owns the provider-specific

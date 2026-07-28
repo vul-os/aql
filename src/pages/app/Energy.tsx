@@ -1,7 +1,7 @@
 // Energy — Aql's metering screen.
 //
 // Wired to the hub's read-only metering API (hub/internal/energy, via
-// energyState() in src/components/demo/liveState.ts, which calls
+// energyState() in src/components/device/liveState.ts, which calls
 // GET /v1/accounts/{id}/energy/series and .../mix). This used to be a
 // seeded fixture chart; it is not anymore. Everything below either comes
 // from that API or says in plain words why it can't be shown — there is no
@@ -35,7 +35,7 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import { PageHeader } from './AppLayout';
 import { Card, StatBlock } from '@/components/ui/Card';
-import { EngineChip, InertNote, Meter, StateDot } from '@/components/demo/DemoMarks';
+import { EngineChip, InertNote, Meter, StateDot } from '@/components/device/StatusMarks';
 import {
   availabilityState,
   engineFleet,
@@ -43,7 +43,7 @@ import {
   readingValue,
   summaryLine,
   type EngineFleet,
-} from '@/components/demo/engineState';
+} from '@/components/device/engineState';
 import {
   bucketCaveat,
   energyNotice,
@@ -52,7 +52,7 @@ import {
   mixIsProportional,
   seriesTotals,
   type EnergyState,
-} from '@/components/demo/liveState';
+} from '@/components/device/liveState';
 import {
   api,
   friendlyApiError,

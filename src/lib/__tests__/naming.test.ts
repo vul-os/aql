@@ -111,6 +111,32 @@ describe('the backend has one name', () => {
     ).toEqual([]);
   });
 
+  // The Workers backend in backend/ was deleted by decision — the Go hub is
+  // the only server. Sixteen files went on citing backend/src/routes/*.ts as
+  // "the behavioral spec", present tense, long after there was anything to
+  // open. That is worse than a stale comment: it tells a reader that the
+  // authority for a route lives somewhere else, so a disagreement between the
+  // hub and the console reads as "check the spec" rather than "decide". There
+  // is no spec. What the hub serves is the contract.
+  it('no source file cites the deleted backend/ directory as a path', () => {
+    const offenders: string[] = [];
+    for (const file of walk(repo, /\.(ts|tsx|mjs|js|go|rs)$/)) {
+      const rel = path.relative(repo, file);
+      if (rel.endsWith('naming.test.ts')) continue; // names what it forbids
+      readFileSync(file, 'utf-8')
+        .split('\n')
+        .forEach((line, i) => {
+          if (!/\bbackend\/(src|dist|node_modules)/.test(line)) return;
+          offenders.push(`${rel}:${i + 1}  ${line.trim().slice(0, 100)}`);
+        });
+    }
+    expect(
+      offenders,
+      `these cite backend/, which was deleted — the path resolves to nothing and ` +
+        `the reader is sent looking for an authority that does not exist:\n${offenders.join('\n')}`,
+    ).toEqual([]);
+  });
+
   it('no LINTEL_ environment variable is read or documented outside the compatibility layer', () => {
     const offenders: string[] = [];
     for (const file of walk(repo, /\.(ts|tsx|mjs|js|go|ya?ml)$|^Dockerfile$|^Makefile$/)) {

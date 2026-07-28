@@ -2,12 +2,14 @@ import { KEYS, read as storageRead, remove as storageRemove, write as storageWri
 // Lightweight API client for the Aql gateway.
 // Handles base URL, bearer auth, JSON, and one-shot refresh-on-401.
 //
-// IMPORTANT — this targets the Go gateway (hub/internal/httpapi), which
-// is the product that actually ships (embedded into the gateway binary as
-// the portal, and reused by the Tauri desktop shell). It does NOT target
-// backend/src/app.ts (the historical Cloudflare Workers reference — kept in
-// the repo for behavioral-spec purposes only, never deployed as the product).
-// See hub/README.md for the route-porting map.
+// IMPORTANT — this targets the Go hub (hub/internal/httpapi), which is the
+// product that actually ships: embedded into the hub binary as the portal,
+// and reused by the Tauri desktop shell. See hub/README.md for the route map.
+//
+// Route shapes were originally inherited from a Cloudflare Workers backend
+// that used to live in backend/. It was deleted — the Go hub is the only
+// server — so anything naming it is history, not a file to open. What the hub
+// serves is the contract; routeParity.test.ts pins this client to it.
 
 import { gatewayFetch, getApiBaseUrl } from './hub';
 
@@ -300,12 +302,12 @@ export type RefreshResponse = {
   token_type: 'Bearer';
 };
 
-// GET /v1/auth/me — the gateway's skeleton auth (see hub/internal/httpapi/auth.go's
+// GET /v1/auth/me — the hub's auth (see hub/internal/httpapi/auth.go's
 // handleMe) does not carry profile/phones/email-verification/Slack/avatar
-// data; none of that is implemented on this backend yet (no /auth/me/profile,
+// data; none of that is implemented on the hub yet (no /auth/me/profile,
 // /auth/me/slack, or /phones/me/phones routes exist). Keep this type honest
-// to what the gateway actually returns rather than the richer shape the old
-// Workers backend (backend/src/routes/auth.ts) used to send.
+// to what the hub actually returns rather than the richer shape the old
+// Workers backend's auth.ts used to send.
 export type MeResponse = {
   user: {
     id: string;
@@ -562,7 +564,7 @@ export const api = {
   // `engine: false` in the response is the DEFAULT — a hub with no device
   // config has no engine, which is not an error and not a failed fetch. Call
   // sites must say so rather than rendering an empty list. See
-  // engineFleet() in src/components/demo/engineState.ts, which narrows all
+  // engineFleet() in src/components/device/engineState.ts, which narrows all
   // four outcomes (live / not configured / route absent / fetch failed).
   engineDevices: () => apiFetch<EngineDevicesResponse>('/engine/devices'),
 

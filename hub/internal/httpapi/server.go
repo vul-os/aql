@@ -1,7 +1,18 @@
-// Package httpapi is the gateway's HTTP surface: std-lib net/http with Go
-// 1.22 pattern routing, no framework (house style). Route shapes mirror the
-// Workers backend (backend/src/routes/*) which is the behavioral spec; only a
-// skeleton subset is ported so far — see gateway/README.md for the map.
+// Package httpapi is the hub's HTTP surface: std-lib net/http with Go 1.22
+// pattern routing, no framework (house style). See hub/README.md for the map.
+//
+// # About the "Workers backend" this file and its neighbours keep naming
+//
+// Many route shapes here were originally ported from a Cloudflare Workers +
+// Postgres backend that used to live in backend/. That directory was DELETED
+// by decision — the Go hub is the only server — so those names are historical
+// provenance and nothing a reader can open. They are kept because knowing a
+// shape was inherited rather than chosen explains otherwise-odd corners of it.
+//
+// Nothing outside this repository specifies these routes any more. What the
+// hub serves IS the contract, pinned from the console's side by
+// src/lib/__tests__/routeParity.test.ts, which fails when a screen calls a
+// route the hub does not have.
 package httpapi
 
 import (
@@ -208,7 +219,7 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("GET /health", s.handleHealth)
 	mux.HandleFunc("GET /v1/gateway/key", s.handleGatewayKey)
 
-	// auth (spec: backend/src/routes/auth.ts)
+	// auth
 	mux.HandleFunc("POST /v1/auth/register", s.handleRegister)
 	mux.HandleFunc("POST /v1/auth/login", s.handleLogin)
 	mux.HandleFunc("POST /v1/auth/refresh", s.handleRefresh)
@@ -237,7 +248,7 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("POST /v1/auth/2fa/activate", s.requireAuth(s.handleTwoFactorActivate))
 	mux.Handle("POST /v1/auth/2fa/disable", s.requireAuth(s.handleTwoFactorDisable))
 
-	// instance admin first-run claim (spec: backend/src/routes/admin.ts)
+	// instance admin first-run claim
 	mux.Handle("GET /v1/admin/claim", s.requireAuth(s.handleClaimState))
 	mux.Handle("POST /v1/admin/claim", s.requireAuth(s.handleClaim))
 
@@ -255,7 +266,7 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("GET /v1/admin/audit/actions", s.requireAdmin(s.handleAdminAuditActions))
 	mux.Handle("GET /v1/admin/audit/verify", s.requireAdmin(s.handleAdminAuditVerify))
 
-	// accounts + members + invites (spec: backend/src/routes/accounts.ts)
+	// accounts + members + invites
 	mux.Handle("GET /v1/accounts", s.requireAuth(s.handleAccountsList))
 	mux.Handle("POST /v1/accounts", s.requireAuth(s.handleAccountCreate))
 	// literal "invites" segment wins over {id} in the 1.22 mux
@@ -273,7 +284,7 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("POST /v1/accounts/{id}/api-tokens", s.requireAuth(s.handleAPITokenCreate))
 	mux.Handle("POST /v1/accounts/{id}/api-tokens/{token_id}/revoke", s.requireAuth(s.handleAPITokenRevoke))
 
-	// locations + limits (spec: backend/src/routes/locations.ts)
+	// locations + limits
 	mux.Handle("GET /v1/accounts/{id}/locations", s.requireAuth(s.handleLocationsList))
 	mux.Handle("POST /v1/accounts/{id}/locations", s.requireAuth(s.handleLocationCreate))
 	mux.Handle("POST /v1/locations", s.requireAuth(s.handleTopLevelLocationCreate))
@@ -283,7 +294,7 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("GET /v1/locations/{id}/limits", s.requireAuth(s.handleLocationLimitsGet))
 	mux.Handle("PATCH /v1/locations/{id}/limits", s.requireAuth(s.handleLocationLimitsPatch))
 
-	// access points (spec: backend/src/routes/access.ts)
+	// access points
 	//
 	// The four tokenScoped routes below are the ONLY ones an API token can
 	// reach, and each names the scope it demands at registration — see
@@ -396,7 +407,7 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("POST /api/controller/poll", s.handleControllerPoll)
 	mux.HandleFunc("POST /api/controller/ack", s.handleControllerAck)
 
-	// chat channels (spec: backend/src/routes/{whatsapp,slack,telegram}.ts).
+	// chat channels.
 	// Unauthenticated by design: each self-authenticates its provider signature
 	// / secret token (fail-closed), then funnels opens through the SAME
 	// store.LogAccess choke point + hub dispatch the /v1 open route uses.
@@ -526,11 +537,11 @@ func readJSON(w http.ResponseWriter, r *http.Request, dst any) bool {
 // health + gateway key
 // ---------------------------------------------------------------------------
 
-// handleHealth mirrors backend/src/app.ts GET /health so the Tauri gateway
-// picker (src/lib/hub.ts testGatewayUrl) can probe any hub: it reads
+// handleHealth keeps the GET /health shape the Workers backend had, so the
+// hub picker (src/lib/hub.ts testGatewayUrl) can probe any hub: it reads
 // {ok, env} and treats ok:false as an unhealthy DB. db_now proves the SQLite
-// handle is live (the backend selected now() from Postgres). On a DB error we
-// return ok:false + 500, exactly like the backend.
+// handle is live (the Workers version selected now() from Postgres). On a DB
+// error this returns ok:false + 500, which is the shape the picker expects.
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	dbNow, err := s.store.DBNow(r.Context())
 	if err != nil {

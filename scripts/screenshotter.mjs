@@ -442,11 +442,11 @@ async function main() {
       // demo fixture used to paint at first frame, so the shot could be taken
       // immediately; a live page has nothing on it until the engine answers.
       { path: '/app/devices', file: 'portal-devices.png', settleMs: 1_200, expectText: 'Main incomer' },
-      // Energy and Automations are wired to LIVE hub data now (energy/automations
-      // fixtures below), not the src/lib/demoData.ts fixture they used to read —
-      // so these two used to assert on demo-only strings ('per-circuit load',
-      // 'Dusk lights') that no longer exist on either page. Both new assertions
-      // come from the live fixtures instead.
+      // Energy and Automations are wired to LIVE hub data (energy/automations
+      // fixtures below), not the demo fixture they used to read — which has
+      // since been deleted outright. These two used to assert on demo-only
+      // strings ('per-circuit load', 'Dusk lights') that no longer exist on
+      // either page; both assertions come from the live fixtures instead.
       // NB: StatBlock's label is CSS-uppercased and innerText follows
       // text-transform, so assert on the untransformed hint prose beneath it,
       // not the "MEASURED THIS WINDOW" style label (same trap as the admin

@@ -81,11 +81,9 @@ green**:
 - [x] React 19 + Vite console, embedded in the hub via `go:embed`, and wrapped by a
       Tauri v2 desktop shell with a hub picker on first run
 - [x] The operations-console views — devices, energy, automations — reading **live state
-      from the device engine** (`GET /v1/engine/devices`), with the demo dataset now
-      confined to the kinds no driver can yet serve. Every row says which it is: engine
-      devices are chipped live, fixtures keep a demo chip, and a hub with no engine
-      configured says so in words rather than showing an empty list that reads as a
-      failed fetch
+      from the device engine** (`GET /v1/engine/devices`). The demo dataset is gone
+      entirely: every row is an engine device, and a hub with no engine configured says
+      so in words rather than showing an empty list that reads as a failed fetch
 - [x] A route-parity test that diffs every frontend API call against the hub's real
       registered routes (AST-extracted), and a docs-vs-code feature-claim guard
       (`npm run check:claims`)
@@ -93,7 +91,8 @@ green**:
 > **What the fold changed.** Aql's original Phase 0 was a Tauri + SvelteKit shell with an
 > in-memory demo dataset driving Overview / Devices / Energy / Automations. The fold
 > replaced that shell with the access module's React console and ported the demo dataset
-> into it verbatim, so the same four screens survive with real access data mixed in. The
+> into it verbatim, so the same four screens survived with real access data mixed in.
+> That fixture has since been deleted — those screens read the device engine now. The
 > SvelteKit app itself is gone. Screenshots of that shell were removed from the repository (and its history) rather than left to mislead; the current console is captured in `site/screenshots/`. The old set
 > shows the retired shell.
 
@@ -197,7 +196,6 @@ and none has met physical hardware.
       still typed by a human
 - [ ] SSDP/UPnP discovery, and Zigbee pairing (turning join on is an actuation with a real
       security consequence, not a discovery side effect)
-      replacing the demo dataset with live device state
 - [ ] Bring the existing access module onto the same internal device model, so `access` is
       one kind among seven rather than a parallel stack
 - [ ] Extend the input surfaces' intent vocabulary past `open`/`close` so chat and the

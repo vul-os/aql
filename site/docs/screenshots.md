@@ -22,9 +22,9 @@ and the day's opens.
 > This screen has grown since the capture above: it now also surfaces tiles for the
 > device kinds beyond access control (lighting, cameras, energy, and the rest) so the
 > "one hub, seven device kinds" idea is visible on day one, not just implied. Those
-> tiles run on the built-in demo dataset and carry a small demo marker; the
-> access-control panels next to them (opens, access points, recent activity) are real
-> and unmarked. A refreshed capture is pending.
+> tiles read the device engine when one is configured, and say so in words when none
+> is. The access-control panels next to them (opens, access points, recent activity) are
+> real. A refreshed capture is pending.
 
 ## Access points & controllers
 
@@ -117,11 +117,9 @@ The landing page, for the curious:
 
 The console also has screens for the other device kinds Aql means to own — devices,
 energy and automations — alongside the access-control screens above. They are not
-screenshotted in this tour yet. What they show today is not a live reading of anything:
-there is no device engine, so every figure on those three screens comes from a
-built-in demo dataset, marked per item with a small chip rather than hidden or left to
-imply otherwise, and every control on the demo side renders disabled. That is different
-from the access-control screens pictured above, which talk to your hub for real.
+screenshotted in this tour yet. What they show is the device engine: real readings from
+whatever drivers that hub was started with, and an explicit "no engine configured"
+message when it was started with none. There is no demo dataset behind them any more.
 
 Any older Aql image showing an Overview / Devices / Energy / Automations console as a
 fully live product predates this repository — it came from a demo build that was

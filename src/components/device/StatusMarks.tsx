@@ -1,59 +1,32 @@
 // Per-item honesty marks.
 //
-// Aql is one product: devices, automations, energy and physical access live
-// on the same screens. Some of what those screens show is real — access
-// points, members, grants and audit all talk to your hub and genuinely
-// move hardware. The rest comes from a built-in demo dataset
-// (src/lib/demoData.ts), because Aql's device engine is ROADMAP Phase 1 and
-// isn't built.
+// Aql is one product: devices, automations, energy and physical access live on
+// the same screens, and what backs each of them differs. Access points,
+// members, grants and audit talk to your hub. Device rows come from the device
+// engine — when one is configured, which is not the default.
 //
-// The rule that follows from that: truth is marked PER ITEM, at the point of
-// use — a chip on the panel, a chip on the row, a note under the control.
-// Not a page-level banner. A banner over a mixed screen either lies about the
-// real half or gets tuned out; a chip on the exact figure that is fixture
-// data cannot do either.
+// The rule: truth is marked PER ITEM, at the point of use — a chip on the
+// panel, a chip on the row, a note under the control. Not a page-level banner.
+// A banner over a mixed screen either lies about the real half or gets tuned
+// out; a chip on the exact figure cannot do either.
 //
 // Companion rule for controls: anything with no engine behind it is rendered
 // disabled and carries an <InertNote /> naming the ROADMAP phase that would
 // make it work. Nothing here is wired to an endpoint that does not exist.
+//
+// There was a <DemoChip /> here for as long as six of the seven device kinds
+// came from a fixture. The fixture is gone and so is the chip — an unused
+// marker for "this is fake" is worse than none, because the next person to
+// need one reaches for it and marks something that is actually live.
 
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
-import type { DeviceState } from '@/lib/demoData';
+import type { DeviceState } from '@/lib/deviceKinds';
 
 /**
- * The demo marker. Put it on the panel header, the table row, or beside the
- * figure itself — whatever is the smallest thing that is actually fixture
- * data.
- */
-export function DemoChip({
-  className,
-  label = 'Demo data',
-  title = 'Fixture data from the built-in demo dataset — not a live reading, and nothing is being sent to hardware.',
-}: {
-  className?: string;
-  label?: string;
-  title?: string;
-}) {
-  return (
-    <span
-      title={title}
-      className={cn(
-        'inline-flex items-center gap-1.5 shrink-0 rounded-full border border-gold/35 bg-gold/10 px-2 py-0.5',
-        'text-[9px] uppercase tracking-[0.16em] text-gold whitespace-nowrap',
-        className,
-      )}
-    >
-      <span className="h-1 w-1 rounded-full bg-gold" aria-hidden />
-      {label}
-    </span>
-  );
-}
-
-/**
- * The counterpart for hub-backed items sitting in the same list. Used
- * only where real and demo rows are adjacent and the reader needs the
- * contrast — never as decoration on an all-real screen.
+ * The mark for a hub-backed item. Used where the reader needs the contrast
+ * with an engine-backed or inert one beside it — never as decoration on a
+ * screen where everything is the same kind of real.
  */
 export function LiveChip({
   className,

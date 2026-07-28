@@ -18,7 +18,8 @@ var (
 
 // Invite is one account invite. TokenHash only — the plaintext accept token
 // is NEVER stored and NEVER returned to the inviter (delivered out-of-band to
-// the invitee; see backend/src/routes/accounts.ts security note).
+// the invitee; see the security note
+// inherited from the Workers backend's accounts.ts).
 type Invite struct {
 	ID         string
 	AccountID  string

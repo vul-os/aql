@@ -55,7 +55,7 @@ const routes: RouteObject[] = [
       // Aql's four primary screens — the product. Devices spans all seven
       // device kinds; the access-control module's own deep screens follow.
       // There is no /app/preview/* namespace: demo-fed panels live inside
-      // these routes and mark themselves per item (src/components/demo/).
+      // these routes and mark themselves per item (src/components/device/).
       { index: true, element: wrap(() => import('@/pages/app/Overview')), errorElement },
       { path: 'devices', element: wrap(() => import('@/pages/app/Devices')), errorElement },
       { path: 'automations', element: wrap(() => import('@/pages/app/Automations')), errorElement },

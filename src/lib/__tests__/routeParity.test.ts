@@ -2,10 +2,11 @@
 // this test's existence: src/lib/api.ts (the frontend client) drifting from
 // the routes hub/internal/httpapi/server.go actually serves.
 //
-// The gateway is the product that ships (embedded into the gateway binary
-// as the portal, reused by the Tauri desktop shell). backend/src/app.ts is a
-// historical Cloudflare Workers reference kept for behavioral-spec purposes
-// only — this test does NOT check against it.
+// The hub is the product that ships (embedded into the hub binary as the
+// portal, reused by the Tauri desktop shell). Route shapes were inherited
+// from a Cloudflare Workers backend that used to live in backend/; it was
+// deleted, so this test checks api.ts against the hub's own routes and there
+// is nothing else left to check against.
 //
 // How it works:
 //  1. Parse api.ts's own source with the TypeScript compiler API (not

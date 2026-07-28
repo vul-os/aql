@@ -34,7 +34,7 @@ import {
   type EngineDevice,
   type EngineReading,
 } from '@/lib/api';
-import type { DeviceState } from '@/lib/demoData';
+import type { DeviceState } from '@/lib/deviceKinds';
 
 // ── the engine's four possible answers ──────────────────────────────────────
 

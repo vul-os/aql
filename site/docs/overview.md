@@ -25,10 +25,10 @@ to sign up for, no account, no telemetry, and no billing code anywhere in the bi
 > the motor.
 >
 > **Not built:** the device engine that would drive the other six kinds (no Matter, MQTT,
-> Zigbee, ONVIF or Modbus driver exists), the automations runtime, energy metering, the
-> camera pipeline, and the phone half of the offline-grant flow. The console's device,
-> energy and automations screens run on a built-in **demo dataset**. Those are the
-> roadmap, not the product — see [Devices](devices.md) and
+> Matter; a robot driver; and the camera pipeline. The device
+> engine, the automations runtime and energy metering are built and ship off by default.
+> The phone half of the offline-grant flow is half done — a grant can be requested and
+> stored, not presented. See [Devices](devices.md) and
 > [ROADMAP.md](https://github.com/vul-os/aql/blob/main/ROADMAP.md).
 
 ## The pieces
@@ -38,9 +38,9 @@ to sign up for, no account, no telemetry, and no billing code anywhere in the bi
 | **The hub** (`hub/`) | One Go binary with an embedded SQLite database. It owns state, runs your rules, serves the web console and the app's API, keeps the audit log, and pushes signed commands to devices. | **Shipped** |
 | **Access module** | The first device kind wired all the way down: signed commands, a paired controller, offline grants, a tamper-evident trail. | **Shipped** |
 | **Controller** | The small device wired to a gate's relay. It dials *out* to the hub over a persistent connection, verifies command signatures against a pinned key, and pulses the motor. Wi-Fi or GSM. | **Shipped** (GPIO relay + BLE radio still need hardware validation — see [Controllers](controllers.md)) |
-| **Console** | The web dashboard, embedded inside the hub binary. No separate deployment. | **Shipped** for admin surfaces; the device/energy/automations screens are demo data |
-| **Desktop app** | A Tauri v2 shell around the same console, with a hub picker so one build points at any hub. | **Shipped** (admin only — no emergency-access screen; see [Emergency access](emergency-access.md)) |
-| **Device engine** | Protocol drivers, discovery, telemetry, automations, energy metering. | **Not built** — see [Devices](devices.md) |
+| **Console** | The web dashboard, embedded inside the hub binary. No separate deployment. | **Shipped.** Admin surfaces, plus device / energy / automations screens over the real engine |
+| **Desktop app** | A Tauri v2 shell around the same console, with a hub picker so one build points at any hub. | **Shipped.** Includes the emergency-access screen — see [Emergency access](emergency-access.md) |
+| **Device engine** | Protocol drivers, discovery, telemetry, automations, energy metering. | **Shipped, default off.** `http`, `modbus`, `mqtt`, `camera` — see [Devices](devices.md) |
 
 The private things worth protecting on any hub are its data directory — which holds the
 SQLite database (`lintel.db`) plus the unencrypted Ed25519 signing key and JWT secret the

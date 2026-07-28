@@ -78,13 +78,15 @@ export default function AppLayout() {
               analytics, settings, admin).
 
               Both kinds of data share those screens. Access, members, grants
-              and audit are gateway-backed and real; the other six device
-              kinds, the energy figures and the rule list come from
-              src/lib/demoData.ts because the device engine is ROADMAP Phase 1.
-              Every demo-fed panel/row marks itself with <DemoChip /> at the
-              point of use (src/components/demo/DemoMarks.tsx), and inert
-              controls stay disabled with a note. Don't wire a demo shape to an
-              endpoint that doesn't exist. */}
+              and audit are hub-backed; the other six device kinds, the energy
+              figures and the rule list come from the device engine, which is
+              off unless the hub was started with -device-drivers. A screen
+              with no engine behind it says so in words rather than rendering
+              an empty list — "no engine" and "no devices" are different
+              answers. Marks are per item, at the point of use
+              (src/components/device/StatusMarks.tsx), and inert controls stay
+              disabled with a note. Don't wire a shape to an endpoint that
+              doesn't exist. */}
           <Outlet />
         </main>
       </div>

@@ -36,7 +36,7 @@
 //                                matches `pattern`.
 //
 // Evidence roots are deliberately restricted to IMPLEMENTATION code —
-// hub/, backend/src/, controller/, proto/, src-tauri/ config — never
+// hub/, controller/, proto/, src-tauri/ config — never
 // src/ (the React portal's UI copy) or site/ (marketing). Scanning UI copy
 // for evidence would be circular: it's the exact layer that lies. See the
 // checker's header for what that means this tool cannot catch.
@@ -107,9 +107,9 @@ export const FEATURES = [
     label: 'Gateway-side minting/issuance of offline LAN/BLE grants (POST /v1/offline-grants)',
     docStatus: 'shipped',
     docRefs: [
-      'README.md resilience note — "both the controller side and the gateway\'s issuance side are real and conformance-tested"',
-      'site/docs/emergency-access.md — "Gateway-side issuance is now real"',
-      'proto/grants.md "Implementation status" — "gateway side ... is also real and conformance-tested"',
+      "README.md § What's real, and what isn't — offline grants: both the controller side and the hub's issuance side",
+      'site/docs/emergency-access.md — hub-side issuance',
+      'proto/grants.md § Implementation status — the issuance half of the contract',
       'hub/internal/channels/send.go — ban-risk warning names the app, not the gateway, as the missing half',
     ],
     // Deliberately narrow: "offline" alone appears constantly in this
@@ -123,10 +123,10 @@ export const FEATURES = [
     label: 'App (Tauri) client that requests, stores and presents an offline LAN/BLE grant to a controller',
     docStatus: 'planned',
     docRefs: [
-      'README.md resilience note — "not built yet is the app side (🔨)"',
+      "README.md § What's real, and what isn't — presenting a grant needs the LAN or BLE",
       'site/docs/emergency-access.md — "What is still not built: the app"',
       'proto/grants.md "Implementation status" — "app client unbuilt"',
-      'hub/internal/channels/send.go — "the app doesn\'t hold or present a grant yet"',
+      'hub/internal/channels/send.go',
     ],
     // The app is src/ + src-tauri/ (React 19 + Tauri v2). src/ is
     // deliberately never used as an evidence root (see this file's header —
@@ -143,7 +143,7 @@ export const FEATURES = [
     label: 'A real GPIO relay driver exists behind `-tags gpio` (NOT that it has ever driven hardware — see the note below)',
     docStatus: 'shipped',
     docRefs: [
-      'README.md — "A real Linux character-device driver now exists behind -tags gpio ... but it has never been run against a GPIO chip, a relay board or a gate"',
+      "README.md § What's real, and what isn't — the GPIO relay driver, never run against hardware",
     ],
     // WHY THIS IS 'shipped' AND NOT 'hardware-validated': this checker greps.
     // It can see that a driver file exists; it cannot see whether that file has
@@ -201,7 +201,7 @@ export const FEATURES = [
     label: 'Tauri iOS/Android app targets',
     docStatus: 'planned',
     docRefs: [
-      'README.md dev table — "app/ ... Desktop, iOS, Android" is the TARGET, not what ships (`src/` + `src-tauri/` ships desktop only)',
+      'README.md § Develop — the shell ships desktop only; iOS/Android are the target',
     ],
     // A generated mobile target leaves `gen/apple` or `gen/android` behind
     // (`tauri ios init` / `tauri android init`); today gen/ only has the
@@ -233,8 +233,8 @@ export const FEATURES = [
     label: 'Analytics endpoints in the Go gateway (backend/ Workers reference still has these; gateway defers them)',
     docStatus: 'shipped',
     docRefs: [
-      'README.md — "still ahead on a few deferred surfaces: OTP verify, analytics, OAuth, meters"',
-      'site/docs/self-host.md — "Still deferred ... analytics endpoints"',
+      "README.md § What's real, and what isn't",
+      'site/docs/self-host.md — deferred surfaces',
     ],
     evidence: [{ root: 'hub/internal', pattern: '/v1/analytics|handleAnalytics', flags: 'i' }],
   },
@@ -244,7 +244,7 @@ export const FEATURES = [
     docStatus: 'shipped',
     docRefs: [
       'ROADMAP.md — listed as done',
-      'ARCHITECTURE.md — the residual is now "loses BOTH password and recovery codes"',
+      'ARCHITECTURE.md §9 — the residual: losing both the password and the recovery codes',
       'site/docs/troubleshooting.md, site/docs/faq.md',
     ],
     // Three pieces. A secret with no activation gate locks people out of their
@@ -263,7 +263,6 @@ export const FEATURES = [
     docRefs: ['No current README/ARCHITECTURE/site claim ships this; verified absent to guard against re-introduction.'],
     evidence: [[
       { root: 'hub/internal', pattern: 'text/csv|ExportCSV|\\.csv"', flags: 'i' },
-      { root: 'backend/src', pattern: 'text/csv|ExportCSV|\\.csv"', flags: 'i' },
     ]],
   },
 
@@ -277,17 +276,17 @@ export const FEATURES = [
   // in both directions: nobody can quietly re-imply the engine ships, and
   // the day any of it actually lands the check fails until the docs catch
   // up. Evidence roots stay on implementation code only (never src/, which
-  // is UI copy — see this file's header); the console's demo dataset lives
-  // at src/lib/demoData.ts and is deliberately NOT evidence of anything.
+  // is UI copy — see this file's header). The console's demo dataset, which
+  // used to live at src/lib/demoData.ts and was deliberately not evidence of
+  // anything, has been deleted: every device row now comes from the engine.
   {
     id: 'device-engine-drivers',
     label: 'Device-engine code naming a device protocol exists (NOT that any protocol driver talks to a real device network)',
     docStatus: 'shipped',
     docRefs: [
-      'README.md — "no Matter, MQTT, Zigbee, ONVIF, Modbus or Z-Wave driver talks to a real device network yet"',
-      'ARCHITECTURE.md §8 — "The device engine — designed, not started"',
-      'ROADMAP.md Phase 1 — "Nothing here exists in code"',
-      'site/docs/devices.md — the per-kind status table: six kinds "Demo data only"',
+'README.md § Real protocol drivers — MQTT (Zigbee/Z-Wave via bridge), Modbus TCP, ONVIF, generic HTTP',
+      'ARCHITECTURE.md §8 The device engine — built, default off, four drivers named',
+      'site/docs/devices.md — the per-kind status table and the driver table',
     ],
     // "Matter" is deliberately absent from the pattern: it is an ordinary
     // English word and matches prose all over this codebase. The other five
@@ -321,9 +320,9 @@ export const FEATURES = [
     label: 'Energy-metering engine code exists (NOT that any meter is polled in a running hub — nothing constructs a poller in cmd/hub)',
     docStatus: 'shipped',
     docRefs: [
-      'README.md — "Energy metering. No ingestion, no rollups, no source-mix accounting."',
+"README.md § Energy metering that won\'t flatter you",
       'ROADMAP.md Phase 4',
-      'site/docs/devices.md § Energy — "Built: nothing"',
+      'site/docs/devices.md § Energy — built, read-only, untested against physical meters',
     ],
     evidence: [[
       { root: 'hub/internal', pattern: 'MeterReading|kWh|inverter|EnergyReading|solar', flags: 'i' },
@@ -335,9 +334,9 @@ export const FEATURES = [
     label: 'ONVIF discovery / stream-address resolution code exists (NOT live view, NOT recording — there is no RTSP client and no pixel ever moves)',
     docStatus: 'shipped',
     docRefs: [
-      'README.md — "The camera pipeline. No live view, no recording, no ONVIF/RTSP code."',
+      "README.md § What's real, and what isn't — the camera pipeline",
       'ROADMAP.md Phase 5',
-      'site/docs/devices.md § Security & bots — "Built: nothing"',
+      'site/docs/devices.md § Security & bots — what the ONVIF driver does and does not do',
     ],
     evidence: [[
       { root: 'hub/internal', pattern: 'RTSP|rtsp://|ffmpeg|onvif', flags: 'i' },
@@ -363,9 +362,9 @@ export const FEATURES = [
     label: 'BLE GATT peripheral backing on any platform other than Linux/BlueZ',
     docStatus: 'planned',
     docRefs: [
-      'README.md — "the GATT peripheral glue exists only for Linux/BlueZ behind -tags ble ... On every other platform the peripheral returns ErrUnsupported"',
-      'ROADMAP.md Finishing Phase 0 — "every other platform returns ErrUnsupported"',
-      'controller/internal/bleperiph/start_ble_linux.go — "//go:build ble && linux"',
+      "README.md § What's real, and what isn't — BLE",
+      'ROADMAP.md Finishing Phase 0 — BLE peripheral support off Linux',
+      'controller/internal/bleperiph/start_unsupported.go',
     ],
     // Hardware validation itself is not regex-checkable — "has this ever run
     // on a real radio" is a human fact. What IS checkable is the narrower
@@ -383,7 +382,7 @@ export const FEATURES = [
     id: 'ed25519-signed-commands',
     label: 'Ed25519-signed device commands',
     docStatus: 'shipped',
-    docRefs: ['README.md Wire contracts — "Ed25519 over canonical JSON (JCS, RFC 8785)"'],
+    docRefs: ['README.md § Safety — Ed25519 over canonical JSON (JCS, RFC 8785)'],
     evidence: [{ file: 'hub/internal/keys/keys.go', pattern: 'ed25519\\.Sign\\(' }],
   },
   {
@@ -397,21 +396,21 @@ export const FEATURES = [
     id: 'claim-token-pairing',
     label: 'Claim-token controller pairing',
     docStatus: 'shipped',
-    docRefs: ['README.md — "claim-token controller pairing"'],
+    docRefs: ['README.md § Pair a controller'],
     evidence: [{ file: 'hub/internal/store/devices.go', pattern: 'claim_token_hash' }],
   },
   {
     id: 'append-only-audit-log',
     label: 'Append-only audit log',
     docStatus: 'shipped',
-    docRefs: ['README.md — "an append-only audit log"'],
+    docRefs: ['README.md § Safety — the audit log'],
     evidence: [{ file: 'hub/internal/store/admin.go', pattern: 'admin_audit_log' }],
   },
   {
     id: 'rate-limits',
     label: 'The four configurable rate limits',
     docStatus: 'shipped',
-    docRefs: ['README.md — "all four rate limits"'],
+    docRefs: ['README.md § Safety — rate limits'],
     evidence: [
       { file: 'hub/internal/store/ratelimit.go', pattern: 'RATE_OPEN_COOLDOWN_S' },
       { file: 'hub/internal/store/ratelimit.go', pattern: 'RATE_OPENS_PER_HOUR' },
@@ -423,14 +422,14 @@ export const FEATURES = [
     id: 'per-location-daily-quotas',
     label: 'Per-location daily quotas (owner/admin exempt)',
     docStatus: 'shipped',
-    docRefs: ['README.md — "per-location daily quotas (owner/admin exempt)"'],
+    docRefs: ['README.md § Safety — quotas'],
     evidence: [{ file: 'hub/internal/store/locations.go', pattern: 'LocationQuotas' }],
   },
   {
     id: 'one-off-visitor-grants',
     label: 'One-off dated temporary access grants (phone-bound, POST/GET /v1/grants)',
     docStatus: 'shipped',
-    docRefs: ['README.md — "one-off dated temporary access grants ... (POST/GET /v1/grants, portal page)"'],
+    docRefs: ['README.md § Features — temporary access'],
     evidence: [
       { file: 'hub/internal/store/grants.go', pattern: 'phone_e164' },
       { file: 'hub/internal/httpapi/server.go', pattern: '"POST /v1/grants"' },
@@ -440,37 +439,38 @@ export const FEATURES = [
     id: 'whatsapp-channel',
     label: 'WhatsApp channel',
     docStatus: 'shipped',
-    docRefs: ['README.md — "the WhatsApp / Slack ... / Telegram channels"'],
+    docRefs: ['README.md § What the chat rails actually cost you'],
     evidence: [{ file: 'hub/internal/channels/whatsapp.go', pattern: 'func \\(WhatsApp\\) Kind\\(\\)' }],
   },
   {
     id: 'slack-channel',
     label: 'Slack channel (Events API)',
     docStatus: 'shipped',
-    docRefs: ['README.md — "Slack (Events API + Socket Mode)"'],
+    docRefs: ['README.md § the rail table — the Slack row'],
     evidence: [{ file: 'hub/internal/channels/slack.go', pattern: 'func \\(Slack\\) Kind\\(\\)' }],
   },
   {
     id: 'telegram-channel',
     label: 'Telegram channel',
     docStatus: 'shipped',
-    docRefs: ['README.md — "the WhatsApp / Slack ... / Telegram channels"'],
+    docRefs: ['README.md § What the chat rails actually cost you — the Telegram row'],
     evidence: [{ file: 'hub/internal/channels/telegram.go', pattern: 'func \\(Telegram\\) Kind\\(\\)' }],
   },
   {
     id: 'slack-socket-mode',
     label: 'Slack Socket Mode (outbound WSS, zero ingress)',
     docStatus: 'shipped',
-    docRefs: ['README.md — "Slack (Events API + Socket Mode)"', 'hub/internal/channels/socketmode.go'],
+    docRefs: ['README.md § What the chat rails actually cost you — the Slack row', 'hub/internal/channels/socketmode.go'],
     evidence: [{ file: 'hub/internal/channels/socketmode.go', pattern: 'type SocketMode struct' }],
   },
   {
     id: 'go-gateway-product-core',
-    label: 'The Go gateway runs the product core (not just a skeleton/spec)',
+    // The id keeps its old spelling on purpose: it is referenced from commit
+    // messages and changing it would silently orphan them. The hub is a hub.
+    label: 'The Go hub runs the product core (not just a skeleton/spec)',
     docStatus: 'shipped',
     docRefs: [
-      'README.md — "The Go gateway ... now runs the product core"',
-      'README.md dev table — gateway row: "🟢 runs the product core"',
+      'README.md § Run it — "one binary, one SQLite"',
     ],
     evidence: [
       { file: 'hub/internal/httpapi/server.go', pattern: 'func \\(s \\*Server\\) Router\\(\\)' },

@@ -48,7 +48,7 @@
 //    doc nobody wired into the manifest is invisible to this script. The
 //    manifest is a checklist, not a doc scanner.
 //
-// 3. It only searches IMPLEMENTATION code (hub/, backend/src/,
+// 3. It only searches IMPLEMENTATION code (hub/,
 //    controller/, proto/, src-tauri/ config) for evidence — deliberately
 //    never src/ (the React portal's UI copy) or site/ (marketing). Scanning
 //    UI copy for "evidence" would be circular, since that copy is exactly
@@ -180,6 +180,46 @@ function evaluateFeature(feature) {
 
 // ── main ─────────────────────────────────────────────────────────────────
 
+// ── docRef rot ──────────────────────────────────────────────────────────
+//
+// docRefs are prose: "README.md § Energy metering", 'ARCHITECTURE.md §8 —
+// "designed, not started"'. Nothing used to read them, so they rotted exactly
+// as prose does — several went on quoting sentences that had been rewritten,
+// including three describing subsystems as unbuilt after they shipped. A
+// reader trusting this manifest was told the docs said something they no
+// longer said.
+//
+// Two things are checkable without pretending a paraphrase is a quote:
+//
+//   1. The file a ref names must exist. Catches renames and deletions.
+//   2. Any DOUBLE-QUOTED span inside a ref must actually appear in that file.
+//      A ref that quotes the docs is making a checkable claim and should be
+//      held to it; a ref that only paraphrases is left alone, because forcing
+//      exact quotes everywhere would make the manifest brittle enough that
+//      the next person stops updating it.
+//
+// Whitespace is collapsed on both sides so a reflowed paragraph still matches.
+function checkDocRefs(feature) {
+  const problems = [];
+  for (const ref of feature.docRefs) {
+    const named = ref.match(/^([A-Za-z0-9_./-]+\.(?:md|html|json|ts|tsx|go))/);
+    if (!named) continue; // a ref that names no file, e.g. a bare note
+    const rel = named[1];
+    const body = readSafe(path.join(repoRoot, rel));
+    if (body === null) {
+      problems.push(`names ${rel}, which does not exist`);
+      continue;
+    }
+    const flat = body.replace(/\s+/g, ' ');
+    for (const [, quoted] of ref.matchAll(/"([^"]{12,})"/g)) {
+      if (!flat.includes(quoted.replace(/\s+/g, ' '))) {
+        problems.push(`quotes ${JSON.stringify(quoted)} but ${rel} does not contain it`);
+      }
+    }
+  }
+  return problems;
+}
+
 function main() {
   const failures = [];
   const passes = [];
@@ -212,6 +252,16 @@ function main() {
       });
     } else {
       passes.push(feature);
+    }
+
+    const refProblems = checkDocRefs(feature);
+    if (refProblems.length > 0) {
+      failures.push({
+        feature,
+        reason:
+          `the doc references for this claim have rotted:\n` +
+          refProblems.map((p) => `      - ${p}`).join('\n'),
+      });
     }
   }
 

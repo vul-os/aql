@@ -51,7 +51,7 @@ if (!('localStorage' in globalThis)) {
 }
 
 const { api, ApiError, isConfirmRequired, isIndeterminate, isUnreachable } = await import('../api');
-const { engineFleet } = await import('../../components/demo/engineState');
+const { engineFleet } = await import('../../components/device/engineState');
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {

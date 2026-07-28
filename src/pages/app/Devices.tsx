@@ -15,7 +15,7 @@
 // No demo fixture here anymore — every row on this page is either real or
 // honestly says why the list is short. No blanket banner either: a banner
 // over a mixed list would be false about most of it. Per-row chips instead —
-// see src/components/demo/DemoMarks.tsx.
+// see src/components/device/StatusMarks.tsx.
 //
 // The one page-level statement that IS made: when the engine is absent, or the
 // hub is too old to serve it, or the request failed, the screen says which of
@@ -39,7 +39,7 @@ import {
   LiveChip,
   StateDot,
   StateLabel,
-} from '@/components/demo/DemoMarks';
+} from '@/components/device/StatusMarks';
 import {
   availabilityLabel,
   availabilityState,
@@ -54,7 +54,7 @@ import {
   summaryLine,
   type EngineControl,
   type EngineFleet,
-} from '@/components/demo/engineState';
+} from '@/components/device/engineState';
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/cn';
 import {
@@ -69,7 +69,7 @@ import {
   type EngineReading,
   type LocationRow,
 } from '@/lib/api';
-import type { DeviceState } from '@/lib/demoData';
+import type { DeviceState } from '@/lib/deviceKinds';
 import { fromUnix } from '@/lib/time';
 
 const STATUS_LABEL: Record<string, string> = {

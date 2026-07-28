@@ -21,7 +21,7 @@ import {
   readingValue,
   readingsErrorMessage,
   summaryLine,
-} from '../../components/demo/engineState';
+} from '../../components/device/engineState';
 import type { EngineDevice } from '../api';
 
 function device(over: Partial<EngineDevice> = {}): EngineDevice {

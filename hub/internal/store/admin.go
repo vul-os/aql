@@ -1,7 +1,7 @@
 package store
 
 // Instance-admin (platform operator) store methods, porting the moderation +
-// observation queries of backend/src/routes/admin.ts. These are CROSS-TENANT
+// observation queries the Workers backend's admin.ts had. These are CROSS-TENANT
 // on purpose: handlers may only reach them through the platform-admin gate
 // (live users-row check), mirroring the Postgres app.is_platform_admin()
 // derivation.

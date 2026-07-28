@@ -4,11 +4,19 @@ This chapter is about the thing Aql is for: **one hub that owns everything physi
 around a home or a business. It is also the chapter with the largest gap between design
 and code, so it says which is which on every line.
 
-> **The device engine does not exist yet.** There is no device driver of any kind in the
-> codebase — no Matter, no MQTT, no Zigbee, no ONVIF, no Modbus, no Z-Wave. There is no
-> automations runtime, no scene engine, no energy ingestion, and no camera pipeline. A
-> grep of the hub and controller sources for any of those protocol names returns nothing.
-> The only device class the hub drives today is a gate/door/barrier controller.
+> **The device engine is built, and it is off unless you turn it on.** `hub/internal/devices`
+> is a real registry behind a driver seam, with four drivers: generic HTTP/webhook, Modbus
+> TCP, MQTT, and ONVIF cameras. An automations runtime and energy metering sit on top of it.
+> None of it constructs itself: a hub started without `-device-drivers` has no registry, no
+> poller and no goroutine, which is the default.
+>
+> What is still absent is worth naming as plainly: **no Matter**, **no radio in the hub**
+> (Zigbee and Z-Wave are reached through a `zigbee2mqtt` or `zwave-js-ui` bridge over the
+> MQTT driver — deliberately, since a bridge already owns the radio and does it better),
+> **no robot driver at all**, and **no camera pipeline** — the ONVIF driver discovers
+> cameras and probes their streams but has never received a frame, and nothing here stores
+> one. See [Camera recording](https://github.com/vul-os/aql/blob/main/docs/CAMERA-RETENTION.md),
+> which is the design that has to exist before any of it is written.
 
 ## The seven device kinds
 
@@ -17,13 +25,13 @@ automations runtime would fire on, and what a driver has to map its protocol ont
 
 | Kind | Examples | Status |
 | --- | --- | --- |
-| **Camera** | Gate camera, yard camera (ONVIF/RTSP) | Demo data only — no pipeline |
-| **Lighting** | Zigbee groups, individual fixtures | Demo data only — no driver |
-| **Robot** | Robot mower, security patrol bot, cleaning bot | Demo data only — no control path |
-| **Climate** | Thermostats, HVAC | Demo data only — no driver |
-| **Energy** | Solar array, grid meter, battery | Demo data only — no ingestion |
-| **Sensor** | Water tank level, contact and motion sensors | Demo data only — no driver |
-| **Access** | Gate lock, door lock, barrier | **Real, end to end** |
+| **Camera** | Gate camera, yard camera (ONVIF/RTSP) | Driver ships — discovery, status and readings. **No video**: no live view, no recording |
+| **Lighting** | Zigbee groups, individual fixtures | No dedicated driver. Drivable today through MQTT (zigbee2mqtt) or generic HTTP |
+| **Robot** | Robot mower, security patrol bot, cleaning bot | **No driver.** The one kind with no path at all |
+| **Climate** | Thermostats, HVAC | No dedicated driver. Drivable today through MQTT or generic HTTP |
+| **Energy** | Solar array, grid meter, battery | Readings through Modbus TCP, MQTT or HTTP; ingestion, rollups and source mix ship |
+| **Sensor** | Water tank level, contact and motion sensors | Readings through MQTT, Modbus TCP or HTTP |
+| **Access** | Gate lock, door lock, barrier | **Real, end to end** — and still its own stack, not yet a kind inside the engine |
 
 **Access is the exception, and it is deliberately the reference shape.** It has a
 versioned wire contract with conformance vectors, a device agent that verifies an
@@ -34,26 +42,30 @@ way down. See [Controllers](controllers.md) and [Emergency access](emergency-acc
 
 ## What the hub actually drives today
 
-One thing: an **access point** — a gate, door, barrier, or "other" — through a paired
-controller that verifies an Ed25519-signed command. The only dispatchable commands are
-`open` and `close`. Access-point kinds are constrained to those four values by a database
-check constraint; there is no generic device model behind them yet.
+Two separate things, and the separation is worth knowing.
 
-Everything the console shows you about a *real* device is about a paired controller — its
-access point, online state and pairing status. Anything else on those screens comes from
-the demo dataset below.
+**Access points** — a gate, door, barrier or "other" — through a paired controller that
+verifies an Ed25519-signed command. The only dispatchable commands are `open` and
+`close`. Access-point kinds are constrained to those four values by a database check
+constraint. This path does **not** go through the device engine; bringing it onto the
+same internal model, so `access` is one kind among seven rather than a parallel stack, is
+still ahead.
 
-## The demo dataset
+**Configured devices**, through the engine, when a hub is started with `-device-drivers`
+and a `-device-config` file. Those devices report readings and accept the verbs their
+capability catalogue declares. A hub with no device config has no engine at all and says
+so — the console shows `engine: false` rather than an empty list, because "no engine" and
+"no devices" are different answers.
 
-The console's device, energy and automations views are real, interactive UI over a
-built-in in-memory dataset (`src/lib/demoData.ts`): twelve fictional devices spread across
-all seven kinds, a fabricated 24-hour power curve, and six example automations that never
-run. Because that data sits beside real, hub-backed access data on the same screens, every
-panel, row and figure that comes from it is marked as demo at the point of use. Nothing
-behind it talks to hardware, a socket or a database.
+## What the console shows
 
-They exist because the shape of the target is worth being able to see and argue with. They
-are not a capability. Treat any screenshot of them the same way.
+Every device row the console renders comes from the engine. There is no demo device
+dataset behind those screens any more — the fixture that used to stand in for six of the
+seven kinds is gone, along with the per-row "Demo data" marks it needed.
+
+What the console does still distinguish, and must: a device the engine has **never heard
+from** is `unknown`, which is a third state and not a synonym for "off". Collapsing them
+would make a device that has never reported look like one that is known down.
 
 ## Why the scope is wider than a smart-home hub
 
@@ -67,11 +79,11 @@ the project exists rather than deferring to one:
   their own state machine (patrol, dock, charge) — rather than an afterthought
   integration.
 
-## The driver/adapter seam (design, not code)
+## The driver/adapter seam
 
 "Works with any hardware" is a control-plane stance, not a promise that Aql ships every
-protocol. The intended shape is a single internal device abstraction — an id, a kind, a
-zone, a state, and a set of commands and telemetry — that every driver maps onto:
+protocol. The shape is a single internal device abstraction — an id, a kind, a zone, a
+state, and a set of commands and telemetry — that every driver maps onto:
 
 - **Discovery** finds devices on the network or bus (mDNS/SSDP, Zigbee pairing, MQTT
   topic scanning, ONVIF probe, manual add).
@@ -81,26 +93,27 @@ zone, a state, and a set of commands and telemetry — that every driver maps on
 - **The console only ever sees the internal shape.** It renders devices, zones and events
   generically, with no protocol-specific code.
 
-Planned adapters, roughly in the order that unlocks the most devices:
+Adapters, and what each one is:
 
-| Protocol | Covers | Status |
+| Driver | Covers | Status |
 | --- | --- | --- |
-| Matter | Modern smart-home devices (lights, locks, sensors) | Planned — no code |
-| MQTT | Broad IoT/DIY ecosystem, and Zana devices | Planned — no code |
-| Zigbee | Battery sensors, switches, bulbs | Planned — no code |
-| ONVIF | IP cameras (most brands) | Planned — no code |
-| Modbus | Energy meters, industrial/building sensors | Planned — no code |
-| Generic HTTP/webhook | Anything with an API — the catch-all escape hatch | Planned — no code |
+| `http` | Anything with an API — the catch-all escape hatch | **Ships.** Reads and executes |
+| `modbus` | Energy meters, industrial/building sensors | **Ships, TCP only.** Read-only — no serial/RTU, though a TCP-to-RTU bridge covers the common case |
+| `mqtt` | Broad IoT/DIY ecosystem, and Zana devices. Also how Zigbee is reached, via a zigbee2mqtt bridge | **Ships.** Reads and executes; verbs come from the capability catalogue, never invented from a topic |
+| `camera` | IP cameras over ONVIF | **Ships, partially.** Discovery, stream-address resolution and an RTSP probe. Receives no frames |
+| Zigbee / Z-Wave | Battery sensors, switches, bulbs, older ecosystems | **Reachable now, through a bridge.** `zigbee2mqtt` or `zwave-js-ui` owns the radio and republishes to MQTT; the hub has no radio and is not getting one |
+| Matter | Modern smart-home devices | **No code.** Needs a certified device and a stack |
+
+A driver never decides what a device may be asked to do. Capabilities come from the
+catalogue, so a discovery pass proposes a *candidate* with an address attached and a
+human decides what joins the fleet — the same rule the MQTT bridge scan and the mDNS
+browse follow, and for the same reason: anything on the LAN can answer.
 
 Bringing the existing access path onto the same internal model — so `access` is one kind
-among seven rather than a parallel stack — is part of the same phase.
+among seven rather than a parallel stack — is still ahead.
 
-**Where would it live?** Undecided, and worth stating rather than hand-waving. Aql has
-two plausible homes for a device engine: the Go hub (which already owns persistence,
-audit and the open path) or the Rust core in the Tauri shell (`src-tauri/`, which today
-exposes exactly one IPC command, `system_pulse`, and is not even called by the frontend).
-The hub is the more likely answer, because the hub is what runs on the always-on box and
-already holds the audit log — but nothing has been committed.
+**Where it lives: the Go hub.** It owns persistence, audit and the open path, and it runs
+on the always-on box. The Rust core in the Tauri shell was the alternative and is not it.
 
 ## Automations
 

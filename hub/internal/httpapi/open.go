@@ -1,7 +1,7 @@
 package httpapi
 
 // The open path (product core) + temporary grants, porting the rest of
-// backend/src/routes/access.ts. Every open funnels through store.LogAccess —
+// the Workers backend's access.ts. Every open funnels through store.LogAccess —
 // the single choke point — and, unlike the Workers backend (whose device
 // dispatch was still a TODO), an allowed open is then SIGNED and pushed to
 // the access point's controller over the device hub.
