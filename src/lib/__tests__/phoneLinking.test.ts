@@ -113,3 +113,69 @@ describe('the guard cannot pass on a file that vanished', () => {
     expect(settingsSrc().length).toBeGreaterThan(500);
   });
 });
+
+/**
+ * The channel half (Telegram/Slack/Discord), whose security shape is NOT the
+ * same as the phone half and whose copy therefore must not be the same either.
+ *
+ * A phone code names the number allowed to spend it. A channel code names
+ * nothing — whoever sends it to the bot gets bound — so anyone who reads it off
+ * a screen before the member uses it can attach their own account to this
+ * profile and inherit its gate access. The screen has to say so, and it has to
+ * say so ONLY here: applying the same alarm to the phone panel would be crying
+ * wolf, and a warning that appears everywhere stops being read anywhere.
+ */
+describe('the chat-account section reflects the weaker binding', () => {
+  const src = settingsSrc();
+
+  it('calls all three channel routes', () => {
+    for (const fn of ['channelLinkStart', 'channelIdentitiesList', 'channelIdentityUnlink']) {
+      expect(src, `Settings.tsx never calls api.${fn}`).toContain(`api.${fn}(`);
+    }
+  });
+
+  it('renders the server-supplied instruction rather than a client-composed one', () => {
+    expect(src).toContain('{linkCode.instruction}');
+  });
+
+  it('warns that a channel code hands over gate access to whoever sends it', () => {
+    const flatSrc = flat(src);
+    expect(flatSrc.toLowerCase()).toContain('keep this code to yourself');
+    // The REASON, not just the instruction. "Don't share it" without "because
+    // anyone who does gets your gate access" is advice a person talks
+    // themselves out of.
+    expect(flatSrc).toMatch(/whoever sends it[^.]*gets linked/i);
+    expect(flatSrc.toLowerCase()).toContain('gate access');
+  });
+
+  it('does not apply that alarm to the phone code panel', () => {
+    // Both panels exist in this file, so the check is that the warning sits in
+    // the channel one: it is defined below the phone panel and above
+    // toApiMessage. If someone lifts it into a shared component used by both,
+    // this fails and the asymmetry gets re-argued rather than lost.
+    const phonePanel = src.slice(
+      src.indexOf('function LinkCodePanel('),
+      src.indexOf('// Telegram/Slack/Discord accounts'),
+    );
+    expect(phonePanel.length).toBeGreaterThan(200);
+    expect(phonePanel.toLowerCase()).not.toContain('keep this code to yourself');
+  });
+
+  it('does not offer WhatsApp as a linkable chat account', () => {
+    const list = src.slice(
+      src.indexOf('const LINKABLE_CHANNELS'),
+      src.indexOf('function channelLabel'),
+    );
+    expect(list.length).toBeGreaterThan(50);
+    expect(list.toLowerCase()).not.toContain('whatsapp');
+    for (const c of ['telegram', 'slack', 'discord']) {
+      expect(list).toContain(`'${c}'`);
+    }
+  });
+
+  it('handles unsupported_channel without implying the user can retry it', () => {
+    expect(src).toContain('unsupported_channel');
+    const flatSrc = flat(src);
+    expect(flatSrc.toLowerCase()).toContain('whatsapp uses your verified phone number');
+  });
+});

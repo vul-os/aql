@@ -358,6 +358,53 @@ export type PhoneLinkCode = {
   instruction: string;
 };
 
+// ── channel identity linking (hub/internal/httpapi/channellink.go) ────────
+//
+// The Telegram/Slack/Discord sibling of the phone-linking group above. Same
+// shortage (channel_identities had no production writer either — see
+// migrations/0020_channel_link_codes.sql), same shape of fix: mint a code
+// here, spend it by sending it as a DM to the gate bot on that rail.
+//
+// The asymmetry that has to survive into the UI: a phone code names the
+// number that may spend it, so the number carries a second factor the code
+// doesn't have to. A channel code cannot name its target — nobody knows
+// their own Telegram/Slack/Discord id in advance, and learning it is what
+// the inbound message is for — so the code ALONE authorises the binding.
+// Anyone who sees a channel code before it's used can send it from their own
+// account and inherit this member's gate access. That is why the code is
+// twice as long as the phone one (store.channelCodeLen) and why the console
+// must show a sharing warning here that the phone screen has no reason to
+// carry with the same weight.
+
+/** channels.KindTelegram / KindSlack / KindDiscord — the only rails this
+ *  ceremony offers. WhatsApp is deliberately absent: its identity is a
+ *  VERIFIED PHONE NUMBER (profile_phone_numbers), handled by the phone-linking
+ *  group above with its own, stronger ceremony — offering both here would
+ *  open a second, weaker path to the same access. DMTAP is absent too,
+ *  because httpapi.linkableChannels doesn't list it (it's a fail-closed
+ *  scaffold; a linking ceremony would imply a rail that works). */
+export type LinkableChannel = 'telegram' | 'slack' | 'discord';
+
+/** One of the caller's own linked platform accounts (store.ChannelIdentity). */
+export type LinkedChannelIdentity = {
+  channel: LinkableChannel | (string & {});
+  external_id: string;
+  created_at: UnixSeconds;
+};
+
+/** The 201 body from POST /channels/me/link. */
+export type ChannelLinkCode = {
+  code: string;
+  channel: LinkableChannel | (string & {});
+  expires_at: UnixSeconds;
+  /** The hub's own wording — composed in handleChannelLinkStart, not here, so
+   *  it can't drift from what the rail actually recognises. It ALSO carries
+   *  the sharing warning ("do not share it") that makes this code different
+   *  from a phone code: render it verbatim, never a client-composed
+   *  paraphrase, and never soften or drop the warning half of the sentence. */
+  instruction: string;
+};
+
 export const api = {
   login: (body: { username: string; password: string }) =>
     apiFetch<LoginResponse>('/auth/login', { method: 'POST', body }),
@@ -457,6 +504,43 @@ export const api = {
    */
   phoneUnlink: (id: string) =>
     apiFetch<void>(`/phones/me/phones/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
+  // Channel identity linking (hub/internal/httpapi/channellink.go). The
+  // Telegram/Slack/Discord sibling of the phone-linking group above — read
+  // the comment on LinkableChannel before offering a fourth option here.
+
+  /**
+   * Mint a short-lived code to send as a DM to the gate bot on `channel`.
+   * Unlike phoneLinkStart, this proves nothing in advance about who will
+   * send it — it can't, because the whole point of the message is to reveal
+   * that sender's platform id. So the code alone is what binds the account,
+   * which is why it must be treated as a live secret from the moment it's
+   * shown (see ChannelLinkCode.instruction).
+   *
+   * Errors worth a specific message: unsupported_channel (400 — `channel`
+   * isn't one of LinkableChannel); too_many_link_codes (429 — the per-user
+   * mint quota).
+   */
+  channelLinkStart: (channel: LinkableChannel) =>
+    apiFetch<ChannelLinkCode>('/channels/me/link', { method: 'POST', body: { channel } }),
+
+  /** The caller's own linked platform accounts, across all rails. */
+  channelIdentitiesList: () =>
+    apiFetch<{ identities: LinkedChannelIdentity[] }>('/channels/me/identities'),
+
+  /**
+   * Unlink one of the caller's own channel identities.
+   *
+   * Ownership is enforced inside the DELETE on the hub (scoped by profile_id
+   * in the query itself), so another member's row is unreachable and answers
+   * 404 identity_not_found — identical to one that never existed. Treat that
+   * 404 as "already gone", same as phoneUnlink's phone_not_found.
+   */
+  channelIdentityUnlink: (channel: LinkableChannel | (string & {}), externalId: string) =>
+    apiFetch<void>(
+      `/channels/me/identities/${encodeURIComponent(channel)}/${encodeURIComponent(externalId)}`,
+      { method: 'DELETE' },
+    ),
 
   // Served by the hub (hub/internal/httpapi/profile.go). avatar_url must be
   // https and is refused otherwise — the same rule the form's help text
