@@ -31,6 +31,24 @@ design intent, not a shipped capability — see
 Identity is keyed on `(channel, external id)` — not phone-number-only — so one person
 can be reachable on WhatsApp and Slack at once without being two people in your records.
 
+**A member has to link each account before that rail answers them.** Being invited to an
+account is not enough: every rail resolves an inbound message through a *verified*
+identity, and accepting an invite deliberately verifies nothing, because accepting proves
+nothing about who holds the handset. The ceremony is one step, from **Settings**: the
+console mints a short-lived `LINK-` code and the member sends it to the bot from the
+account they are linking. The code proves they are looking at this account's console; the
+inbound message proves they control the account. No SMS and no email — this hub sends
+neither.
+
+WhatsApp's code is six characters because it is bound to the number that may spend it, so
+possession of the handset carries most of the security. The other rails use a twelve-
+character code: nobody knows their own Telegram numeric id, so the code cannot name the
+account allowed to spend it and whoever sends it first gets linked. Those are secrets, and
+the console says so where it shows them.
+
+Until a member links, their messages are **ignored rather than refused** — which is what
+"the bot doesn't answer me" looks like from the outside.
+
 | Channel | Identity | Status | Self-host friction |
 | --- | --- | --- | --- |
 | WhatsApp | phone number | **Shipped** — Meta Cloud API | **High** — verified Meta business + WABA + number |
@@ -184,9 +202,11 @@ With no `SLACK_APP_TOKEN`, the hub stays on the Events API webhook
 one that needs zero ingress — see [Reachability](reachability.md).
 
 Residents then DM the app — or use a channel you allow — with `open`. Their Slack
-member id is their identity; invite members from the portal's **Members** page by id or
-with a one-time link. Workspaces map naturally onto complexes and offices, which makes
-Slack a favourite for gated workplaces and co-working spaces.
+member id is their identity, and they attach it themselves with a link code from
+**Settings** (above); there is no way for an administrator to type someone's Slack id in
+on their behalf, because that would be a claim about an account nobody had proven they
+control. Workspaces map naturally onto complexes and offices, which makes Slack a
+favourite for gated workplaces and co-working spaces.
 
 Slack replies support the same numbered pickers and quota warnings as WhatsApp.
 

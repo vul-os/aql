@@ -186,8 +186,32 @@ encrypted to your hub, and no amount of self-hosting changes it.
 
 So each rail declares four things: whether it can contact someone who hasn't
 messaged first, how it receives, what it costs in each direction, and who sees
-plaintext. The hub serves that at `GET /v1/rails/disclosure`, and the table lives
-in code beside the rails so it can't quietly go stale.
+plaintext. The hub serves that at `GET /v1/rails/disclosure`, the console shows
+it in **Settings** next to where you link an account — the point being to read it
+*before* choosing a rail — and the table lives in code beside the rails so it
+can't quietly go stale.
+
+### A rail only answers people it recognises
+
+Being invited to an account is not enough. Every rail resolves an inbound
+message to a member through a **verified** identity, and accepting an invite
+deliberately does not verify anything — accepting proves nothing about who holds
+the handset.
+
+So each member does one short ceremony from **Settings**, once per rail:
+
+- **WhatsApp** — the console mints a six-character `LINK-` code and you send it
+  to the gate bot *from the number you are linking*. The code proves you are
+  looking at this account's console; the inbound message proves you hold the
+  number. Two facts, one act, and no SMS or email — this hub sends neither.
+- **Telegram, Slack, Discord** — the same shape, except the code is longer
+  (twelve characters). It has to be: nobody knows their own Telegram numeric id,
+  so the code cannot name the account allowed to spend it, and whoever sends it
+  gets linked. Treat those codes as secrets; the console says so.
+
+Until a member does this, their messages are **ignored rather than refused** —
+which is exactly what "the bot doesn't answer me" looks like, so the console
+flags an unverified number distinctly.
 
 | Rail | Receives via | Behind CGNAT | Cost | Who reads it |
 |---|---|---|---|---|

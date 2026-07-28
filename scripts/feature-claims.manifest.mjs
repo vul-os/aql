@@ -472,7 +472,11 @@ export const FEATURES = [
     id: 'channel-link-ceremony',
     label: 'Telegram/Slack/Discord identity linking by console-minted code, redeemed from the account itself',
     docStatus: 'shipped',
-    docRefs: ['docs/PHONE-LINKING.md § 4 — "the channel-identity sibling is 0020"'],
+    docRefs: [
+      'docs/PHONE-LINKING.md § 4 — "the channel-identity sibling is 0020"',
+      'README.md § A rail only answers people it recognises',
+      'site/docs/channels.md — the twelve-character code and why it is longer',
+    ],
     evidence: [
       { file: 'hub/internal/store/channellink.go', pattern: 'RedeemChannelLinkCode' },
       { file: 'hub/internal/store/migrations/0020_channel_link_codes.sql', pattern: 'CREATE TABLE channel_link_codes' },
@@ -491,7 +495,11 @@ export const FEATURES = [
     id: 'phone-link-ceremony',
     label: 'Phone verification by console-minted link code, redeemed from the number itself over WhatsApp',
     docStatus: 'shipped',
-    docRefs: ['docs/PHONE-LINKING.md § 4. What has to be built'],
+    docRefs: [
+      'docs/PHONE-LINKING.md § 4. What has to be built',
+      'README.md § A rail only answers people it recognises',
+      'site/docs/channels.md — "A member has to link each account before that rail answers them"',
+    ],
     evidence: [
       { file: 'hub/internal/store/phonelink.go', pattern: 'RedeemPhoneLinkCode' },
       { file: 'hub/internal/store/migrations/0018_phone_link_codes.sql', pattern: 'CREATE TABLE phone_link_codes' },

@@ -48,10 +48,27 @@ green** across 8 packages:
 - [x] **Ed25519-signed commands** with nonce + expiry, and the WebSocket device hub that
       delivers them (with long-poll fallback)
 - [x] **Tamper-evident audit** — SHA-256 hash chain over `access_logs` and
-      `admin_audit_log`, append-only DB triggers, `GET /v1/admin/audit/verify` and an
-      `aql-hub verify-audit` CLI that works against a cold backup
+      `admin_audit_log`, append-only DB triggers, `GET /v1/admin/audit/verify`, an
+      `aql-hub verify-audit` CLI that works against a cold backup, and an admin console
+      view that runs the check and states what a passing chain does *not* prove (it is a
+      detection control: it cannot see an attacker who edited the database and recomputed
+      every hash forward)
 - [x] Login brute-force throttles (per-IP and per-account, fail-closed), live per-request
-      session revocation, log-out-everywhere
+      session revocation, log-out-everywhere (reachable from Settings, not only as an
+      endpoint)
+- [x] **Chat identity linking** — a member becomes recognisable on a rail by one
+      ceremony: the console mints a short-lived code and the member sends it to the bot
+      from the account being linked. WhatsApp binds a verified phone number; Telegram,
+      Slack and Discord bind a platform account id and use a longer code, because that
+      code cannot name the account allowed to spend it. No SMS and no email — this hub
+      sends neither. Until this session nothing in production could write either
+      identity, so every rail resolved every sender to a non-member and refused every
+      open
+- [x] **Controller events stored on the hub** — signed events from a controller are
+      persisted, deduped on `event_id`, and the access-relevant kinds appended to the
+      hash-chained audit log, so an offline emergency open (the one path with no hub in
+      the loop) leaves a record. The envelope is kept verbatim so its signature stays
+      re-checkable
 - [x] **Offline-grant issuance** (`POST /v1/offline-grants`) — same authorization gates as
       a live open, all-or-nothing, fixed 7-day TTL, audited
 - [x] Refuses to bind a non-loopback address without `-behind-proxy` (resolution-aware,
