@@ -90,6 +90,21 @@ describe('engineNotice', () => {
     expect(notice).toContain('not an empty fleet');
   });
 
+  it('distinguishes a refusal from a failure, and says who to ask', () => {
+    // The engine is hub-wide and cannot say which account owns a device, so a
+    // multi-account hub admits only the instance admin. That is a deliberate
+    // answer with an action attached — rendering it as `error` would send a
+    // member to check their network for a problem that is not there.
+    const forbidden = engineNotice({ status: 'forbidden', devices: [] });
+    const failed = engineNotice({ status: 'error', devices: [], message: 'Network down.' });
+    expect(forbidden).toBeTruthy();
+    expect(forbidden).not.toBe(failed);
+    expect(forbidden).toContain('instance admin');
+    // And it must not imply breakage, which is the thing a member would
+    // otherwise go and hunt for.
+    expect(forbidden).toContain('Nothing is wrong with the engine');
+  });
+
   it('is silent when the engine is live and serving devices', () => {
     expect(engineNotice({ status: 'live', devices: [device()] })).toBeNull();
     // …but says so when it is live with nothing discovered, rather than
@@ -150,6 +165,16 @@ describe('execute outcomes', () => {
     expect(
       describeExecuteError(new ApiError(400, { error: 'invalid_request' }), 'Open').kind,
     ).toBe('refused');
+  });
+
+  it('names the multi-account refusal instead of a generic failure', () => {
+    const out = describeExecuteError(
+      new ApiError(403, { error: 'not_engine_authority' }), 'Turn on');
+    expect(out.kind).toBe('refused');
+    expect(out.message).toContain('instance admin');
+    // "Nothing was sent" matters: a person told an action merely failed will
+    // try it again, and this one was never going to work for them.
+    expect(out.message).toContain('Nothing was sent');
   });
 
   it('falls back to a plain failure for anything unrecognised', () => {

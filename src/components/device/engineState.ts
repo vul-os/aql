@@ -45,6 +45,17 @@ export type EngineFleet =
   | { status: 'absent'; devices: [] }
   /** The hub predates /v1/engine (SPA-fallback answered, not JSON). */
   | { status: 'unsupported'; devices: [] }
+  /**
+   * The hub refused: this caller holds no authority over the engine.
+   *
+   * Its own state rather than an `error`, for the same reason `absent` is not
+   * an empty `live`. The engine is hub-wide and has no way to say which
+   * account a device belongs to, so on a hub serving several accounts only the
+   * instance admin may drive it. That is a deliberate answer with a reason a
+   * person can act on — "ask your instance admin" — and rendering it as a
+   * failed request would send them to check their network instead.
+   */
+  | { status: 'forbidden'; devices: [] }
   /** The request genuinely failed. Distinct from "no devices". */
   | { status: 'error'; devices: []; message: string };
 
@@ -63,6 +74,9 @@ export async function engineFleet(): Promise<EngineFleet> {
     return { status: 'live', devices: res.devices };
   } catch (err) {
     if (isUnavailable(err)) return { status: 'unsupported', devices: [] };
+    if (err instanceof ApiError && err.code === 'not_engine_authority') {
+      return { status: 'forbidden', devices: [] };
+    }
     return { status: 'error', devices: [], message: friendlyApiError(err, 'Could not reach the device engine.') };
   }
 }
@@ -81,6 +95,8 @@ export function engineNotice(fleet: EngineFleet): string | null {
       return 'No device engine is configured on this hub, so it reports no devices of its own. That is the default for a hub with no device config — not an error, and not a failed load.';
     case 'unsupported':
       return "This hub doesn't serve the device-engine API yet — it's running a build from before /v1/engine existed. Upgrade the hub to see live devices here.";
+    case 'forbidden':
+      return 'This hub serves more than one account, and its device engine has no way to tell which account a device belongs to — so only the instance admin can see or drive it. Nothing is wrong with the engine; ask whoever runs this hub.';
     case 'error':
       return `The device engine could not be read: ${fleet.message} This is a failed request, not an empty fleet — devices may well be running.`;
     case 'live':
@@ -305,6 +321,11 @@ export function describeExecuteError(err: unknown, label: string): ExecuteOutcom
         return { kind: 'refused', message: `The hub refused “${label}” — this device doesn't offer it.` };
       case 'no_device_engine':
         return { kind: 'failed', message: 'This hub has no device engine configured.' };
+      case 'not_engine_authority':
+        return {
+          kind: 'refused',
+          message: `“${label}” was refused: on a hub serving several accounts, only the instance admin can drive devices. Nothing was sent.`,
+        };
     }
   }
   return { kind: 'failed', message: friendlyApiError(err, `“${label}” did not go through.`) };
