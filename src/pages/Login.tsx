@@ -46,25 +46,6 @@ export default function Login() {
         Use your username and password to sign in.
       </p>
 
-      {/* Google sign-in is disabled unconditionally: the gateway
-          (hub/internal/httpapi) has no OAuth routes ported yet (see
-          api.ts's googleStartUrl doc comment) — pointing this at
-          /v1/auth/google/start would just land on the SPA fallback. */}
-      <div
-        aria-disabled="true"
-        title="Google sign-in isn’t available on this hub yet — use username + password."
-        className="mt-5 sm:mt-7 flex items-center justify-center gap-3 h-11 rounded-full border border-ink/15 bg-paper-cool/40 opacity-45 cursor-not-allowed select-none"
-      >
-        <GoogleMark />
-        <span className="text-sm font-medium">Continue with Google</span>
-      </div>
-
-      <div className="my-5 sm:my-6 flex items-center gap-3 text-[10px] uppercase tracking-[0.22em] text-ink/45">
-        <span className="flex-1 h-px bg-ink/12" />
-        or
-        <span className="flex-1 h-px bg-ink/12" />
-      </div>
-
       <form onSubmit={onSubmit} className="space-y-3 sm:space-y-4" noValidate>
         <Field
           label="Username"
@@ -149,13 +130,3 @@ function toMessage(err: unknown): string {
   return 'Something went wrong.';
 }
 
-function GoogleMark() {
-  return (
-    <svg viewBox="0 0 18 18" className="h-4 w-4" aria-hidden>
-      <path fill="#EA4335" d="M9 3.48c1.7 0 2.86.74 3.52 1.36l2.6-2.54C13.46 0.95 11.43 0 9 0 5.48 0 2.44 2.02 0.96 4.96l3.02 2.34C4.7 5.07 6.66 3.48 9 3.48Z" />
-      <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.13 4.13 0 0 1-1.8 2.71l2.92 2.27c1.71-1.58 2.68-3.91 2.68-6.62Z" />
-      <path fill="#FBBC05" d="M3.96 10.71A5.4 5.4 0 0 1 3.68 9c0-.59.1-1.16.28-1.7L0.96 4.96A9 9 0 0 0 0 9c0 1.46.35 2.83.96 4.04l3-2.33Z" />
-      <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.27c-.81.55-1.86.87-3.04.87-2.34 0-4.31-1.59-5.02-3.72L0.96 13.04C2.44 15.98 5.48 18 9 18Z" />
-    </svg>
-  );
-}

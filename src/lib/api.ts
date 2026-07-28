@@ -410,11 +410,6 @@ export const api = {
   // already fall back to a static list on failure (see src/pages/Signup.tsx).
   countries: () => apiFetch<{ countries: CountryRef[] }>('/reference/countries'),
 
-  // NOT IMPLEMENTED on the gateway — no OAuth routes exist at all. Google
-  // sign-in is unconditionally disabled in the UI (Login.tsx / Signup.tsx)
-  // rather than pointed at a dead link.
-  googleStartUrl: () => `${getApiBaseUrl()}${API_VERSION_PREFIX}/auth/google/start`,
-
   accountUpdate: (accountId: string, body: { name?: string }) =>
     apiFetch<void>(`/accounts/${accountId}`, { method: 'PATCH', body }),
 

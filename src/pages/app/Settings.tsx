@@ -12,9 +12,6 @@ import { getApiBaseUrl, getStoredGatewayUrl, isTauri, openGatewayPicker } from '
 
 export default function Settings() {
   const { currentAccount, user } = useAuth();
-  // OAuth-only accounts (Google sign-in) have no password to change. Show a
-  // small explainer instead of an empty/broken password form.
-  const hasPassword = user?.has_password ?? false;
 
   return (
     <>
@@ -22,16 +19,14 @@ export default function Settings() {
         kicker="Settings"
         title={currentAccount?.name ?? 'Settings'}
         description={
-          hasPassword
-            ? 'Rename or remove this location, and manage your account password.'
-            : 'Rename or remove this location, and manage your sign-in identity.'
+          'Rename or remove this location, and manage your account password.'
         }
       />
       <div className="grid grid-cols-1 gap-6 max-w-3xl">
         <ProfileSection />
         <ContactSection />
         <LocationsSection />
-        {hasPassword ? <PasswordSection /> : <SignInIdentitySection />}
+        <PasswordSection />
         <TwoFactorSection />
         <GatewaySection />
       </div>
@@ -70,31 +65,6 @@ function GatewaySection() {
   );
 }
 
-// Calm explainer for users who signed in with Google and have no password
-// set. Tells them how to add one if they want a fallback.
-function SignInIdentitySection() {
-  return (
-    <Card>
-      <h2 className="font-display text-xl mb-1">Sign-in</h2>
-      <p className="text-sm text-ink/55 mb-4">
-        You signed in with Google. There is no password on this account, so there is nothing to
-        change here.
-      </p>
-      <div className="rounded-xl bg-paper-cool border border-ink/10 px-4 py-3 text-[13.5px] text-ink/75 leading-relaxed">
-        Want a password as a backup sign-in method? Use the{' '}
-        <a
-          href="/forgot-password"
-          className="underline underline-offset-4 decoration-terracotta text-ink hover:text-terracotta-deep"
-        >
-          forgot-password
-        </a>{' '}
-        flow with this username — you&rsquo;ll set a password without unlinking Google. Both
-        methods will then work.
-      </div>
-    </Card>
-  );
-}
-
 function ProfileSection() {
   const { user, refreshMe } = useAuth();
   const [displayName, setDisplayName] = useState(user?.name ?? '');
@@ -103,17 +73,11 @@ function ProfileSection() {
   const [message, setMessage] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Keep local state in sync when the user record refreshes (e.g. after a
-  // Google sign-in refreshes the avatar from Google).
+  // Keep local state in sync when the user record refreshes.
   useEffect(() => { setDisplayName(user?.name ?? ''); }, [user?.name]);
   useEffect(() => { setAvatarUrl(user?.avatar_url ?? ''); }, [user?.avatar_url]);
 
-  const sourceLabel =
-    user?.avatar_source === 'user'
-      ? 'Set by you'
-      : user?.avatar_source === 'google'
-        ? 'From your Google account · refreshed on each sign-in'
-        : 'No avatar set';
+  const sourceLabel = user?.avatar_source === 'user' ? 'Set by you' : 'No avatar set';
 
   async function save(e: FormEvent) {
     e.preventDefault();
@@ -152,16 +116,16 @@ function ProfileSection() {
     }
   }
 
-  async function resetToGoogle() {
+  async function clearAvatar() {
     setMessage(null);
     setErrorMsg(null);
     setSaving(true);
     try {
       await api.profileUpdate({ avatar_url: null });
       await refreshMe();
-      setMessage('Avatar cleared — sign out and back in with Google to refresh.');
+      setMessage('Avatar cleared.');
     } catch (err) {
-      setErrorMsg(toApiMessage(err, 'Could not reset avatar.'));
+      setErrorMsg(toApiMessage(err, 'Could not clear the avatar.'));
     } finally {
       setSaving(false);
     }
@@ -171,8 +135,8 @@ function ProfileSection() {
     <Card>
       <h2 className="font-display text-xl mb-1">Your profile</h2>
       <p className="text-sm text-ink/55 mb-5">
-        How you appear inside Aql. Avatar can be any https URL — Google picture, Gravatar,
-        a hosted image, anywhere.
+        How you appear inside Aql. Avatar can be any https URL — Gravatar, a hosted
+        image, anywhere. The hub stores the URL, never the picture.
       </p>
 
       <form onSubmit={save} className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-x-6 gap-y-5 items-start">
@@ -204,7 +168,7 @@ function ProfileSection() {
           <label className="block">
             <span className="flex items-baseline justify-between mb-1.5">
               <span className="text-sm font-medium text-ink/85">Avatar URL</span>
-              <span className="text-xs text-ink/45">https only · leave empty to use Google</span>
+              <span className="text-xs text-ink/45">https only · leave empty for none</span>
             </span>
             <input
               type="url"
@@ -227,11 +191,11 @@ function ProfileSection() {
             {user?.avatar_source === 'user' && (
               <button
                 type="button"
-                onClick={resetToGoogle}
+                onClick={clearAvatar}
                 disabled={saving}
                 className="h-10 px-4 rounded-full text-sm text-ink/65 hover:text-ink"
               >
-                Reset to Google picture
+                Clear avatar
               </button>
             )}
           </div>

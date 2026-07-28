@@ -24,10 +24,9 @@ export type SessionUser = {
   name: string;
   avatar_url: string | null;
   avatar_cdn_url: string | null;
-  avatar_source: 'google' | 'user' | null;
+  avatar_source: 'user' | null;
   has_verified_phone: boolean;
   has_slack_identity: boolean;
-  has_password: boolean;
   /** Instance operator — unlocks the /app/admin console. */
   is_platform_admin: boolean;
   slack_user_id: string | null;
@@ -107,10 +106,6 @@ function toSession(me: MeResponse): { user: SessionUser; accounts: SessionAccoun
       // None of profile/phone-verification/Slack is implemented on the
       // gateway yet (see MeResponse's doc comment in api.ts) — always "off".
       has_verified_phone: false,
-      // No Google OAuth on the gateway either, so every account is
-      // password-based; showing the password-change form (rather than the
-      // "signed in with Google" explainer) is the correct default here.
-      has_password: true,
       is_platform_admin: me.user.is_platform_admin,
       has_slack_identity: false,
       slack_user_id: null,
