@@ -67,11 +67,14 @@ export default function AppLayout() {
         <AppTopBar />
         <main className="flex-1 px-4 sm:px-6 lg:px-10 py-6 sm:py-10 max-w-[1400px] w-full mx-auto">
           {/* WhatsApp-connect and Slack-identity nudge banners used to live
-              here. Removed: they called api.phoneAdd()/api.slackUpdate(),
-              neither of which the gateway implements (no /phones or
-              /auth/me/slack routes — see api.ts's doc comments), so they
-              could never succeed and would have nagged on every page load
-              forever. Reinstate once those routes exist server-side. */}
+              here. Removed: they called client methods that pointed at routes
+              the hub does not serve, so they could never succeed and would
+              have nagged on every page load forever. Those methods are gone
+              too now.
+              Reinstating them needs more than a route: linking a phone
+              requires proving the number belongs to the person claiming it,
+              and both obvious ways to do that let someone squat a neighbour's
+              number. See docs/PHONE-LINKING.md. */}
           {/* Children come from routes.tsx: Aql's four primary screens
               (Overview, Devices, Automations, Energy) and the access-control
               module's deep screens (access points, members, temp access,

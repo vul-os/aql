@@ -145,18 +145,22 @@ function normalizeGoPath(p: string): string {
   return p.replace(/\{[^/]+\}/g, '{param}');
 }
 
-// ── known, intentional gaps (gateway hasn't implemented these yet) ─────────
+// ── known, intentional gaps ────────────────────────────────────────────────
 //
-// Every entry here must correspond to a doc comment in api.ts explaining why
-// the call exists anyway and how the UI degrades. This list is the ONLY
-// thing standing between "frontend calls a route the gateway doesn't have"
-// failing the build — keep it short, and delete entries the moment the
-// gateway implements the route for real.
-const KNOWN_UNAVAILABLE: Array<{ method: string; path: string }> = [
-  { method: 'GET', path: '/phones/me/phones' },
-  { method: 'POST', path: '/phones/me/phones' },
-  { method: 'PUT', path: '/auth/me/slack' },
-];
+// EMPTY, and worth keeping that way. Every route src/lib/api.ts calls, the hub
+// serves.
+//
+// It was not empty for a long time, and the entries were not harmless. Each
+// one was a screen shipped ahead of its backend, degrading in a way somebody
+// had reasoned about once and nobody had looked at since: a profile form that
+// failed for every user, a maintenance panel that rendered an error, a country
+// selector that fell back to one country, and a WhatsApp signup button that
+// could not work. The list made all of that look managed.
+//
+// Adding an entry is therefore a real decision, not bookkeeping. It must come
+// with a doc comment in api.ts saying why the call exists anyway and how the
+// UI degrades — and preferably with a reason the route cannot simply be built.
+const KNOWN_UNAVAILABLE: Array<{ method: string; path: string }> = [];
 
 describe('frontend/gateway route parity', () => {
   it('every apiFetch() call in src/lib/api.ts targets a route the gateway serves (or is an acknowledged gap)', () => {

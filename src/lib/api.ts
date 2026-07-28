@@ -370,16 +370,19 @@ export const api = {
 
   me: () => apiFetch<MeResponse>('/auth/me'),
 
-  // NOT IMPLEMENTED on the gateway (no /phones route at all). Kept so call
-  // sites can attempt it and get a clean UNAVAILABLE_CODE ApiError instead
-  // of a dead link; UI must treat failure as "not available", not an error.
-  phones: () => apiFetch<{ phones: Array<{ id: string; phone_e164: string; verified_at: string | null; is_primary: boolean }> }>('/phones/me/phones'),
-  phoneAdd: (body: { phone_e164: string; is_primary?: boolean }) =>
-    apiFetch<{ id: string }>('/phones/me/phones', { method: 'POST', body }),
-
-  // NOT IMPLEMENTED on the gateway (no /auth/me/slack route).
-  slackUpdate: (body: { slack_user_id?: string; slack_handle?: string }) =>
-    apiFetch<void>('/auth/me/slack', { method: 'PUT', body }),
+  // There is deliberately no phones() / phoneAdd() / slackUpdate() here.
+  //
+  // They existed for a long time as calls to routes the hub does not serve,
+  // "kept so call sites can attempt it and get a clean UNAVAILABLE_CODE" —
+  // which in practice meant a request on every Settings visit to discover a
+  // fact fixed at build time, and a signup button that failed for every user
+  // who arrived from the WhatsApp nudge.
+  //
+  // Linking a phone is not a missing route, it is a missing CEREMONY: the hub
+  // owns phone→member mapping already (profile_phone_numbers, migration 0002)
+  // and access resolution requires verified_at, but nothing has ever verified
+  // a number. See docs/PHONE-LINKING.md for the design and the squatting
+  // hazard that rules out the obvious shortcuts.
 
   // Served by the hub (hub/internal/httpapi/profile.go). avatar_url must be
   // https and is refused otherwise — the same rule the form's help text

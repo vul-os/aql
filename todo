@@ -67,10 +67,13 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       wire format. Do not present it as a channel.
 
 ## console ↔ hub drift (tracked by src/lib/__tests__/routeParity.test.ts)
-Each of these is UI with no backend, or a backend nothing calls. Either build the route
-or remove the screen.
-- [ ] `/phones/me/phones`, `PUT /auth/me/slack` — both are chat/phone identity,
-      which is moving to Ephor. Decide there rather than building here.
+CLOSED. routeParity's KNOWN_UNAVAILABLE list is empty — every route api.ts calls, the
+hub serves. Adding an entry back is a real decision, not bookkeeping.
+- [ ] Phone linking is the one that was NOT a missing route: the hub has owned
+      phone→member mapping since 0002 and requires verified_at to grant access, but
+      nothing has ever verified a number, and both obvious shortcuts let an attacker
+      squat a neighbour's number. Design + the squatting hazard: docs/PHONE-LINKING.md.
+      Migration 0018 is unclaimed and reserved for it.
 - Not doing: Google OAuth, and any email-based auth. The hub is meant to work off nodes;
   recovery is username-based through a delivery seam, not an email dependency.
 

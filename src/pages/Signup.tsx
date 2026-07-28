@@ -50,7 +50,6 @@ export default function Signup() {
 
   // Submission + flow
   const [submitting, setSubmitting] = useState(false);
-  const [connectingPhone, setConnectingPhone] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [submittedUsername, setSubmittedUsername] = useState<string | null>(null);
   const { registerWithPassword, refreshMe } = useAuth();
@@ -147,27 +146,6 @@ export default function Signup() {
     await submitSignup();
   }
 
-  async function connectPendingWhatsAppPhone() {
-    if (!pendingWhatsAppPhone) return;
-    setErrorMsg(null);
-    setConnectingPhone(true);
-    try {
-      await api.phoneAdd({ phone_e164: pendingWhatsAppPhone, is_primary: true });
-      try { sessionStorage.removeItem(PENDING_WHATSAPP_PHONE_KEY); } catch {/**/}
-      await refreshMe();
-      navigate('/app', { replace: true });
-    } catch (err) {
-      setErrorMsg(toMessage(err));
-    } finally {
-      setConnectingPhone(false);
-    }
-  }
-
-  function skipPendingWhatsAppPhone() {
-    try { sessionStorage.removeItem(PENDING_WHATSAPP_PHONE_KEY); } catch {/**/}
-    navigate('/app', { replace: true });
-  }
-
   return (
     <AuthLayout
       asideKicker={step === 'location' ? 'Almost there' : 'Get started'}
@@ -193,10 +171,6 @@ export default function Signup() {
         <SuccessPanel
           username={submittedUsername}
           pendingWhatsAppPhone={pendingWhatsAppPhone}
-          connectingPhone={connectingPhone}
-          errorMsg={errorMsg}
-          onConnectWhatsApp={connectPendingWhatsAppPhone}
-          onSkipWhatsApp={skipPendingWhatsAppPhone}
           onContinue={() => navigate('/app', { replace: true })}
           onRedo={() => setSubmittedUsername(null)}
         />
@@ -543,19 +517,11 @@ function KindCard({
 function SuccessPanel({
   username,
   pendingWhatsAppPhone,
-  connectingPhone,
-  errorMsg,
-  onConnectWhatsApp,
-  onSkipWhatsApp,
   onContinue,
   onRedo,
 }: {
   username: string;
   pendingWhatsAppPhone: string | null;
-  connectingPhone: boolean;
-  errorMsg: string | null;
-  onConnectWhatsApp: () => void;
-  onSkipWhatsApp: () => void;
   onContinue: () => void;
   onRedo: () => void;
 }) {
@@ -566,36 +532,23 @@ function SuccessPanel({
         Signed up as <span className="font-medium text-ink">{username}</span>. Continue to your
         dashboard to add access points and invite members.
       </p>
+      {/* Arrived from the WhatsApp nudge (SignupLinkForPhone adds ?wa_phone=).
+          There WAS a "Connect number" button here that called api.phoneAdd() —
+          a route the hub does not serve, so it failed for everyone who followed
+          that link. Worse, nothing in the hub has ever VERIFIED a phone
+          (store.AddVerifiedPhone has no callers), and access resolution
+          requires verified_at, so even a working link would have granted
+          nothing. Telling the user what to do instead beats a button that
+          cannot work — see docs/PHONE-LINKING.md. */}
       {pendingWhatsAppPhone && (
         <div className="mt-4 rounded-xl border border-terracotta/25 bg-terracotta/10 px-4 py-4">
-          <p className="text-sm font-medium text-ink">Connect WhatsApp number?</p>
+          <p className="text-sm font-medium text-ink">About that WhatsApp number</p>
           <p className="mt-1 text-sm text-ink/70">
-            Link <span className="font-mono text-ink">{pendingWhatsAppPhone}</span> to this account
-            so WhatsApp messages from that number can find your access.
+            <span className="font-mono text-ink">{pendingWhatsAppPhone}</span> isn&rsquo;t linked to
+            this account. The hub can&rsquo;t confirm on its own that the number is yours, so an
+            account admin links it for you — ask whoever runs this hub to add it to your
+            membership.
           </p>
-          {errorMsg && (
-            <p className="mt-3 text-sm text-terracotta-deep" role="alert">
-              {errorMsg}
-            </p>
-          )}
-          <div className="mt-4 flex flex-col sm:flex-row gap-2">
-            <Button
-              variant="ink"
-              size="md"
-              className="flex-1"
-              onClick={onConnectWhatsApp}
-              disabled={connectingPhone}
-            >
-              {connectingPhone ? 'Connecting…' : 'Connect number'}
-            </Button>
-            <button
-              type="button"
-              onClick={onSkipWhatsApp}
-              className="h-10 px-4 rounded-full text-sm text-ink/65 hover:text-ink"
-            >
-              Not now
-            </button>
-          </div>
         </div>
       )}
       <Button variant="ink" size="lg" className="mt-6 w-full" onClick={onContinue}>
