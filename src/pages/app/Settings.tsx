@@ -6,7 +6,15 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Avatar, resolveAvatarUrl } from '@/components/ui/Avatar';
-import { ApiError, api, friendlyApiError, isUnavailable, type LocationRow } from '@/lib/api';
+import {
+  ApiError,
+  api,
+  friendlyApiError,
+  isUnavailable,
+  type LinkedPhone,
+  type LocationRow,
+  type PhoneLinkCode,
+} from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { getApiBaseUrl, getStoredGatewayUrl, isTauri, openGatewayPicker } from '@/lib/hub';
 
@@ -24,7 +32,7 @@ export default function Settings() {
       />
       <div className="grid grid-cols-1 gap-6 max-w-3xl">
         <ProfileSection />
-        <ContactSection />
+        <PhoneNumbersSection />
         <LocationsSection />
         <PasswordSection />
         <TwoFactorSection />
@@ -217,42 +225,329 @@ function ProfileSection() {
   );
 }
 
-// Contact channels: linking a phone number to your account.
+// Phone numbers: the ceremony that proves a number belongs to this account
+// (docs/PHONE-LINKING.md, hub/internal/httpapi/phones.go).
 //
-// There is no route behind this, and the reason is worth stating precisely
-// because the obvious reading is wrong. The hub DOES own phone→member mapping
-// — profile_phone_numbers has existed since migration 0002, and it is how a
-// WhatsApp message gets resolved to a member who may open a gate. What is
-// missing is any way to PROVE a number belongs to the person claiming it.
+// The hub has owned phone→member mapping since migration 0002 — it's how a
+// WhatsApp message gets resolved to a member who may open a gate — but every
+// chat-rail lookup requires a VERIFIED number (store/channels.go), and an
+// unverified one is not a weaker version of a linked number: it does nothing.
+// A member whose messages to the gate bot go silently ignored has almost
+// always landed here first, which is why "verified" has to be impossible to
+// miss rather than a footnote next to the number.
 //
-// That proof is the whole feature. Access resolution requires
-// verified_at IS NOT NULL (store/channels.go), so a self-service form that
-// linked numbers unverified would grant nothing and mean nothing, and one that
-// linked them verified would let anyone claim a neighbour's number and receive
-// their gate access. Migration 0002 carries the scar: an earlier auto-verify
-// on invite-accept let exactly that happen, and the fix was to link invited
-// phones UNVERIFIED.
-//
-// The ceremony that would work is written down in docs/PHONE-LINKING.md. Until
-// it exists, this says so rather than showing a form that cannot succeed —
-// which is what it did before: a probe request on every visit to discover a
-// fact fixed at build time, and ~150 lines of forms behind a branch that could
-// never be taken.
-function ContactSection() {
+// The ceremony itself: mint a code here, send it to the gate bot from the
+// phone being linked, the WhatsApp webhook redeems it. Nothing here can mark
+// a number verified directly — that would be exactly the self-service
+// shortcut PHONE-LINKING.md rules out (link it unverified and it's useless;
+// link it verified and anyone can claim a neighbour's number).
+const PHONE_E164 = /^\+[1-9][0-9]{6,14}$/;
+
+function PhoneNumbersSection() {
+  const [phones, setPhones] = useState<LinkedPhone[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
+  const [linking, setLinking] = useState<PhoneLinkCode | null>(null);
+
+  const refresh = useCallback(async () => {
+    try {
+      const r = await api.phonesList();
+      setPhones(r.phones);
+      setLoadError(null);
+      setUnavailable(false);
+    } catch (err) {
+      if (isUnavailable(err)) {
+        // An older, self-hosted hub build predating phone linking. Say so
+        // rather than showing a form that can only 404.
+        setUnavailable(true);
+        setPhones([]);
+        return;
+      }
+      setLoadError(friendlyApiError(err, 'Could not load linked numbers.'));
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  // The ceremony completes over the WhatsApp webhook, not this tab — nothing
+  // pushes this screen a notice when a code is redeemed, so while one is
+  // outstanding, poll for it rather than making the member refresh the page
+  // to find out whether their message arrived.
+  useEffect(() => {
+    if (!linking) return;
+    const id = setInterval(async () => {
+      try {
+        const r = await api.phonesList();
+        setPhones(r.phones);
+        if (r.phones.some((p) => p.phone_e164 === linking.phone_e164 && p.verified)) {
+          setLinking(null);
+        }
+      } catch {
+        // A failed background poll isn't worth surfacing — the next tick, or
+        // a manual refresh of the page, still catches up.
+      }
+    }, 4000);
+    return () => clearInterval(id);
+  }, [linking]);
+
   return (
     <Card>
-      <h2 className="font-display text-2xl">Contact channels</h2>
+      <h2 className="font-display text-2xl">Phone numbers</h2>
       <p className="text-sm text-ink/65 mt-1">
-        You can&rsquo;t link a phone number to your account here yet. The hub can only
-        act on a number it has proven you control, and it has no way to prove that
-        today — so a form here would either grant nothing or let someone claim a
-        number that isn&rsquo;t theirs.
+        The numbers this account is recognised by on WhatsApp and the other chat rails. A number
+        only works once it&rsquo;s verified — an unverified one is why a message to the gate bot
+        gets ignored.
       </p>
-      <p className="text-sm text-ink/55 mt-3">
-        Opening a gate from chat still works. It&rsquo;s configured per rail rather than
-        per person, and an account admin links a member&rsquo;s number when inviting them.
-      </p>
+
+      {unavailable && (
+        <p className="mt-4 text-sm text-ink/55">This hub doesn&rsquo;t serve phone linking yet.</p>
+      )}
+
+      {loadError && (
+        <p className="mt-4 text-sm text-terracotta-deep" role="alert">
+          {loadError}
+        </p>
+      )}
+
+      {phones === null && !loadError && !unavailable && (
+        <p className="mt-6 text-sm text-ink/55">Loading…</p>
+      )}
+
+      {phones && !unavailable && (
+        <ul className="mt-6 divide-y divide-ink/10 -mx-1">
+          {phones.length === 0 && (
+            <li className="px-1 py-3 text-sm text-ink/65">No numbers linked yet.</li>
+          )}
+          {phones.map((p) => (
+            <PhoneRowItem key={p.id} phone={p} onChanged={refresh} />
+          ))}
+        </ul>
+      )}
+
+      {!unavailable &&
+        (linking ? (
+          <LinkCodePanel linkCode={linking} onDone={() => setLinking(null)} />
+        ) : (
+          <StartLinkForm onStarted={setLinking} />
+        ))}
     </Card>
+  );
+}
+
+function PhoneRowItem({
+  phone,
+  onChanged,
+}: {
+  phone: LinkedPhone;
+  onChanged: () => Promise<void> | void;
+}) {
+  const [unlinking, setUnlinking] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  async function unlink() {
+    setErrorMsg(null);
+    setUnlinking(true);
+    try {
+      await api.phoneUnlink(phone.id);
+      await onChanged();
+    } catch (err) {
+      setErrorMsg(
+        err instanceof ApiError && err.code === 'phone_not_found'
+          ? 'Already unlinked.'
+          : friendlyApiError(err, 'Could not unlink this number.'),
+      );
+      setUnlinking(false);
+    }
+  }
+
+  return (
+    <li className="px-1 py-4">
+      <div className="flex items-center gap-3">
+        <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">
+          <span className="font-medium text-ink font-mono">{phone.phone_e164}</span>
+          <span
+            className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] ${
+              phone.verified ? 'bg-moss/15 text-moss' : 'bg-gold/20 text-ink/80'
+            }`}
+          >
+            {phone.verified ? 'Verified' : 'Not verified'}
+          </span>
+          {phone.is_primary && (
+            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] bg-paper-warm text-ink border border-ink/10">
+              Primary
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={unlink}
+          disabled={unlinking}
+          className="text-xs text-terracotta-deep hover:underline underline-offset-4 shrink-0"
+        >
+          {unlinking ? 'Unlinking…' : 'Unlink'}
+        </button>
+      </div>
+      {!phone.verified && (
+        <p className="mt-2 text-sm text-ink/60">
+          Not verified — messages from this number to the gate bot are ignored until it is. Finish
+          linking it below.
+        </p>
+      )}
+      {errorMsg && (
+        <p className="mt-2 text-sm text-terracotta-deep" role="alert">
+          {errorMsg}
+        </p>
+      )}
+    </li>
+  );
+}
+
+function StartLinkForm({ onStarted }: { onStarted: (code: PhoneLinkCode) => void }) {
+  const [phone, setPhone] = useState('+27');
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setErrorMsg(null);
+    const trimmed = phone.trim();
+    if (!PHONE_E164.test(trimmed)) {
+      setErrorMsg('Phone must be E.164 format, e.g. +27821234567.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const code = await api.phoneLinkStart(trimmed);
+      onStarted(code);
+    } catch (err) {
+      setErrorMsg(linkStartErrorMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={onSubmit}
+      className="mt-6 pt-6 border-t border-ink/10 flex flex-col sm:flex-row sm:items-end gap-3"
+    >
+      <label className="block flex-1 max-w-[240px]">
+        <span className="text-sm font-medium text-ink/85 block mb-1.5">Link a number</span>
+        <input
+          type="tel"
+          inputMode="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="+27821234567"
+          className="w-full h-11 rounded-xl bg-paper-cool border border-ink/15 px-4 text-[15px] font-mono focus:outline-none focus:ring-2 focus:ring-ink"
+        />
+      </label>
+      <Button type="submit" variant="ink" disabled={submitting}>
+        {submitting ? 'Starting…' : 'Get a link code'}
+      </Button>
+      {errorMsg && (
+        <p className="text-sm text-terracotta-deep sm:pb-2.5" role="alert">
+          {errorMsg}
+        </p>
+      )}
+    </form>
+  );
+}
+
+function linkStartErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.code === 'invalid_phone') {
+      return "That doesn't look like a valid phone number. Use E.164 format, e.g. +27821234567.";
+    }
+    if (err.code === 'phone_verified_elsewhere') {
+      // Deliberately does not suggest retrying or contacting support in
+      // general terms: moving a verified number is a decision an
+      // administrator has to make, not something this screen can resolve.
+      return 'That number is already verified on another account. Moving a verified number needs an administrator — this screen can’t do it for you.';
+    }
+    if (err.code === 'too_many_link_codes') {
+      return 'Too many link codes requested for this account recently. Wait a while before trying again.';
+    }
+  }
+  return friendlyApiError(err, 'Could not start linking this number.');
+}
+
+/** Seconds remaining until `expiresAt` (Unix seconds), ticking every second.
+ *  Never negative, so callers can treat 0 as "expired" without a second check. */
+function useCountdown(expiresAt: number): number {
+  const [remaining, setRemaining] = useState(() =>
+    Math.max(0, expiresAt - Math.floor(Date.now() / 1000)),
+  );
+  useEffect(() => {
+    const tick = () => setRemaining(Math.max(0, expiresAt - Math.floor(Date.now() / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [expiresAt]);
+  return remaining;
+}
+
+function formatMmSs(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function LinkCodePanel({ linkCode, onDone }: { linkCode: PhoneLinkCode; onDone: () => void }) {
+  const remaining = useCountdown(linkCode.expires_at);
+  const expired = remaining <= 0;
+  const [copied, setCopied] = useState(false);
+
+  function copyCode() {
+    navigator.clipboard
+      .writeText(linkCode.code)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1400);
+      })
+      .catch(() => {});
+  }
+
+  return (
+    <div className="mt-6 pt-6 border-t border-ink/10 space-y-4">
+      <div className="rounded-xl bg-ink text-paper p-4">
+        <p className="text-sm font-medium mb-2">Your link code</p>
+        <div className="flex items-center justify-between gap-3">
+          <code className="font-mono text-2xl tracking-[0.2em]">{linkCode.code}</code>
+          <button
+            type="button"
+            onClick={copyCode}
+            className="shrink-0 px-3 py-1.5 rounded-full border border-white/25 hover:border-white text-xs"
+          >
+            {copied ? 'Copied' : 'Copy code'}
+          </button>
+        </div>
+        {/* The hub's own wording — never re-composed here, so it can't drift
+            from the number the chat rail is actually listening for. */}
+        <p className="text-sm text-paper/80 mt-3">{linkCode.instruction}</p>
+      </div>
+
+      {expired ? (
+        <p className="text-sm text-terracotta-deep" role="alert">
+          This code has expired. Start over to get a new one.
+        </p>
+      ) : (
+        <p className="text-sm text-ink/65">
+          Waiting for that message to arrive — this updates on its own once it does, no need to
+          refresh. Expires in {formatMmSs(remaining)}.
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={onDone}
+        className="text-sm text-ink/65 hover:text-ink underline underline-offset-4"
+      >
+        {expired ? 'Start over' : 'Cancel'}
+      </button>
+    </div>
   );
 }
 

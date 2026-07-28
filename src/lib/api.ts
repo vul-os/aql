@@ -305,9 +305,10 @@ export type RefreshResponse = {
 // GET /v1/auth/me — the hub carries the user's display profile (display_name,
 // avatar_url, avatar_source; see handleMe and profile.go) and nothing else
 // from the richer shape the old Workers backend sent. There is still no
-// phone-verification, Slack-identity or email data, because no
-// /auth/me/slack or /phones/me/phones route exists. Keep this type honest to
-// what the hub actually returns.
+// Slack-identity or email data, because no /auth/me/slack route exists.
+// Phone numbers ARE served now, but as their own resource — api.phonesList()
+// — not folded into this response; see the phone-linking group below. Keep
+// this type honest to what the hub actually returns.
 //
 // The profile fields are optional on the wire on purpose: handleMe treats the
 // profile as best-effort, so a hub that cannot read the row still answers
@@ -326,6 +327,35 @@ export type MeResponse = {
     name: string;
     role: string;
   }>;
+};
+
+// ── phone linking (docs/PHONE-LINKING.md) ───────────────────────────────────
+
+/** One of the caller's own numbers (store.LinkedPhone). */
+export type LinkedPhone = {
+  id: string;
+  phone_e164: string;
+  /** Whether the ceremony has been completed for this row. An unverified
+   *  number resolves no chat rail access — see channels.go's "Member access
+   *  by verified phone" — so this is the one field a list of numbers cannot
+   *  render as a footnote. */
+  verified: boolean;
+  is_primary: boolean;
+  created_at: UnixSeconds;
+};
+
+/** The 201 body from POST /phones/me/link. */
+export type PhoneLinkCode = {
+  /** `LINK-XXXXXX` — namespaced so it can't be mistaken for a gate command by
+   *  the chat parser, or vice versa. Shown once; the hub stores only a hash
+   *  and cannot answer with the plaintext again. */
+  code: string;
+  phone_e164: string;
+  expires_at: UnixSeconds;
+  /** The exact sentence to show the user, composed hub-side so the wording
+   *  can't drift from the channel that has to recognise it. Render this,
+   *  never a client-composed paraphrase. */
+  instruction: string;
 };
 
 export const api = {
@@ -370,19 +400,63 @@ export const api = {
 
   me: () => apiFetch<MeResponse>('/auth/me'),
 
-  // There is deliberately no phones() / phoneAdd() / slackUpdate() here.
+  // Phone linking (hub/internal/httpapi/phones.go, docs/PHONE-LINKING.md).
   //
-  // They existed for a long time as calls to routes the hub does not serve,
-  // "kept so call sites can attempt it and get a clean UNAVAILABLE_CODE" —
-  // which in practice meant a request on every Settings visit to discover a
-  // fact fixed at build time, and a signup button that failed for every user
-  // who arrived from the WhatsApp nudge.
-  //
-  // Linking a phone is not a missing route, it is a missing CEREMONY: the hub
-  // owns phone→member mapping already (profile_phone_numbers, migration 0002)
-  // and access resolution requires verified_at, but nothing has ever verified
-  // a number. See docs/PHONE-LINKING.md for the design and the squatting
-  // hazard that rules out the obvious shortcuts.
+  // There is deliberately no phoneAdd() / slackUpdate() here, and no way to
+  // hand the hub a phone number and have it come back verified in one call.
+  // Linking was never a missing route — the hub has owned phone→member
+  // mapping since migration 0002 — it was a missing CEREMONY: nothing proved
+  // a number belongs to the person claiming it, and access resolution
+  // requires verified_at IS NOT NULL. A self-service form that linked numbers
+  // unverified granted nothing; one that linked them verified let anyone
+  // claim a neighbour's number and receive their gate access (the exact bug
+  // migration 0002's unique index scars over). Read PHONE-LINKING.md before
+  // changing any of the three calls below.
+
+  /**
+   * Mint a short-lived link code for a number. Proves nothing about who
+   * controls `phone_e164` — it can't, and doesn't need to: the code this
+   * returns can only ever be spent BY that number, when it arrives over the
+   * WhatsApp webhook (store.RedeemPhoneLinkCode). A code minted against
+   * someone else's phone is useless to whoever minted it.
+   *
+   * Render `instruction` verbatim rather than composing the "send this code"
+   * sentence client-side — it names the exact number to send from, and the
+   * hub is the one authority for wording that has to match what the chat
+   * rail actually recognises.
+   *
+   * Errors worth a specific message: invalid_phone (400, not E.164);
+   * phone_verified_elsewhere (409 — the number is verified on another
+   * profile; moving it is a support operation with a human in it, not
+   * something this screen can resolve); too_many_link_codes (429 — the
+   * per-user mint quota, deliberately not per-phone so an attacker can't
+   * exhaust a victim's budget and lock them out of linking their own number).
+   */
+  phoneLinkStart: (phone_e164: string) =>
+    apiFetch<PhoneLinkCode>('/phones/me/link', { method: 'POST', body: { phone_e164 } }),
+
+  /**
+   * The caller's own numbers, verified or not.
+   *
+   * Unverified rows are included on purpose (handlePhonesList's comment): a
+   * number linked by accepting an invite is real and unverified, and hiding
+   * it would leave the member with no way to understand why their chat
+   * messages are ignored.
+   */
+  phonesList: () => apiFetch<{ phones: LinkedPhone[] }>('/phones/me/phones'),
+
+  /**
+   * Unlink one of the caller's own numbers — "the easy half, and it must not
+   * be forgotten" per phones.go: a number you can add and never remove is
+   * worse than one you cannot add.
+   *
+   * Ownership is enforced inside the DELETE on the hub, not by a prior read,
+   * so another member's row is unreachable and answers 404 phone_not_found —
+   * identical to an id that never existed at all. Never treat that 404 as
+   * anything other than "already gone".
+   */
+  phoneUnlink: (id: string) =>
+    apiFetch<void>(`/phones/me/phones/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
   // Served by the hub (hub/internal/httpapi/profile.go). avatar_url must be
   // https and is refused otherwise — the same rule the form's help text
