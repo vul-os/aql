@@ -116,7 +116,12 @@ func TestCGNATAnswerFollowsFromTheDeclaredTransport(t *testing.T) {
 			"a webhook needs a reachable endpoint by definition")
 	}
 
-	for _, k := range []string{KindTelegram, KindSlack, KindDiscord} {
+	// Telegram is deliberately NOT in this list. It is the one rail whose
+	// transport depends on configuration, so the unconditional answer belongs
+	// to DisclosureFor — see TestTelegramDisclosureFollowsTheConfiguredEngine.
+	// This test used to assert Telegram was outbound-persistent, which is how
+	// the false claim survived: the guard agreed with it.
+	for _, k := range []string{KindSlack, KindDiscord} {
 		d, _ := Disclosure(k)
 		if d.InboundTransport != OutboundPersistent {
 			t.Errorf("%s transport = %q, want outbound-persistent", k, d.InboundTransport)
@@ -162,5 +167,67 @@ func TestSelfHostClaimsCarryTheirCaveats(t *testing.T) {
 	if !strings.Contains(strings.ToLower(wa.SelfHostNote), "business") {
 		t.Error("WhatsApp's self-host note does not mention the Business account, " +
 			"which is the barrier that makes it hard")
+	}
+}
+
+// Telegram is the one rail whose inbound transport depends on configuration,
+// and getting that wrong is not cosmetic: RunsBehindCGNAT derives its answer
+// from the same field, so a hub that needs a public HTTPS endpoint would tell a
+// self-hoster it does not.
+//
+// The static table declared OutboundPersistent unconditionally. For the whole
+// period the polling engine was built but unwired, that was false for every
+// install without exception — the webhook was the only path that ran.
+func TestTelegramDisclosureFollowsTheConfiguredEngine(t *testing.T) {
+	// Default: webhook, ingress required. Declared as the MORE demanding of
+	// the two on purpose — a disclosure that does not know your configuration
+	// must not assume the easier answer.
+	for _, raw := range []string{"", "webhook", "poling", "  "} {
+		d, ok := DisclosureFor(KindTelegram, Config{TelegramEngine: raw})
+		if !ok {
+			t.Fatalf("engine %q: no disclosure for telegram", raw)
+		}
+		if d.InboundTransport != Webhook {
+			t.Errorf("engine %q: inbound transport %q, want %q", raw, d.InboundTransport, Webhook)
+		}
+		if d.RunsBehindCGNAT() {
+			t.Errorf("engine %q: claims it runs behind CGNAT, but the webhook needs a "+
+				"reachable HTTPS endpoint", raw)
+		}
+	}
+
+	// Opted in: outbound, no ingress. Case- and whitespace-tolerant, because
+	// ResolveTelegramEngine is.
+	for _, raw := range []string{"polling", "Polling", " POLLING "} {
+		d, _ := DisclosureFor(KindTelegram, Config{TelegramEngine: raw})
+		if d.InboundTransport != OutboundPersistent {
+			t.Errorf("engine %q: inbound transport %q, want %q", raw, d.InboundTransport, OutboundPersistent)
+		}
+		if !d.RunsBehindCGNAT() {
+			t.Errorf("engine %q: long polling is entirely outbound and must run behind CGNAT", raw)
+		}
+		if strings.Contains(d.SelfHostNote, "HTTPS endpoint") {
+			t.Errorf("engine %q: self-host note still demands an endpoint: %q", raw, d.SelfHostNote)
+		}
+	}
+}
+
+// Every other rail is mode-free, and must not acquire a mode by accident: an
+// override keyed on the wrong rail would silently change what a self-hoster is
+// told about Slack or Discord.
+func TestOnlyTelegramVariesWithConfiguration(t *testing.T) {
+	base := DisclosuresFor(Config{})
+	polling := DisclosuresFor(Config{TelegramEngine: "polling"})
+	if len(base) != len(polling) {
+		t.Fatalf("rail count changed with configuration: %d vs %d", len(base), len(polling))
+	}
+	for i := range base {
+		if base[i].Rail == KindTelegram {
+			continue
+		}
+		if base[i].InboundTransport != polling[i].InboundTransport ||
+			base[i].SelfHostNote != polling[i].SelfHostNote {
+			t.Errorf("%s changed with the Telegram engine setting", base[i].Rail)
+		}
 	}
 }

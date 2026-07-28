@@ -192,7 +192,7 @@ in code beside the rails so it can't quietly go stale.
 | Rail | Receives via | Behind CGNAT | Cost | Who reads it |
 |---|---|---|---|---|
 | **WhatsApp** | webhook | ✗ needs an HTTPS endpoint | free in · metered out | Meta, always — plus you |
-| **Telegram** | outbound connection | ✓ | free | Telegram, always — plus you |
+| **Telegram** | webhook by default, or an outbound connection with `AQL_TELEGRAM_ENGINE=polling` | ✗ by default, ✓ with polling | free | Telegram, always — plus you |
 | **Slack** | outbound connection | ✓ | free | Slack, always — plus you |
 | **Discord** | outbound connection | ✓ | free | Discord, always — plus you |
 

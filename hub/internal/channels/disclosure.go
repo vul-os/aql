@@ -158,9 +158,23 @@ var disclosures = map[string]RailDisclosure{
 			"endpoint. Both are real work; the account approval is the harder one.",
 	},
 	KindTelegram: {
-		Rail:             KindTelegram,
-		Platform:         "Telegram",
-		InboundTransport: OutboundPersistent,
+		Rail:     KindTelegram,
+		Platform: "Telegram",
+		// WEBHOOK, because that is what an unconfigured install runs.
+		//
+		// Telegram is the one rail whose inbound transport depends on
+		// configuration: AQL_TELEGRAM_ENGINE=polling switches it to getUpdates,
+		// which is entirely outbound. This entry said OutboundPersistent
+		// unconditionally, so every install was told the rail needs no ingress
+		// — and RunsBehindCGNAT, derived from this field, said the same. For
+		// the whole period the polling engine was built but unwired, that was
+		// false for every install without exception.
+		//
+		// Declared as the more demanding of the two deliberately: a disclosure
+		// that does not know your configuration must not assume the easier
+		// answer. DisclosureFor applies the override when polling is really
+		// selected.
+		InboundTransport: Webhook,
 		Inbound: Direction{
 			Initiation: InboundTriggered,
 			Price:      Free,
@@ -173,8 +187,9 @@ var disclosures = map[string]RailDisclosure{
 			Note:       "A bot cannot message you first; you must start the conversation.",
 		},
 		SelfHostable: true,
-		SelfHostNote: "A bot token from @BotFather. No public endpoint needed — the hub " +
-			"dials out, so this rail works behind CGNAT.",
+		SelfHostNote: "A bot token from @BotFather, and a reachable HTTPS endpoint for " +
+			"the webhook. Set AQL_TELEGRAM_ENGINE=polling and the hub dials out " +
+			"instead, needing no endpoint at all.",
 	},
 	KindDiscord: {
 		Rail:             KindDiscord,
@@ -213,6 +228,43 @@ var disclosures = map[string]RailDisclosure{
 		SelfHostable: true,
 		SelfHostNote: "Your own Slack app with Socket Mode. No public endpoint needed.",
 	},
+}
+
+// DisclosureFor returns the declaration for one rail as CONFIGURED, applying
+// the overrides that depend on how this hub is set up.
+//
+// Today exactly one rail has any: Telegram's inbound transport is the webhook
+// by default and outbound-persistent under AQL_TELEGRAM_ENGINE=polling. That
+// is not a detail — it decides whether the rail needs a public HTTPS endpoint,
+// which is the question a self-hoster behind CGNAT is actually asking, and
+// RunsBehindCGNAT derives its answer from this field.
+//
+// Kept as an override over the static table rather than folded into it, so the
+// table stays readable as the contract and this stays readable as the
+// deviation. If a second rail grows a mode, it belongs here too.
+func DisclosureFor(k string, cfg Config) (RailDisclosure, bool) {
+	d, ok := disclosures[k]
+	if !ok {
+		return d, false
+	}
+	if k == KindTelegram && ResolveTelegramEngine(cfg.TelegramEngine) == TelegramEnginePolling {
+		d.InboundTransport = OutboundPersistent
+		d.SelfHostNote = "A bot token from @BotFather. This hub is configured for long " +
+			"polling, so it dials out and needs no public endpoint — the rail works " +
+			"behind CGNAT."
+	}
+	return d, true
+}
+
+// DisclosuresFor returns every declaration as configured, ordered by rail.
+func DisclosuresFor(cfg Config) []RailDisclosure {
+	out := make([]RailDisclosure, 0, len(disclosures))
+	for k := range disclosures {
+		d, _ := DisclosureFor(k, cfg)
+		out = append(out, d)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Rail < out[j].Rail })
+	return out
 }
 
 // Disclosure returns the §26.3 declaration for a rail.

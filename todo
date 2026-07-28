@@ -63,6 +63,15 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       the answer changes.
 
 ## chat rail → Ephor (in progress)
+- [x] COORD-3 examined. It is a DECISION already worked out in docs/EPHOR-CHAT-SEAM.md
+      §1.5 (declare SelfHost::Backstop, refuse the ScarceReachabilityException the
+      harness would grant), not a blocked question like COORD-2 — but the declaration
+      lives in an Ephor crate that does not exist yet, so nothing to implement here.
+      What WAS actionable: Aql's own §26.3 disclosure disagreed with §1.5's transport
+      analysis for Telegram. Fixed.
+- [ ] COORD-6: none of the four Gate variants is honest for this adapter (§1.6). Has a
+      proposal (Gate::Authorization + a rustdoc disclosure in node mode, and propose
+      Gate::AuthorizationDelegated upstream). Same blocker — needs the crate.
 - [ ] the WhatsApp / Slack / Telegram adapters move OUT of Aql and into Ephor
       (github.com/vul-os/ephor). Target shape: Ephor terminates the rail and hands the hub
       an authorised command; the hub checks rules, signs, actuates. Swappable — run one or

@@ -50,7 +50,7 @@ func railDisclosureJSON(d channels.RailDisclosure) map[string]any {
 }
 
 func (s *Server) handleRailDisclosures(w http.ResponseWriter, _ *http.Request) {
-	all := channels.Disclosures()
+	all := channels.DisclosuresFor(s.cfg.Channels)
 	out := make([]map[string]any, 0, len(all))
 	for _, d := range all {
 		out = append(out, railDisclosureJSON(d))
