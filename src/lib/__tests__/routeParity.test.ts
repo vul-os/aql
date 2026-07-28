@@ -157,7 +157,6 @@ const KNOWN_UNAVAILABLE: Array<{ method: string; path: string }> = [
   { method: 'GET', path: '/phones/me/phones' },
   { method: 'POST', path: '/phones/me/phones' },
   { method: 'PUT', path: '/auth/me/slack' },
-  { method: 'PATCH', path: '/auth/me/profile' },
   { method: 'GET', path: '/access-points/{param}/maintenance' },
   { method: 'POST', path: '/access-points/{param}/maintenance' },
 ];

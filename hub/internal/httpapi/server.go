@@ -236,6 +236,7 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("POST /v1/auth/forgot-password", s.handleForgotPassword)
 	mux.HandleFunc("POST /v1/auth/reset-password", s.handleResetPassword)
 	mux.Handle("POST /v1/auth/update-password", s.requireAuth(s.handleUpdatePassword))
+	mux.Handle("PATCH /v1/auth/me/profile", s.requireAuth(s.handleProfileUpdate))
 
 	// two-factor authentication (see twofactor.go). All four are session-only
 	// — an API token can never enrol, activate or remove a second factor,

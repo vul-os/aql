@@ -70,8 +70,7 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 Each of these is UI with no backend, or a backend nothing calls. Either build the route
 or remove the screen.
 - [ ] per-access-point maintenance log (`GET/POST /access-points/{id}/maintenance`)
-- [ ] `/reference/countries`, `/phones/me/phones`, `PUT /auth/me/slack`,
-      `PATCH /auth/me/profile`
+- [ ] `/reference/countries`, `/phones/me/phones`, `PUT /auth/me/slack`
 - Not doing: Google OAuth, and any email-based auth. The hub is meant to work off nodes;
   recovery is username-based through a delivery seam, not an email dependency.
 

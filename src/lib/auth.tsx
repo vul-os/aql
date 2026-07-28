@@ -99,10 +99,12 @@ function toSession(me: MeResponse): { user: SessionUser; accounts: SessionAccoun
     user: {
       id: me.user.id,
       username: me.user.username,
-      name: me.user.username,
-      avatar_url: null,
+      // The hub's display_name when there is one; the username is the
+      // fallback rather than an empty header where a name should be.
+      name: me.user.display_name ?? me.user.username,
+      avatar_url: me.user.avatar_url ?? null,
       avatar_cdn_url: null,
-      avatar_source: null,
+      avatar_source: me.user.avatar_source ?? null,
       // None of profile/phone-verification/Slack is implemented on the
       // gateway yet (see MeResponse's doc comment in api.ts) — always "off".
       has_verified_phone: false,

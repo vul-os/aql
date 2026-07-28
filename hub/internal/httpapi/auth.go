@@ -295,8 +295,20 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	for _, a := range accounts {
 		list = append(list, map[string]any{"id": a.ID, "name": a.Name, "role": a.Role})
 	}
+	// The profile is best-effort on purpose. It is display data, and a user
+	// who cannot load their own accounts has a real problem — one who cannot
+	// load their avatar does not, and failing /auth/me over it would sign them
+	// out of a working hub.
+	user := map[string]any{"id": u.ID, "username": u.Username, "is_platform_admin": u.IsPlatformAdmin}
+	if p, err := s.store.ProfileGet(r.Context(), u.ID); err == nil {
+		for k, v := range profileJSON(p) {
+			if k != "id" {
+				user[k] = v
+			}
+		}
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"user":     map[string]any{"id": u.ID, "username": u.Username, "is_platform_admin": u.IsPlatformAdmin},
+		"user":     user,
 		"accounts": list,
 	})
 }

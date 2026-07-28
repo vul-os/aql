@@ -165,12 +165,24 @@ function ProfileSection() {
             />
           </label>
 
-          <label className="block">
-            <span className="flex items-baseline justify-between mb-1.5">
-              <span className="text-sm font-medium text-ink/85">Avatar URL</span>
-              <span className="text-xs text-ink/45">https only · leave empty for none</span>
-            </span>
+          {/* The hint sits OUTSIDE the label on purpose. Nested inside it, the
+              accessible name of this field became "Avatar URL https only ·
+              leave empty for none" — a screen reader announces the whole thing
+              as the field's name, and nothing can address the field by the name
+              a person would use. It belongs in aria-describedby, which is what
+              a hint is for. */}
+          <div className="block">
+            <div className="flex items-baseline justify-between mb-1.5">
+              <label htmlFor="avatar-url" className="text-sm font-medium text-ink/85">
+                Avatar URL
+              </label>
+              <span id="avatar-url-hint" className="text-xs text-ink/45">
+                https only · leave empty for none
+              </span>
+            </div>
             <input
+              id="avatar-url"
+              aria-describedby="avatar-url-hint"
               type="url"
               inputMode="url"
               value={avatarUrl}
@@ -179,7 +191,7 @@ function ProfileSection() {
               maxLength={1024}
               className="w-full h-11 rounded-xl bg-paper-cool border border-ink/15 px-4 text-[15px] text-ink placeholder:text-ink/35 focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink/40"
             />
-          </label>
+          </div>
 
           {message && <p className="text-sm text-moss" role="status">{message}</p>}
           {errorMsg && <p className="text-sm text-terracotta-deep" role="alert">{errorMsg}</p>}

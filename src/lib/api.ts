@@ -302,17 +302,24 @@ export type RefreshResponse = {
   token_type: 'Bearer';
 };
 
-// GET /v1/auth/me — the hub's auth (see hub/internal/httpapi/auth.go's
-// handleMe) does not carry profile/phones/email-verification/Slack/avatar
-// data; none of that is implemented on the hub yet (no /auth/me/profile,
-// /auth/me/slack, or /phones/me/phones routes exist). Keep this type honest
-// to what the hub actually returns rather than the richer shape the old
-// Workers backend's auth.ts used to send.
+// GET /v1/auth/me — the hub carries the user's display profile (display_name,
+// avatar_url, avatar_source; see handleMe and profile.go) and nothing else
+// from the richer shape the old Workers backend sent. There is still no
+// phone-verification, Slack-identity or email data, because no
+// /auth/me/slack or /phones/me/phones route exists. Keep this type honest to
+// what the hub actually returns.
+//
+// The profile fields are optional on the wire on purpose: handleMe treats the
+// profile as best-effort, so a hub that cannot read the row still answers
+// with a usable session rather than signing the user out over an avatar.
 export type MeResponse = {
   user: {
     id: string;
     username: string;
     is_platform_admin: boolean;
+    display_name?: string | null;
+    avatar_url?: string | null;
+    avatar_source?: 'user' | null;
   };
   accounts: Array<{
     id: string;
@@ -380,7 +387,9 @@ export const api = {
   slackUpdate: (body: { slack_user_id?: string; slack_handle?: string }) =>
     apiFetch<void>('/auth/me/slack', { method: 'PUT', body }),
 
-  // NOT IMPLEMENTED on the gateway (no /auth/me/profile route).
+  // Served by the hub (hub/internal/httpapi/profile.go). avatar_url must be
+  // https and is refused otherwise — the same rule the form's help text
+  // states, kept by the server rather than only by the browser.
   profileUpdate: (body: { display_name?: string; avatar_url?: string | null }) =>
     apiFetch<{ profile: { id: string; display_name: string | null; avatar_url: string | null } }>(
       '/auth/me/profile',

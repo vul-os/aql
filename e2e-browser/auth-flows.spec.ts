@@ -230,3 +230,59 @@ test('a browser holding the old lintel.* keys is migrated, not signed out', asyn
   expect(after.oldAccess, 'the legacy key survived; the fallback would run forever').toBeNull();
   expect(after.newHub, 'the chosen hub was not carried across').toBe(session.hub);
 });
+
+// The profile form, which until now could not save.
+//
+// The console shipped it pointed at PATCH /v1/auth/me/profile, a route the hub
+// did not serve — so "Save profile" failed for every user, every time, and
+// routeParity recorded it as an acknowledged gap rather than a bug. The hub
+// serves it now (hub/internal/httpapi/profile.go, with its own Go tests
+// covering validation and persistence).
+//
+// What those Go tests cannot show is that the FORM is wired to it. That is the
+// failure this repo keeps finding: a component complete, tested, and reached by
+// nothing. So this drives the real form in a real browser and then RELOADS,
+// because a name that survives only in React state is not saved.
+test('the profile form really saves, and the name survives a reload', async ({ page }) => {
+  const username = `e2e-profile-${Date.now()}`;
+  await connectAndSignUp(page, username);
+  await page.goto(gw.url('/app/settings'));
+
+  const name = page.getByLabel('Display name', { exact: true });
+  await expect(name).toBeVisible();
+  await name.fill('Thandiwe Ncube');
+
+  const saved = page.waitForResponse(
+    (r) => r.url() === gw.url('/v1/auth/me/profile') && r.request().method() === 'PATCH',
+  );
+  await page.getByRole('button', { name: /Save profile/i }).click();
+  expect((await saved).status(), 'the hub refused the profile update').toBe(200);
+
+  // Reload: this is the assertion that distinguishes "saved" from "rendered".
+  await page.reload();
+  await expect(page.getByLabel('Display name', { exact: true })).toHaveValue('Thandiwe Ncube');
+});
+
+// The form's own help text says "https only", and the console enforces it
+// before asking the hub — so the interesting assertion is that the request is
+// never sent AND the user is told why. A silent no-op would look identical to
+// a save from the outside.
+//
+// The hub enforces the same rule independently (profile_test.go's
+// TestProfileUpdateRejectsNonHTTPSAvatars), because a rule only the browser
+// keeps is not a rule. Neither check stands in for the other.
+test('a non-https avatar is refused in the console, without asking the hub', async ({ page }) => {
+  await connectAndSignUp(page, `e2e-avatar-${Date.now()}`);
+  await page.goto(gw.url('/app/settings'));
+
+  let asked = false;
+  page.on('request', (r) => {
+    if (r.url().endsWith('/v1/auth/me/profile')) asked = true;
+  });
+
+  await page.getByLabel('Avatar URL', { exact: true }).fill('http://example.com/me.png');
+  await page.getByRole('button', { name: /Save profile/i }).click();
+
+  await expect(page.getByRole('alert')).toHaveText(/https/i);
+  expect(asked, 'the console sent a request it had already decided was invalid').toBe(false);
+});
