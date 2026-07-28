@@ -3,6 +3,7 @@ package command_test
 import (
 	"crypto/ed25519"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -505,5 +506,80 @@ func TestNoReplayWindowBetweenPruningAndExpiry(t *testing.T) {
 	if !sawExpired {
 		t.Error("no presentation was refused as `expired`, so the sweep never reached " +
 			"past the validity window")
+	}
+}
+
+// A nonce that cannot be durably recorded must not open the gate.
+//
+// noncestore's package doc promises this — "a nonce that cannot be durably
+// recorded is treated as unusable and the command is rejected" — and
+// NonceStore's own interface comment repeats it: "any error must cause
+// rejection (fail-closed)". The store honours it, and its own tests cover a
+// full store and a corrupt file.
+//
+// What nothing covered is the WIRING: that the command path acts on the error
+// rather than logging it and continuing. That is the half that matters here.
+// Mark failing means the nonce is not on disk, so a power loss immediately
+// after — which is exactly when a disk write fails — leaves the controller
+// with no record that this command was ever used. The same signed bytes replay
+// and the gate opens again, and every existing test still passes, because they
+// all use a store whose Mark succeeds.
+//
+// The assertion is on the RELAY, not just the ack. A denial that actuated
+// anyway would be the worst of both.
+type failingNonceStore struct {
+	seen map[string]bool
+	// markCalls counts attempts, so the test can prove Mark was actually
+	// reached rather than short-circuited by an earlier check — which would
+	// make this pass for the wrong reason.
+	markCalls int
+}
+
+func (f *failingNonceStore) Seen(nonce string) bool { return f.seen[nonce] }
+
+func (f *failingNonceStore) Mark(nonce string, keepUntil, now int64) error {
+	f.markCalls++
+	return errors.New("simulated: durable write failed")
+}
+
+func TestACommandWhoseNonceCannotBePersistedNeverActuates(t *testing.T) {
+	_, gwPriv, _, gwPubB64, ctrlPriv := testKeys(t)
+	check := vectorfile.Check{
+		Now:          1789000010,
+		DeviceID:     "de71ce00-0000-4000-8000-000000000001",
+		AccessPoints: []string{"main"},
+	}
+	p, fake, mock := newProcessor(t, check, gwPubB64, ctrlPriv)
+
+	ns := &failingNonceStore{seen: map[string]bool{}}
+	p.Nonces = ns
+
+	m := map[string]any{
+		"v": 0, "typ": "cmd", "cmd": "open",
+		"device_id":    check.DeviceID,
+		"access_point": check.AccessPoints[0],
+		"nonce":        wire.B64u([]byte{9, 9, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}),
+		"iat":          fake.NowSec, "exp": fake.NowSec + 30,
+	}
+	raw, err := p.Process(signCmd(t, gwPriv, m))
+	if err != nil {
+		t.Fatalf("process: %v", err)
+	}
+	ack := parseAck(t, raw)
+
+	if ns.markCalls == 0 {
+		t.Fatal("Mark was never reached; this command was refused by an earlier check, " +
+			"so the test proves nothing about the persistence failure")
+	}
+	if ack.Result != command.ResultDenied {
+		t.Fatalf("a command whose nonce could not be recorded was accepted: %+v", ack)
+	}
+	if ack.Detail != wire.ReasonReplay {
+		t.Errorf("denied with %q; the fail-closed path reports %q", ack.Detail, wire.ReasonReplay)
+	}
+	// The gate itself. An ack saying "denied" while the relay pulsed would be
+	// the worst outcome available: unrecorded, unacknowledged, and open.
+	if s := mock.State(); s != "idle" {
+		t.Fatalf("the relay moved for a command that was denied: state %q", s)
 	}
 }

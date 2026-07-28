@@ -449,6 +449,19 @@ export const FEATURES = [
     ],
   },
   {
+    // The store fails closed and its own tests prove it. Nothing proved the
+    // WIRING: that the command path acts on the error rather than logging it.
+    // A nonce that is not on disk is a command that replays after a power cut.
+    id: 'unrecordable-nonce-never-actuates',
+    label: 'A command whose nonce cannot be durably recorded is denied and the relay never moves',
+    docStatus: 'shipped',
+    docRefs: ['controller/internal/noncestore/noncestore.go — "cannot be durably recorded is treated as unusable"'],
+    evidence: [
+      { file: 'controller/internal/command/command_vectors_test.go', pattern: 'TestACommandWhoseNonceCannotBePersistedNeverActuates' },
+      { file: 'controller/internal/command/command.go', pattern: 'ctx\\.Nonces\\.Mark\\(' },
+    ],
+  },
+  {
     // The highest-stakes structural claim in the repo: whoever holds the pinned
     // gateway key can sign a command that opens the gate, so the set of paths
     // that can WRITE it is the whole trust model.

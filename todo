@@ -426,6 +426,28 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       and the controller's key pinning. Six claims — five were unguarded truths, one
       (modbus) was a genuine hole.
 
+## fail-closed claims, wired
+- The structural sweep covered SHAPE. The controller also makes BEHAVIOURAL fail-closed
+      claims, and those regress silently in a different way: the component keeps failing
+      closed while its caller quietly stops caring.
+- [x] noncestore: "a nonce that cannot be durably recorded is treated as unusable and the
+      command is rejected", and NonceStore's interface repeats it — "any error must cause
+      rejection (fail-closed)". The STORE honours it and has its own tests (full store,
+      corrupt file). Nothing tested the wiring: that command.go acts on the error. It
+      does, at line 108, and now a test injects a failing Mark and asserts the command is
+      denied AND the relay never moved.
+- NOTE: why it matters. Mark failing means the nonce is not on disk, and a disk write
+      fails exactly when a power loss is imminent. The same signed bytes then replay after
+      the reboot and the gate opens again. Tampering the check to `_ = ctx.Nonces.Mark(...)`
+      returns Result:opened — the gate opening on a command with no durable record of it.
+- NOTE: the test counts Mark CALLS as well, so it cannot pass for the wrong reason. Making
+      the command expired instead refuses it earlier and fails with "Mark was never
+      reached; this test proves nothing about the persistence failure" — which is what the
+      first draft of a test like this usually does silently.
+- [ ] Other fail-closed claims not yet wiring-tested: state.go's "a mutation that cannot be
+      persisted fails closed", relay/gpio.go's "the only cleanup path that cannot be
+      skipped". Same shape: the component is right, the caller is unproven.
+
 ## spec-derived checks
 The technique that found the 2^53 rounding: derive expected behaviour from proto/*.md
 and check the code against it, rather than checking the code against itself. The vectors
