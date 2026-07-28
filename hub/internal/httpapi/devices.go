@@ -349,8 +349,66 @@ func (s *Server) handleControllerUplink(ctx context.Context, deviceID string, pu
 		}
 		s.handleLateAck(ctx, deviceID, ack)
 	case "event":
-		s.log.Info("controller event", "device", deviceID)
+		s.handleControllerEvent(ctx, deviceID, msg)
 	}
+}
+
+// handleControllerEvent persists one verified controller event.
+//
+// The signature was checked above, fail-closed, before this runs. What
+// happens here is storage, and it is the half that was missing: the
+// controller signs these events, reserves an un-evictable queue partition for
+// grant redemptions, fsyncs an overflow log when that fills, and records a
+// redemption BEFORE it pulses the relay — and the hub logged one line and
+// forgot them. An offline emergency open is the one access path with no hub
+// in the loop, so that event was the only record it happened.
+//
+// A store failure is logged and not retried: events.md v0 has no event ack,
+// so there is no wire mechanism to ask for a redelivery. That gap is the
+// spec's, documented as an open question there; this makes the failure
+// visible rather than pretending it cannot happen.
+func (s *Server) handleControllerEvent(ctx context.Context, deviceID string, msg []byte) {
+	var ev struct {
+		EventID  string         `json:"event_id"`
+		DeviceID string         `json:"device_id"`
+		Kind     string         `json:"kind"`
+		TS       int64          `json:"ts"`
+		Data     map[string]any `json:"data"`
+		Sig      string         `json:"sig"`
+	}
+	if err := jsonUnmarshal(msg, &ev); err != nil {
+		s.log.Warn("controller event unparseable", "device", deviceID, "err", err)
+		return
+	}
+	if ev.EventID == "" {
+		// Without it there is no dedupe key, so storing the event would make
+		// every redelivery a fresh audit row.
+		s.log.Warn("controller event with no event_id, dropped", "device", deviceID, "kind", ev.Kind)
+		return
+	}
+
+	stored, logID, err := s.store.RecordControllerEvent(ctx, store.ControllerEvent{
+		EventID:  ev.EventID,
+		DeviceID: deviceID, // the VERIFIED id, not the envelope's self-report
+		Kind:     ev.Kind,
+		TS:       ev.TS,
+		Data:     ev.Data,
+		Sig:      ev.Sig,
+		Envelope: msg,
+	})
+	if err != nil {
+		s.log.Error("controller event NOT STORED", "device", deviceID,
+			"kind", ev.Kind, "event_id", ev.EventID, "err", err)
+		return
+	}
+	if !stored {
+		// The at-least-once path doing its job (events.md: "event_id dedup
+		// makes a retry safe"). Not an error, and deliberately quiet.
+		s.log.Debug("controller event deduped", "device", deviceID, "event_id", ev.EventID)
+		return
+	}
+	s.log.Info("controller event", "device", deviceID, "kind", ev.Kind,
+		"event_id", ev.EventID, "log_id", logID)
 }
 
 // handleLateAck is reached only after ResolveAck already reported no

@@ -433,6 +433,24 @@ export const FEATURES = [
     evidence: [{ file: 'hub/internal/store/admin.go', pattern: 'admin_audit_log' }],
   },
   {
+    // Added when the receiving half was built (migration 0019). Worth a claim
+    // precisely because the failure it fixes was invisible to every existing
+    // check: the controller's side was complete, signed, durable and tested,
+    // and the hub verified each event and then dropped it. Nothing was
+    // "missing" in a way a route-parity or build check could see.
+    id: 'controller-events-persisted',
+    label: 'Controller-originated events persisted on the hub, deduped on event_id, ' +
+      'with access kinds appended to the hash-chained audit log',
+    docStatus: 'shipped',
+    docRefs: ['proto/events.md § Delivery — "On receipt"'],
+    evidence: [
+      { file: 'hub/internal/store/controllerevents.go', pattern: 'RecordControllerEvent' },
+      { file: 'hub/internal/store/migrations/0019_controller_events.sql', pattern: 'event_id\\s+TEXT PRIMARY KEY' },
+      // The wiring, which is the half that was absent: a handler that calls it.
+      { file: 'hub/internal/httpapi/devices.go', pattern: 'handleControllerEvent' },
+    ],
+  },
+  {
     id: 'rate-limits',
     label: 'The four configurable rate limits',
     docStatus: 'shipped',

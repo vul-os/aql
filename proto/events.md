@@ -31,6 +31,22 @@ controller (ring buffer, oldest-dropped, capacity ≥ 10k) and drained on reconn
 The hub dedupes on `event_id`. Offline grant redemptions are **never** dropped before
 delivery — they occupy a reserved partition of the queue.
 
+**On receipt** the hub verifies the controller signature (fail-closed, before
+any routing), then stores the envelope verbatim in `controller_events` keyed
+by `event_id` — that key *is* the dedupe, so a redelivery collides and is
+discarded rather than double-logged. Kinds that describe a physical access
+outcome (`grant_redeemed`, `opened`, `denied`) additionally append a row to
+the hash-chained `access_logs` with `source = offline_grant`, resolving the
+access point from the *device* rather than from the event payload — a
+controller must not be able to write audit rows against a gate it does not
+drive. `boot` is stored but is not an access event and stays out of that view.
+
+This paragraph describes behaviour that did not exist until migration 0019.
+Before it, the hub verified each event and then discarded it (the handler was
+a single log line), which made the dedupe sentence above false and left an
+offline grant redemption — the one open with no hub in the loop, and so the
+one the controller works hardest to record — with no trace on the hub at all.
+
 ## Kinds
 
 | `kind` | `data` | Drives |

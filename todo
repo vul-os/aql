@@ -118,8 +118,28 @@ cannot catch what both implementations get wrong together.
       by vectors, which are single-fault by design: five multi-fault cases now assert the
       EARLIER step wins. Verified that moving lockdown after the signature check leaves
       the whole vector corpus AND verify.mjs green while the new test fails.
-- [ ] Remaining normative claims worth the same treatment: grants.md's revocation
-      window, events.md's ordering/at-least-once.
+- [x] events.md's delivery contract. The first of these audits to find a DEFECT
+      rather than a coverage gap, and the largest one yet: the hub's handler for
+      controller events was `s.log.Info("controller event")`. Verified, then dropped.
+      Everything upstream of it was real — the controller signs each event, holds
+      grant redemptions in a reserved partition that is never evicted, fsyncs an
+      overflow log when that fills, and records a redemption BEFORE pulsing the relay
+      (with its own test asserting that order). All of it delivered into a log line.
+      Consequence: an offline emergency open, the ONE path with no hub in the loop and
+      therefore the one nothing else records, left no trace on the hub. And events.md's
+      "The hub dedupes on `event_id`" — the only mitigation the spec offers for its two
+      acknowledged delivery gaps — was false, because nothing was stored to dedupe.
+      Fixed: migration 0019 controller_events (event_id PRIMARY KEY = the dedupe),
+      access kinds appended to the hash-chained access_logs with source=offline_grant,
+      access point resolved from the DEVICE not the payload. Tampered all three:
+      removing dedupe, letting the payload pick the AP, and restoring the original log
+      line each fail a test naming the exact defect.
+- NOTE: the ordering/at-least-once half of events.md needed no test. "Record before
+      actuate" was already covered (TestOnRedeemedRecordsBeforeActuating), and the
+      no-ack / no-sequence-number gaps are documented as v0-open in the spec, not
+      claims. The claim worth checking was the one asserted in passing, mid-paragraph.
+- [ ] Remaining normative claim worth the same treatment: grants.md's revocation
+      window.
 
 ## fuzzing
 - [x] No fuzz target existed anywhere. Four now, on the two parsers that read
