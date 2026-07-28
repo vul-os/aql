@@ -101,6 +101,12 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       the end and landed in the brief de-energised gap about a third of the time.
 - LESSON: a flaky test on a safety behaviour is the worst combination — it gets re-run
       until green and then trusted. Sample throughout and assert on the worst case.
+- [x] Swept the relay tests for the same shape. Three slept a fixed time into a running
+      pulse and then acted; the sleep began before the pulsing goroutine was scheduled,
+      so the real margin was never what the test appeared to allow. They wait for the
+      observed state now. Checked Pulse for the Hold defect too — MinPulse/MaxPulse are
+      documented as bounding ONE pulse, and repeated pulses are the rate limiter's
+      concern, so there is no unmet claim there.
 
 ## drift guards — audited for vacuous passes
 The Go side too: bleperiph/platform_test.go's filename-constraint guard had the same

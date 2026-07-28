@@ -226,6 +226,29 @@ func TestPulseAssertsThenDeasserts(t *testing.T) {
 	}
 }
 
+// waitForState polls until the relay reaches want, or fails.
+//
+// Replaces "sleep a fixed time and hope we are inside the pulse". The sleep
+// started before the pulsing goroutine had even been scheduled, so the real
+// margin was never the difference the test appeared to allow — and an overshoot
+// does not report a slow machine, it reports the property under test as broken.
+//
+// That matters most for the concurrency test below, where an overshoot claims a
+// second pulse was accepted while one was running: a safety property, falsely
+// accused. The natural next step is to widen the window, which is how a real
+// regression gets masked. Waiting for the observed state removes the guess.
+func waitForState(t *testing.T, g *GPIO, want string) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if g.State() == want {
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
+	t.Fatalf("relay never reached state %q (still %q)", want, g.State())
+}
+
 func TestPulseIsObservableWhileItRuns(t *testing.T) {
 	out := &fakeLine{}
 	g := newTestGPIO(t, GPIOConfig{}, out, nil)
@@ -233,10 +256,10 @@ func TestPulseIsObservableWhileItRuns(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() { defer close(done); _ = g.Pulse(150 * time.Millisecond) }()
-	time.Sleep(50 * time.Millisecond)
-	if s := g.State(); s != StatePulsing {
-		t.Errorf("state during pulse = %q, want %q (State must not block on the pulse)", s, StatePulsing)
-	}
+	// State() must be observable WHILE the pulse runs — that it becomes
+	// StatePulsing at all is the assertion, and waiting for it is what proves
+	// State does not block on the pulse.
+	waitForState(t, g, StatePulsing)
 	if !out.energised() {
 		t.Error("line not energised during the pulse")
 	}
@@ -281,7 +304,7 @@ func TestConcurrentPulseIsRefusedNotQueued(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() { defer close(done); _ = g.Pulse(120 * time.Millisecond) }()
-	time.Sleep(40 * time.Millisecond)
+	waitForState(t, g, StatePulsing)
 	// A queued second pulse would toggle a gate opener a second time.
 	if err := g.Pulse(50 * time.Millisecond); err == nil {
 		t.Fatal("concurrent Pulse accepted; want refusal")
@@ -367,7 +390,7 @@ func TestReleaseCutsAPulseShort(t *testing.T) {
 
 	done := make(chan error, 1)
 	go func() { done <- g.Pulse(4 * time.Second) }()
-	time.Sleep(50 * time.Millisecond)
+	waitForState(t, g, StatePulsing)
 
 	start := time.Now()
 	if err := g.Release(); err != nil {
