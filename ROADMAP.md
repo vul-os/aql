@@ -268,6 +268,19 @@ and none has met physical hardware.
       /v1/accounts/{id}/devices/claimable`, `POST|DELETE .../devices/claims`) and the
       Devices screen does not yet offer them, so on a multi-account hub claiming is
       currently an API call
+- [ ] **Automations never consult device ownership.** `grep` for ownership in
+      `internal/automations/` returns nothing: a rule belongs to an account, names a
+      device key, and nothing validates that the device is that account's — at save time
+      or at firing time. On a multi-account hub an admin of account B can write a rule
+      that drives a device account A claimed. The blast radius is bounded, and
+      deliberately: `MaxActionTier = TierConsequential`, enforced at BOTH save and fire
+      (`engine.go`'s execution-time gate is explicit that it "is not belt-and-braces for
+      the save-time check; it is the check that matters", because a rule saved a year ago
+      is evaluated against today's tiers). So the worst case is a thermostat setpoint or a
+      patrol route on someone else's hardware — not entry granted, not blades started. The
+      fix is the same shape as the energy one: an ownership lookup consulted at firing
+      time, since a rule written while a device was owned must stop working when it is
+      released
 - [ ] Bring the existing access module onto the same internal device model, so `access` is
       one kind among seven rather than a parallel stack
 - [ ] Extend the input surfaces' intent vocabulary past `open`/`close` so chat and the
