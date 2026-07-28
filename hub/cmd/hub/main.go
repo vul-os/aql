@@ -187,6 +187,15 @@ func main() {
 		os.Exit(runVerifyAudit(os.Args[2:]))
 	}
 
+	// `aql-hub 2fa disable -user NAME -reason TEXT [-data DIR]` — the
+	// last-resort escape hatch for a user who lost both their authenticator
+	// and their recovery codes. See store/twofactor_operator.go for what
+	// authorises it (possession of the data directory, nothing else) and why
+	// the audit entry is written in the same transaction as the disable.
+	if len(os.Args) > 2 && os.Args[1] == "2fa" && os.Args[2] == "disable" {
+		os.Exit(runTwoFactorDisable(os.Args[3:]))
+	}
+
 	var (
 		dataDir     = flag.String("data", envOr("AQL_DATA_DIR", "./data"), "data directory")
 		listen      = flag.String("listen", envOr("AQL_LISTEN", ":8080"), "listen address")
@@ -269,6 +278,77 @@ func runVerifyAudit(args []string) int {
 	if !ok {
 		return 1
 	}
+	return 0
+}
+
+// runTwoFactorDisable turns off one user's active second factor.
+//
+// It runs against the database directly rather than the HTTP API on purpose:
+// the API cannot offer this, because every route that ends a second factor
+// requires a claim the locked-out user by definition does not have. The
+// authority here is possession of the data directory — which is to say, shell
+// access to the host, which already permits strictly more than this does.
+//
+// -reason is required and recorded verbatim. An entry saying only that 2FA was
+// turned off tells a later reader nothing; one saying "phone lost, confirmed
+// with Ada by video call" tells them whether to be worried.
+func runTwoFactorDisable(args []string) int {
+	fs := flag.NewFlagSet("2fa disable", flag.ExitOnError)
+	dataDir := fs.String("data", envOr("AQL_DATA_DIR", "./data"), "data directory")
+	username := fs.String("user", "", "username of the locked-out account (required)")
+	reason := fs.String("reason", "", "why this is being done; recorded in the audit log (required)")
+	fs.Parse(args)
+
+	switch {
+	case strings.TrimSpace(*username) == "":
+		fmt.Fprintln(os.Stderr, "2fa disable: -user is required")
+		return 2
+	case strings.TrimSpace(*reason) == "":
+		// Required rather than defaulted: a blank reason is indistinguishable
+		// from an attacker's entry, and the whole value of this subcommand
+		// over a hand-written UPDATE is what it leaves behind.
+		fmt.Fprintln(os.Stderr, "2fa disable: -reason is required — it is what the audit entry is for")
+		return 2
+	}
+
+	st, err := store.Open(*dataDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "open store: %v\n", err)
+		return 1
+	}
+	defer st.Close()
+
+	ctx := context.Background()
+	userID, err := st.UserIDByUsernameForOperator(ctx, strings.TrimSpace(*username))
+	if errors.Is(err, store.ErrNotFound) {
+		fmt.Fprintf(os.Stderr, "no such user: %s\n", *username)
+		return 1
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "look up user: %v\n", err)
+		return 1
+	}
+
+	res, err := st.DisableTOTPByOperator(ctx, userID, strings.TrimSpace(*reason))
+	if errors.Is(err, store.ErrNoLiveTOTP) {
+		// Not framed as success: the operator was told someone is locked out,
+		// and this says the lock is somewhere else.
+		fmt.Fprintf(os.Stderr, "%s has no active second factor — nothing was changed, "+
+			"and whatever is blocking them is not 2FA\n", *username)
+		return 1
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "disable: %v\n", err)
+		return 1
+	}
+
+	fmt.Printf("2FA disabled for %s (user %s, factor %s)\n", res.Username, res.UserID, res.FactorID)
+	if res.RecoveryCodesOutstanding > 0 {
+		fmt.Printf("NOTE: %d unused recovery code(s) were still outstanding — that account "+
+			"had a way back in without this. Worth asking why it was not used.\n",
+			res.RecoveryCodesOutstanding)
+	}
+	fmt.Println("They can sign in with their password alone now, and should re-enrol.")
 	return 0
 }
 

@@ -144,18 +144,34 @@ type AdminAuditEntry struct {
 // chain (internal/store/audithash.go) inside one transaction so concurrent
 // writers can never fork the chain.
 func (s *Store) WriteAdminAudit(ctx context.Context, actorUserID, action, targetKind, targetID string, allowed bool, detail any) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := writeAdminAuditTx(ctx, tx, actorUserID, action, targetKind, targetID, allowed, detail); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// writeAdminAuditTx is WriteAdminAudit's body, inside a caller's transaction.
+//
+// It exists for the one caller whose audit entry must not be best-effort. Most
+// admin actions are already visible in their own right — a suspended account
+// looks suspended — so a lost audit row is a gap in the trail rather than a
+// hidden act. Disabling a second factor from the CLI is different: it leaves
+// nothing behind but an account that no longer has 2FA, and "it was off
+// already" is exactly what an attacker with host access would want the record
+// to say. Writing it in the same transaction as the disable means the two
+// cannot come apart.
+func writeAdminAuditTx(ctx context.Context, tx *sql.Tx, actorUserID, action, targetKind, targetID string, allowed bool, detail any) error {
 	raw, err := json.Marshal(detail)
 	if err != nil {
 		raw = []byte("{}")
 	}
 	id := NewID()
 	t := now()
-
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
 
 	prev, err := lastAdminAuditRowHash(ctx, tx)
 	if err != nil {
@@ -177,10 +193,7 @@ func (s *Store) WriteAdminAudit(ctx context.Context, actorUserID, action, target
 		id, nullable(actorUserID), action, nullable(targetKind), nullable(targetID),
 		boolInt(allowed), string(raw), t,
 		actorUserID, prev, rowHash)
-	if err != nil {
-		return err
-	}
-	return tx.Commit()
+	return err
 }
 
 // AdminAuditActions lists the admin-action trail, newest first.

@@ -165,8 +165,15 @@ hub's issuance endpoint):
       never gates login, ±1 step of skew, replay refused by a monotonic last-step, and ten
       single-use recovery codes minted in the same transaction as activation so 2FA is
       never on without an escape hatch
-- [ ] An `aql-hub 2fa disable --user` subcommand, so the last-resort recovery is not a
-      manual SQL update
+- [x] `aql-hub 2fa disable -user NAME -reason TEXT`, so the last-resort recovery for
+      someone who lost both their authenticator and their recovery codes is not a manual
+      SQL update. No claim is required and none can be — the authority is possession of
+      the data directory, which is shell access to the host and already permits more.
+      `-reason` is mandatory and the audit entry is written in the same transaction as
+      the disable, so a second factor cannot come off without a record saying why. The
+      path is pinned out of the HTTP surface by a test: serving it would turn "holds the
+      host" into "holds a session", which is the reduction the second factor exists to
+      prevent
 
 ---
 
