@@ -9,6 +9,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 )
 
@@ -125,4 +126,23 @@ func (s *Store) ClaimedDeviceKeys(ctx context.Context) (map[string]bool, error) 
 		out[k] = true
 	}
 	return out, rows.Err()
+}
+
+// DeviceOwnerAccount is the account that claimed deviceKey, or
+// ErrDeviceNotClaimed.
+//
+// Narrower than a full claim row on purpose: its one caller is the energy
+// poller, which needs to answer "whose history does this meter's reading
+// belong in" and has no business knowing who made the claim or when. An
+// earlier, wider version of this lookup was deleted for having no production
+// caller at all; this one exists because ingestion acquired a real need for
+// it, and returns only what that need requires.
+func (s *Store) DeviceOwnerAccount(ctx context.Context, deviceKey string) (string, error) {
+	var accountID string
+	err := s.db.QueryRowContext(ctx,
+		`SELECT account_id FROM device_ownership WHERE device_key = ?`, deviceKey).Scan(&accountID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrDeviceNotClaimed
+	}
+	return accountID, err
 }

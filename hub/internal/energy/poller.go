@@ -34,8 +34,14 @@ type PollResult struct {
 	// one that was asked for. They are dropped: attributing a reading to the
 	// wrong meter is worse than losing it.
 	Foreign int
-	Ingest  IngestResult
-	Rollup  RollupResult
+	// Unattributed is meters skipped because their ownership could not be
+	// established — the lookup errored. Counted rather than absorbed into the
+	// default account, for the reason WithOwnerLookup gives: a failed lookup
+	// has not shown a meter is unclaimed, and filing it under the configured
+	// account on that basis would be inventing an attribution.
+	Unattributed int
+	Ingest       IngestResult
+	Rollup       RollupResult
 	// Pruned is raw samples deleted this cycle by the retention window.
 	// Always 0 when retention is off.
 	Pruned int64
@@ -73,6 +79,45 @@ type Poller struct {
 	// nothing needs once their deltas exist.
 	sampleRetention time.Duration
 	now             func() time.Time
+
+	// owner resolves which account claimed a device, or reports that nobody
+	// has. Nil means "do not ask", which is the behaviour this poller had
+	// before ownership existed: every meter's samples go to accountID.
+	//
+	// See WithOwnerLookup for why the fallback is what it is.
+	owner OwnerFunc
+}
+
+// OwnerFunc reports the account that has claimed deviceKey.
+//
+// claimed=false means nobody has, which is a different answer from an error
+// and is treated differently: unclaimed meters fall back to the poller's
+// configured account, an error does not.
+type OwnerFunc func(ctx context.Context, deviceKey string) (accountID string, claimed bool, err error)
+
+// WithOwnerLookup routes each meter's samples to the account that claimed it.
+//
+// Without this, PollOnce polled every CapMeter device the registry reported
+// and wrote all of them under one process-wide -energy-account. On a hub
+// serving one household that is exactly right and nothing changes. On a hub
+// serving several it was wrong in both directions at once: an account that
+// claimed a meter saw NOTHING for it, while the configured account's Energy
+// screen showed every meter on the hub, including ones it had never claimed.
+//
+// The fallback for an UNCLAIMED meter is the configured account, deliberately.
+// A hub that predates ownership has claimed nothing, and a hub whose operator
+// has not got round to claiming is in the same position; dropping their
+// samples on the floor to be principled would lose real metering history that
+// nothing else records. An unclaimed meter is not evidence of a tenancy
+// problem — it is evidence that nobody has said whose it is yet.
+//
+// An ERROR is different and is never absorbed: a lookup that failed has not
+// established that a meter is unclaimed, and writing it to the default
+// account on that basis would be inventing an attribution. Those samples are
+// skipped and counted, so a persistent failure shows up as a meter that
+// stopped reporting rather than as one silently filed under the wrong owner.
+func WithOwnerLookup(fn OwnerFunc) PollerOption {
+	return func(p *Poller) { p.owner = fn }
 }
 
 // PollerOption configures a Poller.
@@ -143,7 +188,9 @@ func (p *Poller) Interval() time.Duration { return p.interval }
 // must not cost the rest of the site its coverage.
 func (p *Poller) PollOnce(ctx context.Context) (PollResult, error) {
 	var res PollResult
-	var samples []Sample
+	// Grouped by the account each meter's history belongs in, so one Ingest
+	// per account rather than one per meter.
+	byAccount := map[string][]Sample{}
 	now := p.now()
 
 	for _, d := range p.reg.Devices() {
@@ -168,12 +215,33 @@ func (p *Poller) PollOnce(ctx context.Context) (PollResult, error) {
 			}
 			kept = append(kept, r)
 		}
-		samples = append(samples, SamplesFromReadings(d.Key, kept, now)...)
+		// Which account's history do these belong in? Without a lookup this
+		// is the configured account for everything, which is what it always
+		// was and is correct on a single-household hub.
+		target := p.accountID
+		if p.owner != nil {
+			acct, claimed, err := p.owner(ctx, d.Key)
+			switch {
+			case err != nil:
+				res.Unattributed++
+				continue
+			case claimed:
+				target = acct
+			}
+		}
+		byAccount[target] = append(byAccount[target], SamplesFromReadings(d.Key, kept, now)...)
 	}
 
-	if len(samples) > 0 {
-		ing, err := p.st.Ingest(ctx, p.accountID, samples)
-		res.Ingest = ing
+	for target, batch := range byAccount {
+		if len(batch) == 0 {
+			continue
+		}
+		ing, err := p.st.Ingest(ctx, target, batch)
+		res.Ingest.Accepted += ing.Accepted
+		res.Ingest.Duplicate += ing.Duplicate
+		res.Ingest.Skipped += ing.Skipped
+		res.Ingest.Channels += ing.Channels
+		res.Ingest.Deltas += ing.Deltas
 		if err != nil {
 			return res, err
 		}

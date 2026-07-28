@@ -170,13 +170,17 @@ hub's issuance endpoint):
       one controller is offline strands it permanently. (`lockdown`/`lift` are deliberately
       controller-local — `offline_grants.go` says so explicitly — and are NOT part of this
       gap)
-- [ ] **Energy ingestion ignores device ownership.** `energy.PollOnce` polls every
-      `CapMeter` device the registry reports and writes all of them under one
-      process-wide `-energy-account`. On a multi-account hub that means an account which
-      claimed a meter sees nothing for it, while the configured account sees every meter
-      on the hub including ones it never claimed. The HTTP read routes are correctly
-      membership-scoped; the gap is entirely on the ingestion side, and it became fixable
-      only once ownership existed (migration 0021)
+- [x] **Energy ingestion respects device ownership.** `PollOnce` used to poll every
+      `CapMeter` device on the hub and write all of them under one process-wide
+      `-energy-account` — wrong in both directions once a second account exists: the
+      account that claimed a meter saw nothing for it, while the configured account's
+      Energy screen showed meters it never claimed. Samples now route to the claiming
+      account. An UNCLAIMED meter still falls back to the configured account, because a
+      hub that predates ownership has claimed nothing and dropping real metering history
+      to be principled is the wrong trade. A lookup that ERRORED is not treated as
+      unclaimed — it has not established anything — so those samples are skipped and
+      counted as `Unattributed`, making a persistent failure look like a meter that
+      stopped reporting rather than one silently filed under the wrong owner
 - [ ] Controller position/tamper sensors return static values
 
 **Console screens ahead of their backend** (tracked mechanically by the route-parity test):

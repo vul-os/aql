@@ -956,9 +956,25 @@ func (h *hub) wireEnergy(cfg config) {
 	}
 
 	est := h.energy
+	// Route each meter's samples to the account that CLAIMED it, falling back
+	// to -energy-account for meters nobody has claimed. Without this the
+	// poller wrote every meter on the hub under one account, which is right
+	// for one household and wrong in both directions for two: the account
+	// that claimed a meter saw nothing for it, and the configured account saw
+	// meters it never claimed.
 	poller := energy.NewPoller(h.reg, est, cfg.energyAccount,
 		energy.WithInterval(cfg.energyInterval),
-		energy.WithSampleRetention(cfg.energySampleRetention))
+		energy.WithSampleRetention(cfg.energySampleRetention),
+		energy.WithOwnerLookup(func(ctx context.Context, deviceKey string) (string, bool, error) {
+			owner, err := h.store.DeviceOwnerAccount(ctx, deviceKey)
+			if errors.Is(err, store.ErrDeviceNotClaimed) {
+				return "", false, nil
+			}
+			if err != nil {
+				return "", false, err
+			}
+			return owner, true, nil
+		}))
 
 	retention := "forever"
 	if cfg.energySampleRetention > 0 {
