@@ -24,7 +24,10 @@ jobs:
           go-version-file: hub/go.mod
           cache-dependency-path: hub/go.sum
       - run: npm ci
-      - run: npm run typecheck     # tsc --noEmit
+      # tsc -b --noEmit. The -b matters: this repo's root tsconfig has
+      # "files": [], so a plain `tsc --noEmit` type-checks NOTHING and passes
+      # on a deliberately broken file. It did exactly that until it was caught.
+      - run: npm run typecheck
       - run: npm test              # vitest run
       - run: npm run build         # tsc -b && vite build
       # The doc-accuracy gate. It has existed for a long time and CI never ran
