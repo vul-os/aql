@@ -74,6 +74,19 @@ function normalizeTemplate(node: ts.TemplateExpression): string {
 function pathArgToString(node: ts.Expression): string | null {
   if (ts.isStringLiteralLike(node)) return node.text; // StringLiteral | NoSubstitutionTemplateLiteral
   if (ts.isTemplateExpression(node)) return normalizeTemplate(node);
+  // `\`/a/${id}/runs\` + (limit ? \`?limit=${limit}\` : '')` — a concatenation,
+  // not a template. The pathname is whatever the left side contributes; the
+  // right side is a query suffix, which is never part of a mux pattern.
+  //
+  // Skipping these was harmless while this file only asked "does every call
+  // have a route?" — a dropped call is one fewer check. It stopped being
+  // harmless when the reverse question arrived: a call the extractor cannot
+  // see makes its route look like it has no caller at all, and the orphan
+  // test would report a wired-up feature as unreachable.
+  if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+    return pathArgToString(node.left);
+  }
+  if (ts.isParenthesizedExpression(node)) return pathArgToString(node.expression);
   return null;
 }
 
@@ -162,6 +175,68 @@ function normalizeGoPath(p: string): string {
 // UI degrades — and preferably with a reason the route cannot simply be built.
 const KNOWN_UNAVAILABLE: Array<{ method: string; path: string }> = [];
 
+// ── the other direction ────────────────────────────────────────────────────
+//
+// The test above asks whether every call has a route. This table exists for
+// the opposite question — whether every route has a caller — which is the one
+// that has actually been failing.
+//
+// A route the console never calls is not a harmless spare. It is indexed as
+// shipped, documented as available, counted in the API surface, and exercised
+// by its own handler tests, all while being unreachable by any user. That has
+// been found here five separate times: Telegram polling, phone verification,
+// channel identity linking, sample pruning, queue compaction. Every one of
+// them had tests that passed.
+//
+// So the routes below are the ones a browser is genuinely not supposed to
+// reach, each with the client that does. Anything else must be callable from
+// src/lib/api.ts.
+const NON_CONSOLE_ROUTES: Array<{ method: string; path: string; reason: string }> = [
+  { method: 'POST', path: '/api/controller/challenge', reason: 'controller firmware — device auth handshake' },
+  { method: 'POST', path: '/api/controller/poll', reason: 'controller firmware — command long-poll' },
+  { method: 'POST', path: '/api/controller/ack', reason: 'controller firmware — command result ack' },
+  { method: 'GET', path: '/api/controller/ws', reason: 'controller firmware — websocket transport' },
+  { method: 'POST', path: '/api/pair/redeem', reason: 'controller firmware — pairing redemption' },
+  { method: 'POST', path: '/pair/redeem', reason: 'controller firmware — unversioned pairing alias' },
+  { method: 'GET', path: '/health', reason: 'process probes and load balancers, not a user surface' },
+  { method: 'POST', path: '/webhooks/slack', reason: 'inbound provider callback (Slack)' },
+  { method: 'POST', path: '/webhooks/slack/interactions', reason: 'inbound provider callback (Slack interactivity)' },
+  { method: 'POST', path: '/webhooks/telegram', reason: 'inbound provider callback (Telegram)' },
+  { method: 'GET', path: '/webhooks/whatsapp', reason: 'inbound provider callback (WhatsApp verify handshake)' },
+  { method: 'POST', path: '/webhooks/whatsapp', reason: 'inbound provider callback (WhatsApp messages)' },
+  {
+    method: 'GET',
+    path: '/v1/gateway/key',
+    reason:
+      'offline mode asks a LAN address which hub it is, via gatewayFetch in ' +
+      'src/lib/offline/service.ts — it cannot go through apiFetch, whose base URL is ' +
+      'the configured hub rather than the address being probed',
+  },
+];
+
+// Routes that NO client can reach — not the console, and not an API token
+// (server.go mounts exactly four tokenScoped routes; everything else is
+// session-JWT-only). These are found, not excused.
+//
+// All three are single-resource GETs that duplicate a list endpoint the
+// console does use, which is why nobody noticed. The reason they are parked
+// here rather than deleted is that the hub's own tests lean on them as
+// NEGATIVE space — tokens_test.go proves a scoped token cannot reach
+// `GET /v1/locations/{id}`, and product_test.go uses `GET /v1/accounts/{id}`
+// as a cross-tenant 404 probe. Deleting them would quietly remove coverage of
+// the tenancy and token-scope contracts, so the disposition (wire a screen to
+// them, or delete them and re-anchor those probes on a route that survives) is
+// a real decision and not a cleanup.
+//
+// This list is a RATCHET, not a parking lot. It may shrink; an addition means
+// a new route shipped that no user can reach, which is the bug this file
+// exists to catch.
+const UNREACHABLE_TODAY: Array<{ method: string; path: string }> = [
+  { method: 'GET', path: '/v1/accounts/{id}' },
+  { method: 'GET', path: '/v1/locations/{id}' },
+  { method: 'GET', path: '/v1/accounts/{id}/automations/{ruleID}' },
+];
+
 describe('frontend/gateway route parity', () => {
   it('every apiFetch() call in src/lib/api.ts targets a route the gateway serves (or is an acknowledged gap)', () => {
     const source = readFileSync(apiTsPath, 'utf-8');
@@ -246,5 +321,84 @@ describe('frontend/gateway route parity', () => {
           stale.map((s) => `  ✗ ${s}`).join('\n'),
       );
     }
+  });
+
+  it('every gateway route is reachable from the console (or is an acknowledged non-console client)', () => {
+    const source = readFileSync(apiTsPath, 'utf-8');
+    const frontendCalls = extractFrontendCalls(source);
+    expect(frontendCalls.length).toBeGreaterThan(20);
+
+    const gatewayRoutes = loadGatewayRoutes();
+    expect(gatewayRoutes.length).toBeGreaterThan(20);
+
+    // What api.ts actually puts on the wire.
+    const called = new Set(
+      frontendCalls.map(
+        (c) => `${c.method} ${normalizePath(`${API_VERSION_PREFIX}${c.normalizedPath}`)}`,
+      ),
+    );
+    const allowed = new Set(NON_CONSOLE_ROUTES.map((r) => `${r.method} ${normalizePath(r.path)}`));
+    const parked = new Set(UNREACHABLE_TODAY.map((r) => `${r.method} ${normalizePath(r.path)}`));
+
+    const orphans: string[] = [];
+    for (const r of gatewayRoutes) {
+      const key = `${r.method} ${normalizeGoPath(r.path)}`;
+      if (called.has(key) || allowed.has(`${r.method} ${r.path}`)) continue;
+      if (parked.has(`${r.method} ${r.path}`)) continue;
+      orphans.push(`${r.method} ${r.path}`);
+    }
+
+    if (orphans.length > 0) {
+      throw new Error(
+        `${orphans.length} gateway route(s) that no screen can reach:\n\n` +
+          orphans.map((o) => `  ✗ ${o}`).join('\n') +
+          `\n\nThe hub serving a route is not the same as the product having the feature. ` +
+          `A route with no caller is documented, counted and tested while being unusable — ` +
+          `that exact shape has shipped here five times.\n\n` +
+          `Either wire it into src/lib/api.ts and a screen, or — if a different client speaks ` +
+          `to it (controller firmware, a provider webhook, a probe) — add it to ` +
+          `NON_CONSOLE_ROUTES in this test with the client named.\n`,
+      );
+    }
+  });
+
+  it('NON_CONSOLE_ROUTES has no stale entries and every entry names its client', () => {
+    const gatewayRoutes = loadGatewayRoutes();
+    const gatewaySet = new Set(gatewayRoutes.map((r) => `${r.method} ${r.path}`));
+
+    const problems: string[] = [];
+
+    // The ratchet only tightens if a wired-up route is taken off it. Without
+    // this, parking an entry here would be permanent by default — the same
+    // "looks managed" failure KNOWN_UNAVAILABLE grew.
+    const source = readFileSync(apiTsPath, 'utf-8');
+    const consoleCalls = new Set(
+      extractFrontendCalls(source).map(
+        (c) => `${c.method} ${normalizePath(`${API_VERSION_PREFIX}${c.normalizedPath}`)}`,
+      ),
+    );
+    for (const e of UNREACHABLE_TODAY) {
+      const key = `${e.method} ${normalizeGoPath(normalizePath(e.path))}`;
+      if (consoleCalls.has(key)) {
+        problems.push(
+          `${e.method} ${e.path} — a screen calls this now; remove it from UNREACHABLE_TODAY`,
+        );
+      }
+      if (!gatewaySet.has(`${e.method} ${normalizePath(e.path)}`)) {
+        problems.push(`${e.method} ${e.path} — the gateway no longer serves this; remove the entry`);
+      }
+    }
+
+    for (const e of NON_CONSOLE_ROUTES) {
+      if (!gatewaySet.has(`${e.method} ${normalizePath(e.path)}`)) {
+        problems.push(`${e.method} ${e.path} — the gateway no longer serves this; remove the entry`);
+      }
+      // A reason is what makes the entry auditable rather than a mute
+      // exemption somebody added to make the suite green.
+      if (e.reason.trim().length < 20) {
+        problems.push(`${e.method} ${e.path} — reason is too thin to audit: "${e.reason}"`);
+      }
+    }
+    expect(problems).toEqual([]);
   });
 });
