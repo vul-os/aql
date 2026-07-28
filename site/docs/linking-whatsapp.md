@@ -87,12 +87,13 @@ The engine is opt-in only and fails closed toward the official path: leave
 `bridge`, and the hub uses Meta's `cloud` engine
 ([`ResolveWhatsAppEngine`, send.go:223](https://github.com/vul-os/aql/blob/main/hub/internal/channels/send.go#L223)).
 
-**A banned number goes silent on WhatsApp, with no notice to residents.** The hub
-does not have a working offline fallback for that moment: the LAN/BLE emergency-grant
-path described in [Emergency access](emergency-access.md) has real, conformance-tested
-verification on both the controller side and the hub's issuance side, but the app
-doesn't hold or present a grant yet, so it is not what saves you here — don't rely on
-it. What actually works today, right now:
+**A banned number goes silent on WhatsApp, with no notice to residents.** The
+[emergency-grant path](emergency-access.md) is not what saves you here, and the reason
+is worth being precise about: it works now — the hub mints grants, the console holds
+one, and it can be presented over your LAN — but it exists for a hub you cannot
+REACH, and it has to be set up before that happens. A banned WhatsApp number leaves
+the hub perfectly reachable; only that one rail goes quiet. So the answer is the
+things that still work, and they have to be in place beforehand too:
 
 - **The web portal** — unlimited opens through the hub's own dashboard, no chat
   channel involved at all.

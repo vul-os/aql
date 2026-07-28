@@ -94,9 +94,11 @@ the grant names. Neither the LAN nor Bluetooth is trusted. Revocation converges 
 the grant TTL. **Status:** that verification logic is real and conformance-tested on
 the controller side, and the hub now really mints and signs the grants it
 verifies (`POST /v1/offline-grants`) — also conformance-tested against the same
-vectors. What's not built yet is the app: nothing on the phone requests, stores or
-presents a grant, so the path still doesn't run end-to-end for a resident — see
-[Emergency access](emergency-access.md) for the full trade-off and current status.
+vectors. The console requests and stores a grant, and presents it over the LAN from the
+desktop app or an http-served browser tab. What is still missing is BLE presentation
+and an https-served console reaching a plain-http controller — see
+[Emergency access](emergency-access.md) for the per-build table and the two remaining
+limits.
 
 ## Abuse limits
 

@@ -110,7 +110,7 @@ export const FEATURES = [
       "README.md § What's real, and what isn't — offline grants: both the controller side and the hub's issuance side",
       'site/docs/emergency-access.md — hub-side issuance',
       'proto/grants.md § Implementation status — the issuance half of the contract',
-      'hub/internal/channels/send.go — ban-risk warning names the app, not the gateway, as the missing half',
+      "hub/internal/channels/send.go — the ban-risk warning, and why offline grants are not the fallback for a banned number",
     ],
     // Deliberately narrow: "offline" alone appears constantly in this
     // codebase for unrelated things (the HTTPS long-poll device queue,

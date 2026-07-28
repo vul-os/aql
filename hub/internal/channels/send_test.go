@@ -142,14 +142,16 @@ func TestBridgeWhatsAppSenderInteractiveDegradesToText(t *testing.T) {
 
 // TestWhatsAppBanRiskWarningNamesTheRisk is a content guard: the warning
 // string must actually name the ban risk and a fallback that genuinely works,
-// not be softened into something vague in a later edit — and it must NOT
-// point operators at the offline LAN/BLE grant path as if that path ran
-// end to end. Gateway-side issuance is real now (POST /v1/offline-grants,
-// see hub/internal/httpapi/offline_grants.go), but the app still doesn't
-// request, store or present a grant (site/docs/emergency-access.md), so the
-// path still doesn't run end to end for a resident. Claiming otherwise would
-// ship a false promise: "fall back to offline grants" when nothing on a
-// resident's phone can present one.
+// not be softened into something vague in a later edit — and it must NOT point
+// operators at the offline LAN/BLE grant path.
+//
+// The reason it must not changed. It used to be that the path did not work at
+// all; it does now (hub issuance, console request/store, LAN presentation from
+// the desktop app or an http-served browser). It is still the wrong answer HERE
+// because of the failure mode: a banned number leaves the hub perfectly
+// reachable, and offline grants exist for a hub you cannot reach and must be
+// fetched beforehand. Pointing at them would send someone to a mechanism that
+// neither addresses this failure nor can be set up once it has happened.
 func TestWhatsAppBanRiskWarningNamesTheRisk(t *testing.T) {
 	w := WhatsAppBanRiskWarning
 	for _, must := range []string{"UNOFFICIAL", "ban", "REQUIRED", "web portal", "Slack Socket Mode", "Telegram"} {
@@ -157,7 +159,14 @@ func TestWhatsAppBanRiskWarningNamesTheRisk(t *testing.T) {
 			t.Errorf("ban-risk warning must mention %q: %q", must, w)
 		}
 	}
-	if !strings.Contains(w, "LAN/BLE") || !strings.Contains(w, "NOT a working fallback") {
-		t.Errorf("ban-risk warning must explicitly disclaim the LAN/BLE grant path as broken, not silently drop it: %q", w)
+	// Disclaimed explicitly rather than silently dropped, and for the right
+	// reason: "not the fallback for this", not "does not work".
+	if !strings.Contains(w, "LAN/BLE") || !strings.Contains(w, "NOT the fallback") {
+		t.Errorf("ban-risk warning must explicitly disclaim the LAN/BLE grant path for this "+
+			"failure mode, not silently drop it: %q", w)
+	}
+	if strings.Contains(w, "doesn't hold or present") {
+		t.Errorf("ban-risk warning still says the app cannot present a grant, which stopped "+
+			"being true when LAN presentation shipped: %q", w)
 	}
 }

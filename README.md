@@ -196,9 +196,16 @@ in code beside the rails so it can't quietly go stale.
 | **Slack** | outbound connection | ✓ | free | Slack, always — plus you |
 | **Discord** | outbound connection | ✓ | free | Discord, always — plus you |
 
-None of them can message a stranger first. That's a property of the platforms,
-and it means none can be turned into a notification channel to someone who never
-opted in.
+None of them can message a stranger first — with one exception you have to opt
+into. That's a property of the platforms, and it means none can be turned into a
+notification channel to someone who never opted in.
+
+The exception is `AQL_WHATSAPP_ENGINE=bridge`, an unofficial WhatsApp Web client
+rather than Meta's Cloud API. It is a regular account: no template wall, no
+per-message billing, and it *can* message a number that never wrote in — which is
+also what gets numbers banned. Aql itself only ever replies, and the hub says all
+of this at `GET /v1/rails/disclosure`, which answers for the engine you actually
+configured.
 
 ---
 

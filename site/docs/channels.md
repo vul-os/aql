@@ -52,6 +52,12 @@ Two things there are worth knowing before you pick a rail:
 
 - **Every rail is inbound-triggered.** The hub cannot message a resident who has never
   messaged it. There is no rail on which Aql can cold-call.
+
+  One caveat, opt-in only: the WhatsApp *bridge* engine is an unofficial Web client,
+  which is a regular account and technically can message a stranger. Aql never does,
+  but the rail's own capability changes — and so does its
+  disclosure at `GET /v1/rails/disclosure`, which answers for the engine you
+  actually configured.
 - **Two rails need no public endpoint at all.** Slack Socket Mode and Discord both hold
   an outbound WebSocket and work behind CGNAT with no hostname. WhatsApp arrives by
   webhook and has no alternative — Meta's Cloud API only speaks webhooks — so it is the

@@ -253,6 +253,36 @@ func DisclosureFor(k string, cfg Config) (RailDisclosure, bool) {
 			"polling, so it dials out and needs no public endpoint — the rail works " +
 			"behind CGNAT."
 	}
+
+	// WhatsApp's bridge engine is a different rail wearing the same name, and
+	// two of the four §26.3 fields change with it.
+	//
+	// Field 3 (price): Meta's Cloud API meters outbound and walls it behind
+	// pre-approved templates outside the 24-hour service window. An unofficial
+	// WhatsApp Web client is a regular account — no per-message billing, no
+	// template wall. Declaring "metered, templates only" to a bridge operator
+	// describes constraints they do not have and a bill they will not get.
+	//
+	// Field 1 (initiation): this is the uncomfortable one, and it is why the
+	// override exists. A WhatsApp Web client CAN message a number that has
+	// never written in — that is the field's definition, and it is also
+	// exactly the behaviour Meta bans numbers for. Aql's own code only ever
+	// replies to inbound, but field 1 asks what the RAIL can do, and an
+	// operator choosing this engine is choosing a rail that can cold-initiate.
+	// Saying otherwise would be the comfortable omission this table exists to
+	// prevent.
+	if k == KindWhatsApp && ResolveWhatsAppEngine(cfg.WhatsAppEngine) == WhatsAppEngineBridge {
+		d.Platform = "WhatsApp (via an unofficial Web-client bridge, NOT Meta's Cloud API)"
+		d.Inbound.Initiation = FreelyInitiating
+		d.Outbound.Initiation = FreelyInitiating
+		d.Outbound.Price = Free
+		d.Outbound.Note = "No template wall and no per-message billing: this is a regular " +
+			"WhatsApp account driven by an unofficial client. Aql itself only ever " +
+			"replies to inbound messages."
+		d.SelfHostNote = "Your own bridge (e.g. Evolution API) and a WhatsApp account. " +
+			"Meta actively detects and bans automated clients — reported number " +
+			"survival is commonly weeks. Never let this be the only way to open a gate."
+	}
 	return d, true
 }
 

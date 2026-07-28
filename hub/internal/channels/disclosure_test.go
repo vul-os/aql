@@ -231,3 +231,60 @@ func TestOnlyTelegramVariesWithConfiguration(t *testing.T) {
 		}
 	}
 }
+
+// The bridge engine is a different rail wearing the same name. Two §26.3
+// fields change with it, and the disclosure declared only the Cloud API's
+// answers.
+func TestWhatsAppDisclosureFollowsTheConfiguredEngine(t *testing.T) {
+	// Default (Cloud API): metered outbound, template-walled, cannot cold-call.
+	for _, raw := range []string{"", "cloud", "bridg", "  "} {
+		d, ok := DisclosureFor(KindWhatsApp, Config{WhatsAppEngine: raw})
+		if !ok {
+			t.Fatalf("engine %q: no disclosure for whatsapp", raw)
+		}
+		if d.Outbound.Price != Metered {
+			t.Errorf("engine %q: outbound price %q, want %q", raw, d.Outbound.Price, Metered)
+		}
+		if d.CanInitiate() {
+			t.Errorf("engine %q: Cloud API cannot message a stranger first", raw)
+		}
+	}
+
+	// Bridge: no template wall, no billing — and it CAN cold-initiate, which
+	// is both the field's definition and the behaviour Meta bans numbers for.
+	// Declaring otherwise would hide the risk an operator is taking on.
+	for _, raw := range []string{"bridge", "Bridge", " BRIDGE "} {
+		d, _ := DisclosureFor(KindWhatsApp, Config{WhatsAppEngine: raw})
+		if d.Outbound.Price != Free {
+			t.Errorf("engine %q: outbound price %q, want %q — an unofficial Web client "+
+				"is a regular account with no per-message billing", raw, d.Outbound.Price, Free)
+		}
+		if !d.CanInitiate() {
+			t.Errorf("engine %q: a WhatsApp Web client can message a number that never "+
+				"wrote in; saying otherwise hides why Meta bans them", raw)
+		}
+		if !strings.Contains(d.SelfHostNote, "bans") {
+			t.Errorf("engine %q: self-host note does not mention the ban risk: %q", raw, d.SelfHostNote)
+		}
+		if !strings.Contains(d.Platform, "unofficial") {
+			t.Errorf("engine %q: platform still reads as Meta's official API: %q", raw, d.Platform)
+		}
+	}
+}
+
+// Selecting one rail's engine must not move another's fields.
+func TestEngineOverridesStayOnTheirOwnRail(t *testing.T) {
+	base := DisclosuresFor(Config{})
+	both := DisclosuresFor(Config{TelegramEngine: "polling", WhatsAppEngine: "bridge"})
+	if len(base) != len(both) {
+		t.Fatalf("rail count changed: %d vs %d", len(base), len(both))
+	}
+	for i := range base {
+		if base[i].Rail == KindTelegram || base[i].Rail == KindWhatsApp {
+			continue
+		}
+		if base[i] != both[i] {
+			t.Errorf("%s changed when another rail's engine was set", base[i].Rail)
+		}
+	}
+}
