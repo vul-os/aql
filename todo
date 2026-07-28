@@ -396,7 +396,21 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       Modbus device actuable without a line of the driver changing, and the allowlist would
       still have read as correct. Fixed at construction, not just in a test: config
       validation now VERIFIES what the allowlist asserts, via a new devices.VerbsOf.
-- [ ] Still unguarded from the sweep: httpapi/twofactor.go's "plaintext, by construction".
+- [x] twofactor's shape claims. All three HELD and none were guarded: exactly one query
+      selects user_totp.secret, TOTPStatus has no Secret field and its query does not
+      select the column, and the recovery-code rows carry salt+digest but never the
+      plaintext "which does not exist after issuance".
+- NOTE: these are SHAPE tests on purpose. A behavioural test passes happily the day
+      someone adds a second secret-selecting query for a perfectly good reason — which is
+      exactly the change worth noticing. The secret is the whole second factor: anything
+      that reads it mints valid codes forever, and unlike a password there is nothing to
+      rotate that a user would notice. The reason the code uses a projection type with no
+      Secret field rather than a struct that simply is not filled in is that the first
+      cannot leak it and the second only has not yet.
+- The structural-claims sweep is now COMPLETE for the claims it found: automations
+      boundaries, the API-token surface, authrecovery's purpose key, modbus read-only, and
+      the TOTP secret. Five claims, one of which (modbus) was a genuine hole rather than an
+      unguarded truth.
 
 ## spec-derived checks
 The technique that found the 2^53 rounding: derive expected behaviour from proto/*.md

@@ -449,6 +449,22 @@ export const FEATURES = [
     ],
   },
   {
+    // The TOTP secret is the entire second factor: anything that reads it can
+    // mint valid codes indefinitely, and there is nothing a user would notice
+    // being rotated. twofactor.go bounds its blast radius with three shape
+    // claims; nothing held them.
+    id: 'totp-secret-blast-radius',
+    label: 'Exactly one query reads the TOTP secret, and the status projection structurally cannot carry it',
+    docStatus: 'shipped',
+    docRefs: ['hub/internal/store/twofactor.go — "the only query in the codebase that selects user_totp.secret"'],
+    evidence: [
+      { file: 'hub/internal/store/totp_secret_test.go', pattern: 'TestOnlyOneQuerySelectsTheTOTPSecret' },
+      { file: 'hub/internal/store/totp_secret_test.go', pattern: 'TestTheStatusProjectionCannotCarryTheSecret' },
+      // The shape itself: the projection has no secret field.
+      { file: 'hub/internal/store/twofactor.go', pattern: 'type TOTPStatus struct' },
+    ],
+  },
+  {
     // "structurally read-only" rested on an allowlist whose central assertion —
     // that every capability in it offers only TierRead verbs — nothing checked.
     // The comment named a test for it that did not exist.
