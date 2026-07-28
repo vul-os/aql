@@ -3,6 +3,7 @@ package command_test
 import (
 	"crypto/ed25519"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/vul-os/aql/controller/internal/clock"
@@ -405,5 +406,104 @@ func TestRepairIsRefusedUnlessSignedByTheCurrentlyPinnedKey(t *testing.T) {
 				t.Errorf("the real hub could no longer open after a refused repair: %+v", a)
 			}
 		})
+	}
+}
+
+// TestNoReplayWindowBetweenPruningAndExpiry.
+//
+// proto/commands.md §4 permits the nonce store to forget: "A nonce must be
+// remembered until its envelope's `exp + skew` has passed (after which step 3
+// rejects it anyway), so the store is small and bounded."
+//
+// That parenthesis is the entire safety argument for pruning, and it is a
+// COUPLING between two rules in different files — the prune horizon in
+// noncestore, the expiry bound in Verify. If they disagree, the gap between them
+// is a window in which a captured command replays: the nonce forgotten, the
+// envelope still valid.
+//
+// PRUNING IS LAZY, and that detail is what makes this test non-obvious. Seen()
+// checks membership only; entries are dropped inside Mark(), which a replay
+// never reaches — it is refused at step 4 first. So a sweep that only replays
+// proves nothing: nothing prunes, the nonce is never forgotten, and shortening
+// the horizon is invisible. My first version of this test did exactly that and
+// passed against a deliberately broken horizon.
+//
+// So each step accepts a FRESH command before replaying the old one. That Mark
+// is what triggers the prune, and it is also what really happens: a controller
+// that is being used is a controller that is pruning.
+func TestNoReplayWindowBetweenPruningAndExpiry(t *testing.T) {
+	dir, gwPriv, _, gwPubB64, ctrlPriv := testKeys(t)
+	_ = dir
+
+	const iat, exp = 1789000000, 1789000030
+	check := vectorfile.Check{
+		Now: iat, DeviceID: "de71ce00-0000-4000-8000-000000000001",
+		AccessPoints: []string{"main"},
+	}
+	p, fake, _ := newProcessor(t, check, gwPubB64, ctrlPriv)
+
+	open := map[string]any{
+		"v": 0, "typ": "cmd", "cmd": "open", "device_id": check.DeviceID,
+		"access_point": "main", "nonce": wire.B64u([]byte("replay-window-01")),
+		"iat": iat, "exp": exp,
+	}
+	signed := signCmd(t, gwPriv, open)
+
+	if raw, err := p.Process(signed); err != nil {
+		t.Fatal(err)
+	} else if a := parseAck(t, raw); a.Result != "opened" {
+		t.Fatalf("the first presentation was not accepted: %+v", a)
+	}
+
+	skew := int64(wire.ClockSkewSeconds)
+	var sawReplay, sawExpired bool
+	for now := int64(iat) + 1; now <= int64(exp)+skew+5; now++ {
+		fake.NowSec = now
+
+		// A fresh, legitimate command at this instant. Its Mark() prunes
+		// whatever the horizon says is finished — including, if the horizon is
+		// wrong, the nonce being replayed just below.
+		fresh := map[string]any{
+			"v": 0, "typ": "cmd", "cmd": "open", "device_id": check.DeviceID,
+			"access_point": "main",
+			"nonce":        wire.B64u([]byte(fmt.Sprintf("fresh-nonce-%06d", now%1000000))),
+			"iat":          now, "exp": now + 30,
+		}
+		if raw, err := p.Process(signCmd(t, gwPriv, fresh)); err != nil {
+			t.Fatalf("now=%d: fresh command: %v", now, err)
+		} else if a := parseAck(t, raw); a.Result != "opened" {
+			t.Fatalf("now=%d: a fresh legitimate command was refused (%+v); the sweep "+
+				"depends on these being accepted so that Mark prunes", now, a)
+		}
+
+		raw, err := p.Process(signed)
+		if err != nil {
+			t.Fatalf("now=%d: %v", now, err)
+		}
+		a := parseAck(t, raw)
+		if a.Result == "opened" {
+			t.Fatalf("now=%d (iat=%d exp=%d skew=%d): a replayed command was ACCEPTED. "+
+				"The nonce store forgot it while the envelope was still inside its "+
+				"validity window, which is a replay window of up to %ds for anyone "+
+				"who captured the envelope.", now, iat, exp, skew, skew)
+		}
+		switch a.Detail {
+		case wire.ReasonReplay:
+			sawReplay = true
+		case wire.ReasonExpired:
+			sawExpired = true
+		}
+	}
+
+	// Both refusals must occur, or the sweep proved less than it looks: an
+	// envelope rejected as expired throughout would never exercise the nonce
+	// store at all.
+	if !sawReplay {
+		t.Error("no presentation was refused as `replay`, so the nonce store was " +
+			"never the thing doing the refusing")
+	}
+	if !sawExpired {
+		t.Error("no presentation was refused as `expired`, so the sweep never reached " +
+			"past the validity window")
 	}
 }

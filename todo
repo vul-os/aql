@@ -103,8 +103,17 @@ cannot catch what both implementations get wrong together.
       one self-signed by the key it installs. The second is the shape a well-meant fix
       for the documented lost-key limitation would take, and it is a complete takeover;
       simulating that change makes the controller answer result=ok.
+- [x] commands.md §4's "remembered until exp + skew (after which step 3 rejects it
+      anyway)". Honoured — Mark's horizon and Verify's expiry bound align exactly, so no
+      replay window exists. It was untested, and it is a coupling across two files that
+      neither side's tests can see.
+- NOTE: pruning is LAZY. Seen() checks membership only; entries are dropped inside
+      Mark(), which a replay never reaches. So a sweep that only replays proves nothing —
+      my first version did exactly that and passed against a deliberately broken horizon.
+      The test now accepts a fresh command at each step, which is what triggers the prune
+      and is also what a controller in use actually does.
 - [ ] Remaining normative claims worth the same treatment: grants.md's revocation
-      window, events.md's ordering/at-least-once, commands.md's nonce and clock rules.
+      window, events.md's ordering/at-least-once.
 
 ## fuzzing
 - [x] No fuzz target existed anywhere. Four now, on the two parsers that read
