@@ -158,6 +158,16 @@ hub's issuance endpoint):
       has never run on hardware on either. darwin returns `ErrUnsupported`: CoreBluetooth
       offers peripheral mode, that library does not bind it, and writing a CGO binding
       that cannot be tested here would be worse than the gap
+- [ ] **Four signed command types the hub cannot send.** `proto/commands.md` defines eight
+      — open, hold, close, lockdown, lift, ping, config, repair — and the controller
+      implements and conformance-tests all eight. The hub's only signer,
+      `keys.SignCommand`, has one call site (`dispatchCommand`), whose two callers pass
+      only `open` or `close`. So `hold`, `config`, standalone `ping` and — most seriously
+      — `repair` are built, verified on the receiving end, and unreachable. `repair` is
+      the disaster-recovery path for a leaked or rotated hub signing key: without a
+      sender, the only remedy is physically factory-resetting every paired controller.
+      (`lockdown`/`lift` are deliberately controller-local — `offline_grants.go` says so
+      explicitly — and are NOT part of this gap)
 - [ ] Controller position/tamper sensors return static values
 
 **Console screens ahead of their backend** (tracked mechanically by the route-parity test):

@@ -30,6 +30,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { Link } from 'react-router-dom';
 import { PageHeader } from './AppLayout';
 import { Card } from '@/components/ui/Card';
+import { ClaimableDevices, ReleaseDeviceButton } from '@/components/device/ClaimableDevices';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { DevicePairing } from '@/components/illustrations/DevicePairing';
@@ -225,6 +226,16 @@ export default function DevicesPage() {
         <Card className="mb-6 border-terracotta/40">
           <p className="text-sm text-terracotta-deep">{error}</p>
         </Card>
+      )}
+
+      {/* Renders nothing unless the engine reports devices nobody owns, which
+          on a single-account hub is never — that hub sees its whole fleet
+          without claiming anything. See ClaimableDevices. */}
+      {currentAccount && (
+        <ClaimableDevices
+          accountId={currentAccount.id}
+          onClaimed={() => void engineFleet().then(setEngine)}
+        />
       )}
 
       {/* Above the list, because a driver that is down explains a whole block
@@ -428,6 +439,14 @@ function DetailPanel({ row, onPairedRefresh }: { row: Row; onPairedRefresh: () =
           <ControllerDetail row={row} onPairedRefresh={onPairedRefresh} />
         )}
         {row.source === 'engine' && <EngineDetail key={row.id} row={row} />}
+        {row.source === 'engine' && accountId && (
+          <ReleaseDeviceButton
+            accountId={accountId}
+            deviceKey={row.engine.key}
+            deviceName={row.engine.name || row.engine.key}
+            onReleased={onPairedRefresh}
+          />
+        )}
       </div>
     </Card>
   );

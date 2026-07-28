@@ -9,7 +9,6 @@ package store
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 )
 
@@ -80,29 +79,6 @@ func (s *Store) ReleaseDevice(ctx context.Context, deviceKey, accountID string) 
 		return ErrDeviceNotClaimed
 	}
 	return nil
-}
-
-// DeviceOwner returns the account that owns deviceKey, or ErrDeviceNotClaimed.
-//
-// This is the lookup the engine's per-device gate makes. It returns the
-// account rather than a boolean so a caller can distinguish "yours",
-// "somebody else's" and "unclaimed" — three states that warrant three
-// different answers.
-func (s *Store) DeviceOwner(ctx context.Context, deviceKey string) (*DeviceClaim, error) {
-	var c DeviceClaim
-	var by sql.NullString
-	err := s.db.QueryRowContext(ctx,
-		`SELECT device_key, account_id, claimed_by, label, claimed_at
-		 FROM device_ownership WHERE device_key = ?`, deviceKey).
-		Scan(&c.DeviceKey, &c.AccountID, &by, &c.Label, &c.ClaimedAt)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrDeviceNotClaimed
-	}
-	if err != nil {
-		return nil, err
-	}
-	c.ClaimedBy = by.String
-	return &c, nil
 }
 
 // DeviceKeysForAccount is every device key this account has claimed.

@@ -104,33 +104,35 @@ func TestASecondAccountCannotSeeOrDriveTheHubsDevices(t *testing.T) {
 	accessA, _ := register(t, h, "first@x.com")
 	accessB, _ := register(t, h, "second@x.com")
 
-	for _, p := range engineProbes("mock:lamp-1") {
-		rec, out := doJSON(t, h, p.method, p.path, accessB, p.body)
-		if rec.Code != http.StatusForbidden || out["error"] != "not_engine_authority" {
-			t.Errorf(`%s %s = %d %v, want 403 not_engine_authority.
+	// The LISTING is a 200 with an empty fleet, not a refusal — and that
+	// distinction is the ownership model's, not a weakening of this one.
+	// A member who has claimed nothing genuinely has no devices; answering 403
+	// would tell them the engine is off-limits when in fact they may claim any
+	// unclaimed device on it (see deviceclaims_test.go). What must NOT happen
+	// is the thing that used to: seeing the hub's whole fleet.
+	for _, access := range []string{accessA, accessB} {
+		rec, out := doJSON(t, h, "GET", "/v1/engine/devices", access, nil)
+		if rec.Code != http.StatusOK {
+			t.Errorf("listing for an account that owns nothing = %d %v, want 200", rec.Code, out)
+		}
+		if devs, _ := out["devices"].([]any); len(devs) != 0 {
+			t.Errorf(`an account that has claimed nothing sees %d devices.
 
-The engine is hub-wide and has no way to say which account a device belongs to,
-so a member of one account among several holds no authority over it. Before this
-gate existed, this exact request listed every device on the hub — and the same
-request against mock:mower-1 with confirm returned 200 at tier
-hazardous-motion.`, p.method, p.path, rec.Code, out)
+Before ownership existed, this exact request listed every device on the hub —
+and the same request against mock:mower-1 with confirm returned 200 at tier
+hazardous-motion. Neither account is privileged here: the rule is not "the
+oldest account wins", it is that an unclaimed device belongs to nobody.`, len(devs))
 		}
 	}
 
-	// And the first account is refused too. The rule is not "the oldest
-	// account wins" — neither of them has hub-wide authority, and quietly
-	// privileging one would be a tenancy model invented in a gate.
-	rec, out := doJSON(t, h, "GET", "/v1/engine/devices", accessA, nil)
-	if rec.Code != http.StatusForbidden {
-		t.Errorf("the first-registered account kept engine access on a two-account hub: %d %v",
-			rec.Code, out)
-	}
-
-	// A distinct code, not an empty fleet: "you may not see these" and "there
-	// are none" are different answers, and a console that conflated them would
-	// tell an operator their devices had vanished.
-	if out["error"] == nil {
-		t.Error("refusal carries no error code for a console to explain")
+	// The per-device routes DO refuse, with a code a console can explain. An
+	// empty list and a refusal are different answers and both are needed:
+	// one says "you own nothing", the other says "not this one".
+	for _, p := range engineProbes("mock:lamp-1")[1:] {
+		rec, out := doJSON(t, h, p.method, p.path, accessB, p.body)
+		if rec.Code != http.StatusForbidden || out["error"] != "not_engine_authority" {
+			t.Errorf("%s %s = %d %v, want 403 not_engine_authority", p.method, p.path, rec.Code, out)
+		}
 	}
 }
 
@@ -161,7 +163,10 @@ func TestADisabledUserLosesTheEngine(t *testing.T) {
 	// Two accounts exist (admin's and victim's), so the victim is already
 	// outside the sole-account case — disable them and confirm the refusal
 	// holds for the stronger reason too.
-	rec, _ := doJSON(t, h, "GET", "/v1/engine/devices", victim, nil)
+	// A per-device route, because the LISTING now answers 200-with-nothing for
+	// someone who owns nothing. Actuation is where the refusal lives.
+	rec, _ := doJSON(t, h, "POST", "/v1/engine/devices/mock:lamp-1/execute", victim,
+		map[string]any{"verb": "on"})
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("fixture: victim should already be refused on a two-account hub, got %d", rec.Code)
 	}
@@ -190,6 +195,10 @@ func TestADisabledUserLosesTheEngine(t *testing.T) {
 	// authority" but "not an active user at all" — and requireEngineAuthority
 	// re-reads users.status on every request rather than trusting the claim
 	// baked into their token.
+	// engineScopeFor re-reads users.status on every request rather than
+	// trusting the claim baked into the victim's still-valid token, so even
+	// the listing — which is permissive about owning nothing — refuses a user
+	// who is no longer active.
 	if rec, _ := doJSON(t, h, "GET", "/v1/engine/devices", victim, nil); rec.Code == http.StatusOK {
 		t.Error("a disabled user still reached the engine")
 	}
@@ -212,8 +221,16 @@ func TestTheSoleAccountShortcutRequiresActualMembership(t *testing.T) {
 	// the point of the seat — so the shortcut is exercised through a plain
 	// user instead.
 	member, _ := register(t, h, "member@x.com")
-	// Two accounts now; the plain member is outside the shortcut.
-	if rec, out := doJSON(t, h, "GET", "/v1/engine/devices", member, nil); rec.Code != http.StatusForbidden {
-		t.Errorf("a second account reached the engine: %d %v", rec.Code, out)
+	// Two accounts now, so the shortcut no longer applies to anyone. The
+	// member owns nothing, so they see nothing and may drive nothing — the
+	// listing says so with an empty fleet and the actuation says so with a
+	// refusal.
+	rec, out := doJSON(t, h, "GET", "/v1/engine/devices", member, nil)
+	if devs, _ := out["devices"].([]any); rec.Code != http.StatusOK || len(devs) != 0 {
+		t.Errorf("a second account saw the hub's fleet: %d %v", rec.Code, out)
+	}
+	if rec, out := doJSON(t, h, "POST", "/v1/engine/devices/mock:lamp-1/execute", member,
+		map[string]any{"verb": "on"}); rec.Code != http.StatusForbidden {
+		t.Errorf("a second account actuated an unclaimed device: %d %v", rec.Code, out)
 	}
 }

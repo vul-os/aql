@@ -1069,6 +1069,31 @@ export const api = {
     );
   },
 
+  // Device ownership (hub/internal/httpapi/deviceclaims.go).
+  //
+  // The engine cannot infer whose a device is — a driver discovers it from a
+  // broker or a PLC, and neither carries a tenant — so ownership is asserted
+  // by an account admin and first claim wins. On a multi-account hub these
+  // are what make devices visible at all; a sole-account hub needs none of
+  // them and sees its whole fleet regardless.
+  claimableDevices: (accountId: string) =>
+    apiFetch<{ devices: EngineDevice[]; engine: boolean }>(
+      `/accounts/${accountId}/devices/claimable`,
+    ),
+
+  /** 409 `device_already_claimed` when another account got there first. */
+  deviceClaim: (accountId: string, body: { device_key: string; label?: string }) =>
+    apiFetch<{ device_key: string; label: string }>(`/accounts/${accountId}/devices/claims`, {
+      method: 'POST',
+      body,
+    }),
+
+  deviceRelease: (accountId: string, deviceKey: string) =>
+    apiFetch<void>(
+      `/accounts/${accountId}/devices/claims/${encodeURIComponent(deviceKey)}`,
+      { method: 'DELETE' },
+    ),
+
   // Members
   accountMembers: (accountId: string) =>
     apiFetch<{ members: AccountMemberRow[] }>(`/accounts/${accountId}/members`),

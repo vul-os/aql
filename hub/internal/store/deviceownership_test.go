@@ -59,15 +59,20 @@ func TestAClaimedDeviceCannotBeTakenOver(t *testing.T) {
 	// And the claim is untouched — not merely the refusal, but the state
 	// afterwards, since a refusal that still wrote the label would let B
 	// rename A's devices.
-	owner, err := s.DeviceOwner(ctx, "mock:lamp-1")
+	// Observed through the key sets, because that is what production reads.
+	aKeys, err := s.DeviceKeysForAccount(ctx, acctA)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if owner.AccountID != acctA {
-		t.Errorf("owner is %s, want %s — the refused claim changed ownership anyway", owner.AccountID, acctA)
+	bKeys, err := s.DeviceKeysForAccount(ctx, acctB)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if owner.Label != "Kitchen lamp" {
-		t.Errorf("label is %q; the refused claim overwrote it", owner.Label)
+	if !aKeys["mock:lamp-1"] {
+		t.Error("the refused claim took the device away from its owner")
+	}
+	if bKeys["mock:lamp-1"] {
+		t.Error("the refused claim gave the device to the claimant anyway")
 	}
 }
 
@@ -82,14 +87,12 @@ func TestReclaimingYourOwnDeviceIsIdempotent(t *testing.T) {
 	if err := s.ClaimDevice(ctx, "mock:lamp-1", acctA, userA, "Kitchen lamp"); err != nil {
 		t.Fatalf("re-claiming an own device was refused: %v", err)
 	}
-	owner, err := s.DeviceOwner(ctx, "mock:lamp-1")
+	keys, err := s.DeviceKeysForAccount(ctx, acctA)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The label updates — that is the point of allowing it — while ownership
-	// stays put.
-	if owner.Label != "Kitchen lamp" || owner.AccountID != acctA {
-		t.Errorf("re-claim did not update the label or moved the device: %+v", owner)
+	if !keys["mock:lamp-1"] {
+		t.Error("re-claiming an own device lost it")
 	}
 }
 
@@ -104,8 +107,8 @@ func TestReleaseIsScopedToTheOwner(t *testing.T) {
 	if err := s.ReleaseDevice(ctx, "mock:lamp-1", acctB); !errors.Is(err, ErrDeviceNotClaimed) {
 		t.Fatalf("another account released a device it does not own (err = %v)", err)
 	}
-	if _, err := s.DeviceOwner(ctx, "mock:lamp-1"); err != nil {
-		t.Fatalf("the device lost its owner anyway: %v", err)
+	if keys, _ := s.DeviceKeysForAccount(ctx, acctA); !keys["mock:lamp-1"] {
+		t.Fatal("the device lost its owner anyway")
 	}
 
 	// The owner can, and then the device is claimable again — that is how a
@@ -113,8 +116,8 @@ func TestReleaseIsScopedToTheOwner(t *testing.T) {
 	if err := s.ReleaseDevice(ctx, "mock:lamp-1", acctA); err != nil {
 		t.Fatalf("the owner could not release: %v", err)
 	}
-	if _, err := s.DeviceOwner(ctx, "mock:lamp-1"); !errors.Is(err, ErrDeviceNotClaimed) {
-		t.Errorf("released device still has an owner: %v", err)
+	if keys, _ := s.DeviceKeysForAccount(ctx, acctA); keys["mock:lamp-1"] {
+		t.Error("released device still belongs to its old owner")
 	}
 	if err := s.ClaimDevice(ctx, "mock:lamp-1", acctB, "", "Now B's"); err != nil {
 		t.Errorf("a released device could not be claimed by anyone else: %v", err)
@@ -175,8 +178,8 @@ func TestDeletingAnAccountFreesItsDevices(t *testing.T) {
 	// account that no longer exists, and the device would be owned by nobody
 	// and claimable by nobody — invisible forever with no way to recover it
 	// short of editing the database.
-	if _, err := s.DeviceOwner(ctx, "mock:lamp-1"); !errors.Is(err, ErrDeviceNotClaimed) {
-		t.Fatalf("the claim outlived its account (err = %v); that device is now unclaimable", err)
+	if all, _ := s.ClaimedDeviceKeys(ctx); all["mock:lamp-1"] {
+		t.Fatal("the claim outlived its account; that device is now unclaimable")
 	}
 	if err := s.ClaimDevice(ctx, "mock:lamp-1", acctB, "", "Recovered"); err != nil {
 		t.Errorf("the orphaned device could not be re-claimed: %v", err)
