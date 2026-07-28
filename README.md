@@ -72,7 +72,7 @@ flowchart LR
 | | |
 |---|---|
 | 🔌 **One device model, seven kinds** | Camera, lighting, robot, climate, energy, sensor and access — one engine with a closed capability catalogue, so the console renders any device with no protocol-specific code. |
-| 📡 **Real protocol drivers** | **MQTT** — which also reaches **Zigbee** and **Z-Wave** through a `zigbee2mqtt` / `zwave-js-ui` bridge, with no radio in the hub — plus **Modbus TCP**, **ONVIF** cameras and **generic HTTP** for anything with a REST endpoint. Bridge discovery reads your device list rather than you typing forty of them. |
+| 📡 **Real protocol drivers** | **MQTT** — which also reaches **Zigbee** and **Z-Wave** through a `zigbee2mqtt` / `zwave-js-ui` bridge, with no radio in the hub — plus **Modbus TCP**, **ONVIF** cameras and **generic HTTP** for anything with a REST endpoint. Bridge *discovery* reads a `zigbee2mqtt` device list so you don't type forty of them; Z-Wave devices are reachable the same way but configured by topic, because only zigbee2mqtt's announcement format is decoded. |
 | ⚙️ **Automations that can't run away** | `trigger → condition → action`, a scheduler that survives restarts, per-rule cooldowns, and a breaker that retires a rule that keeps failing — under a **compile-time ceiling** on what an unattended rule may actuate. No automation can open a gate; that's structural, not a setting. |
 | ⚡ **Energy metering that won't flatter you** | Ingestion, hour/day/month rollups, source-mix accounting across grid, solar and battery. An hour nobody measured reads as **null**, never zero, and the chart draws it as a gap — an outage and a house using nothing are different facts. |
 | 🚪 **Access control, end to end** | Ed25519-signed commands, a controller that pins your hub's key at pairing, per-member time windows, geofence rules, temporary grants, and **offline emergency access** that works with the network down. |
@@ -143,7 +143,10 @@ Drivers are selected by flag and configured from one JSON file:
 ```
 
 Already running `zigbee2mqtt`? The hub can read your device list off it instead
-of you transcribing it. See [Devices](site/docs/devices.md).
+of you transcribing it. `zwave-js-ui` devices work too, but discovery does not
+read them — it decodes zigbee2mqtt's announcement format only, so a Z-Wave
+device is configured by topic like any other MQTT device. See
+[Devices](site/docs/devices.md).
 
 ### Pair a controller
 

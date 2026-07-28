@@ -172,7 +172,16 @@ func TestSuggestedConfigIsWhatAnOperatorWouldHaveTyped(t *testing.T) {
 
 // A silent bridge and a bridge with no devices are different answers, and an
 // operator debugging an empty result needs to know which they got.
-func TestSilentBridgesAreDistinguishedFromEmptyOnes(t *testing.T) {
+func TestTheThreeAnswersADiscoveryPassCanGive(t *testing.T) {
+	// "No devices", "no bridge" and "a bridge we cannot read" are three
+	// different things, and an operator debugging an empty result is sent to a
+	// different place by each.
+	//
+	// The third used to be reported as the second. zwave-js-ui was listed as
+	// SILENT, which means "we asked correctly and it did not answer" — so the
+	// honest reading was to go and check whether the bridge was running. In
+	// fact parseAnnouncement decodes only zigbee2mqtt's array shape, so that
+	// bridge could have been publishing perfectly and would still never appear.
 	b := newFakeBroker()
 	cfg := Config{
 		BrokerAddr: "broker:1883", ClientID: "aql", CommandQoS: QoSAtLeastOnce,
@@ -185,15 +194,57 @@ func TestSilentBridgesAreDistinguishedFromEmptyOnes(t *testing.T) {
 		done <- res
 	}()
 	time.Sleep(120 * time.Millisecond)
-	// zigbee2mqtt answers with an empty list; zwave-js-ui says nothing at all.
+	// zigbee2mqtt answers, with an empty list: a bridge that is running and has
+	// nothing paired.
 	b.push(t, "zigbee2mqtt/bridge/devices", `[]`, 0)
 
 	res := <-done
+
 	if len(res.BridgesSeen) != 1 || res.BridgesSeen[0] != "zigbee2mqtt" {
 		t.Errorf("BridgesSeen = %v, want the one that answered", res.BridgesSeen)
 	}
-	if len(res.BridgesSilent) != 1 || res.BridgesSilent[0] != "zwave-js-ui" {
-		t.Errorf("BridgesSilent = %v, want the one that did not", res.BridgesSilent)
+	if len(res.BridgesSilent) != 0 {
+		t.Errorf("BridgesSilent = %v; nothing here was asked in a language it speaks "+
+			"and then stayed quiet", res.BridgesSilent)
+	}
+	if len(res.BridgesUnreadable) != 1 || res.BridgesUnreadable[0] != "zwave-js-ui" {
+		t.Errorf("BridgesUnreadable = %v, want zwave-js-ui — its format is not decoded, "+
+			"which is not the same as it being absent", res.BridgesUnreadable)
+	}
+	// And the operator is told what to do instead, rather than left with a gap.
+	var explained bool
+	for _, n := range res.Notes {
+		if strings.Contains(n, "zwave-js-ui") && strings.Contains(n, "configure them by topic") {
+			explained = true
+		}
+	}
+	if !explained {
+		t.Errorf("no note explains the unreadable bridge: %v", res.Notes)
+	}
+}
+
+// A bridge that CAN be read and simply did not answer is still silent — the
+// distinction above must not have collapsed the other way.
+func TestAParseableBridgeThatSaysNothingIsSilent(t *testing.T) {
+	b := newFakeBroker()
+	cfg := Config{
+		BrokerAddr: "broker:1883", ClientID: "aql", CommandQoS: QoSAtLeastOnce,
+		Dial: b.dial, Logf: func(string, ...any) {},
+	}
+
+	done := make(chan ScanResult, 1)
+	go func() {
+		res, _ := Scan(context.Background(), cfg, 300*time.Millisecond)
+		done <- res
+	}()
+	res := <-done
+
+	if len(res.BridgesSeen) != 0 {
+		t.Errorf("BridgesSeen = %v, want none", res.BridgesSeen)
+	}
+	if len(res.BridgesSilent) != 1 || res.BridgesSilent[0] != "zigbee2mqtt" {
+		t.Errorf("BridgesSilent = %v, want zigbee2mqtt — it is readable and said nothing",
+			res.BridgesSilent)
 	}
 }
 

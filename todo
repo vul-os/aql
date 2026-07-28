@@ -485,6 +485,27 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 - The fail-closed sweep is now complete: the nonce store's wiring, state.go's rollback
       (a real defect), and this. Three claims — one was false, two were true-but-unwired.
 
+## bridge discovery told operators the wrong thing
+- [x] KnownBridges lists zigbee2mqtt AND zwave-js-ui, but parseAnnouncement decodes ONE
+      shape: zigbee2mqtt's retained JSON array on `<prefix>/bridge/devices`. zwave-js-ui
+      does not publish that, so it was always classified SILENT — which the code's own
+      comment defines as "subscribed to and stayed silent", i.e. we asked correctly and it
+      did not answer. An operator reading that goes to check whether their bridge is
+      running. It was running; we cannot read it whatever it publishes.
+- [x] Added the third answer: BridgesUnreadable, plus a note telling the operator the
+      devices are still reachable and to configure them by topic. "Did not answer" and
+      "answered in a language we do not speak" send you to different places.
+- NOTE: the existing test ENCODED the wrong classification — it asserted zwave-js-ui lands
+      in BridgesSilent. Rewritten to cover all three states, including a genuinely silent
+      readable bridge, so the distinction cannot collapse in either direction.
+- NOTE: deliberately did NOT implement zwave-js-ui discovery. Its format is a configurable
+      prefix with per-node topics, not a z2m-style array; writing a parser for a format I
+      cannot verify against a real bridge would be guessing, and a wrong guess here
+      proposes capabilities, which is how a tier gets assigned. Narrowing the claim is the
+      honest move until someone has one to test against.
+- README and site/docs said "bridge discovery reads your device list" right after naming
+      both bridges. Corrected to name the one it reads.
+
 ## spec-derived checks
 The technique that found the 2^53 rounding: derive expected behaviour from proto/*.md
 and check the code against it, rather than checking the code against itself. The vectors

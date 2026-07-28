@@ -62,9 +62,27 @@ import (
 // a polling interval.
 const DefaultDiscoveryWindow = 5 * time.Second
 
-// KnownBridges are the topic prefixes Scan understands, in the spelling the
+// KnownBridges are the topic prefixes Scan subscribes to, in the spelling the
 // bridges themselves use.
+//
+// Subscribing is not the same as understanding. See parseableBridges.
 var KnownBridges = []string{"zigbee2mqtt", "zwave-js-ui"}
+
+// parseableBridges are the bridges whose announcement format this scanner can
+// actually decode.
+//
+// Only zigbee2mqtt. parseAnnouncement decodes ONE shape — the retained JSON
+// array of devices with `friendly_name` / `ieee_address` / `definition.exposes`
+// that zigbee2mqtt publishes on `<prefix>/bridge/devices`. zwave-js-ui does not
+// publish that, so its devices are configured by topic like any other MQTT
+// device rather than discovered.
+//
+// This distinction exists because reporting zwave-js-ui as SILENT was worse
+// than reporting nothing. Silent means "we asked correctly and it did not
+// answer", which sends an operator to check whether their bridge is running.
+// The truth is that we cannot read its format whatever it publishes, and that
+// is a different thing to go and fix.
+var parseableBridges = map[string]bool{"zigbee2mqtt": true}
 
 // Candidate is one device a bridge announced.
 //
@@ -106,6 +124,11 @@ type ScanResult struct {
 	// debugging an empty result needs to know which they got.
 	BridgesSeen   []string
 	BridgesSilent []string
+	// BridgesUnreadable are known bridges this scanner subscribes to but whose
+	// announcement format it cannot decode — a third answer that used to be
+	// reported as the second. "Did not answer" and "answered in a language we
+	// do not speak" send an operator to different places.
+	BridgesUnreadable []string
 	// Notes carries anything that was skipped and why, so a device missing from
 	// the result is explained rather than merely absent.
 	Notes []string
@@ -167,9 +190,17 @@ func Scan(ctx context.Context, cfg Config, window time.Duration) (ScanResult, er
 	defer mu.Unlock()
 
 	for _, b := range KnownBridges {
-		if seen[b] {
+		switch {
+		case seen[b]:
 			res.BridgesSeen = append(res.BridgesSeen, b)
-		} else {
+		case !parseableBridges[b]:
+			// Not silent — unreadable. Saying "silent" would send an operator
+			// to debug a bridge that is working perfectly well.
+			res.BridgesUnreadable = append(res.BridgesUnreadable, b)
+			res.Notes = append(res.Notes, b+": discovery cannot read this bridge's "+
+				"announcement format, so its devices are not listed here. They are still "+
+				"reachable — configure them by topic like any other MQTT device.")
+		default:
 			res.BridgesSilent = append(res.BridgesSilent, b)
 		}
 	}

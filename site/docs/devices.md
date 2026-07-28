@@ -101,7 +101,7 @@ Adapters, and what each one is:
 | `modbus` | Energy meters, industrial/building sensors | **Ships, TCP only.** Read-only — no serial/RTU, though a TCP-to-RTU bridge covers the common case |
 | `mqtt` | Broad IoT/DIY ecosystem, and Zana devices. Also how Zigbee is reached, via a zigbee2mqtt bridge | **Ships.** Reads and executes; verbs come from the capability catalogue, never invented from a topic |
 | `camera` | IP cameras over ONVIF | **Ships, partially.** Discovery, stream-address resolution and an RTSP probe. Receives no frames |
-| Zigbee / Z-Wave | Battery sensors, switches, bulbs, older ecosystems | **Reachable now, through a bridge.** `zigbee2mqtt` or `zwave-js-ui` owns the radio and republishes to MQTT; the hub has no radio and is not getting one |
+| Zigbee / Z-Wave | Battery sensors, switches, bulbs, older ecosystems | **Reachable now, through a bridge.** `zigbee2mqtt` or `zwave-js-ui` owns the radio and republishes to MQTT; the hub has no radio and is not getting one. **Discovery reads zigbee2mqtt only** — it decodes that bridge's `bridge/devices` announcement, and reports any other known bridge as unreadable rather than silent, so a Z-Wave fleet is configured by topic instead of listed for you |
 | Matter | Modern smart-home devices | **No code.** Needs a certified device and a stack |
 
 A driver never decides what a device may be asked to do. Capabilities come from the

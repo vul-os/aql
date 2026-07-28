@@ -449,6 +449,19 @@ export const FEATURES = [
     ],
   },
   {
+    // Discovery decodes ONE bridge format. Listing a second known bridge as
+    // "silent" told an operator to debug a bridge that was working fine.
+    id: 'bridge-discovery-scope-honest',
+    label: 'Discovery decodes zigbee2mqtt only, and reports other known bridges as unreadable rather than silent',
+    docStatus: 'shipped',
+    docRefs: ['site/docs/devices.md — "Discovery reads zigbee2mqtt only"'],
+    evidence: [
+      { file: 'hub/internal/devices/mqtt/discover.go', pattern: 'parseableBridges' },
+      { file: 'hub/internal/devices/mqtt/discover.go', pattern: 'BridgesUnreadable' },
+      { file: 'hub/internal/devices/mqtt/discover_test.go', pattern: 'TestTheThreeAnswersADiscoveryPassCanGive' },
+    ],
+  },
+  {
     // The one wiring in the GPIO driver no CI machine can exercise: the
     // setCloexec call sits behind an ioctl that needs a real gpiochip. The
     // function is proven by a hardware-free test; the CALL was not.
