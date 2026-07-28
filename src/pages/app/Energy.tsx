@@ -35,6 +35,7 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import { PageHeader } from './AppLayout';
 import { Card, StatBlock } from '@/components/ui/Card';
+import { ChannelConfig } from '@/components/energy/ChannelConfig';
 import { EngineChip, InertNote, Meter, StateDot } from '@/components/device/StatusMarks';
 import {
   availabilityState,
@@ -116,6 +117,12 @@ export default function EnergyPage() {
       ) : (
         <LiveEnergy state={state} />
       )}
+
+      {/* Below the figures, because it is what they are derived from — and it
+          renders regardless of whether the series loaded, since a channel
+          misconfiguration is one reason the series above could be empty or
+          wrong in the first place. */}
+      <ChannelConfig accountId={currentAccount.id} />
     </>
   );
 }

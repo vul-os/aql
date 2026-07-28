@@ -56,10 +56,6 @@ const ALLOWED_UNCALLED: Record<string, string> = {
   accountCreate:
     'Account creation happens through registration (an account is created with its owner); ' +
     'there is no second path in the console that creates a bare account.',
-  energyChannels:
-    'The Energy screen renders series and source mix, which is what a resident reads. The ' +
-    'raw per-channel listing is an operator-level view that does not exist yet — if that ' +
-    'screen is built, remove this entry rather than widening it.',
 };
 
 /**

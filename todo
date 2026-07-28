@@ -254,10 +254,24 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       quiet house. Now above the device list, rendering the driver's OWN detail string
       (the only line that says what to fix) and refusing to read an empty driver map as
       healthy. Both tampered.
-- [ ] energyChannels is the last allowlisted "no screen yet". The Energy screen shows
-      series and mix, which is what a resident reads; the raw per-channel listing is an
-      operator view. Build it or decide it is genuinely not wanted — do not leave the
-      exemption standing as a decision nobody made.
+- [x] energyChannels built rather than declined. The argument that settled it: the source
+      MIX is derived entirely from per-channel `source`/`flow`, and those are ASSIGNMENTS
+      somebody made, not measurements — a solar meter tagged as grid produces a chart that
+      is confidently and invisibly wrong, with nowhere to look. The panel also surfaces
+      `enabled` (a disabled channel contributes nothing, and its absence from the chart is
+      indistinguishable from a meter reading zero) and the interval/gap-tolerance pair
+      that produces the quality flags the screen already shows without saying where they
+      come from. Read-only on purpose: editing a channel's source or scale rewrites what
+      historical buckets MEAN, which is a decision with a paper trail, not a dropdown.
+- NOTE: the api-reachability allowlist is now down to four entries, all genuine
+      design decisions (refresh is redundant with the request interceptor; grant,
+      accountsList and accountCreate have no console path by design). Every entry that was
+      really unfinished work has been built.
+- LESSON, twice now: a source-level guard can be satisfied by the component's OWN doc
+      comment. The "contributes nothing" check passed against a version with the
+      user-facing line deleted, because the phrase also appears in the file header —
+      exactly the flaw the automations agent hit with `confirm(`. Assert a string that
+      only the rendered JSX contains, and always tamper to confirm.
 
 ## spec-derived checks
 The technique that found the 2^53 rounding: derive expected behaviour from proto/*.md
