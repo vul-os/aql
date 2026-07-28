@@ -506,6 +506,26 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 - README and site/docs said "bridge discovery reads your device list" right after naming
       both bridges. Corrected to name the one it reads.
 
+## automations: the coupling that looks like an oddity
+- [x] "Nothing is retried" holds WITHIN a run — TestIndeterminateIsRecordedAndNotRetried
+      covers that. But the scheduler calls Fire again on the next occurrence, and the only
+      thing between an unknown outcome and a second actuation is LastFiredAt being stamped,
+      because MinIntervalS is gated on it. That coupling was untested.
+- NOTE: it looks like an oddity, which is why it needed a test with the reasoning in it.
+      "Only stamp LastFiredAt on success, since nothing was confirmed to have happened"
+      reads as a correctness fix and is exactly the double-actuation the package doc exists
+      to prevent. Tampering it that way fails with the reason spelled out.
+- [x] Audited the other item-(1) drivers' claims while here. httpdev is SOUND and tested:
+      a transport error before the request was written is unreachable, after it is
+      INDETERMINATE, and a 5xx on a non-idempotent action is indeterminate too — with
+      tests for each. Nothing to do, which is worth recording so the next pass does not
+      re-audit it.
+- [x] check:claims docRef matching now strips line-leading `//`, `*` and `>` before
+      comparing. A quote from a comment that WRAPS became "... unknown // physical ..."
+      once the newline collapsed, so it never matched and the only remedy was shortening
+      the quote — which silently narrows what the reference pins. Hit three times in one
+      sitting before fixing the tool instead of the quotes.
+
 ## spec-derived checks
 The technique that found the 2^53 rounding: derive expected behaviour from proto/*.md
 and check the code against it, rather than checking the code against itself. The vectors

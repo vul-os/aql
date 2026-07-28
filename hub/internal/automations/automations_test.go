@@ -817,3 +817,59 @@ func TestCooldownSkipsARunWithoutSpendingTheBudget(t *testing.T) {
 		t.Fatalf("after the cooldown: %s", run.Outcome)
 	}
 }
+
+// An indeterminate actuation must start the cooldown, so the rule cannot fire
+// again on the next tick and repeat something that may already have happened.
+//
+// The package doc's whole argument for never retrying is that "retrying an
+// unknown physical outcome is how a gate gets opened twice". Fire() honours it
+// within a run — TestIndeterminateIsRecordedAndNotRetried covers that — but the
+// scheduler calls Fire again on the very next occurrence, and the only thing
+// standing between an unknown outcome and a second actuation is LastFiredAt
+// being set, because MinIntervalS is gated on it.
+//
+// So "indeterminate counts as a fire" is load-bearing and looks like an
+// oddity: a reasonable-sounding change is to only stamp LastFiredAt on
+// success, since nothing was confirmed to have happened. That change reads as
+// a correctness fix and is precisely the double-actuation this design exists
+// to prevent.
+func TestAnIndeterminateActuationStartsTheCooldown(t *testing.T) {
+	h := newHarness(t)
+	r := h.rule("gate", dailyAt(6*60), Action{DeviceKey: "test:bot-1", Verb: devices.VerbStart})
+	r.MinIntervalS = 600
+	saved, _ := h.eng.SaveRule(h.ctx, r)
+
+	h.drv.fail(devices.ErrIndeterminate)
+	run, _ := h.eng.Fire(h.ctx, h.reload(saved.ID), CauseManual, 0)
+	if run.Outcome != OutcomeIndeterminate {
+		t.Fatalf("first run: %s, want indeterminate", run.Outcome)
+	}
+
+	// The rule must now be inside its cooldown, exactly as if it had succeeded.
+	if got := h.reload(saved.ID).LastFiredAt; got == 0 {
+		t.Fatal("LastFiredAt was not stamped for an indeterminate outcome. The cooldown is " +
+			"gated on it, so the next tick would actuate again — repeating an action the " +
+			"driver could not confirm either way.")
+	}
+
+	h.drv.fail(nil) // clear the injected failure
+	h.clock.advance(time.Minute)
+	before := len(h.drv.Calls())
+	run, err := h.eng.Fire(h.ctx, h.reload(saved.ID), CauseManual, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.Outcome != OutcomeSkipped || run.Reason != ReasonCooldown {
+		t.Fatalf("second run: %s/%s, want skipped/cooldown", run.Outcome, run.Reason)
+	}
+	if got := len(h.drv.Calls()); got != before {
+		t.Fatalf("the driver was called again %d time(s) while inside the cooldown", got-before)
+	}
+
+	// And once the cooldown genuinely expires the rule works normally: this is
+	// a delay, not a latch.
+	h.clock.advance(10 * time.Minute)
+	if run, _ := h.eng.Fire(h.ctx, h.reload(saved.ID), CauseManual, 0); run.Outcome != OutcomeExecuted {
+		t.Fatalf("after the cooldown: %s", run.Outcome)
+	}
+}

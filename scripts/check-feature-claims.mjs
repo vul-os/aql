@@ -229,7 +229,20 @@ function checkDocRefs(feature) {
       problems.push(`names ${rel}, which does not exist`);
       continue;
     }
-    const flat = body.replace(/\s+/g, ' ');
+    // Flatten for matching, stripping the markers that a WRAPPED quote runs
+    // into: `//` in Go, `*` in a block comment, `>` in a markdown blockquote.
+    //
+    // Whitespace alone was not enough. A claim quoted from a source comment
+    // that wraps across two lines becomes "... unknown // physical ..." once
+    // the newline collapses, so the quote never matched and the only remedy
+    // was to shorten every quote until it fitted on one line. That happened
+    // three times in one sitting, each time silently narrowing what the
+    // reference actually pinned — which is the opposite of the point.
+    const flat = body
+      .split('\n')
+      .map((line) => line.replace(/^\s*(?:\/\/+|\*|>)+\s?/, ''))
+      .join(' ')
+      .replace(/\s+/g, ' ');
     for (const [, quoted] of ref.matchAll(/"([^"]{12,})"/g)) {
       if (!flat.includes(quoted.replace(/\s+/g, ' '))) {
         problems.push(`quotes ${JSON.stringify(quoted)} but ${rel} does not contain it`);

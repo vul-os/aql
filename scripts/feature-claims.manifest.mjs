@@ -449,6 +449,20 @@ export const FEATURES = [
     ],
   },
   {
+    // "Nothing is retried" holds within a run, and the scheduler calls Fire
+    // again on the next occurrence. The only thing between an unknown outcome
+    // and a second actuation is LastFiredAt being stamped, because the cooldown
+    // is gated on it — a coupling that looks like an oddity and is the design.
+    id: 'indeterminate-starts-the-cooldown',
+    label: 'An indeterminate actuation starts the cooldown, so an unconfirmed action is not repeated on the next tick',
+    docStatus: 'shipped',
+    docRefs: ['hub/internal/automations/automations.go — "retrying an unknown physical outcome is how a gate gets opened twice"'],
+    evidence: [
+      { file: 'hub/internal/automations/automations_test.go', pattern: 'TestAnIndeterminateActuationStartsTheCooldown' },
+      { file: 'hub/internal/automations/engine.go', pattern: 'case OutcomeFailed, OutcomeIndeterminate:' },
+    ],
+  },
+  {
     // Discovery decodes ONE bridge format. Listing a second known bridge as
     // "silent" told an operator to debug a bridge that was working fine.
     id: 'bridge-discovery-scope-honest',
@@ -553,7 +567,7 @@ export const FEATURES = [
     id: 'api-token-surface-pinned',
     label: 'The set of API-token-reachable routes is pinned, and a read scope can never guard a mutation',
     docStatus: 'shipped',
-    docRefs: ['hub/internal/httpapi/server.go — "are the ONLY ones an API token can"'],
+    docRefs: ['hub/internal/httpapi/server.go — "are the ONLY ones an API token can reach"'],
     evidence: [
       { file: 'hub/internal/httpapi/tokenroutes_test.go', pattern: 'TestOnlyTheDeclaredRoutesAreReachableByAnAPIToken' },
       { file: 'hub/internal/httpapi/tokenroutes_test.go', pattern: 'TestAReadScopeNeverGuardsAMutation' },
