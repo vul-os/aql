@@ -246,6 +246,19 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       original. Removed: reclamation happens at Open and past the threshold, both
       automatic, and a second entry point is just a second thing to forget to call.
 
+## console surfaces for things the hub already served
+- [x] engineHealth. Per-DRIVER health had no screen: the Devices page renders per-device
+      state, and that cannot express a driver being down as a whole. An unreachable MQTT
+      broker does not look like "the MQTT driver is down since 14:02" — it looks like a
+      block of devices whose readings stop being fresh, which is indistinguishable from a
+      quiet house. Now above the device list, rendering the driver's OWN detail string
+      (the only line that says what to fix) and refusing to read an empty driver map as
+      healthy. Both tampered.
+- [ ] energyChannels is the last allowlisted "no screen yet". The Energy screen shows
+      series and mix, which is what a resident reads; the raw per-channel listing is an
+      operator view. Build it or decide it is genuinely not wanted — do not leave the
+      exemption standing as a decision nobody made.
+
 ## spec-derived checks
 The technique that found the 2^53 rounding: derive expected behaviour from proto/*.md
 and check the code against it, rather than checking the code against itself. The vectors

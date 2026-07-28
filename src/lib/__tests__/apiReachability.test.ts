@@ -60,9 +60,6 @@ const ALLOWED_UNCALLED: Record<string, string> = {
     'The Energy screen renders series and source mix, which is what a resident reads. The ' +
     'raw per-channel listing is an operator-level view that does not exist yet — if that ' +
     'screen is built, remove this entry rather than widening it.',
-  engineHealth:
-    'Device-engine health is surfaced per device on the Devices screen from the device ' +
-    'payload; the aggregate health endpoint has no screen of its own yet.',
 };
 
 /**

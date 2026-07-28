@@ -40,6 +40,7 @@ import {
   StateDot,
   StateLabel,
 } from '@/components/device/StatusMarks';
+import { DriverHealth } from '@/components/device/DriverHealth';
 import {
   availabilityLabel,
   availabilityState,
@@ -225,6 +226,12 @@ export default function DevicesPage() {
           <p className="text-sm text-terracotta-deep">{error}</p>
         </Card>
       )}
+
+      {/* Above the list, because a driver that is down explains a whole block
+          of rows looking stale — and per-device state cannot say it. */}
+      <div className="mb-5">
+        <DriverHealth />
+      </div>
 
       <div className="mb-5 flex flex-wrap items-center gap-2">
         {kinds.map((k) => (
