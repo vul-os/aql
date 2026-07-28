@@ -433,6 +433,24 @@ export const FEATURES = [
     evidence: [{ file: 'hub/internal/store/admin.go', pattern: 'admin_audit_log' }],
   },
   {
+    // The same defect as phone-link-ceremony, four rails over: Telegram,
+    // Slack, Discord and DMTAP all resolve members through channel_identities,
+    // whose only writer (LinkChannelIdentity) had test callers and no others.
+    id: 'channel-link-ceremony',
+    label: 'Telegram/Slack/Discord identity linking by console-minted code, redeemed from the account itself',
+    docStatus: 'shipped',
+    docRefs: ['docs/PHONE-LINKING.md § 4 — "the channel-identity sibling is 0020"'],
+    evidence: [
+      { file: 'hub/internal/store/channellink.go', pattern: 'RedeemChannelLinkCode' },
+      { file: 'hub/internal/store/migrations/0020_channel_link_codes.sql', pattern: 'CREATE TABLE channel_link_codes' },
+      { file: 'hub/internal/httpapi/channellink.go', pattern: 'handleChannelLinkStart' },
+      // Wired into all three identity rails, not just defined.
+      { file: 'hub/internal/httpapi/channels_telegram.go', pattern: 'tryChannelLink' },
+      { file: 'hub/internal/httpapi/channels_slack.go', pattern: 'tryChannelLink' },
+      { file: 'hub/internal/httpapi/channels_discord.go', pattern: 'tryChannelLink' },
+    ],
+  },
+  {
     // The ceremony that makes a verified phone possible at all. Worth a claim
     // because its absence was invisible: every chat rail was built, tested and
     // documented as shipped, and inert on any real deployment, because the

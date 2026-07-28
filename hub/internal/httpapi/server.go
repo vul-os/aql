@@ -259,6 +259,13 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("GET /v1/phones/me/phones", s.requireAuth(s.handlePhonesList))
 	mux.Handle("DELETE /v1/phones/me/phones/{id}", s.requireAuth(s.handlePhoneUnlink))
 
+	// Channel identity linking (see channellink.go). Same ceremony, different
+	// binding target — and a longer code, because a channel code cannot name
+	// the account that may spend it.
+	mux.Handle("POST /v1/channels/me/link", s.requireAuth(s.handleChannelLinkStart))
+	mux.Handle("GET /v1/channels/me/identities", s.requireAuth(s.handleChannelIdentitiesList))
+	mux.Handle("DELETE /v1/channels/me/identities/{channel}/{external_id}", s.requireAuth(s.handleChannelIdentityUnlink))
+
 	// two-factor authentication (see twofactor.go). All four are session-only
 	// — an API token can never enrol, activate or remove a second factor,
 	// because requireAuth accepts JWTs only. The login-side gate is not a

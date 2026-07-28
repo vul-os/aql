@@ -1,13 +1,16 @@
 # Linking a phone number: the ceremony that has to exist first
 
-**Status: design only. No code implements this.** The hub has held phone→member
+**Status: built** (migration 0018; the channel-identity sibling is 0020 — see
+§ 4). This document was written as a design, and the reasoning below is left in
+the tense it was written in because it is *why* the built thing has the shape
+it has. The hub has held phone→member
 mapping since migration 0002 (`profile_phone_numbers`), and it is how a WhatsApp
 message gets resolved to a member who may open a gate. What has never existed is
 any way to **prove** a number belongs to the person claiming it.
 
 This document exists because the missing piece looked like a missing route for a
 long time, and it is not. `src/lib/api.ts` carried `phones()`, `phoneAdd()` and
-`slackUpdate()` for months as calls to endpoints the hub does not serve; Settings
+`slackUpdate()` for months as calls to endpoints the hub did not serve; Settings
 probed one on every visit to discover that; and the WhatsApp onboarding nudge
 sent people to a signup page with a "Connect number" button that failed for
 every user who pressed it. Building those routes would not have fixed anything,
@@ -153,10 +156,27 @@ definition not yet recognised and every access check would otherwise answer
 a test (`TestLinkCodeIsReachableBeforeTheMembershipCheck`) that fails if the
 call is moved after the check.
 
-This ceremony covers **WhatsApp only**, and that is not a phased rollout.
-Telegram, Slack and Discord identify a sender by a platform account id, not a
-phone number, so there is no number for a code to be bound to. Their identity
-binding is a separate unsolved problem — see § 5.
+This ceremony covers **WhatsApp only**, because WhatsApp's identity is a phone
+number. Telegram, Slack and Discord identify a sender by a platform account
+id, so there is no number for a code to be bound to.
+
+That was first written here as "a separate unsolved problem". It is not: the
+same two facts are available on those rails (a code proves console access, an
+inbound direct message proves control of the account), so migration 0020 runs
+the same ceremony against `channel_identities` instead of
+`profile_phone_numbers`. See `hub/internal/store/channellink.go`.
+
+**But the two are not interchangeable, and the difference is the interesting
+part.** A phone code names the number that may spend it, because the member
+knows their own number and types it in. Nobody knows their own Telegram
+numeric id — learning it is what the inbound message is *for* — so a channel
+code cannot name its target, and whoever sends it gets bound.
+
+The phone code is therefore short (six characters) because possession of the
+handset is a second factor it does not have to carry. The channel code is
+twice as long (~2^59) because there is no second factor at all: the code is
+the only thing between a stranger and someone else's gate access, and its
+console copy says so rather than treating it as a convenience string.
 
 ---
 

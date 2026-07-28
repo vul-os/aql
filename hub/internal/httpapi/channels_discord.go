@@ -111,10 +111,19 @@ func (s *Server) processDiscordMessage(ctx contextT, send channels.DiscordSender
 	}
 	txt := channels.NormalizeText(msg.Content)
 
+	// Link codes first, before the membership branch below: someone linking
+	// has no identity row yet, so that branch would answer them instead and
+	// the ceremony could never complete. See channellink.go.
+	if reply, handled := s.tryChannelLink(ctx, channels.KindDiscord, userKey, txt); handled {
+		s.discordText(ctx, send, chatID, msg.ChannelID, reply)
+		return
+	}
+
 	if profileID == "" {
 		s.discordText(ctx, send, chatID, msg.ChannelID, strings.Join([]string{
 			"This Discord account isn't linked to an Aql member yet.",
-			"Ask your admin to add Discord user id " + userKey + " in the dashboard, then send \"menu\".",
+			"In the Aql console, open Settings and generate a Discord link code,",
+			"then send it here. It looks like LINK-XXXX-XXXX-XXXX and lasts 10 minutes.",
 		}, "\n"))
 		return
 	}

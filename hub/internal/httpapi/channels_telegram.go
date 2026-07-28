@@ -90,10 +90,19 @@ func (s *Server) processTGMessage(ctx contextT, msg *channels.TGMessage) {
 	}
 	txt := channels.NormalizeText(msg.Text)
 
+	// Link codes first, before the membership branch below: someone linking
+	// has no identity row yet, so that branch would answer them instead and
+	// the ceremony could never complete. See channellink.go.
+	if reply, handled := s.tryChannelLink(ctx, channels.KindTelegram, userKey, txt); handled {
+		s.tgSendText(ctx, msg.Chat.ID, chatID, reply)
+		return
+	}
+
 	if profileID == "" {
 		s.tgSendText(ctx, msg.Chat.ID, chatID, strings.Join([]string{
 			"This Telegram account isn't linked to an Aql member yet.",
-			"Ask your admin to add Telegram id " + userKey + " in the dashboard, then send \"menu\".",
+			"In the Aql console, open Settings and generate a Telegram link code,",
+			"then send it here. It looks like LINK-XXXX-XXXX-XXXX and lasts 10 minutes.",
 		}, "\n"))
 		return
 	}

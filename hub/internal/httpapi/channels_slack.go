@@ -128,13 +128,22 @@ func (s *Server) processSlackEvent(ctx contextT, teamID string, ev *channels.Sla
 	if txt == "" {
 		return
 	}
+	// Link codes first, before the membership branch: someone linking has no
+	// identity row yet, so that branch would answer them instead and the
+	// ceremony could never complete. See channellink.go.
+	if reply, handled := s.tryChannelLink(ctx, channels.KindSlack, ev.User, txt); handled {
+		s.slackReply(ctx, chatID, channelID, reply, nil)
+		return
+	}
+
 	switch {
 	case slackHelpWords[txt]:
 		s.slackReply(ctx, chatID, channelID, channels.SlackMenu(displayName), nil)
 	case profileID == "":
 		s.slackReply(ctx, chatID, channelID, strings.Join([]string{
-			"I don't know which lintel profile this Slack user belongs to yet.",
-			"Add Slack user ID " + ev.User + " in the web dashboard, then send \"menu\".",
+			"I don't know which Aql profile this Slack user belongs to yet.",
+			"In the Aql console, open Settings and generate a Slack link code,",
+			"then send it here. It looks like LINK-XXXX-XXXX-XXXX and lasts 10 minutes.",
 		}, "\n"), nil)
 	// "close" is a first-class command word here, exactly as "open" is. Until
 	// now AccessBlocks only ever minted open_gate: buttons and this switch only

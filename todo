@@ -117,9 +117,26 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       to salt against, and six characters means the hash is not doing much work; the
       phone binding is), and the mint quota is per USER not per phone (per-phone hands
       an attacker a way to lock a victim out of their own number).
-- [ ] Telegram/Slack/Discord identity binding is UNSOLVED and separate: those rails
-      identify a sender by a platform account id, so there is no number for a code to
-      bind to. Do not present the WhatsApp ceremony as covering them.
+- [x] Telegram/Slack/Discord: SAME DEFECT, four more rails. channel_identities (0005)
+      is how those rails resolve a member, and its only writer — LinkChannelIdentity —
+      also had test callers and no others. So they were inert for the same reason.
+      I recorded this as "unsolved and separate" an hour earlier; that was wrong. The
+      same two facts exist on those rails (a code proves console access, an inbound DM
+      proves control of the account), so migration 0020 runs the ceremony against
+      channel_identities. Built + wired into all three rails.
+- NOTE: the two ceremonies are NOT interchangeable, and this is the part worth
+      remembering. A phone code names the number that may spend it, because the member
+      knows their own number. Nobody knows their own Telegram numeric id — learning it
+      is what the inbound message is FOR — so a channel code cannot name its target and
+      whoever sends it gets bound. Phone code = 6 chars (possession of the handset is
+      the second factor). Channel code = 12 chars / ~2^59 (there is NO second factor;
+      the code is the only barrier). A guard fails if anyone shortens it, and the
+      console copy tells the member not to share it.
+- NOTE: three rails' unlinked prompts told members to "ask your admin to add <id> in
+      the dashboard" — a dashboard feature that never existed, because nothing could
+      write the table it would have written to. Now they describe the real ceremony.
+- [ ] DMTAP deliberately gets NO linking ceremony: it is a scaffold with a fail-closed
+      transport, and giving it one would imply a rail that works.
 
 ## spec-derived checks
 The technique that found the 2^53 rounding: derive expected behaviour from proto/*.md

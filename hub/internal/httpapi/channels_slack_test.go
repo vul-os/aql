@@ -95,8 +95,18 @@ func TestSlackUnlinkedUser(t *testing.T) {
 	e := setupChannels(t, permissiveRL())
 	slackPost(e.h, "/webhooks/slack", slackEvent("U-STRANGER", "open", "1700000000.3"))
 	sent := e.slack.all()
-	if len(sent) != 1 || !strings.Contains(sent[0].text, "don't know which lintel profile") {
+	if len(sent) != 1 {
 		t.Fatalf("unlinked slack: %+v", sent)
+	}
+	// The prompt has to describe a ceremony that exists. It used to say "Add
+	// Slack user ID <id> in the web dashboard" — a dashboard flow that was
+	// never built, because until migration 0020 nothing in production could
+	// write channel_identities at all.
+	if !strings.Contains(sent[0].text, "LINK-") {
+		t.Errorf("the unlinked prompt does not point at the link ceremony: %q", sent[0].text)
+	}
+	if strings.Contains(sent[0].text, "web dashboard") {
+		t.Errorf("still pointing at the non-existent dashboard flow: %q", sent[0].text)
 	}
 }
 
