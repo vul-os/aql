@@ -146,6 +146,12 @@ func (s *Server) processTGMessage(ctx contextT, msg *channels.TGMessage) {
 	case tgHelpWords[txt]:
 		s.tgSendText(ctx, msg.Chat.ID, chatID, channels.TelegramMenu(displayName))
 	default:
+		// A verb chat cannot serve is answered, not redirected to a gate menu
+		// (channels/unsupported.go).
+		if v, ok := channels.UnsupportedVerb(txt); ok {
+			s.tgSendText(ctx, msg.Chat.ID, chatID, channels.UnsupportedVerbReply(v, s.channelPublicURL()))
+			return
+		}
 		s.tgSendText(ctx, msg.Chat.ID, chatID, channels.TelegramMenu(displayName))
 	}
 }

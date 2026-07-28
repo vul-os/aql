@@ -205,3 +205,52 @@ func TestWhatsAppDeniedOpenIsHonest(t *testing.T) {
 		t.Fatalf("denied open must reply honestly: %+v", sent)
 	}
 }
+
+// A member who asks for a capability chat does not serve gets told so, over
+// the real webhook.
+//
+// Before this, "turn on the porch light" fell through to the welcome menu and
+// the member was shown a list of GATES with an offer to open one. Nothing
+// actuated, so it was never dangerous — it was misleading, and the member had
+// no way to tell "I did not understand you" from "that is not a thing I do".
+func TestWhatsAppSaysWhatItCannotDo(t *testing.T) {
+	e := setupChannels(t, permissiveRL())
+
+	rec := waPost(e.h, waTextMsg(testPhoneRaw, "wamid.unsup1", "turn on the porch light", waPhoneID))
+	if rec.Code != 200 {
+		t.Fatalf("code: %d", rec.Code)
+	}
+	sent := e.wa.all()
+	if len(sent) != 1 {
+		t.Fatalf("want one reply, got %+v", sent)
+	}
+	body := sent[0].body
+	if !strings.Contains(body, "can't on") && !strings.Contains(body, "only open and close") {
+		t.Errorf("reply does not say what it cannot do: %q", body)
+	}
+	// The specific regression: it must not answer a lighting request with a
+	// gate picker.
+	if sent[0].interactive != nil {
+		t.Errorf("answered an unsupported verb with an interactive gate menu: %+v", sent[0].interactive)
+	}
+}
+
+// And the gate path is untouched: a body naming a gate verb still opens,
+// including when it also mentions something chat cannot do.
+func TestWhatsAppGateVerbStillWinsOverAnUnsupportedOne(t *testing.T) {
+	e := setupChannels(t, permissiveRL())
+
+	rec := waPost(e.h, waTextMsg(testPhoneRaw, "wamid.mixed1", "open the gate and turn on the light", waPhoneID))
+	if rec.Code != 200 {
+		t.Fatalf("code: %d", rec.Code)
+	}
+	sent := e.wa.all()
+	if len(sent) == 0 {
+		t.Fatal("no reply to a gate request")
+	}
+	for _, m := range sent {
+		if strings.Contains(m.body, "only open and close") {
+			t.Fatalf("a gate request was diverted to the unsupported-verb reply: %q", m.body)
+		}
+	}
+}

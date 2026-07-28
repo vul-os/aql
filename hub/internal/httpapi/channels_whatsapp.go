@@ -203,6 +203,17 @@ func (s *Server) waHandleText(ctx contextT, msg *channels.WAMessage, from, chatI
 		return one(to, chatID, channels.PushGateMenu(channels.VerbOpen, locations[0].Name, allGrants, portal))
 	}
 
+	// A verb the engine knows and chat cannot serve — "turn on the porch light".
+	// Answered plainly instead of with a gate menu, which would show the member
+	// a capability they did not ask for and leave them unable to tell "I did not
+	// understand you" from "that is not a thing I do". See channels/unsupported.go.
+	//
+	// After the gate branch above, never before it: a body naming open or close
+	// is routed exactly as it always was, mixed intent included.
+	if v, ok := channels.UnsupportedVerb(body); ok {
+		return text(to, chatID, channels.UnsupportedVerbReply(v, portal))
+	}
+
 	// Fallback: welcome menu — a body naming no verb at all. Also an offer to
 	// open; the member asked for nothing, so nothing is being un-done.
 	if len(locations) == 1 {

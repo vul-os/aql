@@ -316,7 +316,21 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       implementation is honest where it was not: an EnginePort beside AccessPort.
       not_implemented stays a first-class outcome, just narrower than "everything except
       gates"; robot control still has no driver.
-- [ ] NEXT, and deliberately not started in a hurry: the `actuate` package. It is now a
+- [x] §1.4's not_implemented REPLY half shipped ahead of the Port, because it has a
+      caller and the Port does not. "turn on the porch light" used to fall through to the
+      welcome menu, so a member asking about a light was shown a list of GATES and an
+      offer to open one. Nothing actuated — misleading, not dangerous — but the member
+      could not tell "I did not understand you" from "that is not a thing I do", and only
+      one of those is worth reporting to whoever runs the hub. Wired on all four rails.
+- NOTE: the verb table maps typed words onto devices.Verb CONSTANTS, not a chat-side list,
+      so it cannot describe capabilities the engine lacks. Matching is longest-phrase-first
+      (deterministic, not map-order) and on word boundaries — "alarm" must not match arm,
+      "sunset" must not match set. Both are tested; loosening to strings.Contains fires on
+      both immediately.
+- NOTE: deliberately does NOT touch the open path. A mixed body ("open the gate and turn
+      on the light") still opens the gate, exactly as before. Refusing mixed intent is a
+      real question but it is a change to the ACTUATION path, not to a fallback reply.
+- [ ] STILL NEXT: the `actuate` package. It is now a
       TWO-implementation seam rather than one, which is a bigger and better change than
       the doc describes. Build it with a caller in the same change — a Port with no
       consumer would be the sixth "built and unreachable" in a repo that has spent this

@@ -449,6 +449,24 @@ export const FEATURES = [
     ],
   },
   {
+    // §1.4's not_implemented, at the layer that exists today. The Port itself is
+    // still unbuilt; this is its reply half, and it has a caller on all four
+    // rails — a seam with no consumer would have been the sixth "built and
+    // unreachable" in this repo.
+    id: 'chat-says-what-it-cannot-do',
+    label: 'A chat message naming a verb chat cannot serve is answered plainly, not with a gate menu',
+    docStatus: 'shipped',
+    docRefs: ['docs/CHAT-COMMANDS.md § 1.4 — "The reply half of `not_implemented` now exists"'],
+    evidence: [
+      { file: 'hub/internal/channels/unsupported.go', pattern: 'func UnsupportedVerb' },
+      // Wired on every rail, not merely defined.
+      { file: 'hub/internal/httpapi/channels_whatsapp.go', pattern: 'UnsupportedVerb' },
+      { file: 'hub/internal/httpapi/channels_telegram.go', pattern: 'UnsupportedVerb' },
+      { file: 'hub/internal/httpapi/channels_slack.go', pattern: 'UnsupportedVerb' },
+      { file: 'hub/internal/httpapi/channels_discord.go', pattern: 'UnsupportedVerb' },
+    ],
+  },
+  {
     // docs/CHAT-COMMANDS.md §2.2 lists four defects in the chat targeting path
     // and now annotates each FIXED. This pins the safety-relevant one so the
     // annotation cannot become a lie: an ambiguous message must actuate

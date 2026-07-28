@@ -160,6 +160,13 @@ func (s *Server) processDiscordMessage(ctx contextT, send channels.DiscordSender
 	case discordHelpWords[txt]:
 		s.discordText(ctx, send, chatID, msg.ChannelID, channels.DiscordMenu(displayName))
 	default:
+		// A verb the engine knows and chat cannot serve gets said plainly; a
+		// menu here would answer a question about lights with a list of gates.
+		if v, ok := channels.UnsupportedVerb(txt); ok {
+			s.discordText(ctx, send, chatID, msg.ChannelID,
+				channels.UnsupportedVerbReply(v, s.channelPublicURL()))
+			return
+		}
 		// A body that names no command word is a question, not an instruction.
 		// There is no default verb and no most-likely-intent fallback
 		// (docs/CHAT-COMMANDS.md §3.5), so the honest answer is the menu.

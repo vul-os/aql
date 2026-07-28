@@ -238,6 +238,16 @@ demo dataset would be a lie told by a system that opens doors.
 > "everything except gates". Robot control still has no driver, and the rule
 > that a stub must never return success is unchanged and is the reason this
 > note does not just delete the paragraph.
+>
+> **The reply half of `not_implemented` now exists**, ahead of the Port itself
+> (`hub/internal/channels/unsupported.go`). A message naming a verb the engine
+> knows and chat cannot serve — "turn on the porch light" — is answered with
+> what chat can and cannot do, and pointed at the console. It used to fall
+> through to the welcome menu, so the member was shown a list of GATES and an
+> offer to open one: nothing actuated, so it was never dangerous, but a person
+> could not tell "I did not understand you" from "that is not a thing I do".
+> The verb table maps typed words onto `devices.Verb` constants rather than a
+> chat-side vocabulary, so it cannot describe capabilities the engine lacks.
 
 The `not_implemented` reply is a first-class outcome, alongside the existing
 `no_device` (`open.go:96-100`).

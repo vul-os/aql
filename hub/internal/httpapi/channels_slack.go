@@ -172,6 +172,12 @@ func (s *Server) processSlackEvent(ctx contextT, teamID string, ev *channels.Sla
 		}
 		s.slackReply(ctx, chatID, channelID, notify, channels.AccessBlocks(verb, displayName, gates, s.channelPublicURL()))
 	default:
+		// A verb chat cannot serve is answered, not redirected to a gate menu
+		// (channels/unsupported.go).
+		if v, ok := channels.UnsupportedVerb(txt); ok {
+			s.slackReply(ctx, chatID, channelID, channels.UnsupportedVerbReply(v, s.channelPublicURL()), nil)
+			return
+		}
 		s.slackReply(ctx, chatID, channelID, channels.SlackMenu(displayName), nil)
 	}
 }
