@@ -290,6 +290,25 @@ func (gw *gateway) stop(t *testing.T) {
 
 func (gw *gateway) register(t *testing.T) *tenant {
 	t.Helper()
+	ten := gw.registerNoClaim(t)
+	// Claim platform admin (first-run, one-shot).
+	st, _, raw := httpJSON(t, http.MethodPost, gw.url+"/v1/admin/claim", ten.token, map[string]any{"token": gw.adminToken})
+	if st != 200 {
+		t.Fatalf("admin claim: %d %s", st, raw)
+	}
+	return ten
+}
+
+// registerNoClaim creates a fresh user/account/location like register, but
+// does not attempt the one-shot platform-admin claim. register() itself
+// cannot be called a second time against the same hub for that reason — the
+// claim is one-shot, and a second attempt 403s (`claim_closed`) and fails the
+// test. This is what a test reaches for to put a SECOND, unrelated account on
+// a hub that already has an admin (from an earlier register() call): exactly
+// the "two accounts, no relationship, same hub" shape the engine tenancy gate
+// exists for.
+func (gw *gateway) registerNoClaim(t *testing.T) *tenant {
+	t.Helper()
 	// A USERNAME, not an email. This product has no email identity, and
 	// readJSON calls DisallowUnknownFields — so sending `email` does not get
 	// ignored, it 400s the whole request. That is exactly how the console broke
@@ -304,18 +323,12 @@ func (gw *gateway) register(t *testing.T) *tenant {
 		t.Fatalf("register: %d %s", st, raw)
 	}
 	tok := body["tokens"].(map[string]any)["access_token"].(string)
-	ten := &tenant{
+	return &tenant{
 		token:      tok,
 		userID:     body["user"].(map[string]any)["id"].(string),
 		accountID:  body["account"].(map[string]any)["id"].(string),
 		locationID: body["location"].(map[string]any)["id"].(string),
 	}
-	// Claim platform admin (first-run, one-shot).
-	st, _, raw = httpJSON(t, http.MethodPost, gw.url+"/v1/admin/claim", tok, map[string]any{"token": gw.adminToken})
-	if st != 200 {
-		t.Fatalf("admin claim: %d %s", st, raw)
-	}
-	return ten
 }
 
 // createDevice makes an unpaired device at the tenant's location and returns

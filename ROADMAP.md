@@ -321,11 +321,16 @@ and none has met physical hardware.
       clips live, how long they last, who may watch, what a full disk does, and what a
       resident is told when retention drops the evening they cared about. Design only; no
       code implements it
-- [ ] Camera live view and recording — packets are counted, never decoded. The remaining
-      blocker is genuinely hardware: H.264 depacketization (FU-A, STAP-A, parameter sets)
-      and an fMP4 writer both need a real camera, because a fake written from the same RFC
-      would agree with whatever this code assumed. The retention worker, the `camera:view`
-      permission and the viewer do not — but building a retention policy for footage that
+- [ ] Camera live view and recording. **H.264 depacketization now exists** — RFC 6184
+      single-NAL, STAP-A and FU-A, emitting Annex-B, with the failure modes that matter
+      covered explicitly: a lost middle fragment discards the partial NAL rather than
+      emitting it half-formed, a continuation with no start bit is dropped rather than
+      given a fabricated header, and every length read off the wire is bounds-checked
+      (STAP-A's inner sizes are attacker-controlled). Two fuzz targets, ~590k execs clean.
+      What that does NOT prove is stated plainly: the vectors were written from the RFC,
+      so they establish that this code agrees with our reading of the spec, not that it
+      agrees with a real camera. The fMP4 writer, and validation against actual hardware,
+      remain. The retention worker, the `camera:view` permission and the viewer do not — but building a retention policy for footage that
       does not exist yet is the wrong order
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
