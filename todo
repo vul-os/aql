@@ -93,6 +93,16 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 - [ ] DMTAP channel stays a scaffold with a fail-closed transport until there is a real
       wire format. Do not present it as a channel.
 
+## race detector
+- [x] Never run on this repo before. Run by hand across hub, controller and e2e, plus
+      the gpio and ble tagged builds: CLEAN, no data races anywhere. Now a CI job so it
+      stays that way.
+- NOTE: hub/internal/httpapi takes ~18 min under -race because every register/login
+      derives argon2id at 64 MiB. The first run FAILED at 608s — that was the default
+      600s `go test` timeout, which reports exactly like a race. Timeouts are set
+      explicitly in the job. The hashing parameters are deliberately not lowered for
+      tests.
+
 ## relay safety
 - [x] The MaxHold watchdog bounded ONE latch, not continuous energised time. Repeated
       `hold` commands re-latched after each expiry — measured 396ms continuously

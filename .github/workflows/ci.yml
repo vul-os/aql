@@ -107,6 +107,51 @@ jobs:
         working-directory: hub
         run: go test ./...
 
+  race:
+    # The race detector, which had never been run on this repository until it
+    # was tried by hand and came back clean across all three modules and both
+    # tagged backends. Clean is the point: it is worth KEEPING clean, and a
+    # detector nobody runs proves nothing about the concurrent code it would
+    # have covered — the relay's timers and goroutines, the hub's handlers, the
+    # controller's transport.
+    #
+    # Its own job, so it runs beside the ordinary suites instead of delaying
+    # them. It is genuinely slow: hub/internal/httpapi took ~18 minutes locally,
+    # because every register and login derives an argon2id hash at 64 MiB and
+    # the detector multiplies that. The default `go test` timeout is 600s, and
+    # exceeding it reports a FAILURE that reads exactly like a race — which is
+    # what happened on the first run here — so the timeout is set explicitly and
+    # generously rather than left to be rediscovered.
+    #
+    # The hashing parameters are deliberately NOT lowered for tests. A mutable
+    # global controlling password-hash strength is the kind of thing that gets
+    # turned down by accident and never turned back up; a slow CI job is the
+    # cheaper problem.
+    name: race detector (all modules)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: hub/go.mod
+          cache-dependency-path: hub/go.sum
+      - name: controller
+        working-directory: controller
+        run: |
+          set -eux
+          go test -race -timeout 20m ./...
+          # The optional backends carry the concurrent code that matters most
+          # here: the relay's watchdog timers and the BLE session.
+          go test -race -timeout 20m -tags gpio ./...
+          go test -race -timeout 20m -tags ble ./...
+      - name: hub
+        working-directory: hub
+        run: go test -race -timeout 45m ./...
+      - name: e2e
+        working-directory: e2e
+        run: go test -race -timeout 20m ./...
+
   controller:
     name: controller (vet + build + test)
     runs-on: ubuntu-latest
