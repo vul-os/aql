@@ -374,11 +374,29 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       perfectly naturally in review, and every existing token test still passes, because
       they check that the scope is ENFORCED rather than what it is attached to. That is a
       read-only token that can actuate.
-- [ ] Remaining unguarded structural claims found in the sweep, in rough order of stakes:
-      store/authrecovery.go ("a username-verification token must be structurally unable to
-      reset a password"), httpapi/twofactor.go ("plaintext, by construction"),
-      devices/modbus/config.go ("structurally read-only: the registry will not route a
-      verb"). Each is a real claim; none is held by anything today.
+- [x] store/authrecovery.go. The claim HOLDS — purpose is in the WHERE clause of the
+      lookup, the claim and the invalidate, so a wrong-purpose token is not found at all.
+      Guarded now (every statement must key on purpose; purpose must be BOUND, never
+      interpolated). Worth pinning precisely because there is only ONE purpose today:
+      no second flow exists to catch a regression, nothing would go red, and the property
+      is being kept correct in advance of the thing it protects against.
+- NOTE: its comment described "the two flows" and gave a username-verification token as
+      the example — a token this hub cannot issue, since identity is a local username and
+      migration 0009 leaves 'email_verify' out of the CHECK constraint deliberately.
+      Corrected.
+- [x] devices/modbus/config.go. The comment named TestReadOnlyCaps, "walks the catalogue
+      and fails if any capability listed here has grown a verb above TierRead". THAT TEST
+      DID NOT EXIST — third instance this session of a comment naming an assertion the
+      code never made. The existing TestActuableCapabilitiesAreRefusedAtConfigTime covers
+      the other direction only: a capability NOT in the allowlist. It cannot see this one.
+- NOTE: the gap was real and non-obvious. readOnlyCaps is an ALLOWLIST, and "structurally
+      read-only" rested entirely on every capability in it offering nothing but TierRead
+      — a claim about a catalogue in another package that nothing tied to this one. A verb
+      added to devices.CapMeter (a resettable counter, a calibrate) would have made every
+      Modbus device actuable without a line of the driver changing, and the allowlist would
+      still have read as correct. Fixed at construction, not just in a test: config
+      validation now VERIFIES what the allowlist asserts, via a new devices.VerbsOf.
+- [ ] Still unguarded from the sweep: httpapi/twofactor.go's "plaintext, by construction".
 
 ## spec-derived checks
 The technique that found the 2^53 rounding: derive expected behaviour from proto/*.md

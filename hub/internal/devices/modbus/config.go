@@ -206,6 +206,21 @@ func (dc DeviceConfig) validate() (device, error) {
 			return device{}, configErr("device %q declares capability %q, which offers verbs that "+
 				"actuate; this driver is read-only and accepts only %s", dc.ID, string(c), readOnlyCapList())
 		}
+		// And verify what the allowlist ASSERTS, rather than trusting it.
+		//
+		// readOnlyCaps is a list of capabilities believed to offer nothing but
+		// TierRead verbs. That is a claim about a catalogue in another package,
+		// and until this check existed nothing tied the two together: a verb
+		// added to devices.CapMeter — a resettable counter, a calibrate — would
+		// have made every Modbus device actuable without one line of this
+		// driver changing, and the allowlist would still have looked correct.
+		for _, spec := range devices.VerbsOf(c) {
+			if spec.Tier != devices.TierRead {
+				return device{}, configErr("device %q declares capability %q, whose verb %q is %s "+
+					"in the catalogue; this driver is read-only and cannot carry it",
+					dc.ID, string(c), string(spec.Verb), spec.Tier)
+			}
+		}
 	}
 
 	addr, err := normaliseAddress(dc.ID, dc.Address)

@@ -28,10 +28,23 @@ import (
 	"errors"
 )
 
-// RecoveryPurpose discriminates the two flows sharing auth_recovery_tokens.
-// It is part of the redemption lookup key, never a field checked afterwards
-// — an username-verification token must be structurally unable to reset a
-// password, not merely rejected once found.
+// RecoveryPurpose discriminates the flows sharing auth_recovery_tokens.
+//
+// There is exactly ONE today. This comment used to say "the two flows" and
+// give a username-verification token as its example, which is a token this
+// hub cannot issue: identity here is a local username, so there is no address
+// to verify and no sender to verify it with, and migration 0009 leaves
+// 'email_verify' deliberately out of the purpose CHECK constraint.
+//
+// The discriminator is kept anyway, and kept in the redemption LOOKUP KEY
+// rather than checked after the row is fetched: a token issued for one flow
+// must be structurally unable to redeem in another, not merely rejected once
+// found. With one purpose that costs nothing and proves nothing; the moment a
+// second exists it is the difference between a guarantee and an `if` somebody
+// has to remember, inside a function that already returns one opaque error for
+// four different reasons. Pinned by TestEveryRecoveryTokenQueryFiltersOnPurpose,
+// which is worth having precisely while there is no second flow to catch a
+// regression.
 type RecoveryPurpose string
 
 const (

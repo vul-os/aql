@@ -234,6 +234,28 @@ func TierOf(cap CapabilityID, v Verb) Tier {
 	return spec.Tier
 }
 
+// VerbsOf returns a capability's verb specs, or nil when the capability is not
+// in the catalogue.
+//
+// Exists so a driver can VERIFY a capability rather than trust a list of them.
+// modbus keeps an allowlist of capabilities it will accept on the grounds that
+// they offer nothing but TierRead verbs — a claim about the catalogue, made in
+// a different package, that nothing checked. A verb added to one of those
+// capabilities would have made a read-only driver actuable without touching
+// the driver at all.
+//
+// Returns a copy: the catalogue is the authority on tiers and a caller that
+// could edit it could name its own.
+func VerbsOf(cap CapabilityID) []VerbSpec {
+	c, ok := catalogue[cap]
+	if !ok {
+		return nil
+	}
+	out := make([]VerbSpec, len(c.Verbs))
+	copy(out, c.Verbs)
+	return out
+}
+
 // Capabilities returns every capability id in the catalogue, sorted. For
 // diagnostics and the conformance test; not a hot path.
 func Capabilities() []CapabilityID {

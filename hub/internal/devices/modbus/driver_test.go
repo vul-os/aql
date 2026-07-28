@@ -463,3 +463,60 @@ func availabilityOf(t *testing.T, d *Driver, id string) devices.Availability {
 	t.Fatalf("device %q not in Discover", id)
 	return ""
 }
+
+// The test config.go's comment has named for a while, which did not exist.
+//
+// readOnlyCaps is an allowlist, and "this driver is structurally read-only"
+// rests entirely on every capability in it offering nothing but TierRead verbs.
+// That is a claim about a catalogue in ANOTHER package. Nothing tied the two
+// together: a verb added to devices.CapMeter — a resettable counter, a
+// calibrate — would have made every Modbus device actuable without a line of
+// this driver changing, and the allowlist would still have read as correct.
+//
+// TestActuableCapabilitiesAreRefusedAtConfigTime covers the other direction: a
+// capability NOT in the allowlist is refused. It cannot see this one, because
+// it only ever names a capability the allowlist already rejects.
+func TestReadOnlyCaps(t *testing.T) {
+	if len(readOnlyCaps) == 0 {
+		t.Fatal("readOnlyCaps is empty; the scan would pass while checking nothing")
+	}
+	for cap := range readOnlyCaps {
+		specs := devices.VerbsOf(cap)
+		if len(specs) == 0 {
+			t.Errorf("capability %q is allowed by this driver but is not in the catalogue, "+
+				"or offers no verbs at all", cap)
+			continue
+		}
+		for _, spec := range specs {
+			if spec.Tier != devices.TierRead {
+				t.Errorf("capability %q offers verb %q at tier %s. This driver's read-only "+
+					"property depends on every allowed capability being read-only; either "+
+					"drop %q from readOnlyCaps or do not add actuating verbs to it.",
+					cap, spec.Verb, spec.Tier, cap)
+			}
+		}
+	}
+}
+
+// And the runtime half: the same claim is now VERIFIED at config time rather
+// than trusted, so a capability that grew an actuating verb is refused even
+// while it sits in the allowlist.
+func TestAnAllowlistedCapabilityThatGrewAnActuatingVerbIsRefused(t *testing.T) {
+	// CapBarrier is not in readOnlyCaps, so it exercises the allowlist branch.
+	// To exercise the CATALOGUE branch, temporarily allow a capability that
+	// does carry actuating verbs and confirm construction still refuses.
+	readOnlyCaps[devices.CapBarrier] = true
+	defer delete(readOnlyCaps, devices.CapBarrier)
+
+	cfg := meterConfig("127.0.0.1:1")
+	cfg.Devices[0].Kind = devices.KindAccess
+	cfg.Devices[0].Capabilities = []devices.CapabilityID{devices.CapBarrier}
+	_, err := New(cfg)
+	if err == nil {
+		t.Fatal("an allowlisted capability carrying actuating verbs was accepted; the " +
+			"read-only property would then rest on the allowlist alone")
+	}
+	if !strings.Contains(err.Error(), "in the catalogue") {
+		t.Errorf("refused for the wrong reason: %v", err)
+	}
+}

@@ -449,6 +449,20 @@ export const FEATURES = [
     ],
   },
   {
+    // "structurally read-only" rested on an allowlist whose central assertion —
+    // that every capability in it offers only TierRead verbs — nothing checked.
+    // The comment named a test for it that did not exist.
+    id: 'modbus-read-only-verified',
+    label: 'The Modbus driver verifies its read-only claim against the catalogue at config time, rather than trusting an allowlist',
+    docStatus: 'shipped',
+    docRefs: ['hub/internal/devices/modbus/config.go — "makes this driver structurally read-only"'],
+    evidence: [
+      { file: 'hub/internal/devices/capability.go', pattern: 'func VerbsOf' },
+      { file: 'hub/internal/devices/modbus/config.go', pattern: 'devices\\.VerbsOf\\(c\\)' },
+      { file: 'hub/internal/devices/modbus/driver_test.go', pattern: 'func TestReadOnlyCaps' },
+    ],
+  },
+  {
     // server.go claims EXHAUSTIVELY that four routes are the only ones an API
     // token can reach. The existing token tests probe a hand-listed sample, so
     // a NEW tokenScoped route would be invisible to all of them.
