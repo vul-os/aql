@@ -467,8 +467,23 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       contains the assignment as prose. Fixed the guard to skip comment lines rather than
       rewording the comment — a guard that counts prose invites whoever hits the false
       positive to weaken it. Verified a genuine second assignment still fails.
-- [ ] Remaining fail-closed claim not yet wiring-tested: relay/gpio.go's "the only cleanup
-      path that cannot be skipped".
+- [x] relay/gpio.go's "the only cleanup path that cannot be skipped". Better shape than
+      expected: setCloexec already had a test, and a properly built one — it uses os.Pipe
+      so it needs no gpiochip, and it CLEARS the flag first so it cannot agree with a
+      setCloexec that does nothing. The call site is also already fail-closed: a failure
+      closes the line and returns.
+- NOTE: what was missing is the wiring, and it is the one thing no CI machine can ever
+      run. The setCloexec call sits immediately after a GPIO_V2_GET_LINE ioctl, which
+      needs a real gpiochip. So the function stayed proven and the CALL stayed unproven —
+      invisible until a gate is held open by a process nobody can find, because an exec'd
+      child inherited the fd and the kernel therefore never released the line.
+- NOTE: a source-scan is a weaker check than running the code, and here the alternative is
+      not a stronger check, it is NO check. Guards the call, that its error is branched on,
+      that the line is closed on failure, and that nothing (SetFinalizer/KeepAlive) extends
+      the line's lifetime past the fd's. Deliberately carries NO build tag, so it runs in
+      the ordinary `go test ./...` rather than only when someone remembers -tags gpio.
+- The fail-closed sweep is now complete: the nonce store's wiring, state.go's rollback
+      (a real defect), and this. Three claims — one was false, two were true-but-unwired.
 
 ## spec-derived checks
 The technique that found the 2^53 rounding: derive expected behaviour from proto/*.md

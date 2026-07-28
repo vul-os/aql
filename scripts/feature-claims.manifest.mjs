@@ -449,6 +449,20 @@ export const FEATURES = [
     ],
   },
   {
+    // The one wiring in the GPIO driver no CI machine can exercise: the
+    // setCloexec call sits behind an ioctl that needs a real gpiochip. The
+    // function is proven by a hardware-free test; the CALL was not.
+    id: 'gpio-line-fd-cloexec-wired',
+    label: 'The GPIO line fd is marked close-on-exec at its request site, and a failure closes the line',
+    docStatus: 'shipped',
+    docRefs: ['controller/internal/relay/gpio.go — "the only cleanup path that cannot be skipped"'],
+    evidence: [
+      { file: 'controller/internal/relay/gpio_wiring_test.go', pattern: 'TestEveryLineFdIsMarkedCloseOnExec' },
+      { file: 'controller/internal/relay/gpio_linux.go', pattern: 'setCloexec\\(l\\.fd\\)' },
+      { file: 'controller/internal/relay/gpio_linux_test.go', pattern: 'TestSetCloexecReallySetsTheFlag' },
+    ],
+  },
+  {
     // A REAL DEFECT, not an unguarded truth. Store's doc promised an
     // unconditional rollback on a failed persist; the snapshot was shallow, so
     // the one field mutated through a pointer — the pinned gateway key — was
