@@ -454,15 +454,85 @@ func TestHoldWatchdogIsNotRearmedByRepeatedHolds(t *testing.T) {
 	if err := g.Hold(); err != nil {
 		t.Fatal(err)
 	}
-	// Spam Hold: the bound must be on continuous energised time, so the
-	// watchdog must still fire ~150ms after the FIRST hold.
-	stop := time.Now().Add(300 * time.Millisecond)
+	// Spam Hold: the bound must be on continuous ENERGISED TIME, so the relay
+	// must spend a real part of this window de-energised however often Hold is
+	// called.
+	//
+	// The previous version sampled the state ONCE, after the loop, and asked
+	// whether it happened to be held. That made a genuine defect look like a
+	// flaky test: the relay was in fact energised from 0ms to 283ms with
+	// MaxHold=150ms, and the single final sample landed in the brief gap
+	// between a watchdog release and the next re-latch about two runs in three.
+	// Sampling throughout, and asserting on the WORST continuous run, makes the
+	// question deterministic.
+	start := time.Now()
+	stop := start.Add(400 * time.Millisecond)
+	var energisedFrom time.Time
+	var longestEnergised time.Duration
 	for time.Now().Before(stop) {
 		_ = g.Hold()
-		time.Sleep(10 * time.Millisecond)
+		now := time.Now()
+		if out.energised() {
+			if energisedFrom.IsZero() {
+				energisedFrom = now
+			} else if d := now.Sub(energisedFrom); d > longestEnergised {
+				longestEnergised = d
+			}
+		} else {
+			energisedFrom = time.Time{}
+		}
+		time.Sleep(5 * time.Millisecond)
 	}
-	if g.State() == StateHeld {
-		t.Fatal("repeated Hold calls kept the relay latched past MaxHold")
+
+	// Generous slack for scheduler jitter on a loaded machine: the point is
+	// that the bound EXISTS, not its precision. Before the cooldown, this
+	// measured the full 400ms window.
+	if limit := 2 * 150 * time.Millisecond; longestEnergised > limit {
+		t.Errorf("relay stayed continuously energised for %v under repeated Hold "+
+			"calls; MaxHold is 150ms, so the watchdog is bounding one latch rather "+
+			"than continuous energised time and a caller can hold the gate open "+
+			"indefinitely", longestEnergised)
+	}
+}
+
+// The cooldown itself, asserted directly: a Hold arriving straight after the
+// watchdog fired must be REFUSED, not silently re-latched.
+func TestHoldIsRefusedDuringTheWatchdogCooldown(t *testing.T) {
+	out := &fakeLine{}
+	g := newTestGPIO(t, GPIOConfig{MaxPulse: 50 * time.Millisecond, MaxHold: 100 * time.Millisecond}, out, nil)
+	defer g.Close()
+
+	if err := g.Hold(); err != nil {
+		t.Fatal(err)
+	}
+	// Wait for the watchdog rather than sleeping a fixed time.
+	deadline := time.Now().Add(2 * time.Second)
+	for g.State() == StateHeld && time.Now().Before(deadline) {
+		time.Sleep(2 * time.Millisecond)
+	}
+	if g.State() != StateIdle {
+		t.Fatalf("watchdog did not release: state=%q", g.State())
+	}
+	if out.energised() {
+		t.Fatal("relay still energised after the watchdog fired")
+	}
+
+	err := g.Hold()
+	if err == nil {
+		t.Fatal("Hold succeeded immediately after the watchdog fired; the relay can " +
+			"be re-latched forever, one MaxHold at a time")
+	}
+	if !strings.Contains(err.Error(), "cooling down") {
+		t.Errorf("refusal does not say why: %v", err)
+	}
+	if out.energised() {
+		t.Error("a refused Hold energised the relay anyway")
+	}
+
+	// And it recovers: the cooldown is a pause, not a latch-out.
+	time.Sleep(120 * time.Millisecond)
+	if err := g.Hold(); err != nil {
+		t.Errorf("Hold still refused after the cooldown elapsed: %v", err)
 	}
 }
 

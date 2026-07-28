@@ -278,6 +278,23 @@ type GPIO struct {
 	gen   uint64
 	abort chan struct{}
 	hold  *time.Timer
+	// holdBlockedUntil is set when the hold watchdog fires, and refuses a new
+	// Hold until it passes.
+	//
+	// Without it, MaxHold bounds a single latch and not continuous energised
+	// time. Hold() returns early while already held, so repeated calls do not
+	// re-arm the timer — but once the watchdog releases, the NEXT Hold simply
+	// latches again with a fresh watchdog. A caller repeating the command holds
+	// the gate open indefinitely, dropping it for only the gap between calls.
+	// Observed: with MaxHold=150ms and a Hold every 10ms, the relay was
+	// energised continuously from 0ms to 283ms.
+	//
+	// That defeats the point of the watchdog, which is the last-resort bound —
+	// the one that is supposed to hold whatever the software above it does.
+	// A signed command is required to reach Hold, so this is not an
+	// unauthenticated attack; a retrying client or a misfiring automation gets
+	// there just as well.
+	holdBlockedUntil time.Time
 }
 
 var (
@@ -537,6 +554,15 @@ func (g *GPIO) Hold() error {
 	if g.state != StateIdle {
 		return fmt.Errorf("relay: cannot hold while %s", g.state)
 	}
+	// Cooldown after a watchdog release. Equal to MaxHold, so the relay can be
+	// energised for at most half of any window — a real bound on continuous
+	// energised time rather than on one latch. A legitimate hold is released by
+	// its own scheduled release and never reaches the watchdog, so this only
+	// affects the case the watchdog is for.
+	if now := time.Now(); now.Before(g.holdBlockedUntil) {
+		return fmt.Errorf("relay: hold refused, cooling down for %s after the hold "+
+			"watchdog fired", g.holdBlockedUntil.Sub(now).Round(time.Millisecond))
+	}
 	if err := g.out.set(true); err != nil {
 		return g.faultLocked("hold", err)
 	}
@@ -553,6 +579,7 @@ func (g *GPIO) holdExpired() {
 		return
 	}
 	g.log.Warn("relay: hold watchdog expired, de-energising", "max_hold", g.cfg.MaxHold)
+	g.holdBlockedUntil = time.Now().Add(g.cfg.MaxHold)
 	g.gen++
 	if err := g.out.set(false); err != nil {
 		_ = g.faultLocked("hold watchdog", err)

@@ -123,16 +123,32 @@ func requestLine(chipFD int, offset uint32, consumer string, flags uint64, initi
 		return nil, fmt.Errorf("kernel returned line fd %d", req.fd)
 	}
 	l := &gpioLine{fd: int(req.fd), offset: offset}
-	// The kernel already opens line request fds O_CLOEXEC; set it again
-	// rather than trusting it, because an exec'd child inheriting this fd
-	// would keep the line claimed after we die — exactly the failure the
-	// fd-lifetime design exists to prevent.
-	if _, _, e := syscall.Syscall(syscall.SYS_FCNTL, uintptr(l.fd),
-		uintptr(syscall.F_SETFD), uintptr(syscall.FD_CLOEXEC)); e != 0 {
+	if err := setCloexec(l.fd); err != nil {
 		_ = l.close()
-		return nil, fmt.Errorf("set FD_CLOEXEC on line fd: %w", e)
+		return nil, fmt.Errorf("set FD_CLOEXEC on line fd: %w", err)
 	}
 	return l, nil
+}
+
+// setCloexec marks fd close-on-exec.
+//
+// The kernel already opens line request fds O_CLOEXEC; this sets it again
+// rather than trusting it, because an exec'd child inheriting the line fd would
+// keep the line CLAIMED after this process dies — which is the one failure the
+// whole fd-lifetime design exists to prevent. The gate would stay held by a
+// process that never meant to hold it.
+//
+// Extracted from openLine so it can be tested. Inline, it sat after a
+// GPIO_V2_GET_LINE_IOCTL and was therefore unreachable without a real gpiochip,
+// so the most consequential line in the failure model had no test at all — the
+// claim was in a comment and nowhere else. It works on any file descriptor,
+// which is what makes it checkable on a machine with no GPIO.
+func setCloexec(fd int) error {
+	if _, _, e := syscall.Syscall(syscall.SYS_FCNTL, uintptr(fd),
+		uintptr(syscall.F_SETFD), uintptr(syscall.FD_CLOEXEC)); e != 0 {
+		return e
+	}
+	return nil
 }
 
 // set implements lineHandle. asserted is the LOGICAL level: the kernel

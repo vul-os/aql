@@ -247,6 +247,14 @@ Aql actuates the physical world, so some commands need care a dashboard would no
   never as a replacement. The reference controller's relay driver is *specified*
   fail-safe (normally-open, line drops on process exit or panic), but the `-tags gpio`
   driver is a documented scaffold that has **not been hardware-validated**.
+- **The hold watchdog bounds continuous energised time, not one latch.** `MaxHold`
+  de-energises a held relay, and after it fires a new hold is refused for the same
+  duration. Without that cooldown the bound was defeatable by repetition: each `hold`
+  command re-latched with a fresh watchdog, so a retrying client or a misfiring
+  automation could keep a gate open indefinitely, dropping it only for the gap between
+  commands. A signed command is needed to reach it, so this was never an
+  unauthenticated attack — but a last-resort bound that the layer above can defeat is
+  not a bound.
 - **Rate limits fail *open* on purpose.** If the limiter's counter store errors, the open
   is allowed and the audit entry is tagged `rate_limit_check_failed`. Locking residents
   out because a bookkeeping table hiccuped is the worse physical failure. Visibility is

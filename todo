@@ -93,6 +93,15 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 - [ ] DMTAP channel stays a scaffold with a fail-closed transport until there is a real
       wire format. Do not present it as a channel.
 
+## relay safety
+- [x] The MaxHold watchdog bounded ONE latch, not continuous energised time. Repeated
+      `hold` commands re-latched after each expiry — measured 396ms continuously
+      energised against a 150ms bound. Fixed with a cooldown equal to MaxHold. Found by
+      investigating a "flaky" test instead of re-running it: the test sampled once at
+      the end and landed in the brief de-energised gap about a third of the time.
+- LESSON: a flaky test on a safety behaviour is the worst combination — it gets re-run
+      until green and then trusted. Sample throughout and assert on the worst case.
+
 ## drift guards — audited for vacuous passes
 The Go side too: bleperiph/platform_test.go's filename-constraint guard had the same
 "look at every file, report offenders" shape and passed on zero files. Its sibling test
