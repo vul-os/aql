@@ -449,6 +449,20 @@ export const FEATURES = [
     ],
   },
   {
+    // The highest-stakes structural claim in the repo: whoever holds the pinned
+    // gateway key can sign a command that opens the gate, so the set of paths
+    // that can WRITE it is the whole trust model.
+    id: 'gateway-key-pinning-doors',
+    label: 'Exactly two code paths can write the controller\'s pinned gateway key, and re-pairing with a different key is refused',
+    docStatus: 'shipped',
+    docRefs: ['controller/internal/pairing/pairing.go — "the ONLY moment a gateway key is accepted"'],
+    evidence: [
+      { file: 'controller/internal/state/pinning_test.go', pattern: 'TestOnlyTwoDoorsWriteThePinnedGatewayKey' },
+      { file: 'controller/internal/state/pinning_test.go', pattern: 'TestRePairingWithADifferentKeyIsRefused' },
+      { file: 'controller/internal/state/state.go', pattern: 'ErrKeyChangeRefused' },
+    ],
+  },
+  {
     // The TOTP secret is the entire second factor: anything that reads it can
     // mint valid codes indefinitely, and there is nothing a user would notice
     // being rotated. twofactor.go bounds its blast radius with three shape

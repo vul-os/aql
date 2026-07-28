@@ -407,10 +407,24 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       rotate that a user would notice. The reason the code uses a projection type with no
       Secret field rather than a struct that simply is not filled in is that the first
       cannot leak it and the second only has not yet.
-- The structural-claims sweep is now COMPLETE for the claims it found: automations
-      boundaries, the API-token surface, authrecovery's purpose key, modbus read-only, and
-      the TOTP secret. Five claims, one of which (modbus) was a genuine hole rather than an
-      unguarded truth.
+- [x] Swept the CONTROLLER too — the half that actually opens gates, and which the hub
+      sweep had not touched. Its highest-stakes claim is package pairing's: "the redeem
+      response is the ONLY moment a gateway key is accepted; thereafter only a `repair`
+      signed by the currently pinned key can change it — state.Store enforces that."
+      TRUE, and the set was unguarded: one assignment, one SavePairing caller (pairing),
+      one ApplyRepair caller (command, past the signature check).
+- NOTE: ApplyRepair verifies NOTHING. Its doc says the caller must already have checked
+      the envelope against the currently pinned key — a contract in a comment, honoured by
+      exactly one call site. A second caller anywhere (a config reload, a recovery hook)
+      rotates the trust root without a signature, and every existing test still passes.
+      That is the takeover this guard exists for; tampering one in adds it to the list.
+- NOTE: the scan deliberately includes BUILD-TAGGED files. A gpio- or ble-only file that
+      wrote the pinned key is just as much of a takeover, and skipping it because the
+      default build does is how a tagged file becomes the place to hide things.
+- The structural-claims sweep is now COMPLETE across both modules: automations boundaries,
+      the API-token surface, authrecovery's purpose key, modbus read-only, the TOTP secret,
+      and the controller's key pinning. Six claims — five were unguarded truths, one
+      (modbus) was a genuine hole.
 
 ## spec-derived checks
 The technique that found the 2^53 rounding: derive expected behaviour from proto/*.md
