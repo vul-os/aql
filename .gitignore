@@ -54,3 +54,4 @@ controller/controller-sim
 hub/bin/
 controller/bin/
 e2e/bin/
+.claude/worktrees/
