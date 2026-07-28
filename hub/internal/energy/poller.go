@@ -72,7 +72,7 @@ type Poller struct {
 	// dispute is argued from. This only drops the bulk raw readings that
 	// nothing needs once their deltas exist.
 	sampleRetention time.Duration
-	now          func() time.Time
+	now             func() time.Time
 }
 
 // PollerOption configures a Poller.

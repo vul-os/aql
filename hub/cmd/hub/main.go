@@ -169,7 +169,7 @@ type config struct {
 	// energySampleRetention bounds the samples table. Deltas are never
 	// pruned; see energy.WithSampleRetention.
 	energySampleRetention time.Duration
-	energyTZ       string
+	energyTZ              string
 
 	// Automations (internal/automations).
 	automations         bool
@@ -220,7 +220,7 @@ func main() {
 		// retention nobody switches on, and the failure mode is a disk that
 		// fills months later on a machine with no operator watching it.
 		energySampleRetention: envDurationOr("AQL_ENERGY_SAMPLE_RETENTION", energy.DefaultSampleRetention),
-		energyTZ:       envOr("AQL_ENERGY_TZ", ""),
+		energyTZ:              envOr("AQL_ENERGY_TZ", ""),
 
 		automations:         *runAutomation,
 		automationsInterval: envDurationOr("AQL_AUTOMATIONS_INTERVAL", automations.DefaultInterval),
