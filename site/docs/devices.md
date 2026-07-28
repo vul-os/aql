@@ -177,12 +177,23 @@ or basic where a camera offers nothing else — asks what the stream is, and rep
 answer: `H264 video · digest auth`. It holds no session.
 
 Turn on `VerifyMediaFlow` and it goes one step further — SETUP the video track over
-interleaved TCP, PLAY, count RTP packets for a couple of seconds, TEARDOWN — answering what
+interleaved TCP, PLAY, watch RTP packets for a couple of seconds, TEARDOWN — answering what
 `DESCRIBE` cannot: whether anything actually **comes out**. A camera that describes a
 perfectly good stream and sends nothing is an ordinary failure (a dead encoder, a transport
 it will not really do, a firewall permitting control and dropping media), and the only
 symptom is a black player after the product said all was well. Such a camera reports as
 **degraded**, not online.
+
+It also reads the RTP **sequence numbers**, which answers a second question the packet
+count cannot: whether the media arrived *intact*. A camera on a weak Wi-Fi link, or behind
+a switch dropping frames, streams continuously and produces a smeared or frozen picture —
+flowing, but lossy, and a probe that only counted packets would call it healthy. The
+summary reports how many of the expected packets never arrived. Reordering, duplication
+and the 16-bit sequence wrap are all kept out of that figure, because each of them makes a
+naive count report a fault on a perfectly good stream.
+
+None of this decodes anything. H.264 depacketization is where a fake written from the
+same RFC would simply agree with the code under test, so it waits for a real camera.
 
 That probe occupies an RTSP session, so it is opt-in and always tears down: cheap cameras
 support very few, and one held by a health check competes with whoever is watching.

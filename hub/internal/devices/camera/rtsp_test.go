@@ -29,8 +29,17 @@ type fakeRTSP struct {
 	// Media knobs. rtpPackets > 0 makes SETUP/PLAY succeed and stream that many
 	// interleaved RTP packets; 0 makes them succeed and send nothing, which is
 	// the failure the media probe exists to catch.
-	rtpPackets  int
-	rtpPayload  byte
+	rtpPackets int
+	rtpPayload byte
+	// rtpDropEvery makes the fake SKIP a sequence number every N packets
+	// without sending it — a stream that is flowing and lossy, which is what a
+	// camera on a weak link produces and what a packet counter alone reports
+	// as healthy. The sequence number still advances, exactly as a real
+	// sender's would; nothing here pretends the packet was never generated.
+	rtpDropEvery int
+	// rtpStartSeq seeds the sequence counter, so a test can start just below
+	// the 16-bit wrap and watch it roll over.
+	rtpStartSeq uint16
 	setupStatus int
 	playStatus  int
 	sawSetup    bool
@@ -417,6 +426,7 @@ func TestSDPParsingIgnoresWhatItDoesNotKnow(t *testing.T) {
 func (f *fakeRTSP) serveMedia(c net.Conn, method, cseq string) {
 	f.mu.Lock()
 	n, pt := f.rtpPackets, f.rtpPayload
+	dropEvery, startSeq := f.rtpDropEvery, f.rtpStartSeq
 	setupStatus, playStatus := f.setupStatus, f.playStatus
 	switch method {
 	case "SETUP":
@@ -448,10 +458,17 @@ func (f *fakeRTSP) serveMedia(c net.Conn, method, cseq string) {
 		}
 		fmt.Fprintf(c, "RTSP/1.0 200 OK\r\nCSeq: %s\r\nSession: 12345678\r\n\r\n", cseq)
 		for i := 0; i < n; i++ {
+			// The sequence number advances whether or not the packet is sent —
+			// a dropped packet is one the receiver never sees, not one the
+			// sender never numbered.
+			seq := startSeq + uint16(i)
+			if dropEvery > 0 && i%dropEvery == 0 && i != 0 {
+				continue
+			}
 			payload := make([]byte, 12+20)
 			payload[0] = 0x80 // version 2
 			payload[1] = pt   // marker clear, payload type
-			binary.BigEndian.PutUint16(payload[2:4], uint16(i))
+			binary.BigEndian.PutUint16(payload[2:4], seq)
 			binary.BigEndian.PutUint32(payload[4:8], uint32(i*3000))
 			binary.BigEndian.PutUint32(payload[8:12], 0xDEADBEEF)
 
@@ -599,5 +616,79 @@ func TestEachMethodAuthenticatesOnItsOwn(t *testing.T) {
 	}
 	if !flow.Flowing() {
 		t.Error("no media over an authenticated session")
+	}
+}
+
+// A stream that is FLOWING and LOSSY. This is the camera an operator most needs
+// help with — a weak Wi-Fi link, or a switch dropping frames — and until the
+// probe read sequence numbers it reported exactly like a healthy one.
+func TestALossyStreamIsFlowingButNotIntact(t *testing.T) {
+	srv := newFakeRTSP(t)
+	srv.set(func(f *fakeRTSP) { f.rtpPackets = 40; f.rtpDropEvery = 4 })
+
+	_, flow, err := ProbeMedia(context.Background(), srv.url("/cam"),
+		Credential{}, 2*time.Second, 400*time.Millisecond)
+	if err != nil {
+		t.Fatalf("ProbeMedia: %v", err)
+	}
+	if !flow.Flowing() {
+		t.Fatal("packets arrived but Flowing() is false")
+	}
+	if flow.Intact() {
+		t.Errorf("a stream missing every 4th packet reported Intact(): %s", flow.Summary())
+	}
+	if flow.Lost == 0 {
+		t.Errorf("no loss detected on a deliberately lossy stream: %s", flow.Summary())
+	}
+	// Roughly a quarter gone. Bounds rather than an exact figure: the probe
+	// stops when its window closes, so the tail is timing-dependent.
+	if r := flow.LossRate(); r < 0.15 || r > 0.35 {
+		t.Errorf("loss rate %.2f, want ~0.25: %s", r, flow.Summary())
+	}
+	if !strings.Contains(flow.Summary(), "lost") {
+		t.Errorf("Summary() hides the loss: %q", flow.Summary())
+	}
+}
+
+// A clean stream must report no loss. The counterpart to the test above: a
+// tracker that reported loss on healthy traffic would be worse than none,
+// because an operator would go looking for a fault that is not there.
+func TestACleanStreamReportsNoLoss(t *testing.T) {
+	srv := newFakeRTSP(t)
+	srv.set(func(f *fakeRTSP) { f.rtpPackets = 30 })
+
+	_, flow, err := ProbeMedia(context.Background(), srv.url("/cam"),
+		Credential{}, 2*time.Second, 400*time.Millisecond)
+	if err != nil {
+		t.Fatalf("ProbeMedia: %v", err)
+	}
+	if flow.Lost != 0 {
+		t.Errorf("clean stream reported %d lost: %s", flow.Lost, flow.Summary())
+	}
+	if !flow.Intact() {
+		t.Errorf("clean stream did not report Intact(): %s", flow.Summary())
+	}
+	if strings.Contains(flow.Summary(), "lost") {
+		t.Errorf("Summary() invented loss on a clean stream: %q", flow.Summary())
+	}
+}
+
+// The 16-bit sequence wraps roughly every half-minute on a busy stream. Through
+// the REAL probe, not just the unit tracker: a wrap misread as a backwards jump
+// would report a five-figure loss on a healthy camera.
+func TestSequenceWrapThroughTheProbeIsNotLoss(t *testing.T) {
+	srv := newFakeRTSP(t)
+	srv.set(func(f *fakeRTSP) { f.rtpPackets = 20; f.rtpStartSeq = 65530 })
+
+	_, flow, err := ProbeMedia(context.Background(), srv.url("/cam"),
+		Credential{}, 2*time.Second, 400*time.Millisecond)
+	if err != nil {
+		t.Fatalf("ProbeMedia: %v", err)
+	}
+	if flow.Lost != 0 {
+		t.Errorf("a stream wrapping 65535→0 reported %d lost: %s", flow.Lost, flow.Summary())
+	}
+	if flow.SourceRestarts != 0 {
+		t.Errorf("the wrap was read as %d source restart(s): %s", flow.SourceRestarts, flow.Summary())
 	}
 }

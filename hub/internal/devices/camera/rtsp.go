@@ -542,9 +542,41 @@ type MediaFlow struct {
 	// single track means something is multiplexing, which a viewer will not
 	// expect.
 	SSRCs []uint32
+	// Lost is how many RTP packets the sequence numbers say never arrived.
+	//
+	// Counting packets answers "is media flowing"; this answers "is it arriving
+	// intact", and they come apart on exactly the cameras an operator needs
+	// help with — a weak Wi-Fi link sends packets the whole time and produces a
+	// smeared picture. See seq.go for how reordering, duplication and the
+	// 16-bit wrap are kept out of this number.
+	Lost int
+	// Expected is how many the observed sequence range implies. Lost/Expected
+	// is the loss rate; both are reported so a caller can tell "0 lost of 12"
+	// from "0 lost of 12000".
+	Expected int
+	// SourceRestarts counts sequence spaces that jumped too far forward to be
+	// loss — a camera restarting its stream mid-probe. Reported rather than
+	// folded into Lost, because it is a different fault with a different fix.
+	SourceRestarts int
 	// Window is how long the probe listened.
 	Window time.Duration
 }
+
+// LossRate is the fraction of expected packets that never arrived, 0 when
+// nothing was expected.
+func (m MediaFlow) LossRate() float64 {
+	if m.Expected <= 0 {
+		return 0
+	}
+	return float64(m.Lost) / float64(m.Expected)
+}
+
+// Intact reports whether the stream arrived without loss.
+//
+// Separate from Flowing() on purpose, and the pair is the point: a stream can
+// be flowing and not intact, which is the case a packet counter alone reports
+// as healthy.
+func (m MediaFlow) Intact() bool { return m.Flowing() && m.Lost == 0 }
 
 // Flowing reports whether any media arrived at all.
 //
@@ -558,8 +590,15 @@ func (m MediaFlow) Summary() string {
 		return "no media in " + m.Window.String()
 	}
 	rate := float64(m.Packets) / m.Window.Seconds()
-	return fmt.Sprintf("%d packets in %s (~%.0f/s, %d bytes)",
+	base := fmt.Sprintf("%d packets in %s (~%.0f/s, %d bytes)",
 		m.Packets, m.Window, rate, m.Bytes)
+	if m.Lost > 0 {
+		base += fmt.Sprintf(", %d of %d lost (%.1f%%)", m.Lost, m.Expected, m.LossRate()*100)
+	}
+	if m.SourceRestarts > 0 {
+		base += fmt.Sprintf(", %d source restart(s)", m.SourceRestarts)
+	}
+	return base
 }
 
 // ProbeMedia runs DESCRIBE, then SETUP and PLAY on the first video track, and
@@ -658,6 +697,7 @@ func countInterleaved(conn net.Conn, br *bufio.Reader, window time.Duration) Med
 	var flow MediaFlow
 	types := map[int]bool{}
 	ssrcs := map[uint32]bool{}
+	seqs := seqSet{}
 	deadline := time.Now().Add(window)
 	// Bound the READ by the window, not by the connection's own deadline. A
 	// silent camera otherwise blocks here until the whole-request timeout, and
@@ -699,7 +739,9 @@ func countInterleaved(conn net.Conn, br *bufio.Reader, window time.Duration) Med
 		flow.Packets++
 		flow.Bytes += len(payload) - 12
 		types[int(payload[1]&0x7F)] = true
-		ssrcs[binary.BigEndian.Uint32(payload[8:12])] = true
+		ssrc := binary.BigEndian.Uint32(payload[8:12])
+		ssrcs[ssrc] = true
+		seqs.observe(ssrc, binary.BigEndian.Uint16(payload[2:4]))
 	}
 
 	for t := range types {
@@ -710,6 +752,10 @@ func countInterleaved(conn net.Conn, br *bufio.Reader, window time.Duration) Med
 		flow.SSRCs = append(flow.SSRCs, s)
 	}
 	sort.Slice(flow.SSRCs, func(i, j int) bool { return flow.SSRCs[i] < flow.SSRCs[j] })
+	expected, _, lost, restarts := seqs.totals()
+	flow.Expected = int(expected)
+	flow.Lost = int(lost)
+	flow.SourceRestarts = restarts
 	return flow
 }
 

@@ -52,7 +52,10 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 - [ ] Matter — needs a certified device and a stack.
 - [ ] Modbus RTU (serial). TCP ships; a TCP-to-RTU bridge covers the common case.
 - [ ] The camera pipeline: H.264 depacketization and an fMP4 writer. The ONVIF driver
-      discovers cameras and probes streams with RTSP and has never received a frame.
+      discovers cameras, probes streams with RTSP, and reads RTP headers — packet counts
+      and sequence-number loss, so "flowing" and "intact" are separate answers — but has
+      never decoded a frame. Depacketization is the line: a fake written from the same
+      RFC would agree with the code under test, so it waits for a real camera.
       `docs/CAMERA-RETENTION.md` is the design that has to exist first — it is design
       only, and steps 3–5 in it (retention worker, `camera:view` permission, viewer) do
       NOT need hardware.
