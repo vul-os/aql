@@ -278,6 +278,29 @@ func (h *Hub) Connected(deviceID string) bool {
 	return ok
 }
 
+// ConnectedDevices is every device holding a live WS right now.
+//
+// It exists for the clock-sync worker. A controller syncs its clock from the
+// hub during the WS handshake and NOWHERE else — the only other path is an
+// accepted `ping`. A healthy connection carries no read deadline and can live
+// for weeks, so a controller that never drops never re-handshakes and its
+// LastGatewaySync goes stale while everything looks perfectly fine.
+//
+// That matters because the controller refuses every offline grant once its
+// last sync is older than wire.StaleClockLimitSeconds (14 days). The failure
+// therefore lands exactly where it hurts most: a site with rock-solid
+// connectivity for a fortnight, then a hub outage, and the emergency grants
+// that outage is supposed to be covered by are all denied stale_clock.
+func (h *Hub) ConnectedDevices() []string {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	out := make([]string, 0, len(h.conns))
+	for id := range h.conns {
+		out = append(out, id)
+	}
+	return out
+}
+
 // Dispatch sends a signed envelope to the device and waits for its cmd.ack.
 // Offline devices get the payload queued (TTL = envelope exp) and "queued"
 // back immediately; connected-but-silent devices yield "undelivered" after

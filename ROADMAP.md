@@ -158,17 +158,22 @@ hub's issuance endpoint):
       has never run on hardware on either. darwin returns `ErrUnsupported`: CoreBluetooth
       offers peripheral mode, that library does not bind it, and writing a CGO binding
       that cannot be tested here would be worse than the gap
-- [ ] **Two signed command types the hub still cannot send.** `proto/commands.md` defines
-      eight; the controller implements and conformance-tests all eight. `config` and
-      `hold` now have senders. Standalone `ping` and — the serious one — `repair` do not.
-      `repair` is the recovery path for a leaked or rotated hub signing key, and doing it
-      properly is a programme rather than a feature: the hub needs two-key retention and
-      per-controller ack tracking (switching the signing key while one controller is
-      offline strands it until a factory reset), and the blast radius reaches past
-      controllers to every phone holding an offline grant, since those pin the hub key too
-      and the app already treats a change as a re-enrolment event. (`lockdown`/`lift` are
-      deliberately controller-local — `offline_grants.go` says so — and are NOT part of
-      this gap)
+- [x] **`ping` — and it was not the minor one.** A controller learns the hub's time at
+      the WS handshake and on an accepted `ping`, and nowhere else. The hub had never sent
+      a ping, and a healthy WS connection carries no read deadline, so a controller that
+      never drops never re-handshakes. After `wire.StaleClockLimitSeconds` (14 days) its
+      grant verification refuses EVERYTHING with `stale_clock` — step 1, before lockdown,
+      before the grant is examined. The failure lands exactly inverted: flawless
+      connectivity for a fortnight, then a hub outage, and every offline emergency grant
+      denied at the gate. A six-hourly sweep of connected controllers fixes it
+- [ ] **`repair` is the last one, and it is a programme rather than a feature.** It is the
+      recovery path for a leaked or rotated hub signing key. The hub needs two-key
+      retention and per-controller ack tracking — switching the signing key while one
+      controller is offline strands it until a factory reset — and the blast radius
+      reaches past controllers to every phone holding an offline grant, since those pin
+      the hub key too and the app already treats a change as a re-enrolment event.
+      (`lockdown`/`lift` are deliberately controller-local — `offline_grants.go` says so —
+      and are NOT part of this gap)
 - [ ] Controller position/tamper sensors return static values
 
 **Console screens ahead of their backend** (tracked mechanically by the route-parity test):

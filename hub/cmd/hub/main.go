@@ -620,6 +620,16 @@ func buildHub(cfg config, log *slog.Logger) (*hub, error) {
 	// silently under-reported exactly the ones an operator is most likely to
 	// have set. One line, once, after everything has been read.
 	warnLegacyEnv(h.log)
+
+	// Always on. A controller learns the hub's time at the WS handshake and
+	// on an accepted ping, and a healthy connection never re-handshakes — so
+	// without this a controller connected for 14 days straight starts refusing
+	// every offline grant with stale_clock, at the gate, during exactly the
+	// outage those grants exist for. See httpapi/clocksync.go.
+	h.workers = append(h.workers, worker{
+		name: "controller-clock-sync",
+		run:  h.srv.RunClockSync,
+	})
 	return h, nil
 }
 
