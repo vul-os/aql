@@ -166,6 +166,32 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       a vulnerability (claim DoS; invite-credential replacement) — allowlisted with that
       reasoning. AddVerifiedPhone/LinkChannelIdentity/PhoneVerified are cross-package
       test fixtures over primitives production reaches through the ceremonies.
+- [x] The FRONTEND twin of that guard: src/lib/__tests__/apiReachability.test.ts. routeParity
+      proved every api.X call hits a real hub route; nothing proved a client method is ever
+      CALLED by a screen. Same defect wearing frontend clothes — the hub serves it, api.ts
+      wraps it, the docs describe it, and no screen offers it, so it looks finished from
+      every angle except using it. Found 15; 9 are honest allowlist entries, 6 were real
+      console gaps (automations delete/run-now/run-history, "log out everywhere", admin
+      audit verify).
+- NOTE: my first version of that guard put the allowlist-rot assertion AFTER the
+      uncalled-methods assertion in the same `it`, so the rot check never ran while any
+      method was uncalled — a check hiding behind another check's failure, which is the
+      exact shape this whole effort keeps finding. Split into its own block and tampered.
+- [x] The six real gaps the frontend guard found are closed: automations delete /
+      run-now / run-history (an automations runtime you cannot inspect is one you cannot
+      trust), "log out everywhere" (a session-security control that was curl-only), and
+      the audit hash-chain verification — the whole point of chaining the audit tables is
+      that "was this tampered with?" is a CHECKABLE question, and nothing in the console
+      could ask it. Also added GET /v1/devices/{id}/events to the console for the same
+      reason: routeCoverage caught that my new route had no client.
+- NOTE: routeCoverage.test.ts already existed and checks hub-route → client; my new
+      guard checks client → screen. Three links, three checks now: routeParity (client →
+      route), routeCoverage (route → client), apiReachability (client → screen). I ran
+      only the Go suite after adding the events route and missed routeCoverage failing.
+- [ ] railDisclosures has no console surface. The §26.3 per-rail disclosure data
+      (initiation class, inbound transport, price shape, exposure) is computed, tested and
+      served, and nothing shows it to anyone — which for an HONESTY feature is worse than
+      for an ordinary one. Allowlisted with that stated, not resolved.
 - NOTE: the guard cannot see the SIBLING shape — a handler that receives something and
       discards it is perfectly "reachable". That was the controller-events defect, and
       nothing automated would have caught it.

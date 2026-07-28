@@ -1,3 +1,4 @@
+import LogoutAllSection from '@/components/settings/LogoutAllSection';
 import TwoFactorSection from '@/components/settings/TwoFactorSection';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -40,6 +41,7 @@ export default function Settings() {
         <LocationsSection />
         <PasswordSection />
         <TwoFactorSection />
+        <LogoutAllSection />
         <GatewaySection />
       </div>
     </>

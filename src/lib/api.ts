@@ -792,6 +792,23 @@ export const api = {
    */
   adminAuditVerify: () => apiFetch<AuditVerifyResult>('/admin/audit/verify'),
 
+  /**
+   * The raw, controller-signed events this hub stored for one device
+   * (hub/internal/httpapi/devices.go, proto/events.md).
+   *
+   * Distinct from the audit log, which is where the ACCESS-relevant ones are
+   * rendered for everyone. This returns each event's envelope verbatim — the
+   * exact bytes the controller signed — because a signature is only
+   * re-checkable against those, and a stored signature nobody can retrieve is
+   * decorative. Admin-only; a device the caller cannot see 404s rather than
+   * 403s, so a guessed device id confirms nothing.
+   */
+  deviceEvents: (deviceId: string, limit?: number) =>
+    apiFetch<{ events: ControllerEventRow[] }>(
+      `/devices/${encodeURIComponent(deviceId)}/events` +
+        (limit ? `?limit=${encodeURIComponent(String(limit))}` : ''),
+    ),
+
   /** Every account this user belongs to. /auth/me carries a summary; this is
    *  the full list with the fields the switcher needs. */
   accountsList: () => apiFetch<{ accounts: AccountRow[] }>('/accounts'),
@@ -1861,6 +1878,17 @@ export type GeofenceRule = {
  * after it can still rewrite history. site/docs says so; no copy here may
  * imply more.
  */
+/** One controller-signed event as stored by the hub (migration 0019). */
+export type ControllerEventRow = {
+  event_id: string;
+  kind: string;
+  ts: UnixSeconds;
+  data: Record<string, unknown>;
+  sig: string;
+  /** The exact signed bytes, kept verbatim so the signature stays verifiable. */
+  envelope: string;
+};
+
 export type AuditVerifyResult = {
   ok: boolean;
   chains: Array<{
