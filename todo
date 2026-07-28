@@ -354,7 +354,17 @@ cannot catch what both implementations get wrong together.
       captured from either side. Found a real defect: 2^53+1 was silently ROUNDED to
       2^53 rather than refused, because Float64() lost the precision before the range
       check ran — in BOTH implementations. The documented deviation promises a refusal.
-- [ ] Parsers still unfuzzed: hub/internal/devices/modbus decode, the camera RTSP/RTP
+- [x] hub/internal/devices/modbus is now fuzzed: readADU (the wire frame), decodeReadResponse
+      (the response-vs-request check) and Metric.decode (the numeric half). ~8M execs
+      clean — the decoder was already careful, which is the honest result. The property
+      worth having is Metric.decode's: a value that decodes successfully is FINITE, held
+      over 1.6M random type/order/scale/offset combinations rather than the few cases the
+      unit tests picked. Several inverters put NaN in a channel that is not measuring, and
+      a NaN ingested as energy poisons every aggregate it touches — silently, because NaN
+      compares false against every threshold anyone would check it with. Tampered: removing
+      the finite guard fails on the seed corpus; loosening the length guard fails with a
+      257-byte PDU the fuzzer built itself. All three added to CI.
+- [ ] Parsers still unfuzzed: the camera RTSP/RTP
       reader.
 - NOTE: two of my own fuzz assertions were wrong before the code was. The framing one
       forbade messages alongside an error; the JCS one compared numbers by SPELLING, so
