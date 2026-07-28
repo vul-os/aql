@@ -182,6 +182,20 @@ func New(cfg Config, st *store.Store, ks *keys.Keys, log *slog.Logger) *Server {
 		s.dial = append(s.dial, s.socket)
 	}
 	s.wireDiscord() // Discord: the third dial-out rail (channels_discord.go)
+	// Telegram long-polling: the zero-ingress path for that rail, mirroring
+	// Slack's Socket Mode above. Always constructed and always safe to
+	// construct — the poller reports Enabled() == false unless the engine is
+	// the exact opt-in "polling" AND a bot token is set, and StartChannels
+	// skips every DialChannel that is not Enabled(). An install that has not
+	// set AQL_TELEGRAM_ENGINE keeps the authenticated webhook, unchanged.
+	//
+	// This block is the one thing channels_telegram_polling.go was missing:
+	// the poller, its offset storage and its handler have all existed for a
+	// while, complete and tested, and nothing constructed them. Its own doc
+	// comment carried these lines as a suggestion.
+	if p := s.NewTelegramPoller(ch.TelegramEngine); p.Enabled() {
+		s.dial = append(s.dial, p)
+	}
 	if cfg.DMTAPTransport != nil {
 		// DMTAP: the second DialChannel, proving the seam generalizes beyond
 		// Slack. Only reachable when a caller injects a real Transport (see

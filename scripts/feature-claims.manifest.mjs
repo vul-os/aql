@@ -457,6 +457,24 @@ export const FEATURES = [
     evidence: [{ file: 'hub/internal/channels/telegram.go', pattern: 'func \\(Telegram\\) Kind\\(\\)' }],
   },
   {
+    id: 'telegram-polling',
+    label: 'Telegram long polling (getUpdates, outbound, zero ingress) — WIRED into the server, not merely implemented',
+    docStatus: 'shipped',
+    docRefs: [
+      'site/docs/channels.md § Telegram — Opt-in long polling',
+      'site/docs/reachability.md — the Telegram long polling row',
+    ],
+    // The evidence is the WIRING, not the poller. channels/telegram_polling.go
+    // and httpapi/channels_telegram_polling.go were both complete and tested
+    // for a long time while nothing constructed one, so a pattern matching the
+    // implementation would have reported this claim as shipped throughout the
+    // entire period an operator could not switch it on.
+    evidence: [
+      { file: 'hub/internal/httpapi/server.go', pattern: 'NewTelegramPoller\\(ch\\.TelegramEngine\\)' },
+      { file: 'hub/internal/channels/channels.go', pattern: 'AQL_TELEGRAM_ENGINE' },
+    ],
+  },
+  {
     id: 'slack-socket-mode',
     label: 'Slack Socket Mode (outbound WSS, zero ingress)',
     docStatus: 'shipped',

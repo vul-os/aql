@@ -55,8 +55,8 @@ Two things there are worth knowing before you pick a rail:
 - **Two rails need no public endpoint at all.** Slack Socket Mode and Discord both hold
   an outbound WebSocket and work behind CGNAT with no hostname. WhatsApp arrives by
   webhook and has no alternative — Meta's Cloud API only speaks webhooks — so it is the
-  one rail that genuinely requires ingress. Telegram is webhook today with an opt-in
-  long-polling engine.
+  one rail that genuinely requires ingress. Telegram defaults to webhook and has an
+  opt-in long-polling engine that needs no public URL either.
 
   One Discord footgun worth knowing before you set it up: leave the **Interactions
   Endpoint URL unset**. Setting it turns button taps into webhooks, which puts the rail
@@ -197,10 +197,18 @@ Telegram is wired to the **real open path** in the hub:
   re-enters the same verdict path. Every chat and message is recorded and the shared
   per-sender flood throttle applies.
 
-- **In progress** — an opt-in long-polling engine (`getUpdates`), an entirely outbound
-  alternative that needs **no public URL at all**, is being built for this channel. It is
-  **not shipped**: today's wiring is the webhook path below, so Telegram currently needs a
-  reachable URL. See [Reachability](reachability.md).
+- **Opt-in long polling** — set `AQL_TELEGRAM_ENGINE=polling` and the hub calls
+  `getUpdates` outbound instead of receiving webhooks. Entirely outbound, so it needs
+  **no public URL at all**. The default is unchanged and stays the webhook: anything
+  other than the exact string `polling` (including unset and misspelled) resolves to
+  webhook, because a hub should not quietly stop authenticating its inbound updates
+  because a variable was fat-fingered.
+
+  **What changes when you select it.** The webhook path authenticates every request with
+  the `X-Telegram-Bot-Api-Secret-Token` header. Polling has no per-request secret; TLS to
+  `api.telegram.org` plus your bot token establish authenticity instead. The hub logs
+  that trade-off once at startup rather than leaving it implicit. See
+  [Reachability](reachability.md).
 
 Setup:
 

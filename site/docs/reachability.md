@@ -46,7 +46,7 @@ hub notices.
 | **Slack — Socket Mode** | **No** | The hub dials **out** over one WebSocket (`apps.connections.open` → `wss://…`). Shipped: `hub/internal/channels/socketmode.go` |
 | **Slack — Events API** | Yes, public HTTPS | Slack POSTs to `/webhooks/slack`. The default only when no `SLACK_APP_TOKEN` is set |
 | **Telegram — webhook** | Yes, public HTTPS | Today's shipped path: Telegram POSTs to `/webhooks/telegram` |
-| **Telegram — long polling** | **No** *(in progress)* | `getUpdates` is entirely outbound. Being built as an opt-in engine; **not shipped yet** |
+| **Telegram — long polling** | **No** | `getUpdates` is entirely outbound. Opt in with `AQL_TELEGRAM_ENGINE=polling`; the authenticated webhook stays the default |
 | **Controllers** | **No** | They dial out to the hub (WSS, HTTPS long-poll fallback): `controller/internal/transport/runner.go:44`. No inbound port, fine behind CGNAT, fine on a 4G SIM |
 | **Web console / desktop app on the LAN** | **No** | Ordinary LAN HTTP to the hub's listener |
 | **Web console from outside the LAN** | Yes, public HTTPS | Only if residents or staff need it off the property |

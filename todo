@@ -59,8 +59,9 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       `telegram-channel`, `slack-socket-mode` as shipped Aql claims. The code IS still
       there, so those entries are truthful today — revisit when the move lands rather
       than weakening them now.
-- [ ] Telegram long-polling (`getUpdates`) — the zero-ingress path for that channel.
-      Probably lands in Ephor rather than here.
+- [x] Telegram long-polling (`getUpdates`) — shipped as an opt-in engine
+      (`AQL_TELEGRAM_ENGINE=polling`). The poller had been complete and tested for a
+      while with nothing constructing it; wiring is now covered by a reachability test.
 - [ ] Discord — designed into the seam, no code yet. Same question: whose seam?
 - [ ] extend the intent vocabulary past `open`/`close` so chat reaches the other kinds
 - [ ] DMTAP channel stays a scaffold with a fail-closed transport until there is a real

@@ -138,7 +138,14 @@ type Config struct {
 	SlackAppToken      string // xapp-… → Socket Mode (zero public URL)
 
 	// Telegram (Bot API webhook)
-	TelegramBotToken      string
+	TelegramBotToken string
+	// TelegramEngine is the raw AQL_TELEGRAM_ENGINE value — "polling" opts
+	// into the zero-ingress getUpdates path, anything else (including unset
+	// and misspelled) means the webhook. Resolve with ResolveTelegramEngine
+	// (telegram_polling.go), which fails closed toward the webhook so that an
+	// upgrade or a fat-fingered variable never quietly stops authenticating
+	// inbound updates.
+	TelegramEngine        string
 	TelegramWebhookSecret string
 
 	// Discord (Bot API + the outbound Gateway WebSocket — see discord.go)
@@ -171,6 +178,7 @@ func FromEnv(getenv func(string) string, publicURL string) Config {
 		SlackBotToken:          getenv("SLACK_BOT_TOKEN"),
 		SlackAppToken:          getenv("SLACK_APP_TOKEN"),
 		TelegramBotToken:       getenv("TELEGRAM_BOT_TOKEN"),
+		TelegramEngine:         getenv("AQL_TELEGRAM_ENGINE"),
 		TelegramWebhookSecret:  getenv("TELEGRAM_WEBHOOK_SECRET"),
 		DiscordBotToken:        getenv("DISCORD_BOT_TOKEN"),
 		PublicURL:              publicURL,
