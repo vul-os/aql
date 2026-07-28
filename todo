@@ -226,11 +226,25 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       otherwise accumulate a run's worth of history per boot) and a threshold after
       drains. Open's failure is deliberately non-fatal — refusing to start because old
       lines could not be reclaimed would turn a full disk into a gate that cannot open.
-- [ ] The controller module has NO reachability guard of its own. An ad-hoc scan lists
-      ~20 candidates, but most are false positives (build-tagged gpio/ble files, same-file
-      callers like grants.InAnyWindow which IS called at grants.go:229). Making it a real
-      guard needs the hub's treatment: transitive reachability, build-tag awareness, and
-      an allowlist with reasons. That is the next piece of this.
+- [x] Tried a controller-wide reachability guard and DELIBERATELY did not ship one. Two
+      rules, both wrong: package-boundary flags every same-package helper (ws.go's six
+      primitives are called from runner.go next door), and file-boundary with transitive
+      closure reports ZERO because the declaration line itself matches a bare-name regex.
+      The hub's version escapes that only because store methods are always called as
+      `s.Method(` and it can require the leading dot; the controller mixes call forms, so
+      the same trick does not transfer. A guard needing a 20-entry allowlist trains people
+      to allowlist, which is worse than no guard.
+- [x] Shipped the SHARP version instead: reclaimPathsAreWired.test.ts, spanning both Go
+      modules. Two of the five instances were reclaim paths, and that is not chance —
+      nobody misses reclamation until a disk is full, months later, on a machine nobody
+      watches, so it is the category least likely to be caught by using the product.
+      Matches Compact/Prune/Expire/Cleanup/Vacuum/Trim/Purge/Evict/Reclaim/Sweep/Rotate,
+      one allowlist entry (ExpireDeviceClaim, a documented dev hook). Tampered: unwiring
+      either real reclaim path fails by name, and breaking the pattern fails the floor.
+- NOTE: it caught something immediately — splitting Compact into Compact/CompactIfNeeded
+      left the unconditional Compact() dead surface AGAIN, an hour after fixing the
+      original. Removed: reclamation happens at Open and past the threshold, both
+      automatic, and a second entry point is just a second thing to forget to call.
 
 ## spec-derived checks
 The technique that found the 2^53 rounding: derive expected behaviour from proto/*.md

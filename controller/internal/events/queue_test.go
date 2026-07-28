@@ -197,9 +197,9 @@ func TestCompact(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := q.Compact(); err != nil {
-		t.Fatal(err)
-	}
+	// Reclamation is automatic: Open compacts after replay, so closing and
+	// reopening is the reclaim. There is no exported unconditional Compact to
+	// call here, on purpose — see the note in queue.go.
 	q.Close()
 	q2 := mustOpen(t, dir)
 	defer q2.Close()
@@ -253,7 +253,19 @@ func TestCompactionActuallyShrinksTheLog(t *testing.T) {
 		t.Fatalf("acking rewrote the log on its own: %d -> %d", grown, after)
 	}
 
-	if err := q.Compact(); err != nil {
+	// Cross the threshold so CompactIfNeeded fires, rather than reaching for
+	// an unconditional entry point that deliberately does not exist.
+	for i := 0; i < events.CompactThreshold; i++ {
+		if err := q.Enqueue("opened", []byte(fmt.Sprintf(`{"event_id":"x%d"}`, i))); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, p := range q.Drain(events.CompactThreshold) {
+		if err := q.Ack(p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := q.CompactIfNeeded(); err != nil {
 		t.Fatal(err)
 	}
 	if after := logSize(t, dir); after >= grown {

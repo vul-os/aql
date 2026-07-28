@@ -344,13 +344,12 @@ func (q *Queue) Len() (normal, grant int) {
 // is not rewriting two files a minute for no reason.
 const CompactThreshold = 128
 
-// Compact rewrites the logs keeping only undelivered entries.
-func (q *Queue) Compact() error {
-	q.mu.Lock()
-	defer q.mu.Unlock()
-	return q.compactLocked()
-}
-
+// There is deliberately no exported unconditional Compact(). One existed and
+// nothing called it, which is how the log came to grow forever; splitting it
+// into a triggered form left the unconditional one dead surface again, and a
+// second reclaim entry point would just be a second thing to forget to call.
+// Reclamation happens at Open and past the threshold below — both automatic.
+//
 // CompactIfNeeded rewrites the logs once enough entries have been acked since
 // the last rewrite, and is a cheap no-op otherwise — so a caller can invoke it
 // after every drain without thinking about it. That is the point: the reason
