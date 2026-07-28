@@ -449,6 +449,21 @@ export const FEATURES = [
     ],
   },
   {
+    // The automations package doc's safety story is an IMPORT-BOUNDARY claim,
+    // and imports rot silently: the package would still compile, its tests
+    // would still pass, and the sentence would simply be false.
+    id: 'rule-engine-boundaries-held',
+    label: 'The unattended rule engine structurally cannot reach the store, serve HTTP, or widen its audit seam',
+    docStatus: 'shipped',
+    docRefs: ['hub/internal/automations/automations.go — "structurally cannot write to an audit table itself"'],
+    evidence: [
+      { file: 'hub/internal/automations/boundaries_test.go', pattern: 'TestTheRuleEngineCannotReachTheStoreOrServeHTTP' },
+      { file: 'hub/internal/automations/boundaries_test.go', pattern: 'TestTheNarrowSeamsStayNarrow' },
+      // The boundary itself: no store import in the package's own sources.
+      { file: 'hub/internal/automations/automations.go', patternAbsent: 'hub/internal/store' },
+    ],
+  },
+  {
     // §1.4's not_implemented, at the layer that exists today. The Port itself is
     // still unbuilt; this is its reply half, and it has a caller on all four
     // rails — a seam with no consumer would have been the sixth "built and

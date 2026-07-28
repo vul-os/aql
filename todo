@@ -330,6 +330,26 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 - NOTE: deliberately does NOT touch the open path. A mixed body ("open the gate and turn
       on the light") still opens the gate, exactly as before. Refusing mixed intent is a
       real question but it is a change to the ACTUATION path, not to a fallback reply.
+- [x] Checked whether AUTOMATIONS could be the actuate Port's caller. They cannot, and
+      deliberately: the package doc says "'Open the gate at 07:00 every weekday' is not
+      expressible here, on purpose", every access verb sits at TierPhysicalAccess, and
+      MaxActionTier is TierConsequential — a line drawn because everything above it is a
+      decision a person should be present for. Already well-tested (tier_test.go pins the
+      ceiling AND makes anyone raising it say so out loud). So the Port still has no
+      caller anywhere, and not building it remains right.
+- [x] Pinned the automations package doc's THREE structural claims instead: no
+      internal/store, no HTTP surface, narrow DB and Auditor seams. All were true and
+      none were guarded — an import is one line somebody adds while fixing something
+      else, and nothing in the build would notice: it would still compile, the tests
+      would still pass, and "structurally cannot write to an audit table itself" would
+      simply be false. That sentence is why an unattended actuator is allowed near an
+      audit table at all.
+- NOTE: widening Auditor breaks the BUILD first (every implementer stops satisfying it),
+      so the type system is the stronger guard for the careless case. The arity check is
+      for the careful one: a change that widens the interface and dutifully updates every
+      implementer compiles perfectly, and nothing else would notice. My first tamper only
+      "passed" because the build broke before the test ran — proved the mechanism by
+      flipping the expected count instead.
 - [ ] STILL NEXT: the `actuate` package. It is now a
       TWO-implementation seam rather than one, which is a bigger and better change than
       the doc describes. Build it with a caller in the same change — a Port with no
