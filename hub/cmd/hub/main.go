@@ -1050,6 +1050,19 @@ func (h *hub) newAutomationsEngine() *automations.Engine {
 		Registry: h.reg,
 		Store:    automations.NewStore(h.store.DB()),
 		Audit:    h.store,
+		// A rule may only drive devices its own account has claimed. Nil here
+		// would keep the pre-ownership behaviour, where a rule in one account
+		// could actuate another account's device.
+		DeviceOwner: func(ctx context.Context, deviceKey string) (string, bool, error) {
+			owner, err := h.store.DeviceOwnerAccount(ctx, deviceKey)
+			if errors.Is(err, store.ErrDeviceNotClaimed) {
+				return "", false, nil
+			}
+			if err != nil {
+				return "", false, err
+			}
+			return owner, true, nil
+		},
 	})
 	if err != nil {
 		h.log.Error("rule engine not started; automation rules cannot be "+

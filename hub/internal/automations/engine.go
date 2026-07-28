@@ -49,7 +49,31 @@ type Config struct {
 	Now func() time.Time
 	// FailureBudget overrides DefaultFailureBudget when > 0.
 	FailureBudget int
+
+	// DeviceOwner resolves which account has claimed a device, or reports
+	// that nobody has. Nil disables the check, which is the behaviour this
+	// engine had before ownership existed.
+	//
+	// Until this seam, a rule named a device key and NOTHING verified it
+	// belonged to the rule's account — not at save, not at firing. On a
+	// multi-account hub an admin of one account could write a rule that drove
+	// another account's claimed device. The tier ceiling bounded what that
+	// could do (MaxActionTier stops entry and hazardous motion) but bounded is
+	// not the same as prevented.
+	//
+	// An UNCLAIMED device is allowed, for the same reason the energy poller
+	// falls back: a hub with one household claims nothing, and requiring every
+	// lamp to be claimed before a rule could touch it would break the
+	// deployment this product is mostly for. An ERROR is refused, because a
+	// lookup that failed has not established that a device is unclaimed and
+	// actuating on that basis would be acting without authority.
+	DeviceOwner OwnerFunc
 }
+
+// OwnerFunc reports the account that has claimed deviceKey. claimed=false
+// means nobody has — a different answer from an error, and treated
+// differently.
+type OwnerFunc func(ctx context.Context, deviceKey string) (accountID string, claimed bool, err error)
 
 // Engine evaluates rules, applies the tier policy, actuates through the
 // registry, and records what happened.
@@ -57,6 +81,7 @@ type Engine struct {
 	reg    *devices.Registry
 	store  *Store
 	audit  Auditor
+	owner  OwnerFunc
 	now    func() time.Time
 	budget int
 }
@@ -75,7 +100,7 @@ func NewEngine(cfg Config) (*Engine, error) {
 		return nil, errors.New("automations: no auditor")
 	}
 	e := &Engine{reg: cfg.Registry, store: cfg.Store, audit: cfg.Audit,
-		now: cfg.Now, budget: cfg.FailureBudget}
+		owner: cfg.DeviceOwner, now: cfg.Now, budget: cfg.FailureBudget}
 	if e.now == nil {
 		e.now = time.Now
 	}
@@ -106,6 +131,29 @@ func checkActionTier(t devices.Tier) error {
 		return refuse(ReasonTierTooHigh,
 			"tier %s is above %s: an automation fires with nobody watching, so it may not %s",
 			t, MaxActionTier, tierProse(t))
+	}
+	return nil
+}
+
+// checkDeviceOwnership refuses a device claimed by a different account.
+//
+// Fail-closed on a lookup error: not knowing whose a device is, is not a
+// licence to actuate it. Unclaimed is permitted — see Config.DeviceOwner.
+func (e *Engine) checkDeviceOwnership(ctx context.Context, ruleAccount, deviceKey string) error {
+	if e.owner == nil {
+		return nil
+	}
+	owner, claimed, err := e.owner(ctx, deviceKey)
+	if err != nil {
+		return refuse(ReasonForeignDevice,
+			"could not establish who owns %s, so it was not actuated: %v", deviceKey, err)
+	}
+	if claimed && owner != ruleAccount {
+		// The message names neither the owning account nor that one exists:
+		// a rule author must not learn the shape of another tenant's fleet
+		// from a refusal.
+		return refuse(ReasonForeignDevice,
+			"%s is not this account's device", deviceKey)
 	}
 	return nil
 }
@@ -215,6 +263,14 @@ func (e *Engine) SaveRule(ctx context.Context, r Rule) (Rule, error) {
 	tier := devices.TierUnset
 	for _, p := range plans {
 		if err := checkActionTier(p.Tier); err != nil {
+			return fail(err)
+		}
+		// A courtesy, not the boundary. Refusing here means an admin naming
+		// another account's device is told immediately, instead of saving a
+		// rule that looks fine and is refused every time it fires. The check
+		// that actually protects the device is the one in the run path, which
+		// re-asks because ownership can change under a stored rule.
+		if err := e.checkDeviceOwnership(ctx, r.AccountID, p.Key); err != nil {
 			return fail(err)
 		}
 		if p.Tier > tier {
@@ -399,6 +455,13 @@ func (e *Engine) Fire(ctx context.Context, r Rule, cause Cause, occurrenceAt int
 	for _, p := range plans {
 		if err := checkActionTier(p.Tier); err != nil {
 			return e.settle(ctx, r, run, OutcomeRefused, ReasonTierTooHigh, err)
+		}
+		// Ownership is checked HERE for exactly the reason the tier is: a rule
+		// carries no authority of its own. A device claimed by this account
+		// when the rule was written may have been released to another since,
+		// and a save-time check alone would keep firing at it forever.
+		if err := e.checkDeviceOwnership(ctx, r.AccountID, p.Key); err != nil {
+			return e.settle(ctx, r, run, OutcomeRefused, ReasonForeignDevice, err)
 		}
 	}
 

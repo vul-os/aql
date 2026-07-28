@@ -102,9 +102,12 @@ const (
 // on them, and so a refusal can be classified as structural (the rule cannot
 // work as written; stop it now) or transient (count it against the budget).
 const (
-	ReasonInvalidRule      = "invalid_rule"
-	ReasonInvalidSchedule  = "invalid_schedule"
-	ReasonTierTooHigh      = "tier_too_high"
+	ReasonInvalidRule     = "invalid_rule"
+	ReasonInvalidSchedule = "invalid_schedule"
+	ReasonTierTooHigh     = "tier_too_high"
+	// ReasonForeignDevice: the rule's account does not own the device it
+	// names. See Config.DeviceOwner.
+	ReasonForeignDevice    = "foreign_device"
 	ReasonUnresolvable     = "unresolvable_target"
 	ReasonNoTargets        = "no_targets"
 	ReasonAmbiguousState   = "ambiguous_state"

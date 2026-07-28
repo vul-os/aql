@@ -268,19 +268,19 @@ and none has met physical hardware.
       /v1/accounts/{id}/devices/claimable`, `POST|DELETE .../devices/claims`) and the
       Devices screen does not yet offer them, so on a multi-account hub claiming is
       currently an API call
-- [ ] **Automations never consult device ownership.** `grep` for ownership in
-      `internal/automations/` returns nothing: a rule belongs to an account, names a
-      device key, and nothing validates that the device is that account's — at save time
-      or at firing time. On a multi-account hub an admin of account B can write a rule
-      that drives a device account A claimed. The blast radius is bounded, and
-      deliberately: `MaxActionTier = TierConsequential`, enforced at BOTH save and fire
-      (`engine.go`'s execution-time gate is explicit that it "is not belt-and-braces for
-      the save-time check; it is the check that matters", because a rule saved a year ago
-      is evaluated against today's tiers). So the worst case is a thermostat setpoint or a
-      patrol route on someone else's hardware — not entry granted, not blades started. The
-      fix is the same shape as the energy one: an ownership lookup consulted at firing
-      time, since a rule written while a device was owned must stop working when it is
-      released
+- [x] **Automations check device ownership.** A rule named a device key and nothing
+      verified it belonged to the rule's account — not at save, not at firing — so on a
+      multi-account hub an admin of one account could write a rule that drove another
+      account's claimed device. The tier ceiling bounded what that could do
+      (`MaxActionTier = TierConsequential` stops entry and hazardous motion) but bounded
+      is not prevented. The check now runs in the execution path for the same reason the
+      tier check does — `engine.go` is explicit that a stored rule "carries no authority
+      of its own", and a device claimed when a rule was written may have been released
+      since. The save-time refusal is a courtesy so an admin is told immediately rather
+      than saving a rule that is refused every time it fires. Unclaimed devices stay
+      drivable (a one-household hub claims nothing); a failed lookup refuses, because not
+      knowing whose a device is, is not a licence to actuate it. The refusal names neither
+      the owning account nor that one exists
 - [ ] Bring the existing access module onto the same internal device model, so `access` is
       one kind among seven rather than a parallel stack
 - [ ] Extend the input surfaces' intent vocabulary past `open`/`close` so chat and the
