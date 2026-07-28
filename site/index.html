@@ -1227,9 +1227,11 @@ caddy reverse-proxy --to 127.0.0.1:8080
         <p class="lede">
         Aql is early, and early projects that oversell are how people end up with a gate that
         doesn't open. So here is the ledger: what is built and tested, and what is still only
-        a design. One of the seven device kinds is finished and the engine behind the other
-        six has not started — that is the whole shape of the project right now. Nothing
-        anywhere on this page is called real unless it appears in the left column.
+        a design. Access control runs end to end, the device engine is running underneath
+        four drivers, and what varies is how far each kind's path goes — a meter is read end
+        to end, a camera is discovered but never decoded, a robot has no driver at all. That
+        is the shape of the project right now. Nothing anywhere on this page is called real
+        unless it appears in the left column.
       </p>
     </div>
 
@@ -1237,14 +1239,19 @@ caddy reverse-proxy --to 127.0.0.1:8080
       <div class="ledger-col reveal">
         <h3>Built &amp; tested <span class="tag tag-shipped">real</span></h3>
         <ul>
-          <li><i class="i-yes"></i><span><b>The hub.</b> One Go binary, one SQLite file: accounts, members, invites, locations, access points, device pairing and the controller registry — 60 HTTP routes, 183 tests green across 8 packages.</span></li>
+          <li><i class="i-yes"></i><span><b>The hub.</b> One Go binary, one SQLite file: accounts, members, invites, locations, access points, device pairing and the controller registry — 111 HTTP routes over 19 migrations, and more than 870 tests green across 16 packages.</span></li>
           <li><i class="i-yes"></i><span><b>Signed commands.</b> Ed25519 envelopes carrying a nonce and an expiry capped at 60 seconds. The controller pins the hub's key at pairing and verifies fail-closed, in a fixed order.</span></li>
-          <li><i class="i-yes"></i><span><b>The reference controller.</b> Its own Go module, 45 tests green: dials out, pins the hub's key, verifies in a fixed order. The last inch is not proven — the GPIO relay driver is still a stub, and no build in this repo has driven real hardware.</span></li>
+          <li><i class="i-yes"></i><span><b>The reference controller.</b> Its own Go module, over 120 tests green: dials out, pins the hub's key, verifies in a fixed order. The GPIO relay driver is written — the kernel uAPI layout is asserted at compile time on arm, arm64 and 386 — but the last inch is still unproven: no build in this repo has driven a real relay or a real gate.</span></li>
           <li><i class="i-yes"></i><span><b>Offline-grant issuance.</b> The hub issues a signed 7-day grant through the same authorization gates as a live open, and the controller's eleven-step verification is built and tested.</span></li>
-          <li><i class="i-yes"></i><span><b>Conformance vectors.</b> 61 vectors and 68 checks in <code>proto/</code>, consumed by both implementations and by an independent verifier that trusts neither.</span></li>
+          <li><i class="i-yes"></i><span><b>Conformance vectors.</b> 98 checks in <code>proto/</code> across pairing, commands, grants, events, acks and webhooks, consumed by the implementations and by an independent verifier that trusts none of them.</span></li>
           <li><i class="i-part"></i><span><b>Chat as an input surface.</b> A message resolves to a member, passes the open path and becomes a signed command — and the per-channel rails are moving out to <a href="https://github.com/vul-os/ephor" rel="noopener" style="color:var(--terracotta)">Ephor</a>. That move is in progress, so read this as the behaviour being real, not as a claim about which binary carries an adapter this week.</span></li>
           <li><i class="i-yes"></i><span><b>Rules and audit.</b> Open cooldown, hourly caps, optional per-location quotas — and a SHA-256 hash-chained, append-only log of every open, denial, pairing and config change, verifiable from a cold backup.</span></li>
           <li><i class="i-yes"></i><span><b>Temporary access grants.</b> A dated window for a named person, with an optional use cap, revocable, refunded on a rate-limit denial.</span></li>
+          <li><i class="i-yes"></i><span><b>The device engine and four drivers.</b> The registry, the internal model and the capability catalogue that assigns every verb a safety tier — with MQTT (including anything a <code>zigbee2mqtt</code> bridge republishes), Modbus TCP, generic HTTP and ONVIF discovery behind it.</span></li>
+          <li><i class="i-yes"></i><span><b>The automations runtime.</b> Rules, a scheduler and an execution engine that runs them against live device state, with a failure budget, a cooldown and a run history. It refuses to actuate anything above its tier ceiling, so &ldquo;open the gate at 07:00&rdquo; is deliberately not expressible.</span></li>
+          <li><i class="i-yes"></i><span><b>Energy metering.</b> Meter ingestion, hourly and daily rollups and a solar/grid/battery source mix, measured rather than estimated — every bucket carries how much of it was actually observed, and raw samples are pruned on a retention window while the counter endpoints a bill is argued from are kept.</span></li>
+          <li><i class="i-yes"></i><span><b>Geofencing and recurring time windows.</b> Both enforced inside the same choke point as every other limit. Geofencing is a convenience and not a security control — the position it tests is client-supplied and unverified, so it stops mistakes, not attackers.</span></li>
+          <li><i class="i-yes"></i><span><b>The app half of offline access.</b> A routed screen requests, holds and presents a grant. Presenting works in the desktop app and in a browser over the LAN when the console is served over http; an https console cannot reach a plain-http controller, and BLE needs the app.</span></li>
           <li><i class="i-yes"></i><span><b>A cross-module test harness.</b> Boots the real hub and controller binaries and drives the open path over the wire, adversarial cases included.</span></li>
         </ul>
       </div>
@@ -1252,13 +1259,11 @@ caddy reverse-proxy --to 127.0.0.1:8080
       <div class="ledger-col reveal">
         <h3>Not built yet <span class="tag tag-planned">planned</span></h3>
         <ul>
-          <li><i class="i-no"></i><span><b>The device engine.</b> The driver-adapter seam and every adapter behind it — Matter, MQTT, Zigbee, ONVIF, Modbus, generic HTTP — is designed, not written. No protocol driver of any kind exists in the repo.</span></li>
-          <li><i class="i-no"></i><span><b>The automations runtime.</b> No <em>when &rarr; do</em> rule executes against live device state. Where the engine even lands — the Go hub or the Rust core — is not committed.</span></li>
-          <li><i class="i-no"></i><span><b>Energy metering.</b> No meter or inverter ingestion, no historical rollups, no source mix.</span></li>
-          <li><i class="i-no"></i><span><b>The camera pipeline.</b> No live view, no recording, no camera-driven alerting.</span></li>
-          <li><i class="i-no"></i><span><b>Lighting, climate, sensors and robot tasking.</b> Six of the seven kinds have status in the design and nothing underneath them.</span></li>
-          <li><i class="i-no"></i><span><b>The phone half of offline access.</b> The app does not request, store or present a grant — the one gap between a tested protocol and a working feature.</span></li>
-          <li><i class="i-no"></i><span><b>Geofencing and recurring windows.</b> Documented designs, no code. The cleaner-every-Tuesday case is not solved yet.</span></li>
+          <li><i class="i-no"></i><span><b>The camera pipeline.</b> The ONVIF driver discovers cameras and resolves an RTSP address; nothing decodes a frame. No live view, no recording, no camera-driven alerting. Depacketization is the line — a fake written from the same RFC would agree with the code under test, so it waits for a real camera.</span></li>
+          <li><i class="i-no"></i><span><b>Robot tasking.</b> The one kind of the seven with no path at all: no driver, and nothing underneath the status in the design.</span></li>
+          <li><i class="i-no"></i><span><b>Matter, and native Zigbee or Z-Wave radios.</b> Matter needs a certified device and a stack. The radios are reached through a bridge instead, and the hub is not getting one — though discovery only reads <code>zigbee2mqtt</code>&rsquo;s announcement format, so a Z-Wave fleet is configured by topic rather than listed for you.</span></li>
+          <li><i class="i-no"></i><span><b>Anything past open and close, from chat.</b> The hub drives meters, lights and climate; chat does not. Ask it to turn on a light and it says so and points at the console. Widening that vocabulary is gated on the tier ladder, not on parsing.</span></li>
+          <li><i class="i-no"></i><span><b>Presenting a grant from an https console, or over BLE in a browser.</b> The first is mixed content and no header fixes it; the second needs native code. Both are why the desktop app exists.</span></li>
           <li><i class="i-no"></i><span><b>One-time PIN and QR passes.</b> Designed. Today's temporary access needs to know who you're granting it to.</span></li>
           <li><i class="i-no"></i><span><b>Mobile builds and first-class Zana support.</b> On the roadmap, in no binary.</span></li>
         </ul>
