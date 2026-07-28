@@ -159,9 +159,23 @@ func freePort(t *testing.T) int {
 	return l.Addr().(*net.TCPAddr).Port
 }
 
-// startGateway boots a fresh gateway (own temp data dir, own keypair, random
-// port) and blocks until /health is green.
+// startGateway boots a fresh hub (own temp data dir, own keypair, random port)
+// and blocks until /health is green. No device engine — that is the shipped
+// default, and most tests here are about the access path.
 func startGateway(t *testing.T) *gateway {
+	return startGatewayWith(t, nil)
+}
+
+// startGatewayWithDevices boots a hub with the HTTP device driver reading
+// deviceConfig, so a test can exercise the engine against a device it controls.
+func startGatewayWithDevices(t *testing.T, deviceConfig string) *gateway {
+	return startGatewayWith(t, []string{
+		"-device-drivers", "http",
+		"-device-config", deviceConfig,
+	})
+}
+
+func startGatewayWith(t *testing.T, extraArgs []string) *gateway {
 	t.Helper()
 	port := freePort(t)
 	dataDir := t.TempDir()
@@ -172,12 +186,13 @@ func startGateway(t *testing.T) *gateway {
 		t: t, url: url, apiBase: url + "/api",
 		dataDir: dataDir, adminToken: adminToken, logs: &logBuf{},
 	}
-	cmd := exec.Command(hubBin,
+	args := append([]string{
 		"-data", dataDir,
 		"-listen", fmt.Sprintf("127.0.0.1:%d", port),
 		"-public-url", url,
 		"-admin-claim-token", adminToken,
-	)
+	}, extraArgs...)
+	cmd := exec.Command(hubBin, args...)
 	cmd.Stdout = gw.logs
 	cmd.Stderr = gw.logs
 	if err := cmd.Start(); err != nil {
