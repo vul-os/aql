@@ -93,6 +93,20 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 - [ ] DMTAP channel stays a scaffold with a fail-closed transport until there is a real
       wire format. Do not present it as a channel.
 
+## second copies of hub-owned vocabularies — swept
+The console restates several lists the hub owns. Found three by accident (metric hints
+13 names behind the drivers; capability→controls complete only by luck; rail disclosure),
+so the rest are now pinned by tests: comparison operators (a closed <select>, so drift
+makes an engine feature unreachable), automation trigger kinds (engine AND schema CHECK),
+access-point kinds (handler AND schema CHECK), API token scopes, device kinds, wire
+constants, refusal reason codes.
+- The asymmetry that matters: a value the console offers and the hub rejects is VISIBLE.
+  A value the hub accepts and the console never offers is INVISIBLE — no error anywhere,
+  the option simply is not there.
+- LESSON: a source-scanning guard must strip comments first. Commenting an option out of
+  a picker left its literal in the file and the check passed on a picker that had lost
+  an entry.
+
 ## §26.3 disclosure — swept, all four rails
 Three of the four declared a configuration-dependent property unconditionally, and each
 time the existing guard AGREED with the false claim. Now mode-aware, with a generic
