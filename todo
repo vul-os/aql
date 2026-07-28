@@ -86,7 +86,13 @@ hub serves. Adding an entry back is a real decision, not bookkeeping.
 ## conformance
 - [x] store/tenants.go's six superseded methods are gone; the tenancy-scoping test now
       drives the accessors production uses.
-- [ ] 34 uncalled exported symbols remain (hub 25, controller 9). Most are legitimate —
+- [ ] ~32 uncalled exported symbols remain. Two of the six with NO caller at all
+      (not even a test) turned out to matter: NewTelegramPoller was an entire unwired
+      feature, and jcs.CanonicalizeJSON was an unrun entry point in a safety-critical
+      package. The four left are UnmarshalJSON (encoding/json calls it) and three
+      energy functional options (WithClock, WithReadTimeout, WithRollupBudget) — an
+      option nobody sets is untested configuration surface; decide whether they earn
+      their place. Most are legitimate —
       test helpers, functional options, build-tagged constructors, encoding/json
       interface methods — but the sweep is worth re-running after any big change. The
       first version of it reported ZERO because a function's own doc comment counts as
