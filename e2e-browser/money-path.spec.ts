@@ -172,3 +172,4 @@ test('sign up, sign in, create a location + access point, attempt an open, read 
   const todayDay = String(new Date().getDate()).padStart(2, '0');
   expect(firstRowText).toContain(todayDay);
 });
+

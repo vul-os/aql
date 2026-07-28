@@ -65,13 +65,16 @@ const REQUEST_ONLY = new Map<string, string>([
  * to close.
  */
 const AWAITING_ENDPOINT = new Map<string, string>([
-  ['performed_at', 'access-point maintenance — GET/POST /access-points/{id}/maintenance'],
-  ['performed_by', 'access-point maintenance'],
-  ['technician_name', 'access-point maintenance'],
-  ['cost_zar_cents', 'access-point maintenance'],
-  ['next_due_in_days', 'access-point maintenance'],
-  ['movement_m_at_event', 'access-point maintenance'],
-  ['parts', 'access-point maintenance'],
+  // The maintenance fields used to live here. The hub serves
+  // GET/POST /access-points/{id}/maintenance now
+  // (hub/internal/httpapi/maintenance.go), so they are emitted and checked
+  // like any other field — which is the point of this map being a promise
+  // rather than a permanent exemption.
+  //
+  // next_due_in_days stays: it is REQUEST-only. The hub accepts it and stores
+  // the resolved date, never echoing the interval back, so a response will
+  // never carry it.
+  ['next_due_in_days', 'request body — maintenance create; the hub resolves it to next_due_at and never echoes it'],
 
   // Reference data the hub does not serve. api.ts already documents that there
   // is no /reference/countries route; these are CountryRef's fields, kept here
@@ -199,16 +202,30 @@ describe('response shape parity', () => {
     }
   });
 
-  it('the maintenance endpoints are still genuinely unserved', () => {
-    // AWAITING_ENDPOINT is a promise that routeParity tracks the same gap. If
-    // the endpoint lands and nobody clears these, this file goes quiet about
-    // fields it should be checking.
+  // AWAITING_ENDPOINT is a promise that routeParity tracks the same gap. An
+  // entry left behind after its route lands would make this file go quiet
+  // about fields it should be checking — which is exactly what happened to the
+  // maintenance fields until the route was built and this check fired.
+  //
+  // So it is now checked generically rather than for one endpoint: every entry
+  // naming a route must still be in routeParity's gap list.
+  it('every AWAITING_ENDPOINT entry names a route that is still unserved', () => {
     const parity = readFileSync(path.join(here, 'routeParity.test.ts'), 'utf-8');
+    const stale: string[] = [];
+    for (const [field, reason] of AWAITING_ENDPOINT) {
+      // Only entries that actually name a path can be checked this way;
+      // request-only exemptions carry no route and are covered above.
+      const route = reason.match(/\/[a-z-]+(?:\/\{[a-z_]+\})?(?:\/[a-z-]+)*/i);
+      if (!route) continue;
+      const normalized = route[0].replace(/\{[a-z_]+\}/gi, '{param}');
+      if (!parity.includes(normalized)) stale.push(`${field} → ${normalized}`);
+    }
     expect(
-      parity.includes('/access-points/{param}/maintenance'),
-      'maintenance is no longer an acknowledged gap — clear AWAITING_ENDPOINT ' +
-        'so its fields are checked again',
-    ).toBe(true);
+      stale,
+      'these fields are exempted as awaiting an endpoint, but routeParity no ' +
+        'longer lists that route as a gap — the endpoint landed, so delete the ' +
+        'exemption and let the fields be checked:\n' + stale.join('\n'),
+    ).toEqual([]);
   });
 });
 

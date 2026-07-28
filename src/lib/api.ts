@@ -438,11 +438,12 @@ export const api = {
     long?: number;
   }) => apiFetch<AccessPointDetail>('/access-points', { method: 'POST', body }),
 
-  // NOT IMPLEMENTED on the gateway — movement metering + maintenance
-  // scheduling is a documented deviation (see accessPointJSON's comment in
-  // hub/internal/httpapi/access.go: "maintenance block carries the
-  // 'nothing recorded' shape"). No /access-points/{id}/maintenance route
-  // exists to list or log against.
+  // Served by the hub (hub/internal/httpapi/maintenance.go). Listing is open
+  // to any member; logging is admin-only and refuses with "not_account_admin".
+  //
+  // next_due_movement_m is REFUSED with "movement_not_measured": nothing here
+  // measures how far a gate leaf travels, so a distance threshold would never
+  // be reached and the reminder would never fire. Schedule by date.
   maintenanceList: (id: string) =>
     apiFetch<{ events: MaintenanceEvent[] }>(`/access-points/${id}/maintenance`),
   maintenanceCreate: (id: string, body: MaintenanceCreateInput) =>
@@ -1395,7 +1396,9 @@ export type MaintenanceCreateInput = {
   notes?: string;
   parts?: Array<{ name: string; qty?: number; cost_zar_cents?: number }>;
   cost_zar_cents?: number;
-  next_due_movement_m?: number;
+  // next_due_at and next_due_in_days are two ways to say the same thing and
+  // the hub refuses both together rather than picking one. There is
+  // deliberately no next_due_movement_m — see maintenanceList's comment.
   next_due_at?: string;
   next_due_in_days?: number;
 };

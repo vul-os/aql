@@ -33,11 +33,6 @@ type Stage = 'idle' | 'opening' | 'closing' | 'open' | 'error';
 
 const FLIP_BACK_MS = 25_000;
 
-function formatMeters(m: number): string {
-  if (m >= 1000) return `${(m / 1000).toFixed(2)} km`;
-  return `${m.toFixed(0)} m`;
-}
-
 function relTime(sec: number | null): string {
   const ts = fromUnix(sec);
   if (!ts) return '—';
@@ -179,7 +174,6 @@ export default function AccessPointPage() {
   const isError = stage === 'error';
   const statusOnline = ap.status === 'active' || ap.status === 'online';
 
-  const pct = ap.maintenance.pct_used ?? 0;
   const due = ap.maintenance.due_now;
 
   return (
@@ -305,7 +299,13 @@ export default function AccessPointPage() {
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Total opens" value={ap.meter.total_opens.toLocaleString()} />
         <StatCard label="Total closes" value={ap.meter.total_closes.toLocaleString()} />
-        <StatCard label="Movement" value={formatMeters(ap.meter.movement_m)} />
+        {/* Was "Movement", which read a permanent 0 m: the hub measures no
+            distance, so the card said this gate had never moved. Next service
+            is a figure the hub can actually answer. */}
+        <StatCard
+          label="Next service"
+          value={ap.maintenance.next_due_at !== null ? relTime(ap.maintenance.next_due_at) : '—'}
+        />
         <StatCard label="Last op" value={relTime(ap.meter.last_op_at)} />
       </section>
 
@@ -324,25 +324,19 @@ export default function AccessPointPage() {
             </Button>
           </div>
 
-          {ap.maintenance.next_due_movement_m !== null ? (
-            <>
-              <div className="h-2 bg-ink/8 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(100, Math.round(pct * 100))}%` }}
-                  transition={{ duration: 0.7, ease: 'easeOut' }}
-                  className={cn('h-full', due ? 'bg-terracotta' : pct > 0.75 ? 'bg-gold' : 'bg-moss')}
-                />
-              </div>
-              <div className="mt-3 flex items-center justify-between text-sm text-ink/65">
-                <span>
-                  {ap.maintenance.movement_remaining_m !== null && ap.maintenance.movement_remaining_m > 0
-                    ? `${formatMeters(ap.maintenance.movement_remaining_m)} until next service`
-                    : 'Service threshold reached'}
-                </span>
-                <span className="text-ink/50">last serviced {relTime(ap.maintenance.last_serviced_at)}</span>
-              </div>
-            </>
+          {/* Keyed on the DATE, not on a movement threshold. The movement
+              fields are always null — the hub measures no distance — so the
+              old condition sent every access point down the "nothing set yet"
+              branch even when a service had been scheduled. */}
+          {ap.maintenance.next_due_at !== null ? (
+            <div className="flex items-center justify-between text-sm text-ink/65">
+              <span className={due ? 'text-terracotta-deep font-medium' : undefined}>
+                {due
+                  ? `Service was due ${relTime(ap.maintenance.next_due_at)}`
+                  : `Next service ${relTime(ap.maintenance.next_due_at)}`}
+              </span>
+              <span className="text-ink/50">last serviced {relTime(ap.maintenance.last_serviced_at)}</span>
+            </div>
           ) : (
             <p className="text-sm text-ink/55">
               No maintenance schedule set yet. Log your first service to start tracking.
@@ -366,7 +360,6 @@ export default function AccessPointPage() {
                       </p>
                     </div>
                     <div className="text-right text-xs text-ink/55 shrink-0">
-                      {ev.movement_m_at_event !== null && <p>at {formatMeters(ev.movement_m_at_event)}</p>}
                       {ev.cost_zar_cents !== null && <p>R {(ev.cost_zar_cents / 100).toFixed(2)}</p>}
                     </div>
                   </li>
@@ -476,7 +469,6 @@ function MaintenanceModal({
   const [notes, setNotes] = useState('');
   const [costRand, setCostRand] = useState('');
   const [nextDueDays, setNextDueDays] = useState('180');
-  const [nextDueMovement, setNextDueMovement] = useState('5000');
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -492,10 +484,6 @@ function MaintenanceModal({
         cost_zar_cents: costRand.trim() ? Math.round(Number(costRand) * 100) : undefined,
         next_due_in_days:
           kind === 'inspection' ? undefined : nextDueDays.trim() ? Number(nextDueDays) : undefined,
-        next_due_movement_m:
-          kind === 'inspection' ? undefined : nextDueMovement.trim()
-            ? Number(nextDueMovement)
-            : undefined,
       };
       await api.maintenanceCreate(ap.id, body);
       onSaved();
@@ -517,7 +505,7 @@ function MaintenanceModal({
     <Modal open onClose={onClose} className="sm:max-w-lg">
       <h2 className="font-display text-2xl mb-1">Log maintenance</h2>
       <p className="text-sm text-ink/60 mb-6">
-        {ap.name} · {formatMeters(ap.meter.movement_m)} · {ap.meter.total_opens.toLocaleString()} opens
+        {ap.name} · {ap.meter.total_opens.toLocaleString()} opens
       </p>
       <form onSubmit={onSubmit} className="space-y-4">
         <fieldset>
@@ -553,11 +541,13 @@ function MaintenanceModal({
             className="mt-1.5 w-full rounded-xl bg-paper-cool border border-ink/15 px-4 py-3 text-[15px] focus:outline-none focus:ring-2 focus:ring-ink"
           />
         </label>
+        {/* Date-based only. There WAS a "next service after (m)" field beside
+            this one, and the hub refuses that now: nothing measures how far a
+            gate leaf travels, so a distance threshold would never be reached
+            and the reminder would never fire. An operator who set one would
+            find out when the gate failed. */}
         {kind !== 'inspection' && (
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Next service after (days)" value={nextDueDays} onChange={setNextDueDays} type="number" />
-            <Field label="Next service after (m)" value={nextDueMovement} onChange={setNextDueMovement} type="number" />
-          </div>
+          <Field label="Next service after (days)" value={nextDueDays} onChange={setNextDueDays} type="number" />
         )}
         {errorMsg && <p className="text-sm text-terracotta-deep">{errorMsg}</p>}
         <div className="flex items-center justify-end gap-2 pt-2">

@@ -309,6 +309,15 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("POST /v1/access-points", s.requireAuth(s.handleAccessPointCreate))
 	mux.Handle("GET /v1/access-points/{id}", s.tokenScoped(store.ScopeAccessRead, fenceAccessPointPath, s.handleAccessPointGet))
 
+	// Maintenance log. requireAuth, NOT tokenScoped: a scoped API token can
+	// read access points and open them, and neither of those implies a right
+	// to read or append a service history. Reaching it from a token would need
+	// a scope of its own, and inventing one for a surface nothing integrates
+	// with yet would be widening the token model on speculation. Session only
+	// until something actually needs otherwise.
+	mux.Handle("GET /v1/access-points/{id}/maintenance", s.requireAuth(s.handleMaintenanceList))
+	mux.Handle("POST /v1/access-points/{id}/maintenance", s.requireAuth(s.handleMaintenanceCreate))
+
 	// the open path + temporary grants (spec: backend access.ts logAccess)
 	mux.Handle("POST /v1/access-points/{id}/open", s.tokenScoped(store.ScopeAccessOpen, fenceAccessPointPath, s.handleAccessPointOpen))
 	mux.Handle("POST /v1/access-points/{id}/close", s.tokenScoped(store.ScopeAccessOpen, fenceAccessPointPath, s.handleAccessPointClose))

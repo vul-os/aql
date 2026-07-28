@@ -16,7 +16,7 @@
     "build:dev": "tsc -b && vite build --mode dev",
     "build:main": "tsc -b && vite build --mode main",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "screenshotter": "node scripts/screenshotter.mjs",

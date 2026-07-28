@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/vul-os/aql/hub/internal/store"
 )
@@ -14,11 +15,19 @@ import (
 
 var apKinds = map[string]bool{"gate": true, "door": true, "barrier": true, "other": true}
 
-// accessPointJSON is the backend shapeAccessPoint parity shape. The meter is
-// derived from access_logs; movement metering + maintenance records are
-// deferred (documented deviation in gateway/README.md), so the maintenance
-// block carries the "nothing recorded" shape.
-func accessPointJSON(d store.AccessPointDetail) map[string]any {
+// accessPointJSON is the wire shape for an access point.
+//
+// The meter is derived from access_logs. movement_m is a literal 0 and always
+// has been: a controller reports that a relay pulsed, not how far a leaf
+// travelled, and nothing here measures distance. It stays in the shape because
+// removing it would be a silent change to a response clients already parse —
+// and because 0 is what the hub actually knows.
+//
+// The maintenance block used to be a hardcoded "nothing recorded", permanently
+// true because no route could record anything. It now reflects the log
+// (0017_maintenance.sql). The movement fields inside it remain null for the
+// same reason movement_m is 0 — see maintenance.go.
+func accessPointJSON(d store.AccessPointDetail, m store.MaintenanceSummary) map[string]any {
 	return map[string]any{
 		"id":          d.ID,
 		"location_id": d.LocationID,
@@ -33,11 +42,16 @@ func accessPointJSON(d store.AccessPointDetail) map[string]any {
 			"last_op_at":   nullInt64(d.LastOpAt),
 		},
 		"maintenance": map[string]any{
-			"last_serviced_at":        nil,
+			"last_serviced_at": nullInt64(m.LastServicedAt),
+			"next_due_at":      nullInt64(m.NextDueAt),
+			"due_now":          m.DueNow,
+			// Null, not zero, and not omitted. Nothing measures movement, so
+			// "0 m remaining" and "42% used" would both be confident answers
+			// to a question this hub cannot answer — the same distinction
+			// internal/energy draws between an unmeasured hour and an hour of
+			// zero.
 			"last_service_movement_m": nil,
 			"next_due_movement_m":     nil,
-			"next_due_at":             nil,
-			"due_now":                 false,
 			"movement_remaining_m":    nil,
 			"pct_used":                nil,
 		},
@@ -67,14 +81,27 @@ func (s *Server) handleAccessPointsList(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 	list := make([]map[string]any, 0)
+	nowUnix := time.Now().Unix()
 	for _, aid := range accountIDs {
 		aps, err := s.store.AccessPointsByAccountDetailed(r.Context(), aid)
 		if err != nil {
 			writeErr(w, http.StatusInternalServerError, "internal")
 			return
 		}
+		// One batched read per account rather than two queries per access
+		// point, so a site with twenty gates does not turn a list render into
+		// forty round trips against a SQLite file on an SD card.
+		ids := make([]string, 0, len(aps))
 		for _, ap := range aps {
-			list = append(list, accessPointJSON(ap))
+			ids = append(ids, ap.ID)
+		}
+		sums, err := s.store.MaintenanceSummaryBatch(r.Context(), ids, nowUnix)
+		if err != nil {
+			writeErr(w, http.StatusInternalServerError, "internal")
+			return
+		}
+		for _, ap := range aps {
+			list = append(list, accessPointJSON(ap, sums[ap.ID]))
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"access_points": list})
@@ -117,7 +144,12 @@ func (s *Server) handleAccessPointGet(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "internal")
 		return
 	}
-	writeJSON(w, http.StatusOK, accessPointJSON(*d))
+	sum, err := s.store.MaintenanceSummaryFor(r.Context(), id, time.Now().Unix())
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	writeJSON(w, http.StatusOK, accessPointJSON(*d, sum))
 }
 
 type createAccessPointReq struct {
@@ -176,7 +208,7 @@ func (s *Server) handleAccessPointCreate(w http.ResponseWriter, r *http.Request)
 			"kind": req.Kind, "device_id": nilIfEmpty(deviceID)}); err != nil {
 		s.log.Error("access point create audit write failed", "access_point_id", d.ID, "err", err)
 	}
-	writeJSON(w, http.StatusCreated, accessPointJSON(*d))
+	writeJSON(w, http.StatusCreated, accessPointJSON(*d, store.MaintenanceSummary{}))
 }
 
 // ---------------------------------------------------------------------------

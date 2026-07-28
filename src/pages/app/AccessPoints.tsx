@@ -22,11 +22,6 @@ const statusStyles: Record<string, string> = {
   pending: 'bg-gold/20 text-ink/80',
 };
 
-function formatMeters(m: number): string {
-  if (m >= 1000) return `${(m / 1000).toFixed(2)} km`;
-  return `${m.toFixed(1)} m`;
-}
-
 function relTime(sec: number | null): string {
   const ts = fromUnix(sec);
   if (!ts) return '—';
@@ -70,7 +65,7 @@ export default function AccessPointsPage() {
       <PageHeader
         kicker="Hardware"
         title="Access points"
-        description="Each access point is one physical opening — gate, door, or barrier — wired through one device. Maintenance tracking advances on every successful op."
+        description="Each access point is one physical opening — gate, door, or barrier — wired through one device. Service history is logged by hand and scheduled by date."
         actions={
           <Button variant="ink" onClick={() => setShowCreate(true)}>
             Add access point
@@ -139,7 +134,6 @@ function AccessPointCard({
   onLogMaintenance: () => void;
 }) {
   const due = ap.maintenance.due_now;
-  const pct = ap.maintenance.pct_used ?? 0;
   return (
     <Card className="p-0 overflow-hidden hover:border-ink/30 transition-colors">
       {/* Card body is one big link to the detail page; the maintenance row
@@ -163,7 +157,7 @@ function AccessPointCard({
 
         <div className="mt-5 grid grid-cols-3 gap-3 text-center">
           <Stat label="opens" value={ap.meter.total_opens.toLocaleString()} />
-          <Stat label="movement" value={formatMeters(ap.meter.movement_m)} />
+          <Stat label="closes" value={ap.meter.total_closes.toLocaleString()} />
           <Stat label="last op" value={relTime(ap.meter.last_op_at)} />
         </div>
       </Link>
@@ -175,27 +169,22 @@ function AccessPointCard({
             <span className="text-[10px] uppercase tracking-[0.18em] px-2 py-0.5 rounded-full bg-terracotta/15 text-terracotta-deep">
               due
             </span>
-          ) : ap.maintenance.next_due_movement_m !== null || ap.maintenance.next_due_at !== null ? (
+          ) : ap.maintenance.next_due_at !== null ? (
             <span className="text-[10px] uppercase tracking-[0.18em] text-ink/45">on track</span>
           ) : (
             <span className="text-[10px] uppercase tracking-[0.18em] text-ink/45">no schedule</span>
           )}
         </div>
 
-        {ap.maintenance.next_due_movement_m !== null && (
-          <>
-            <div className="h-1.5 bg-ink/8 rounded-full overflow-hidden">
-              <div
-                className={`h-full ${due ? 'bg-terracotta' : pct > 0.75 ? 'bg-gold' : 'bg-moss'}`}
-                style={{ width: `${Math.min(100, Math.round(pct * 100))}%` }}
-              />
-            </div>
-            <p className="text-xs text-ink/60 mt-2">
-              {ap.maintenance.movement_remaining_m !== null && ap.maintenance.movement_remaining_m > 0
-                ? `${formatMeters(ap.maintenance.movement_remaining_m)} until next service`
-                : 'Service threshold reached'}
-            </p>
-          </>
+        {/* Date-based. The progress bar here was driven by pct_used, a
+            movement figure the hub never measured and now reports as null, so
+            it rendered as 0% on every card that had a schedule at all. */}
+        {ap.maintenance.next_due_at !== null && (
+          <p className="text-xs text-ink/60 mt-2">
+            {due
+              ? `Service was due ${relTime(ap.maintenance.next_due_at)}`
+              : `Next service ${relTime(ap.maintenance.next_due_at)}`}
+          </p>
         )}
 
         <div className="mt-3 flex items-center justify-between text-xs text-ink/55">
@@ -235,7 +224,6 @@ function MaintenanceModal({
   const [notes, setNotes] = useState('');
   const [costRand, setCostRand] = useState('');
   const [nextDueDays, setNextDueDays] = useState('180');
-  const [nextDueMovement, setNextDueMovement] = useState('5000');
   const [history, setHistory] = useState<MaintenanceEvent[] | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -267,10 +255,6 @@ function MaintenanceModal({
         cost_zar_cents: costRand.trim() ? Math.round(Number(costRand) * 100) : undefined,
         next_due_in_days:
           kind === 'inspection' ? undefined : nextDueDays.trim() ? Number(nextDueDays) : undefined,
-        next_due_movement_m:
-          kind === 'inspection' ? undefined : nextDueMovement.trim()
-            ? Number(nextDueMovement)
-            : undefined,
       };
       await api.maintenanceCreate(ap.id, body);
       onSaved();
@@ -295,7 +279,7 @@ function MaintenanceModal({
         <span className="text-[11px] uppercase tracking-[0.18em] text-ink/50">{ap.name}</span>
       </div>
       <p className="text-sm text-ink/60 mb-6">
-        Current movement {formatMeters(ap.meter.movement_m)} · {ap.meter.total_opens.toLocaleString()} opens.
+        {ap.meter.total_opens.toLocaleString()} opens · {ap.meter.total_closes.toLocaleString()} closes.
       </p>
 
       <form onSubmit={onSubmit} className="space-y-4">
@@ -346,23 +330,17 @@ function MaintenanceModal({
           />
         </label>
 
+        {/* Date-based only. The hub refuses a movement threshold: nothing
+            measures how far a gate leaf travels, so one would never be reached
+            and the reminder would never fire. */}
         {kind !== 'inspection' && (
-          <div className="grid grid-cols-2 gap-3">
-            <Field
-              label="Next service after (days)"
-              value={nextDueDays}
-              onChange={setNextDueDays}
-              type="number"
-              hint="calendar"
-            />
-            <Field
-              label="Next service after (m)"
-              value={nextDueMovement}
-              onChange={setNextDueMovement}
-              type="number"
-              hint="movement"
-            />
-          </div>
+          <Field
+            label="Next service after (days)"
+            value={nextDueDays}
+            onChange={setNextDueDays}
+            type="number"
+            hint="calendar"
+          />
         )}
 
         {errorMsg && <p className="text-sm text-terracotta-deep">{errorMsg}</p>}
@@ -398,9 +376,6 @@ function MaintenanceModal({
                   </p>
                 </div>
                 <div className="text-right text-xs text-ink/55">
-                  {ev.movement_m_at_event !== null && (
-                    <p>at {formatMeters(ev.movement_m_at_event)}</p>
-                  )}
                   {ev.cost_zar_cents !== null && (
                     <p>R {(ev.cost_zar_cents / 100).toFixed(2)}</p>
                   )}
