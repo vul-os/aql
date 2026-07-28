@@ -28,7 +28,7 @@
 // editing loads the whole rule into this form and resubmits the whole thing,
 // same as creating one.
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -63,9 +63,20 @@ const EVENT_NAMES: EventName[] = ['online', 'offline', 'degraded'];
 // form — there's no compile error, no refusal, just a schedule that's wrong.
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-// Metric names come from the capability's own vocabulary
-// (devices.Reading) — a hint for the datalist below, never a constraint.
-// Threshold.Validate() only checks that a metric string is non-empty.
+// Fallback metric hints, used only until a device is chosen.
+//
+// This list used to be the WHOLE vocabulary offered, and it had not grown as
+// drivers did: the shipped drivers emit seventeen metric names and this named
+// four, so nothing the camera driver reports — media_lost, media_flowing,
+// stream_ok — could be discovered from the form at all. A hint list is a second
+// copy of a vocabulary that lives somewhere else, and it rotted the way second
+// copies do.
+//
+// So it is a fallback now. Once a device is selected the hints come from what
+// THAT device has actually reported (see metricHints below), which cannot rot
+// because it is not a copy. Still hints either way: Threshold.Validate() only
+// requires a non-empty string, and the engine matches metrics by name, so a
+// metric this form has never heard of remains typeable and works.
 const METRIC_HINTS = ['level', 'celsius', 'kw', 'percent'];
 
 const COMMON_TZS = [
@@ -227,6 +238,51 @@ export default function RuleEditor({
   function updateCondition(id: number, patch: Partial<ConditionRow>) {
     setConditions((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
+
+  // ── metric hints, from what the devices in this rule actually report ────
+  //
+  // Fetched rather than listed, because a hardcoded vocabulary is a second copy
+  // of one that lives in the drivers, and the old four-item list had drifted
+  // thirteen metrics behind them.
+  //
+  // Best-effort by construction: a failure leaves the fallback hints in place
+  // and the field stays free text, so a hub with no engine, a slow reply or a
+  // device that has reported nothing yet all degrade to exactly the behaviour
+  // this form had before. Nothing here can prevent a rule being written.
+  const [liveMetrics, setLiveMetrics] = useState<string[]>([]);
+  const hintKeys = useMemo(() => {
+    const keys = new Set<string>();
+    if (thresholdDeviceKey.trim()) keys.add(thresholdDeviceKey.trim());
+    for (const c of conditions) if (c.deviceKey.trim()) keys.add(c.deviceKey.trim());
+    return [...keys].sort();
+  }, [thresholdDeviceKey, conditions]);
+
+  useEffect(() => {
+    if (hintKeys.length === 0) {
+      setLiveMetrics([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const found = new Set<string>();
+      await Promise.all(
+        hintKeys.map(async (key) => {
+          try {
+            const res = await api.engineReadings(key);
+            for (const r of res.readings) found.add(r.metric);
+          } catch {
+            /* a device the engine does not know is not an error here */
+          }
+        }),
+      );
+      if (!cancelled) setLiveMetrics([...found].sort());
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hintKeys]);
+
+  const metricHints = liveMetrics.length > 0 ? liveMetrics : METRIC_HINTS;
 
   // ── action ─────────────────────────────────────────────────────────────
   const [actionKind, setActionKind] = useState<'device' | 'zone'>(rule?.action.zone ? 'zone' : 'device');
@@ -468,7 +524,7 @@ export default function RuleEditor({
         ))}
       </datalist>
       <datalist id="rule-editor-metric-options">
-        {METRIC_HINTS.map((m) => (
+        {metricHints.map((m) => (
           <option key={m} value={m} />
         ))}
       </datalist>

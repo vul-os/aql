@@ -136,6 +136,48 @@ describe('the rule editor does not re-implement the safety ceiling', () => {
     ).toBe(false);
   });
 
+  // A metric the form has never heard of must stay typeable.
+  //
+  // The engine matches metrics by NAME — Threshold.Validate() only requires a
+  // non-empty string, and numericReading compares rd.Metric to the rule's — so
+  // constraining this field to a list would make every metric the list does not
+  // know unusable, silently, from the UI only. The drivers emit seventeen
+  // names; a hardcoded list here once offered four.
+  it('leaves the metric field free text rather than a closed picker', () => {
+    // The datalist attribute is a HINT; a <select> would be a constraint.
+    const closed = /<select[^>]*\n?[^>]*(?:thresholdMetric|c\.metric|updateCondition\([^)]*metric)/s.test(src);
+    expect(
+      closed,
+      'RuleEditor.tsx has turned the metric into a closed picker. The engine matches ' +
+        'metrics by name and accepts any non-empty string, so a picker makes every ' +
+        'metric it omits unreachable from the UI — which is how the old four-item ' +
+        'hint list hid everything the camera driver reports.',
+    ).toBe(false);
+    expect(
+      /list="rule-editor-metric-options"/.test(src),
+      'the metric inputs no longer offer the hint datalist at all',
+    ).toBe(true);
+  });
+
+  // Hints must come from what the selected devices actually report, not from a
+  // list maintained beside the drivers.
+  it('sources metric hints from live readings, keeping the constant as a fallback', () => {
+    expect(
+      /engineReadings/.test(src),
+      'RuleEditor.tsx no longer asks the engine what a device reports, so its metric ' +
+        'hints are a hardcoded second copy of a vocabulary that lives in the drivers — ' +
+        'which is exactly what drifted thirteen metrics behind them.',
+    ).toBe(true);
+    // The datalist must render the derived list. Rendering METRIC_HINTS
+    // directly would restore the stale behaviour while leaving the fetch in
+    // place, which reads as fixed and is not.
+    const datalist = src.slice(src.indexOf('rule-editor-metric-options'));
+    expect(
+      /metricHints\.map/.test(datalist.slice(0, 400)),
+      'the metric datalist does not render the derived hints',
+    ).toBe(true);
+  });
+
   // The engine's vocabulary, passed through. The scheduler logs the same names.
   it('explains refusals using the engine’s own reason codes', () => {
     const engine = read('hub/internal/automations/automations.go');
