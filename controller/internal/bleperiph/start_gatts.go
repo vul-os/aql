@@ -70,6 +70,10 @@ func (c *txConn) Close() error {
 	return nil
 }
 
+// BackendLinked reports whether a real GATT-server backend was compiled in.
+// See the note on the stub's copy in start_unsupported.go.
+const BackendLinked = true
+
 // Start brings up the BLE peripheral and blocks until ctx is done.
 func Start(ctx context.Context, cfg Config) error {
 	mtu := cfg.MTU

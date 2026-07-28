@@ -94,6 +94,12 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       wire format. Do not present it as a channel.
 
 ## drift guards — audited for vacuous passes
+The Go side too: bleperiph/platform_test.go's filename-constraint guard had the same
+"look at every file, report offenders" shape and passed on zero files. Its sibling test
+was worse — its comment named the assertion that matters (the no-backend build must
+return exactly ErrUnsupported, because agent.go treats anything else as fatal and would
+stop the controller) and the code only logged. Both fixed; BackendLinked is now a
+compile-time constant per backend so a test can tell a stub build from a real one.
 Every source-scanning test was checked by breaking its extraction and seeing whether it
 noticed. naming.test.ts did NOT: four of its five guards passed with walk() returning
 nothing, including the one keeping the gateway→hub rename from regressing. Fixed with a

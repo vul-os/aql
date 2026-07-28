@@ -17,6 +17,15 @@ import "context"
 //
 // So the honest boundary is linux || windows, not linux. An earlier version of
 // this comment said Linux only, which had stopped being true.
+// BackendLinked reports whether a real GATT-server backend was compiled in.
+//
+// A compile-time constant, one per Start implementation, so a test can assert
+// what this build actually contains instead of inferring it. The package claims
+// exactly one of the two files is linked; before this existed, "it compiles"
+// was the whole proof, and a test could not tell a stub build from a real one
+// in order to assert the right thing about it.
+const BackendLinked = false
+
 func Start(ctx context.Context, cfg Config) error {
 	return ErrUnsupported
 }

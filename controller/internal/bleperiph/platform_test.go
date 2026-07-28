@@ -2,6 +2,7 @@ package bleperiph
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,11 +35,13 @@ func TestNoFileInThisPackageCarriesAnImplicitPlatformConstraint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	examined := 0
 	for _, e := range entries {
 		name := e.Name()
 		if !strings.HasSuffix(name, ".go") {
 			continue
 		}
+		examined++
 		base := strings.TrimSuffix(name, ".go")
 		base = strings.TrimSuffix(base, "_test")
 		for _, suf := range suffixes {
@@ -51,25 +54,58 @@ func TestNoFileInThisPackageCarriesAnImplicitPlatformConstraint(t *testing.T) {
 			}
 		}
 	}
+
+	// A floor, because this check is shaped "look at every file, report
+	// offenders" — which passes perfectly when it looks at NO files. A wrong
+	// directory or a changed filter would make it go quiet rather than fail,
+	// and a quiet guard is indistinguishable from a healthy one. The package
+	// has several files; three is a floor, not a count.
+	if examined < 3 {
+		t.Fatalf("examined only %d .go files in this package, so this guard would "+
+			"report no offenders whatever the filenames were", examined)
+	}
 }
 
 // The boundary this package claims, asserted so the claim and the build tags
-// cannot drift apart. Both constants are compile-time, so this test is really a
-// check that exactly one of the two Start implementations was linked.
+// cannot drift apart.
+//
+// Start is defined in both files; if the tags ever overlapped the package would
+// not compile, and if neither matched it would not compile either. So reaching
+// here proves the tags partition — but that is ALL it proved, and the previous
+// version of this test stopped there: it logged whatever Start returned and
+// asserted nothing about it.
+//
+// The assertion that matters was written in that comment and never made. On a
+// build with no backend, Start must return exactly ErrUnsupported, because
+// agent.go branches on errors.Is(err, ErrUnsupported) to log a warning and
+// carry on. Any other error goes to the agent's error channel instead — so a
+// stub returning something else does not degrade the BLE feature, it stops the
+// controller from running. On the default build, which is every controller not
+// built with `-tags ble`.
+//
+// context.Background() rather than t.Context(): this module targets go1.23 and
+// t.Context() landed in 1.24. `go test` hid that once — the package was cached
+// from before the file existed — and only `go vet` caught it.
 func TestExactlyOneBackendIsLinked(t *testing.T) {
-	// Start is defined in both files; if the tags ever overlapped, the package
-	// would not compile at all and this test could not run. If neither matched,
-	// it would also not compile. Reaching here proves the tags partition.
-	//
-	// What is worth asserting is that the UNSUPPORTED path returns the sentinel
-	// rather than something a caller cannot recognise, since agent.go branches
-	// on exactly that to degrade instead of failing the controller.
-	// context.Background() rather than t.Context(): this module targets go1.23
-	// and t.Context() landed in 1.24. `go test` hid it — the package was cached
-	// from before this file existed — and only `go vet` caught it.
 	err := Start(context.Background(), Config{})
-	if err == nil {
-		t.Skip("a real GATT-server backend is linked and started on this host")
+
+	if !BackendLinked {
+		if !errors.Is(err, ErrUnsupported) {
+			t.Fatalf("this build links no GATT-server backend, so Start must return "+
+				"ErrUnsupported — agent.go recognises only that and treats anything "+
+				"else as fatal, which would stop the controller rather than degrade "+
+				"the feature. Got: %v", err)
+		}
+		return
 	}
-	t.Logf("Start on this build reports: %v", err)
+
+	// A real backend is linked. It may still fail for want of a radio, an
+	// adapter or permission, and that is not this test's business — but it must
+	// NOT claim to be unsupported, because the agent would then quietly skip a
+	// backend this build actually has.
+	if errors.Is(err, ErrUnsupported) {
+		t.Fatalf("a real backend is linked, yet Start reported ErrUnsupported; the " +
+			"agent would log a warning and skip BLE on a build that supports it")
+	}
+	t.Logf("backend linked; Start on this host reports: %v", err)
 }
