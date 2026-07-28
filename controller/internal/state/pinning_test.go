@@ -113,6 +113,13 @@ func TestOnlyTwoDoorsWriteThePinnedGatewayKey(t *testing.T) {
 	var assigns []string
 	for name, src := range files {
 		for i, line := range strings.Split(src, "\n") {
+			// Code only. A COMMENT explaining the assignment — state.go's own
+			// mutate() has one — is not a second door, and counting it would
+			// invite whoever hit the false positive to weaken this instead.
+			// (Found by writing exactly that comment.)
+			if t := strings.TrimSpace(line); strings.HasPrefix(t, "//") || strings.HasPrefix(t, "*") {
+				continue
+			}
 			if assignPinnedRe.MatchString(line) {
 				assigns = append(assigns, name+":"+itoa(i+1)+strings.TrimRight(" "+strings.TrimSpace(line), " "))
 			}
@@ -211,4 +218,87 @@ func itoa(n int) string {
 		n /= 10
 	}
 	return string(b)
+}
+
+// A mutation that cannot be persisted must leave NOTHING changed in memory.
+//
+// Store's doc says so without qualification: "fail-closed: a mutation that
+// cannot be persisted returns an error and the in-memory state is rolled
+// back." It was not true for the pinned gateway key.
+//
+// `prev := s.data` copies the struct, which SHARES the map, the slice and the
+// Pairing pointer with the live state. Config was deep-copied explicitly;
+// Pairing was not, and ApplyRepair mutates through the pointer. So a failed
+// disk write during a repair rolled back everything except the one thing that
+// had actually changed — the controller kept the new pinned key in memory
+// while the disk still held the old one, the hub got an error ack and carried
+// on signing with the old key, and the controller rejected it until the next
+// reboot restored agreement.
+//
+// The test writes through the REAL failure path (an unwritable directory)
+// rather than a stubbed persist, because the bug was in what the snapshot
+// shared, and a stub that copied the struct differently would have hidden it.
+func TestAFailedPersistRollsBackEveryField(t *testing.T) {
+	dir := t.TempDir()
+	st, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubA, _, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubB, _, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	enc := base64.RawURLEncoding.EncodeToString
+
+	if err := st.SavePairing(Pairing{DeviceID: "d1", GatewayPubkey: enc(pubA)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetAccessPoints([]string{"main"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetLockdown(false); err != nil {
+		t.Fatal(err)
+	}
+
+	wantKey := string(st.GatewayKey())
+	wantLockdown := st.Lockdown()
+
+	// Break persistence the way the disk does: the atomic tmp+rename cannot
+	// create its temp file.
+	if err := os.Chmod(dir, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+
+	// 1. The pinned key, through the pointer — the field that was broken.
+	if err := st.ApplyRepair(enc(pubB)); err == nil {
+		t.Fatal("ApplyRepair reported success with an unwritable state directory")
+	}
+	if got := string(st.GatewayKey()); got != wantKey {
+		t.Error("the pinned gateway key changed in memory despite the persist failure. " +
+			"The controller would trust a key the disk does not have, reject the hub's " +
+			"commands signed with the old one, and recover only on reboot.")
+	}
+
+	// 2. A plain value field, to prove the rollback still covers what it always did.
+	if err := st.SetLockdown(true); err == nil {
+		t.Fatal("SetLockdown reported success with an unwritable state directory")
+	}
+	if st.Lockdown() != wantLockdown {
+		t.Error("lockdown latched in memory despite the persist failure; a reboot would silently unlatch it")
+	}
+
+	// 3. The slice, which no mutator shares today — asserted so that a future
+	//    one assigning into it cannot quietly leave the rollback partial.
+	if err := st.SetAccessPoints([]string{"side", "back"}); err == nil {
+		t.Fatal("SetAccessPoints reported success with an unwritable state directory")
+	}
+	aps := st.AccessPoints()
+	if len(aps) != 1 || aps[0] != "main" {
+		t.Errorf("access points changed in memory despite the persist failure: %v", aps)
+	}
 }

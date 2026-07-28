@@ -449,6 +449,20 @@ export const FEATURES = [
     ],
   },
   {
+    // A REAL DEFECT, not an unguarded truth. Store's doc promised an
+    // unconditional rollback on a failed persist; the snapshot was shallow, so
+    // the one field mutated through a pointer — the pinned gateway key — was
+    // the one thing it did not restore.
+    id: 'state-rollback-is-deep',
+    label: 'A failed state persist rolls back every field, including the pinned key mutated through a pointer',
+    docStatus: 'shipped',
+    docRefs: ['controller/internal/state/state.go — "the in-memory state is rolled back"'],
+    evidence: [
+      { file: 'controller/internal/state/pinning_test.go', pattern: 'TestAFailedPersistRollsBackEveryField' },
+      { file: 'controller/internal/state/state.go', pattern: 'prevPairing' },
+    ],
+  },
+  {
     // The store fails closed and its own tests prove it. Nothing proved the
     // WIRING: that the command path acts on the error rather than logging it.
     // A nonce that is not on disk is a command that replays after a power cut.

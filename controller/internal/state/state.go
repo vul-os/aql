@@ -89,15 +89,40 @@ func (s *Store) persistLocked() error {
 func (s *Store) mutate(fn func(*persisted)) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// The snapshot has to be DEEP for every reference field, not just the map.
+	//
+	// `prev := s.data` copies the struct, which shares the map, the slice and
+	// the Pairing POINTER with the live state. Config was already handled;
+	// Pairing was not, and ApplyRepair mutates through the pointer
+	// (d.Pairing.GatewayPubkey = ...). So a failed persist during a repair
+	// rolled back everything except the thing that had actually changed: the
+	// controller kept the NEW pinned key in memory while the disk still held
+	// the old one, and after the error ack the hub carried on signing with the
+	// old key that the controller would now reject. A lockout until reboot,
+	// from a guarantee the doc comment says is unconditional.
+	//
+	// AccessPoints is snapshotted for the same reason rather than because a
+	// mutator needs it today — the only one replaces the slice wholesale. A
+	// future one assigning into it would share the backing array and the
+	// rollback would silently stop covering it.
 	prev := s.data
 	prevCfg := make(map[string]int64, len(s.data.Config))
 	for k, v := range s.data.Config {
 		prevCfg[k] = v
 	}
+	var prevPairing *Pairing
+	if s.data.Pairing != nil {
+		p := *s.data.Pairing
+		prevPairing = &p
+	}
+	prevAPs := append([]string(nil), s.data.AccessPoints...)
+
 	fn(&s.data)
 	if err := s.persistLocked(); err != nil {
 		s.data = prev
 		s.data.Config = prevCfg
+		s.data.Pairing = prevPairing
+		s.data.AccessPoints = prevAPs
 		return err
 	}
 	return nil

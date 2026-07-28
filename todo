@@ -444,9 +444,31 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       the command expired instead refuses it earlier and fails with "Mark was never
       reached; this test proves nothing about the persistence failure" — which is what the
       first draft of a test like this usually does silently.
-- [ ] Other fail-closed claims not yet wiring-tested: state.go's "a mutation that cannot be
-      persisted fails closed", relay/gpio.go's "the only cleanup path that cannot be
-      skipped". Same shape: the component is right, the caller is unproven.
+- [x] state.go's rollback claim was FALSE — a real defect, not an unguarded truth. Store's
+      doc says without qualification that a mutation which cannot be persisted "returns an
+      error and the in-memory state is rolled back". `prev := s.data` copies the STRUCT,
+      which shares the map, the slice and the Pairing POINTER. Config was deep-copied
+      explicitly; Pairing was not, and ApplyRepair mutates through the pointer. So a failed
+      disk write during a repair rolled back everything EXCEPT the thing that had actually
+      changed.
+- NOTE: consequence. The controller keeps the new pinned key in memory while the disk
+      still holds the old one; the hub gets an error ack, carries on signing with the old
+      key, and the controller rejects it until a reboot restores agreement. A lockout, not
+      a takeover — but from a guarantee documented as unconditional.
+- NOTE: found by probing rather than reading. The comment said "rolled back", the code
+      looked like it rolled back, and only running it against an unwritable directory
+      showed the pointer sharing. Reading would not have caught this.
+- NOTE, honest: of the three fields the new test asserts, only the pinned key actually
+      discriminates. Lockdown is a value and was always fine; AccessPoints is replaced
+      wholesale by its only mutator, so its snapshot is defensive for a future in-place
+      mutator, not cover for a live bug — dropping it fails nothing today, and the test
+      says so rather than implying three saves.
+- NOTE: my own pinning guard then failed on the COMMENT I added explaining the fix, which
+      contains the assignment as prose. Fixed the guard to skip comment lines rather than
+      rewording the comment — a guard that counts prose invites whoever hits the false
+      positive to weaken it. Verified a genuine second assignment still fails.
+- [ ] Remaining fail-closed claim not yet wiring-tested: relay/gpio.go's "the only cleanup
+      path that cannot be skipped".
 
 ## spec-derived checks
 The technique that found the 2^53 rounding: derive expected behaviour from proto/*.md
