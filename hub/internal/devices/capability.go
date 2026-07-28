@@ -1,6 +1,9 @@
 package devices
 
-import "sort"
+import (
+	"sort"
+	"strings"
+)
 
 // Tier is a verb's safety class. It is assigned HERE, by this package, from the
 // (capability, verb) pair — never parsed from a message, never supplied by a
@@ -202,7 +205,13 @@ var catalogue = map[CapabilityID]Capability{
 // that capability — the caller cannot tell these apart on purpose, because the
 // correct response to all three is identical: refuse.
 func Lookup(cap CapabilityID, v Verb) (VerbSpec, bool) {
-	c, ok := catalogue[cap]
+	return lookupIn(catalogue, cap, v)
+}
+
+// lookupIn is Lookup over any catalogue, so the inverse checker can validate a
+// candidate table rather than only the live one.
+func lookupIn(cat map[CapabilityID]Capability, cap CapabilityID, v Verb) (VerbSpec, bool) {
+	c, ok := cat[cap]
 	if !ok {
 		return VerbSpec{}, false
 	}
@@ -236,16 +245,43 @@ func Capabilities() []CapabilityID {
 	return out
 }
 
+// init makes the rule above structural rather than procedural.
+//
+// The doc comment on Tier has always said the registry "refuses to build"
+// without a safe inverse, and until now nothing refused: checkInverses was
+// reached only from a test, so the guarantee held exactly as long as somebody
+// ran one. For "stopping is never riskier than starting" — the rule that keeps
+// `stop` on a mower reachable when `start` is not — that gap is the difference
+// between a property and an intention.
+//
+// Panicking is the right severity and cannot surprise an operator. The
+// catalogue is a compile-time literal with no dynamic registration, so a
+// violation is a programming error that fires the first time ANY binary
+// importing this package starts — in a developer's terminal or in CI, never
+// newly on a hub that was working yesterday.
+func init() {
+	if problems := checkInverses(); len(problems) > 0 {
+		panic("devices: capability catalogue violates the inverse rule " +
+			"(stopping is never riskier than starting): " + strings.Join(problems, "; "))
+	}
+}
+
 // checkInverses enforces "stopping is never riskier than starting": every verb
 // above TierConsequential must name an inverse, that inverse must exist in the
 // same capability, and it must sit at TierReversible or below.
+func checkInverses() []string { return checkInversesIn(catalogue) }
+
+// checkInversesIn is the rule itself, over any catalogue.
 //
-// Exported so the package's own test can assert it over the whole catalogue —
-// a new row added without an inverse fails the build's tests, not a resident's
-// evening.
-func checkInverses() []string {
+// Split out from checkInverses so a test can feed it a DELIBERATELY broken
+// catalogue and prove the checker detects one. The package's only test of this
+// asserted that today's real catalogue is clean, which a checker that always
+// returned nil would have passed too — and with the init above in place, that
+// test can no longer fail for any reason, so on its own it would have become
+// decorative.
+func checkInversesIn(cat map[CapabilityID]Capability) []string {
 	var problems []string
-	for id, c := range catalogue {
+	for id, c := range cat {
 		for _, spec := range c.Verbs {
 			if spec.Tier <= TierConsequential {
 				continue
@@ -254,7 +290,7 @@ func checkInverses() []string {
 				problems = append(problems, string(id)+"."+string(spec.Verb)+": tier "+spec.Tier.String()+" with no inverse")
 				continue
 			}
-			inv, ok := Lookup(id, spec.Inverse)
+			inv, ok := lookupIn(cat, id, spec.Inverse)
 			if !ok {
 				problems = append(problems, string(id)+"."+string(spec.Verb)+": inverse "+string(spec.Inverse)+" not in capability")
 				continue

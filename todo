@@ -273,6 +273,34 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       exactly the flaw the automations agent hit with `confirm(`. Assert a string that
       only the rendered JSX contains, and always tamper to confirm.
 
+## the tier ladder's safety rule
+- [x] "Stopping is never riskier than starting" was PROCEDURAL, not structural. Tier's own
+      doc comment says the registry "refuses to build" without a safe inverse; nothing
+      refused — checkInverses was reached only from a test, so the guarantee held exactly
+      as long as somebody ran one. Same shape as bleperiph's ErrUnsupported sentinel and
+      the ABI test's 32-bit claim: a comment naming an assertion the code never made.
+      Now enforced at package init. Panicking is safe here and cannot surprise an
+      operator: the catalogue is a compile-time literal with no dynamic registration, so
+      a violation fires the first time any binary importing the package starts — in a
+      terminal or in CI, never newly on a hub that worked yesterday.
+- NOTE: the existing test asserted only that TODAY'S catalogue is clean, which a
+      checkInverses that always returned nil would have passed just as happily. It proved
+      the catalogue innocent and the checker nothing — and once init panics, it can never
+      fail at all. Split checkInversesIn(cat) out so a test can feed it a deliberately
+      broken catalogue: three cases (no inverse named, inverse absent from the capability,
+      inverse itself above reversible — the subtlest, where an escape hatch exists but is
+      no more reachable than the thing it undoes), plus a compliant catalogue that must
+      still come back clean so the cases cannot pass against a checker that always
+      complains.
+- [x] docs/CHAT-COMMANDS.md said "Nothing in this document is built" while §1.2's closed
+      verb set, §3's tier ladder and this rule had all been shipping. Header corrected to
+      name exactly the two pieces that exist and to keep everything else PROPOSAL — the
+      actuation Port seam of §1.4 still has no `actuate` package.
+- [ ] The rest of CHAT-COMMANDS remains the largest designed-but-unbuilt surface here:
+      the actuation Port, capability-aware targeting, progressive narrowing, confirmation
+      and step-up, time windows. It is a multi-session project and the doc is good; the
+      next increment is the `actuate` package, since everything chat-side depends on it.
+
 ## spec-derived checks
 The technique that found the 2^53 rounding: derive expected behaviour from proto/*.md
 and check the code against it, rather than checking the code against itself. The vectors

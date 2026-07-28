@@ -3,15 +3,83 @@ package devices
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 )
 
 // The catalogue's own invariant: "stopping is never riskier than starting".
-// A new capability row added without an inverse fails here, at build time,
-// rather than in someone's garden.
+//
+// This one can no longer fail — init() panics on a violating catalogue, so a
+// bad row kills the test binary before any test runs. It is kept because it
+// names the rule where someone editing the catalogue will look, and it would
+// start failing again the moment the init guard were removed.
 func TestEveryHazardousVerbHasASafeInverse(t *testing.T) {
 	if problems := checkInverses(); len(problems) > 0 {
 		t.Fatalf("catalogue violates the inverse rule:\n  %v", problems)
+	}
+}
+
+// And the test that can actually fail: the checker must DETECT a violation.
+//
+// The test above asserts only that today's real catalogue is clean, which a
+// checkInverses that always returned nil would have passed just as happily —
+// so on its own it proved the catalogue innocent and the checker nothing. Each
+// case here is a distinct way the rule can be broken.
+func TestTheInverseCheckerActuallyDetectsViolations(t *testing.T) {
+	const cap = CapabilityID("test.hazard")
+
+	cases := []struct {
+		name string
+		cat  map[CapabilityID]Capability
+		want string
+	}{
+		{
+			name: "hazardous verb with no inverse named",
+			cat: map[CapabilityID]Capability{cap: {ID: cap, Verbs: []VerbSpec{
+				{Verb: VerbStart, Tier: TierHazardousMotion},
+			}}},
+			want: "no inverse",
+		},
+		{
+			name: "inverse names a verb the capability does not offer",
+			cat: map[CapabilityID]Capability{cap: {ID: cap, Verbs: []VerbSpec{
+				{Verb: VerbStart, Tier: TierHazardousMotion, Inverse: VerbStop},
+			}}},
+			want: "not in capability",
+		},
+		{
+			// The subtlest one, and the reason the rule exists: an inverse
+			// EXISTS but is itself dangerous, so "stop" is no more reachable
+			// than "start" and the escape hatch is not one.
+			name: "inverse exists but is itself above reversible",
+			cat: map[CapabilityID]Capability{cap: {ID: cap, Verbs: []VerbSpec{
+				{Verb: VerbStart, Tier: TierHazardousMotion, Inverse: VerbStop},
+				{Verb: VerbStop, Tier: TierHazardousMotion},
+			}}},
+			want: "must be reversible or below",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			problems := checkInversesIn(c.cat)
+			if len(problems) == 0 {
+				t.Fatalf("the checker passed a catalogue that breaks the rule (%s)", c.name)
+			}
+			if !strings.Contains(problems[0], c.want) {
+				t.Fatalf("problem %q does not mention %q", problems[0], c.want)
+			}
+		})
+	}
+
+	// A well-formed catalogue must still come back clean, or the cases above
+	// would pass against a checker that simply always complains.
+	ok := map[CapabilityID]Capability{cap: {ID: cap, Verbs: []VerbSpec{
+		{Verb: VerbStart, Tier: TierHazardousMotion, Inverse: VerbStop},
+		{Verb: VerbStop, Tier: TierReversible},
+	}}}
+	if problems := checkInversesIn(ok); len(problems) > 0 {
+		t.Fatalf("a compliant catalogue was reported as broken: %v", problems)
 	}
 }
 

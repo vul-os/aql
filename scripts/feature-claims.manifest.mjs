@@ -449,6 +449,20 @@ export const FEATURES = [
     ],
   },
   {
+    // The safety rule under the whole tier ladder. Worth a claim because its
+    // enforcement was procedural (a test) while its own doc comment said it was
+    // structural ("the registry refuses to build") — now it actually is.
+    id: 'verb-inverse-rule-enforced',
+    label: 'Stopping is never riskier than starting — a hazardous verb without a safe inverse panics at package init',
+    docStatus: 'shipped',
+    docRefs: ['docs/CHAT-COMMANDS.md — "stopping is never riskier than starting"'],
+    evidence: [
+      { file: 'hub/internal/devices/capability.go', pattern: 'func checkInversesIn' },
+      { file: 'hub/internal/devices/capability.go', pattern: 'func init\\(\\)' },
+      { file: 'hub/internal/devices/capability.go', pattern: 'panic\\("devices: capability catalogue violates' },
+    ],
+  },
+  {
     // Energy retention. PruneSamples was written, carefully guarded and never
     // called by anything — the fourth "built and unreachable" found in this
     // codebase — so a hub polling a meter every 60s grew its samples table

@@ -1,10 +1,23 @@
 # Chat commands — design specification
 
 > [!IMPORTANT]
-> **Status: proposal.** Nothing in this document is built. What *is* built is the
+> **Status: mostly proposal, and no longer entirely.** What *is* built is the
 > single-verb chat access path folded in from lintel (`gateway/`, `controller/`,
-> `proto/`) — that path is described here as it exists, with `file:line`
-> citations, and everything else is labelled **PROPOSAL**.
+> `proto/`) — described here as it exists, with `file:line` citations — plus
+> two pieces of §1.2 and §3 that have since landed in the device engine:
+>
+> - The **closed verb set and the tier ladder** (`hub/internal/devices/capability.go`).
+>   Tiers are assigned there from the `(capability, verb)` pair — never parsed
+>   from a message, never supplied by a driver, never carried on the wire.
+> - The **"stopping is never riskier than starting"** rule, enforced by
+>   `checkInverses` at package init: a catalogue where a hazardous verb has no
+>   inverse, or an inverse that is itself hazardous, panics the first time any
+>   binary importing the package starts.
+>
+> Everything else is still labelled **PROPOSAL**, including the actuation
+> `Port` seam in §1.4 (no `actuate` package exists) and every chat-side change.
+> This header said "nothing in this document is built" for as long as those two
+> pieces had been shipping.
 >
 > Read [`ARCHITECTURE.md`](./ARCHITECTURE.md) (Aql's device model) and
 > [`../ARCHITECTURE.md`](../ARCHITECTURE.md) (the gateway that ships today)
