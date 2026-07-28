@@ -252,6 +252,13 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("POST /v1/auth/update-password", s.requireAuth(s.handleUpdatePassword))
 	mux.Handle("PATCH /v1/auth/me/profile", s.requireAuth(s.handleProfileUpdate))
 
+	// Phone linking (see phones.go and docs/PHONE-LINKING.md). Session-only,
+	// like the 2FA routes below: linking an identity that the chat rails
+	// then trust is not something an API token should be able to do.
+	mux.Handle("POST /v1/phones/me/link", s.requireAuth(s.handlePhoneLinkStart))
+	mux.Handle("GET /v1/phones/me/phones", s.requireAuth(s.handlePhonesList))
+	mux.Handle("DELETE /v1/phones/me/phones/{id}", s.requireAuth(s.handlePhoneUnlink))
+
 	// two-factor authentication (see twofactor.go). All four are session-only
 	// — an API token can never enrol, activate or remove a second factor,
 	// because requireAuth accepts JWTs only. The login-side gate is not a

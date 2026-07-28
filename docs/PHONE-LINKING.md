@@ -110,6 +110,23 @@ Why this shape and not the alternatives:
 
 ## 4. What has to be built
 
+**Status: built.** Migration 0018 is taken, the store layer is
+`hub/internal/store/phonelink.go`, the routes are
+`hub/internal/httpapi/phones.go`, and the channel side is
+`hub/internal/httpapi/phonelink_chat.go`. Two clarifications the build
+produced, both recorded rather than quietly resolved:
+
+- **The hash is deterministic**, unlike the selector+verifier pairs in 0009
+  and 0012. It has to be: the inbound message carries the code and nothing
+  else, so the code is the lookup key. At six characters that digest does not
+  defeat someone who can read the database — the real protection is the phone
+  binding in step 3, and the migration says so explicitly rather than
+  implying the hash is doing more work than it is.
+- **The mint quota is per user, not per phone.** Item 2 below asks for both.
+  Per-phone is the wrong shape: it hands an attacker a way to exhaust a
+  victim's budget by minting codes against their number, which is the very
+  lockout that item warns about.
+
 1. A `phone_link_codes` table (**migration 0018 is unclaimed — take it**): code
    hash, user, phone, expiry, attempt count. The code is stored **hashed**, like
    every other credential here (`0009_auth_recovery.sql`, `0012_api_tokens.sql`)
@@ -126,6 +143,20 @@ Why this shape and not the alternatives:
 
 Steps 1, 2, 4 and 5 are ordinary work. Step 3 is the one that deserves an
 adversarial read before it merges.
+
+That read is written down in `phonelink_chat.go`'s package comment — what a
+complete stranger can reach, and what each thing they can send does. It is
+worth restating one conclusion here: the redemption attempt has to run
+**before** the membership lookup, because someone linking a number is by
+definition not yet recognised and every access check would otherwise answer
+"you have no access" and stop. That ordering is load-bearing and is pinned by
+a test (`TestLinkCodeIsReachableBeforeTheMembershipCheck`) that fails if the
+call is moved after the check.
+
+This ceremony covers **WhatsApp only**, and that is not a phased rollout.
+Telegram, Slack and Discord identify a sender by a platform account id, not a
+phone number, so there is no number for a code to be bound to. Their identity
+binding is a separate unsolved problem — see § 5.
 
 ---
 

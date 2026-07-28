@@ -93,6 +93,34 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 - [ ] DMTAP channel stays a scaffold with a fail-closed transport until there is a real
       wire format. Do not present it as a channel.
 
+## phone linking (shipped 2026-07-28)
+- [x] The chat rails were INERT on every real deployment and nothing said so. Every
+      lookup in channels.go filters on `verified_at IS NOT NULL`, and the only writer
+      of that column — store.AddVerifiedPhone — had test callers and no others. So no
+      member could ever be recognised, and every WhatsApp/Telegram/Slack open was
+      refused. Built, tested, documented as shipped, and dead.
+- NOTE: this was an unfinished REPAIR, not an oversight. Invite-accept used to
+      auto-verify the invited number (a squatting hole); the fix made invites link
+      phones UNVERIFIED and removed the last production path that set the column. The
+      replacement ceremony was designed in docs/PHONE-LINKING.md and never built.
+      invites.go still promised "the OTP verify flow" — a flow that never existed.
+- [x] Built it: migration 0018 phone_link_codes, store/phonelink.go, httpapi/phones.go
+      (mint/list/unlink, session-only), and the channel side in phonelink_chat.go.
+- NOTE: the security core is that a code is spendable ONLY by the number it was minted
+      for. That is what makes minting safe without proof of ownership — which it cannot
+      require, since proving ownership is the point of the ceremony. Tampered: removing
+      the binding lets an attacker verify a victim's number onto their own profile.
+- NOTE: redemption must run BEFORE the membership lookup, because someone linking is by
+      definition not yet recognised. Pinned by a test that fails when the call is moved.
+- NOTE: two deviations from the design, both recorded in the doc rather than silently
+      resolved — the code hash is deterministic (the inbound message carries no selector
+      to salt against, and six characters means the hash is not doing much work; the
+      phone binding is), and the mint quota is per USER not per phone (per-phone hands
+      an attacker a way to lock a victim out of their own number).
+- [ ] Telegram/Slack/Discord identity binding is UNSOLVED and separate: those rails
+      identify a sender by a platform account id, so there is no number for a code to
+      bind to. Do not present the WhatsApp ceremony as covering them.
+
 ## spec-derived checks
 The technique that found the 2^53 rounding: derive expected behaviour from proto/*.md
 and check the code against it, rather than checking the code against itself. The vectors

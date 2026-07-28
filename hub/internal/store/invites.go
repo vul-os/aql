@@ -62,8 +62,14 @@ type AcceptInviteResult struct {
 	AccountID string
 	Role      string
 	// PhoneVerificationRequired is true when a phone was linked (always
-	// UNVERIFIED — accepting an invite never proves phone control; only the
-	// OTP verify flow flips verified_at).
+	// UNVERIFIED — accepting an invite never proves phone control).
+	//
+	// The flow that DOES flip verified_at is the link-code ceremony in
+	// phonelink.go: a code minted in the console, sent to the bot from the
+	// number itself. This comment used to promise "the OTP verify flow",
+	// which was never built — and because every chat-rail lookup requires
+	// verified_at, its absence made those rails inert for every real
+	// deployment. See migrations/0018_phone_link_codes.sql.
 	PhoneVerificationRequired bool
 }
 

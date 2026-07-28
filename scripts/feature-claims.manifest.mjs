@@ -433,6 +433,23 @@ export const FEATURES = [
     evidence: [{ file: 'hub/internal/store/admin.go', pattern: 'admin_audit_log' }],
   },
   {
+    // The ceremony that makes a verified phone possible at all. Worth a claim
+    // because its absence was invisible: every chat rail was built, tested and
+    // documented as shipped, and inert on any real deployment, because the
+    // column they all filter on had no production writer.
+    id: 'phone-link-ceremony',
+    label: 'Phone verification by console-minted link code, redeemed from the number itself over WhatsApp',
+    docStatus: 'shipped',
+    docRefs: ['docs/PHONE-LINKING.md § 4. What has to be built'],
+    evidence: [
+      { file: 'hub/internal/store/phonelink.go', pattern: 'RedeemPhoneLinkCode' },
+      { file: 'hub/internal/store/migrations/0018_phone_link_codes.sql', pattern: 'CREATE TABLE phone_link_codes' },
+      { file: 'hub/internal/httpapi/phones.go', pattern: 'handlePhoneLinkStart' },
+      // The wiring into the rail, which is the half whose absence was the bug.
+      { file: 'hub/internal/httpapi/channels_whatsapp.go', pattern: 'tryPhoneLink' },
+    ],
+  },
+  {
     // Added when the receiving half was built (migration 0019). Worth a claim
     // precisely because the failure it fixes was invisible to every existing
     // check: the controller's side was complete, signed, durable and tested,

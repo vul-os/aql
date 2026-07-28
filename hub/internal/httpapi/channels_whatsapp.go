@@ -117,6 +117,14 @@ func (s *Server) waHandleText(ctx contextT, msg *channels.WAMessage, from, chatI
 		body = channels.NormalizeText(msg.Text.Body)
 	}
 
+	// Link codes come first, before any membership lookup: a member linking
+	// their number is not yet recognised, so every check below would answer
+	// "no access" and the ceremony could never complete. See phonelink_chat.go
+	// for what a stranger can and cannot do with this reachability.
+	if reply, handled := s.tryPhoneLink(ctx, from, body); handled {
+		return text(to, chatID, reply)
+	}
+
 	allGrants, err := s.store.AvailableAccessPointsByPhone(ctx, from, 0)
 	if err != nil {
 		s.log.Error("wa available", "err", err)
