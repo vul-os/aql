@@ -77,6 +77,53 @@ Related: the `-tags gpio` relay driver is an unimplemented stub that panics by d
 the BLE radio layer has never been validated on hardware. Neither is a vulnerability —
 both are documented gaps — but do not deploy either to a real gate expecting them to work.
 
+## Verifying a release download
+
+Every release attaches a `SHA256SUMS` manifest covering every published asset, and a
+[sigstore build-provenance attestation](https://docs.github.com/actions/security-guides/using-artifact-attestations)
+signed with a short-lived certificate minted from the release workflow's OIDC token. There
+is no long-lived signing key: nothing to leak, nothing to rotate, nothing whose absence
+quietly downgrades a check.
+
+```sh
+curl -fsSLO https://raw.githubusercontent.com/vul-os/aql/vX.Y.Z/scripts/verify.sh
+bash verify.sh --tag vX.Y.Z --attest aql-hub_vX.Y.Z_linux_amd64.tar.gz
+```
+
+`scripts/verify.sh` fetches `SHA256SUMS`, looks up the **exact** entry for the asset you
+named and compares digests. Two outcomes: verified, or a non-zero exit with a diagnostic
+naming what was wrong. There is deliberately no `--skip-verify`, and **no path where a
+missing `SHA256SUMS` means "nothing to check"** — a verifier that shrugs at a 404 prints a
+line that looks like verification while checking nothing, which is worse than no verifier.
+
+| Exit | Meaning |
+|---|---|
+| 0 | verified |
+| 2 | usage error |
+| 3 | `SHA256SUMS` unfetchable or absent |
+| 4 | HTML page served where the manifest was expected |
+| 5 | manifest empty or with no well-formed digest line |
+| 6 | manifest has no entry for that asset |
+| 7 | asset unfetchable, or HTML served where bytes were expected |
+| 8 | truncated download |
+| 9 | digest mismatch |
+| 10 | `curl` or a digest tool missing |
+| 11 | `--attest` requested and provenance did not verify |
+| 12 | plaintext non-loopback origin refused |
+
+Without `--attest`, digests are checked but provenance is **not**, and the script says so
+rather than letting a pass imply more than it checked. `bash scripts/verify.sh --selftest`
+re-proves the refusals (24 synthetic-origin cases, asserting the exit code *and* that a
+diagnostic was printed); CI runs it on every push.
+
+Two things this does **not** cover, on purpose:
+
+- **The macOS desktop app is unsigned.** No Apple signing identity or notarization is
+  configured, so Gatekeeper will warn on first launch. Build provenance is not code
+  signing and does not replace it.
+- **The container image** `ghcr.io/vul-os/aql-hub` is published by a separate workflow and
+  is not listed in `SHA256SUMS`. Pin it by its registry digest if you need that guarantee.
+
 ## Supported versions
 
 The `main` branch is the supported line. The wire contracts in `proto/` are versioned

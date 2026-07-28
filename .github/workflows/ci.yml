@@ -402,3 +402,32 @@ jobs:
         env:
           CGO_ENABLED: "0"
         run: go test -count=1 -timeout 900s ./...
+
+  # The release verifier is only worth having if its REFUSALS are exercised.
+  # scripts/verify.sh is what a user runs before executing a downloaded hub,
+  # controller or desktop bundle; a checksum guard that has quietly stopped
+  # failing looks identical, from a green CI run, to one that works. Run the
+  # full synthetic-origin failure matrix on every push, not only at release
+  # time — release.yml is tag-triggered and, until this pass, could not even
+  # start (its `needs:` named a job that does not exist).
+  verify-script:
+    name: release verifier (lint + failure matrix)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntax check
+        run: bash -n scripts/verify.sh
+
+      - name: ShellCheck
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq shellcheck
+          shellcheck scripts/verify.sh
+
+      # Each case is a synthetic origin broken in exactly one way; the matrix
+      # asserts the exit code AND that a diagnostic was printed, because
+      # "aborted with no message" was the real-world bug being guarded against.
+      - name: Failure matrix (synthetic origin)
+        run: bash scripts/verify.sh --selftest
