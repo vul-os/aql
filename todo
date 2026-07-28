@@ -105,9 +105,17 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       the error first — but nothing tested that ordering, and the existing
       frame_too_large test could not reach the case. Reversing two statements in the
       session issues a challenge on a connection being dropped for protocol abuse.
-- [ ] Parsers still unfuzzed, in rough order of exposure: hub/internal/devices/modbus
-      decode (a meter), the camera RTSP/RTP reader, hub/internal/keys JCS
-      canonicalisation.
+- [x] controller/internal/jcs — fuzzed for PROPERTIES, not just panics: idempotent,
+      deterministic across map iterations, value-preserving, output re-parses. "Does not
+      panic" is far too weak for the code that decides which bytes a signature covers.
+- [ ] Parsers still unfuzzed: hub/internal/keys JCS (the SIGNING side — same properties
+      apply and the two implementations must agree), hub/internal/devices/modbus decode,
+      the camera RTSP/RTP reader.
+- NOTE: two of my own fuzz assertions were wrong before the code was. The framing one
+      forbade messages alongside an error; the JCS one compared numbers by SPELLING, so
+      canonicalising `0e00` to `0` — exactly correct — looked like value corruption. A
+      property assertion is a claim about the spec and deserves the same scepticism as
+      the code.
 
 ## race detector
 - [x] Never run on this repo before. Run by hand across hub, controller and e2e, plus
