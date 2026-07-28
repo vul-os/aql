@@ -108,9 +108,15 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 - [x] controller/internal/jcs — fuzzed for PROPERTIES, not just panics: idempotent,
       deterministic across map iterations, value-preserving, output re-parses. "Does not
       panic" is far too weak for the code that decides which bytes a signature covers.
-- [ ] Parsers still unfuzzed: hub/internal/keys JCS (the SIGNING side — same properties
-      apply and the two implementations must agree), hub/internal/devices/modbus decode,
-      the camera RTSP/RTP reader.
+- [x] hub/internal/keys JCS (the signing side). Same properties.
+- [x] proto/jcs-cases.json — the two JCS implementations cannot import each other
+      (Go's internal/ rule, and e2e depends on neither by design), so their agreement is
+      asserted against SHARED DATA. Expected values derived from RFC 8785 by hand, not
+      captured from either side. Found a real defect: 2^53+1 was silently ROUNDED to
+      2^53 rather than refused, because Float64() lost the precision before the range
+      check ran — in BOTH implementations. The documented deviation promises a refusal.
+- [ ] Parsers still unfuzzed: hub/internal/devices/modbus decode, the camera RTSP/RTP
+      reader.
 - NOTE: two of my own fuzz assertions were wrong before the code was. The framing one
       forbade messages alongside an error; the JCS one compared numbers by SPELLING, so
       canonicalising `0e00` to `0` — exactly correct — looked like value corruption. A

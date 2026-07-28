@@ -1,0 +1,121 @@
+{
+  "$comment": [
+    "Adversarial JCS canonicalisation cases, shared by every implementation.",
+    "",
+    "WHY THIS FILE EXISTS. hub/internal/keys and controller/internal/jcs are two",
+    "INDEPENDENT implementations of RFC 8785, and that independence is the point:",
+    "the hub signs over its canonical form and the controller verifies over its",
+    "own, so an implementation that shared code with its counterpart would make",
+    "their agreement vacuous. Go's internal/ rule then forbids any single test",
+    "from importing both, so agreement cannot be asserted in code — it has to be",
+    "asserted against DATA that both read.",
+    "",
+    "proto/vectors already does that for 93 canonical encodings, but those are",
+    "the documents this product actually sends: envelopes of integers and short",
+    "strings. Nothing exercised the edges where two hand-written canonicalisers",
+    "most plausibly disagree — key ordering by UTF-16 code unit, surrogate pairs,",
+    "control characters, the ±2^53 boundary, alternative spellings of a number.",
+    "",
+    "The expected values below are derived from RFC 8785 by hand, NOT captured",
+    "from either implementation. Captured output would only prove each side",
+    "reproduces itself.",
+    "",
+    "A disagreement here is not cosmetic. It means the hub signs bytes the",
+    "controller does not re-derive: every command fails at a gate, or a document",
+    "differing from the one a human approved verifies anyway."
+  ],
+  "cases": [
+    {
+      "name": "keys sorted by UTF-16 code unit, not by locale",
+      "why": "'A' is 0x41 and 'a' is 0x61, so uppercase sorts first. A locale-aware sort puts them together.",
+      "input": "{\"a\":1,\"A\":2}",
+      "canonical": "{\"A\":2,\"a\":1}"
+    },
+    {
+      "name": "a non-ASCII key sorts by its code unit, after ASCII",
+      "why": "é is U+00E9, above every ASCII letter. Sorting by bytes of some other encoding would reorder this.",
+      "input": "{\"é\":1,\"z\":2}",
+      "canonical": "{\"z\":2,\"é\":1}"
+    },
+    {
+      "name": "nested objects are sorted at every level",
+      "why": "An implementation that sorts only the top level passes most real envelopes.",
+      "input": "{\"b\":{\"d\":1,\"c\":2},\"a\":3}",
+      "canonical": "{\"a\":3,\"b\":{\"c\":2,\"d\":1}}"
+    },
+    {
+      "name": "array order is preserved",
+      "why": "Arrays are sequences; sorting them would change the document.",
+      "input": "{\"a\":[3,1,2]}",
+      "canonical": "{\"a\":[3,1,2]}"
+    },
+    {
+      "name": "an escaped surrogate pair becomes literal UTF-8",
+      "why": "RFC 8785 emits everything but the short escapes and control characters literally. Mishandling the pair yields two replacement characters.",
+      "input": "{\"k\":\"\\ud83d\\ude00\"}",
+      "canonical": "{\"k\":\"😀\"}"
+    },
+    {
+      "name": "control characters keep their \\u00XX form",
+      "why": "The short escapes are only \\b \\t \\n \\f \\r \\\" \\\\; everything else below 0x20 is \\u00XX, lower-case hex.",
+      "input": "{\"c\":\"\\u0001\\u001f\"}",
+      "canonical": "{\"c\":\"\\u0001\\u001f\"}"
+    },
+    {
+      "name": "the short escapes are used where they exist",
+      "why": "Emitting \\u0009 instead of \\t is valid JSON and the wrong canonical form.",
+      "input": "{\"c\":\"\\u0009\\u000a\"}",
+      "canonical": "{\"c\":\"\\t\\n\"}"
+    },
+    {
+      "name": "an alternative spelling of zero canonicalises to 0",
+      "why": "Found by fuzzing. 0e00 is a legal JSON number; a canonicaliser that echoed the spelling would sign different bytes for the same value.",
+      "input": "0e00",
+      "canonical": "0"
+    },
+    {
+      "name": "a positive exponent is expanded",
+      "why": "1e2 and 100 are the same number and must produce the same bytes.",
+      "input": "{\"n\":1e2}",
+      "canonical": "{\"n\":100}"
+    },
+    {
+      "name": "the largest exactly-representable integer survives",
+      "why": "2^53 is the documented upper bound of the deviation note. One past it must be refused, not rounded.",
+      "input": "{\"n\":9007199254740992}",
+      "canonical": "{\"n\":9007199254740992}"
+    },
+    {
+      "name": "a negative integer keeps its sign",
+      "input": "{\"n\":-1}",
+      "canonical": "{\"n\":-1}"
+    },
+    {
+      "name": "an empty key is a key",
+      "input": "{\"\":1,\"a\":2}",
+      "canonical": "{\"\":1,\"a\":2}"
+    },
+    {
+      "name": "insignificant whitespace is removed",
+      "input": "{ \"a\" : 1 , \"b\" : [ 1 , 2 ] }",
+      "canonical": "{\"a\":1,\"b\":[1,2]}"
+    },
+    {
+      "name": "literals are emitted bare",
+      "input": "{\"t\":true,\"f\":false,\"n\":null}",
+      "canonical": "{\"f\":false,\"n\":null,\"t\":true}"
+    }
+  ],
+  "refused": [
+    {
+      "name": "a non-integer number is refused, not rounded",
+      "why": "The documented deviation: full ECMAScript double formatting is not implemented, so a real must be an error rather than a guess. Rounding it would sign a number nobody sent.",
+      "input": "{\"n\":1.5}"
+    },
+    {
+      "name": "one past 2^53 is refused",
+      "why": "Beyond the IEEE-754 safe range the value cannot round-trip, so canonicalising it would silently change it.",
+      "input": "{\"n\":9007199254740993}"
+    }
+  ]
+}

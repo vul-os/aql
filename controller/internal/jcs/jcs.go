@@ -75,6 +75,31 @@ func writeJCS(b *strings.Builder, v any) error {
 	case float64:
 		return writeJCSFloat(b, x)
 	case json.Number:
+		// Exact integers FIRST, before float64 can round them.
+		//
+		// Float64() on json.Number("9007199254740993") returns 9007199254740992
+		// — 2^53+1 is not representable — so the range check below then sees a
+		// value inside the safe range and emits the rounded number. The
+		// document that gets signed differs from the one that arrived, silently,
+		// which is exactly what the deviation note promises not to do:
+		// "accepts integral numbers within the IEEE-754 safe range (|n| <= 2^53)
+		// and returns an error for anything else".
+		//
+		// ParseInt on the literal keeps the exact value, so the bound is applied
+		// to what was actually written. Anything ParseInt rejects — a real, an
+		// exponent form like 1e2, something past int64 — falls through to the
+		// float path, which expands exponents and refuses non-integers as before.
+		//
+		// Found by a shared canonicalisation case (proto/jcs-cases.json), which
+		// exists because the two implementations of this file cannot import each
+		// other and must be held to the same data.
+		if n, err := strconv.ParseInt(x.String(), 10, 64); err == nil {
+			if n > 1<<53 || n < -(1<<53) {
+				return fmt.Errorf("jcs: integer %d outside the IEEE-754 safe range (see Canonicalize deviation note)", n)
+			}
+			b.WriteString(strconv.FormatInt(n, 10))
+			return nil
+		}
 		f, err := x.Float64()
 		if err != nil {
 			return err

@@ -123,6 +123,7 @@ jobs:
           set -eux
           go test ./internal/discovery/ -run xxx -fuzz FuzzParseResponse -fuzztime 30s
           go test ./internal/discovery/ -run xxx -fuzz FuzzDecodeName -fuzztime 30s
+          go test ./internal/keys/ -run xxx -fuzz FuzzHubCanonicalizeJSON -fuzztime 30s
 
   race:
     # The race detector, which had never been run on this repository until it
