@@ -312,3 +312,98 @@ func TestNonceStoreFullFailsClosed(t *testing.T) {
 		t.Fatalf("full nonce store must fail closed: %+v", a)
 	}
 }
+
+// TestRepairIsRefusedUnlessSignedByTheCurrentlyPinnedKey.
+//
+// proto/pairing.md is explicit that `repair` must be signed by the CURRENTLY
+// pinned key, and equally explicit about the consequence: a hub that has lost
+// its old private key "cannot author a valid `repair` for any controller it
+// hasn't already migrated… This is deliberate, not an oversight. The pinned key
+// is the *entire* trust anchor."
+//
+// TestRepairRotatesPinnedKey covers the happy path. Nothing covered the attack,
+// and the attack is the whole point of the rule: a repair names the key that
+// replaces the trust anchor, so accepting one signed by anything else hands the
+// controller to whoever sent it. There is no gate left to check afterwards —
+// every later command verifies against the key the attacker installed.
+//
+// The second case is the one worth having a named test for. Verifying a repair
+// against the key it INSTALLS is a self-signed rotation, and it is exactly the
+// shape of a well-meant fix for the limitation the spec describes: "the hub lost
+// its key and cannot recover, so let it sign the repair with the new one". That
+// change looks like a recovery feature and is a complete bypass.
+func TestRepairIsRefusedUnlessSignedByTheCurrentlyPinnedKey(t *testing.T) {
+	dir, _, _, gwPubB64, ctrlPriv := testKeys(t)
+	keys, err := vectorfile.LoadKeys(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nextPubB64 := keys.Keys["gateway_next"].PublicKeyB64u
+	nextSeed, _ := keys.Keys["gateway_next"].Seed()
+	nextPriv := ed25519.NewKeyFromSeed(nextSeed)
+	attackerSeed, _ := keys.Keys["attacker"].Seed()
+	attackerPriv := ed25519.NewKeyFromSeed(attackerSeed)
+
+	check := vectorfile.Check{
+		Now: 1789000010, DeviceID: "de71ce00-0000-4000-8000-000000000001",
+		AccessPoints: []string{"main"},
+	}
+
+	for _, tc := range []struct {
+		name string
+		priv ed25519.PrivateKey
+		why  string
+	}{
+		{
+			name: "signed by an unrelated key",
+			priv: attackerPriv,
+			why:  "anyone who can reach the controller could otherwise re-pin it to their own hub",
+		},
+		{
+			name: "self-signed by the key it installs",
+			priv: nextPriv,
+			why: "verifying a repair against next_pubkey makes the rotation self-authorising, " +
+				"which is the shape a well-meant fix for the lost-key limitation would take",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p, _, _ := newProcessor(t, check, gwPubB64, ctrlPriv)
+
+			repair := map[string]any{
+				"v": 0, "typ": "cmd", "cmd": "repair", "device_id": check.DeviceID,
+				"nonce": wire.B64u([]byte("repair-nonce-02!")),
+				"iat":   check.Now, "exp": check.Now + 30,
+				"payload": map[string]any{"next_pubkey": nextPubB64},
+			}
+			raw, err := p.Process(signCmd(t, tc.priv, repair))
+			if err != nil {
+				t.Fatalf("Process: %v", err)
+			}
+			a := parseAck(t, raw)
+			if a.Result != "denied" || a.Detail != wire.ReasonBadSig {
+				t.Errorf("repair %s was not refused as badsig: %+v — %s", tc.name, a, tc.why)
+			}
+
+			// The assertion that matters most: the trust anchor is unchanged.
+			// A refusal that still rotated would be worse than an acceptance,
+			// because the ack would say denied.
+			if got := p.State.Pairing().GatewayPubkey; got != gwPubB64 {
+				t.Fatalf("the pinned key CHANGED after a refused repair: %s (was %s) — %s",
+					got, gwPubB64, tc.why)
+			}
+
+			// And the original key still works, so the controller has not been
+			// left unable to talk to its real hub.
+			open := map[string]any{
+				"v": 0, "typ": "cmd", "cmd": "open", "device_id": check.DeviceID,
+				"access_point": "main", "nonce": wire.B64u([]byte("after-refuse-01!")),
+				"iat": check.Now, "exp": check.Now + 30,
+			}
+			gwSeed, _ := keys.Keys["gateway"].Seed()
+			raw, _ = p.Process(signCmd(t, ed25519.NewKeyFromSeed(gwSeed), open))
+			if a := parseAck(t, raw); a.Result != "opened" {
+				t.Errorf("the real hub could no longer open after a refused repair: %+v", a)
+			}
+		})
+	}
+}

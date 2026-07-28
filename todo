@@ -93,6 +93,19 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 - [ ] DMTAP channel stays a scaffold with a fail-closed transport until there is a real
       wire format. Do not present it as a channel.
 
+## spec-derived checks
+The technique that found the 2^53 rounding: derive expected behaviour from proto/*.md
+and check the code against it, rather than checking the code against itself. The vectors
+cannot catch what both implementations get wrong together.
+- [x] pairing.md's "`repair` must be signed by the CURRENTLY pinned key". Honoured —
+      Process reads the pinned key fresh, verifies, and only then swaps. But only the
+      HAPPY path was tested. Added the attack: a repair signed by an unrelated key, and
+      one self-signed by the key it installs. The second is the shape a well-meant fix
+      for the documented lost-key limitation would take, and it is a complete takeover;
+      simulating that change makes the controller answer result=ok.
+- [ ] Remaining normative claims worth the same treatment: grants.md's revocation
+      window, events.md's ordering/at-least-once, commands.md's nonce and clock rules.
+
 ## fuzzing
 - [x] No fuzz target existed anywhere. Four now, on the two parsers that read
       UNAUTHENTICATED bytes: mDNS parseResponse/decodeName (any host on the LAN, one
