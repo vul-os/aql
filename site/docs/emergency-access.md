@@ -45,7 +45,8 @@ stale-clock handling), shared by both transports. **LAN/mDNS works today** — t
 advertises `_lintel._tcp` and serves grants over LAN HTTP. The **BLE** path's framing
 codec and open→challenge→proof→result session are implemented and unit-tested at ATT
 MTUs 23/185/512; the **BLE radio (GATT peripheral) still needs hardware validation** —
-its BlueZ glue compiles behind `-tags ble` on Linux but has not been exercised on real
+its glue compiles behind `-tags ble` on Linux (BlueZ) and Windows (WinRT)
+but has not been exercised on real
 hardware yet.
 
 **Hub-side issuance is now real.** `POST /v1/offline-grants`

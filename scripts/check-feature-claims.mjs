@@ -124,7 +124,14 @@ function checkItem(item) {
   if (item.root !== undefined) {
     const absRoot = path.join(repoRoot, item.root);
     if (!existsSync(absRoot)) {
-      return { ok: false, detail: `root ${item.root} does not exist` };
+      // expectMissing marks a path whose ABSENCE is the intended signal —
+      // a directory something else would generate if the feature were set up
+      // (src-tauri/gen/apple, say). Without the marker a missing path is
+      // treated as a broken manifest, because that is what it usually is, and
+      // the two are indistinguishable from the outside.
+      return item.expectMissing
+        ? { ok: false, detail: `${item.root} is absent, as this claim expects` }
+        : { ok: false, broken: true, detail: `root ${item.root} does not exist` };
     }
     const re = new RegExp(item.pattern, item.flags ?? '');
     for (const abs of walk(absRoot)) {
@@ -139,7 +146,9 @@ function checkItem(item) {
   // single-file item
   const absFile = path.join(repoRoot, item.file);
   if (!existsSync(absFile)) {
-    return { ok: false, detail: `${item.file} does not exist` };
+    return item.expectMissing
+      ? { ok: false, detail: `${item.file} is absent, as this claim expects` }
+      : { ok: false, broken: true, detail: `${item.file} does not exist` };
   }
   if (item.pattern === undefined && item.patternAbsent === undefined) {
     return { ok: true, detail: `${item.file} exists` };
@@ -166,7 +175,16 @@ function checkSlot(slot) {
     const results = slot.map(checkItem);
     const hit = results.find((r) => r.ok);
     if (hit) return hit;
-    return { ok: false, detail: `none of: ${results.map((r) => r.detail).join('; ')}` };
+    // A broken path inside an OR-slot still breaks the slot, even though the
+    // slot legitimately allows misses: "we looked in three places and one of
+    // them does not exist" is not the same statement as "we looked in three
+    // places and found nothing".
+    const broken = results.filter((r) => r.broken);
+    return {
+      ok: false,
+      broken: broken.length > 0,
+      detail: `none of: ${results.map((r) => r.detail).join('; ')}`,
+    };
   }
   return checkItem(slot);
 }
@@ -175,7 +193,8 @@ function checkSlot(slot) {
 function evaluateFeature(feature) {
   const results = feature.evidence.map((slot) => ({ slot, result: checkSlot(slot) }));
   const implemented = results.every((r) => r.result.ok);
-  return { implemented, results };
+  const broken = results.filter((r) => r.result.broken);
+  return { implemented, results, broken };
 }
 
 // ── main ─────────────────────────────────────────────────────────────────
@@ -233,7 +252,25 @@ function main() {
       continue;
     }
 
-    const { implemented, results } = evaluateFeature(feature);
+    const { implemented, results, broken } = evaluateFeature(feature);
+
+    // Checked BEFORE the status branches, because a broken path is not an
+    // answer about the feature at all. It matters most for 'planned' claims,
+    // where absence is the expected result: a mistyped filename makes the
+    // claim pass forever and report "planned, no evidence (correct)". That is
+    // how a claim asserting Linux was the only BLE peripheral backing stayed
+    // green after Windows support landed — its evidence named a file that
+    // does not exist.
+    if (broken.length > 0) {
+      failures.push({
+        feature,
+        reason:
+          `evidence points at something that does not exist, so this claim has been ` +
+          `checking nothing:\n` +
+          broken.map((r) => `      - ${r.result.detail}`).join('\n'),
+      });
+      continue;
+    }
 
     if (feature.docStatus === 'shipped' && !implemented) {
       const failing = results.filter((r) => !r.result.ok);

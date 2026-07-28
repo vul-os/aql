@@ -21,9 +21,12 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
   proto/vectors/. Guarded by src/lib/__tests__/naming.test.ts.
 
 ## next up
-- [ ] BLE radio validation on real Linux/BlueZ hardware — framing and session are tested,
-      the radio has never run. `-tags ble`; every other platform returns ErrUnsupported
-      from `bleperiph/start_unsupported.go`.
+- [ ] BLE radio validation on real hardware — framing and session are tested, the radio
+      has never run. `-tags ble` builds a real GATT server on Linux (BlueZ) AND Windows
+      (WinRT); only darwin and below get ErrUnsupported from
+      `bleperiph/start_unsupported.go`, and that one is blocked upstream:
+      tinygo.org/x/bluetooth v0.15.0 has no GATT server for darwin at all
+      (gatts_other.go is a nine-line stub), so macOS is a BLE central only.
 - [ ] GPIO relay validation on real hardware — the driver exists behind `-tags gpio` and
       has never driven a chip, a relay board or a gate. Fail-safe spec: normally-open,
       line drops on exit/panic.

@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -108,6 +108,45 @@ describe('the backend has one name', () => {
     expect(
       offenders,
       `these still point at the old gateway/ layout:\n${offenders.join('\n')}`,
+    ).toEqual([]);
+  });
+
+  // Every file and root named in the claims manifest must exist.
+  //
+  // check-feature-claims.mjs enforces this at run time now, but only when it
+  // runs. This is the cheap version that fails in the ordinary unit suite, and
+  // it exists because the failure it catches is invisible: a 'planned' claim
+  // whose evidence path is mistyped reports "planned, no evidence (correct)"
+  // forever. One did — it asserted Linux was the only BLE peripheral backing,
+  // and stayed green for the whole period Windows support shipped.
+  it('every path the feature-claims manifest names actually exists', () => {
+    // Scanned as SOURCE rather than imported. The manifest is a .mjs with no
+    // type declaration, so importing it fails `tsc -b` — and this file already
+    // reads Go and config files as text for the same kind of check.
+    //
+    // Evidence items are flat object literals ({ file: '…', pattern: '…' }),
+    // so matching brace-delimited blocks with no nesting is sufficient and
+    // keeps the expectMissing marker attached to the item it belongs to.
+    const src = readFileSync(path.join(repo, 'scripts/feature-claims.manifest.mjs'), 'utf-8');
+    const blocks = src.match(/\{[^{}]*\}/g) ?? [];
+    expect(blocks.length, 'no evidence blocks were parsed out of the manifest').toBeGreaterThan(10);
+
+    const missing: string[] = [];
+    let checked = 0;
+    for (const b of blocks) {
+      // A path whose ABSENCE is the signal (a generated directory) is allowed
+      // to be absent — see checkItem in check-feature-claims.mjs.
+      if (/expectMissing/.test(b)) continue;
+      const m = /\b(?:file|root):\s*'([^']+)'/.exec(b);
+      if (!m) continue;
+      checked += 1;
+      if (!existsSync(path.join(repo, m[1]))) missing.push(m[1]);
+    }
+    expect(checked, 'no file/root evidence paths were found to check').toBeGreaterThan(10);
+    expect(
+      missing,
+      'the claims manifest points at paths that do not exist, so those claims check ' +
+        'nothing:\n' + missing.join('\n'),
     ).toEqual([]);
   });
 
