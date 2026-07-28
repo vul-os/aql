@@ -234,3 +234,130 @@ func TestStaleClockBackwardReset(t *testing.T) {
 		t.Fatal("deny must not return a grant")
 	}
 }
+
+// TestVerificationOrderOnMultipleFaults.
+//
+// proto/grants.md §"Verification order" is normative about ORDER, not just
+// outcome: eleven numbered steps, "fail-closed — first failure wins". The
+// vectors deliberately present SINGLE faults, so they pin every step's reason
+// and can say nothing at all about which one wins when two are wrong at once.
+//
+// Order is not cosmetic here. The reason lands in the controller's event log
+// and the hub's audit trail, and it is what an operator reads when a gate did
+// not open. "expired" sends them to look at a clock; "badsig" sends them to
+// look at a pairing. A reordering swaps those diagnoses silently, with every
+// single-fault vector still green.
+//
+// It also has to hold across implementations — proto/vectors/verify.mjs
+// evaluates the same order — so a drift here is a drift between the controller
+// and the independent checker.
+//
+// Each case below breaks TWO rules and asserts the EARLIER step is reported.
+func TestVerificationOrderOnMultipleFaults(t *testing.T) {
+	dir, pub := gatewayPub(t)
+	f, err := vectorfile.Load(dir, "grants.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var valid *vectorfile.Vector
+	for i := range f.Vectors {
+		if f.Vectors[i].Name == "grant-redeem-valid" {
+			valid = &f.Vectors[i]
+			break
+		}
+	}
+	if valid == nil {
+		t.Fatal("grant-redeem-valid vector not found; this test has nothing to perturb")
+	}
+
+	// run replays the valid transcript with env perturbed by tweak.
+	run := func(t *testing.T, tweak func(*grants.Env)) string {
+		t.Helper()
+		x := grants.NewExchange()
+		var open grants.Open
+		if err := json.Unmarshal(valid.Transcript.Open.Object, &open); err != nil {
+			t.Fatal(err)
+		}
+		var ch grants.Challenge
+		if err := json.Unmarshal(valid.Transcript.Challenge, &ch); err != nil {
+			t.Fatal(err)
+		}
+		x.InjectChallenge(&open, ch)
+		env := envFrom(valid.Check, pub)
+		tweak(&env)
+		res, _, _ := x.HandleProof(valid.Transcript.Proof.Object, env)
+		if res.Result == "opened" {
+			return "opened"
+		}
+		return res.Detail
+	}
+
+	// Sanity: unperturbed, this transcript opens. Without it, every assertion
+	// below could be satisfied by a transcript that was already broken.
+	if got := run(t, func(*grants.Env) {}); got != "opened" {
+		t.Fatalf("the baseline transcript does not open (%s); the perturbations below "+
+			"would prove nothing", got)
+	}
+
+	staleSync := valid.Check.Now - wire.StaleClockLimitSeconds - 1
+
+	for _, tc := range []struct {
+		name  string
+		tweak func(*grants.Env)
+		want  string
+		why   string
+	}{
+		{
+			name:  "stale clock and lockdown together report stale_clock",
+			tweak: func(e *grants.Env) { e.LastGatewaySync = staleSync; e.Lockdown = true },
+			want:  wire.ReasonStaleClock,
+			why:   "step 1 precedes step 2",
+		},
+		{
+			name:  "stale clock and a wrong hub key report stale_clock",
+			tweak: func(e *grants.Env) { e.LastGatewaySync = staleSync; e.GatewayKey = otherKey(t) },
+			want:  wire.ReasonStaleClock,
+			why:   "step 1 precedes step 3; a controller that cannot trust its clock says so first",
+		},
+		{
+			name:  "lockdown and a wrong hub key report lockdown",
+			tweak: func(e *grants.Env) { e.Lockdown = true; e.GatewayKey = otherKey(t) },
+			want:  wire.ReasonLockdown,
+			why:   "step 2 precedes step 3",
+		},
+		{
+			name: "lockdown and a device this grant does not name report lockdown",
+			tweak: func(e *grants.Env) {
+				e.Lockdown = true
+				e.DeviceID = "de71ce00-0000-4000-8000-00000000ffff"
+			},
+			want: wire.ReasonLockdown,
+			why:  "step 2 precedes step 5",
+		},
+		{
+			name: "a wrong hub key and a device this grant does not name report badsig",
+			tweak: func(e *grants.Env) {
+				e.GatewayKey = otherKey(t)
+				e.DeviceID = "de71ce00-0000-4000-8000-00000000ffff"
+			},
+			want: wire.ReasonBadSig,
+			why:  "step 3 precedes step 5 — an unverified grant's contents are not evidence of anything",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := run(t, tc.tweak); got != tc.want {
+				t.Errorf("reported %q, want %q (%s)", got, tc.want, tc.why)
+			}
+		})
+	}
+}
+
+// otherKey is a valid Ed25519 public key that is not the pinned one.
+func otherKey(t *testing.T) ed25519.PublicKey {
+	t.Helper()
+	pub, _, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return pub
+}

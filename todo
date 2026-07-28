@@ -112,6 +112,12 @@ cannot catch what both implementations get wrong together.
       my first version did exactly that and passed against a deliberately broken horizon.
       The test now accepts a fresh command at each step, which is what triggers the prune
       and is also what a controller in use actually does.
+- [x] grants.md's 11-step verification ORDER ("first failure wins"). Honoured,
+      including the one apparent deviation — the cnonce lookup precedes step 3 because
+      with no pending entry there is no grant to verify, and the code says so. Untestable
+      by vectors, which are single-fault by design: five multi-fault cases now assert the
+      EARLIER step wins. Verified that moving lockdown after the signature check leaves
+      the whole vector corpus AND verify.mjs green while the new test fails.
 - [ ] Remaining normative claims worth the same treatment: grants.md's revocation
       window, events.md's ordering/at-least-once.
 
