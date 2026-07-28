@@ -45,6 +45,26 @@ jobs:
       # controller implements; a change that breaks them must not reach main on
       # the strength of nobody having checked locally.
       - run: node proto/vectors/verify.mjs
+      # Byte-reproducibility of the generator, which is the property that lets a
+      # reviewer trust a large generated-JSON diff at all: if regenerating
+      # changes nothing, the committed corpus IS what generate.mjs produces, so
+      # a diff in these files is a deliberate contract change rather than
+      # incidental churn. proto/vectors/HARNESS-PATTERN.md tells other repos to
+      # run exactly this; it should not be advice this repo only gives.
+      - name: vectors are byte-reproducible
+        run: |
+          set -eu
+          node proto/vectors/generate.mjs
+          # `git status`, not `git diff`: diff cannot see a file the generator
+          # created that was never committed, and a vector file nobody
+          # committed is a vector file nothing checks. Scoped to the generated
+          # JSON because the .md and .mjs here are hand-written.
+          changed="$(git status --porcelain -- 'proto/vectors/*.json')"
+          [ -z "$changed" ] || {
+            echo "::error::regenerating proto/vectors/ changed or added files:"
+            echo "$changed"
+            exit 1
+          }
 
   rust:
     name: rust (fmt + clippy + check, Tauri shell)
@@ -123,13 +143,23 @@ jobs:
       - name: fuzz (short)
         working-directory: hub
         run: |
-          set -eux
-          go test ./internal/discovery/ -run xxx -fuzz FuzzParseResponse -fuzztime 30s
-          go test ./internal/discovery/ -run xxx -fuzz FuzzDecodeName -fuzztime 30s
-          go test ./internal/keys/ -run xxx -fuzz FuzzHubCanonicalizeJSON -fuzztime 30s
-          go test ./internal/devices/modbus/ -run xxx -fuzz FuzzReadADU -fuzztime 30s
-          go test ./internal/devices/modbus/ -run xxx -fuzz FuzzDecodeReadResponse -fuzztime 30s
-          go test ./internal/devices/modbus/ -run xxx -fuzz FuzzMetricDecode -fuzztime 30s
+          set -eu
+          # Fuzz a named target, failing if it does not exist.
+          #
+          # `go test -fuzz X` exits 0 when X matches NOTHING — it silently runs
+          # no fuzzing at all. Both JCS entries here became no-ops the moment
+          # the canonicalizer moved to its own module, and CI stayed green
+          # while fuzzing nothing. -list is what tells the difference.
+          fuzz() {
+            go test "$1" -list='Fuzz.*' | grep -qx "$2" \
+              || { echo "::error::no fuzz target $2 in $1 — did it move?"; exit 1; }
+            go test "$1" -run xxx -fuzz "$2" -fuzztime 30s
+          }
+          fuzz ./internal/discovery/ FuzzParseResponse
+          fuzz ./internal/discovery/ FuzzDecodeName
+          fuzz ./internal/devices/modbus/ FuzzReadADU
+          fuzz ./internal/devices/modbus/ FuzzDecodeReadResponse
+          fuzz ./internal/devices/modbus/ FuzzMetricDecode
 
   race:
     # The race detector, which had never been run on this repository until it
@@ -175,6 +205,45 @@ jobs:
       - name: e2e
         working-directory: e2e
         run: go test -race -timeout 20m ./...
+
+  jcs:
+    name: jcs (the shared canonicalizer)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: jcs/go.mod
+      # Its own job because it is its own module, and because of what it is:
+      # every signed document in this product is signed and verified over bytes
+      # this package produces. It used to be three hand-copied implementations,
+      # one of which silently rounded 2^53+1 for as long as it existed. There is
+      # one now, so it carries the whole weight and nothing else cross-checks it.
+      - name: gofmt
+        working-directory: jcs
+        run: |
+          set -eu
+          out="$(gofmt -l .)"
+          [ -z "$out" ] || { echo "::error::gofmt: $out"; exit 1; }
+      - name: go vet
+        working-directory: jcs
+        run: go vet ./...
+      - name: go test
+        working-directory: jcs
+        run: go test -race ./...
+      - name: fuzz (short)
+        working-directory: jcs
+        run: |
+          set -eu
+          # Same guard as the other fuzz steps: -fuzz exits 0 on a target that
+          # does not exist, and these two targets have already moved once.
+          fuzz() {
+            go test "$1" -list='Fuzz.*' | grep -qx "$2" \
+              || { echo "::error::no fuzz target $2 in $1 — did it move?"; exit 1; }
+            go test "$1" -run xxx -fuzz "$2" -fuzztime 30s
+          }
+          fuzz . FuzzCanonicalizeJSONProperties
+          fuzz . FuzzCanonicalizeValue
 
   controller:
     name: controller (vet + build + test)
@@ -268,13 +337,22 @@ jobs:
       - name: fuzz (short)
         working-directory: controller
         run: |
-          set -eux
-          go test ./internal/grants/ -run xxx -fuzz FuzzHandleOpen -fuzztime 30s
-          go test ./internal/grants/ -run xxx -fuzz FuzzHandleProof -fuzztime 30s
-          go test ./internal/framing/ -run xxx -fuzz FuzzReassemblerPush -fuzztime 30s
-          go test ./internal/framing/ -run xxx -fuzz FuzzChunkRoundTrip -fuzztime 30s
-          go test ./internal/jcs/ -run xxx -fuzz FuzzCanonicalizeJSONProperties -fuzztime 30s
-          go test ./internal/jcs/ -run xxx -fuzz FuzzCanonicalizeValue -fuzztime 30s
+          set -eu
+          # Fuzz a named target, failing if it does not exist.
+          #
+          # `go test -fuzz X` exits 0 when X matches NOTHING — it silently runs
+          # no fuzzing at all. Both JCS entries here became no-ops the moment
+          # the canonicalizer moved to its own module, and CI stayed green
+          # while fuzzing nothing. -list is what tells the difference.
+          fuzz() {
+            go test "$1" -list='Fuzz.*' | grep -qx "$2" \
+              || { echo "::error::no fuzz target $2 in $1 — did it move?"; exit 1; }
+            go test "$1" -run xxx -fuzz "$2" -fuzztime 30s
+          }
+          fuzz ./internal/grants/ FuzzHandleOpen
+          fuzz ./internal/grants/ FuzzHandleProof
+          fuzz ./internal/framing/ FuzzReassemblerPush
+          fuzz ./internal/framing/ FuzzChunkRoundTrip
 
   e2e-browser:
     name: e2e-browser (real Chromium against a real hub binary)
