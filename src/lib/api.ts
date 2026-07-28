@@ -148,6 +148,31 @@ export function isUnreachable(err: unknown): boolean {
 }
 
 /**
+ * The code apiFetch raises when the request never reached a hub at all —
+ * DNS failure, connection refused, Wi-Fi gone, the hub powered off.
+ *
+ * Status 0 because there was no HTTP response to take a status from. It is
+ * deliberately NOT `unreachable`, which is the hub's own 502 about a DEVICE it
+ * could not contact: that answer proves the hub is up and talking, which is
+ * the opposite of this.
+ */
+export const HUB_UNREACHABLE_CODE = 'hub_unreachable';
+
+/**
+ * True when the request never reached the hub.
+ *
+ * Before this existed, a transport failure surfaced as a raw
+ * `TypeError: Failed to fetch` — so every screen in the console rendered
+ * "Failed to fetch" as its error message, which names a browser API rather
+ * than telling a user their hub is off. It also meant nothing could
+ * distinguish "your hub is unreachable" from "your hub said no", which is the
+ * distinction offline emergency access exists to act on.
+ */
+export function isHubUnreachable(err: unknown): boolean {
+  return err instanceof ApiError && err.code === HUB_UNREACHABLE_CODE;
+}
+
+/**
  * Narrow an unknown error to a 429 denial. Returns the denial reason and a
  * clean retry hint (seconds, ≥1) or null when the error is anything else.
  */
@@ -233,10 +258,27 @@ export async function apiFetch<T>(path: string, init: FetchInit = {}): Promise<T
     });
   };
 
-  let res = await doRequest();
+  // A rejected fetch means nothing reached a hub — there is no response to
+  // read a status from. Translating it here rather than at ~200 call sites is
+  // what lets a screen tell "your hub is off" from "your hub said no", and
+  // what stops "Failed to fetch" being shown to a user as an explanation.
+  //
+  // An abort is passed through untouched: a request the caller cancelled, or
+  // one that hit its own timeout, says nothing about whether the hub is up.
+  const attempt = async (): Promise<Response> => {
+    try {
+      return await doRequest();
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') throw err;
+      if (err instanceof Error && err.name === 'AbortError') throw err;
+      throw new ApiError(0, HUB_UNREACHABLE_CODE);
+    }
+  };
+
+  let res = await attempt();
   if (res.status === 401 && tokenStore.refresh) {
     const refreshed = await refreshAccessToken();
-    if (refreshed) res = await doRequest();
+    if (refreshed) res = await attempt();
   }
 
   if (res.status === 204) return undefined as T;

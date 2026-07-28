@@ -45,6 +45,7 @@ const {
   requestGrant,
   allGateStatuses,
   freshness,
+  probeController,
 } = await import('../service');
 const { recordId, saveGrantRecord } = await import('../vault');
 
@@ -227,5 +228,62 @@ describe('freshness is never dressed up as validity', () => {
     expect(f.message).toMatch(/Not confirmed/);
     expect(f.message).toMatch(/unless the hub has withdrawn it/);
     expect(f.message).not.toMatch(/\bValid\b/);
+  });
+});
+
+// ── probeController ────────────────────────────────────────────────────────
+//
+// The liveness check the emergency path leans on. Its whole value is being
+// cheap and side-effect-free, so what is worth testing is not "does it return
+// true" but WHAT IT SENDS: a GET, to a route the controller does not serve,
+// never a POST that would mint a challenge or open a gate.
+
+describe('probeController', () => {
+  function recordingFetch(res: Partial<Response> | Error) {
+    const calls: Array<{ url: string; method: string }> = [];
+    const impl = (async (url: string | URL, init?: RequestInit) => {
+      calls.push({ url: String(url), method: init?.method ?? 'GET' });
+      if (res instanceof Error) throw res;
+      return res as Response;
+    }) as unknown as typeof fetch;
+    return { impl, calls };
+  }
+
+  it('asks with a GET and never a method that changes controller state', async () => {
+    const { impl, calls } = recordingFetch({ status: 405 } as Response);
+    await probeController('10.0.0.9', { fetchImpl: impl });
+
+    expect(calls).toHaveLength(1);
+    // A POST here would mint a single-use challenge on every check, or —
+    // against /grant/proof — open the gate. Neither belongs in a question
+    // about whether anyone is listening.
+    expect(calls[0].method).toBe('GET');
+    // Normalised the same way a real redemption normalises it, default port
+    // and all. Probing a different address than the one we would redeem
+    // against would answer a question nobody asked.
+    expect(calls[0].url).toBe('http://10.0.0.9:8737/grant/open');
+  });
+
+  it('reads a 405 as present, because that is what an unrouted GET returns', async () => {
+    const { impl } = recordingFetch({ status: 405 } as Response);
+    expect(await probeController('10.0.0.9', { fetchImpl: impl })).toBe(true);
+  });
+
+  it('reads a server error as absent', async () => {
+    const { impl } = recordingFetch({ status: 502 } as Response);
+    expect(await probeController('10.0.0.9', { fetchImpl: impl })).toBe(false);
+  });
+
+  it('reports absent rather than throwing when nothing answers', async () => {
+    const { impl } = recordingFetch(new TypeError('Failed to fetch'));
+    // This runs while someone is at a gate; a rejected promise here would
+    // take out whatever screen asked.
+    await expect(probeController('10.0.0.9', { fetchImpl: impl })).resolves.toBe(false);
+  });
+
+  it('refuses an unusable address without sending anything', async () => {
+    const { impl, calls } = recordingFetch({ status: 200 } as Response);
+    expect(await probeController('https://gate.example', { fetchImpl: impl })).toBe(false);
+    expect(calls).toHaveLength(0);
   });
 });

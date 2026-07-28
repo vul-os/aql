@@ -444,6 +444,69 @@ export function lanTransportAvailable(): boolean {
   return window.location.protocol === 'http:';
 }
 
+/**
+ * Is anything speaking the controller's LAN protocol at this address?
+ *
+ * Uses `GET /grant/open`, which the controller's LAN server has no route for
+ * and answers 405 through its CORS wrapper — a response, and nothing else.
+ * That is the point: a liveness probe must cost the thing it is probing
+ * nothing, and the alternatives all cost something.
+ *
+ *   - `POST /grant/proof` actuates the gate. Obviously not.
+ *   - `POST /grant/open` does not actuate, but it mints a single-use
+ *     challenge nonce, so probing with it would burn controller state on
+ *     every check and leave dangling challenges behind.
+ *   - `OPTIONS /grant/open` is a genuine no-op 200, but OPTIONS is not a
+ *     simple method, so a browser preflights the probe itself — a request to
+ *     find out whether we may send a request whose only purpose was to find
+ *     out whether anyone is there.
+ *
+ * GET is a simple request: it goes straight out, changes nothing, and a 405
+ * is as good an answer as a 200 for this question.
+ *
+ * In a browser this is still subject to CORS — the controller admits exactly
+ * one origin, the console of the hub it is paired to (lanserver/cors.go), so
+ * a probe from anywhere else fails and reports absent. In the Tauri app,
+ * where this feature actually matters, gatewayFetch uses the native client
+ * and no such limit applies.
+ *
+ * # What a true answer does and does not mean
+ *
+ * It means something is listening there and speaking this shape. It does NOT
+ * mean it is YOUR controller: OPTIONS carries no authentication, and nothing
+ * about the response is signed. Identity is established at redemption, where
+ * the controller checks the grant against its own pinned hub key — so callers
+ * must say "a controller is answering", never "your gate is ready".
+ *
+ * Never throws, and never waits long: this runs while someone is standing at
+ * a gate, and a slow "maybe" is worse than a fast "we don't know".
+ */
+export async function probeController(
+  address: string,
+  opts: { timeoutMs?: number; fetchImpl?: typeof fetch } = {},
+): Promise<boolean> {
+  const baseUrl = normalizeControllerAddress(address);
+  if (!baseUrl) return false;
+  const doFetch = opts.fetchImpl ?? gatewayFetch;
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), opts.timeoutMs ?? 1500);
+  try {
+    const res = await doFetch(`${baseUrl}/grant/open`, {
+      method: 'GET',
+      signal: ctl.signal,
+    });
+    // Any answer proves a listener. The status is not asserted beyond "not a
+    // server error": 405 is what today's controller returns, and a future one
+    // may answer differently — reporting it absent over a status code would
+    // send someone away from a gate that would in fact have opened.
+    return res.status < 500;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export type GateStatus = {
   /**
    * The hub this gate belongs to — its pinned key. Access-point ids are

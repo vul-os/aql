@@ -47,6 +47,12 @@ const NOT_A_HUB_CODE = new Map<string, string>([
   // answers a route the gateway does not serve. Never sent by the hub, by
   // definition — it exists precisely because nothing was.
   ['gateway_route_unavailable', 'client-side sentinel — see UNAVAILABLE_CODE in api.ts'],
+  // Minted client-side when the request never reached a hub at all: DNS
+  // failure, connection refused, the hub powered off. The hub cannot emit it
+  // for the same reason it cannot emit anything — it was not there. Note this
+  // is NOT the hub's 502 `unreachable`, which is the hub reporting a DEVICE it
+  // could not contact and therefore proof the hub itself is up.
+  ['hub_unreachable', 'client-side sentinel — see HUB_UNREACHABLE_CODE in api.ts'],
 ]);
 
 /**
