@@ -40,6 +40,22 @@ import (
 // above — a handler that receives something and discards it is fully
 // "reachable". This catches one specific, repeatedly-observed failure, not
 // dead code in general.
+//
+// It also matches call sites TEXTUALLY (".Name("), so a method whose name is
+// also defined on some other type is marked reachable when that other type's
+// method is the one being called. Three names currently overlap — Close,
+// DeleteRule and Location — and all three store versions were checked by hand
+// and are genuinely called on their own (cmd/hub calls st.Close; the
+// automations engine calls its store's DeleteRule; httpapi calls the energy
+// store's Location). Nothing is masked today. If a fourth name starts
+// overlapping, that check has to be redone by hand, because this test will not
+// do it for you.
+//
+// The frontend has the same guard for its own layer, and it shipped with a
+// closely related hole: src/lib/__tests__/apiReachability.test.ts could not see
+// `api\n  .method()`, so a wired-up method still looked uncalled and the
+// stale-allowlist check stayed quiet. Textual reachability checks are worth
+// having and are worth distrusting in exactly this way.
 
 // allowedUnreachable is an allowlist, and every entry needs a REASON that
 // survives someone reading it a year from now. "It's fine" is not a reason.
