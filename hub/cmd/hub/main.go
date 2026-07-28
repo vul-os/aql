@@ -41,6 +41,8 @@
 //
 //	AQL_DEVICE_REFRESH_INTERVAL       how often every driver is re-discovered (default 5m)
 //	AQL_ENERGY_INTERVAL               meter polling interval (default 60s)
+//	AQL_ENERGY_SAMPLE_RETENTION       how long raw meter samples are kept
+//	                                  (default 720h / 30d; 0 keeps forever)
 //	AQL_ENERGY_TZ                     IANA timezone rollup buckets are anchored to
 //	                                     (default UTC — a bill is a local-time document)
 //	AQL_AUTOMATIONS_INTERVAL          rule scheduler tick (default 30s)
@@ -164,6 +166,9 @@ type config struct {
 	// Energy metering (internal/energy).
 	energyAccount  string
 	energyInterval time.Duration
+	// energySampleRetention bounds the samples table. Deltas are never
+	// pruned; see energy.WithSampleRetention.
+	energySampleRetention time.Duration
 	energyTZ       string
 
 	// Automations (internal/automations).
@@ -211,6 +216,10 @@ func main() {
 
 		energyAccount:  *energyAccount,
 		energyInterval: envDurationOr("AQL_ENERGY_INTERVAL", energy.DefaultInterval),
+		// A default, not "off". Retention that has to be switched on is
+		// retention nobody switches on, and the failure mode is a disk that
+		// fills months later on a machine with no operator watching it.
+		energySampleRetention: envDurationOr("AQL_ENERGY_SAMPLE_RETENTION", energy.DefaultSampleRetention),
 		energyTZ:       envOr("AQL_ENERGY_TZ", ""),
 
 		automations:         *runAutomation,
@@ -867,10 +876,16 @@ func (h *hub) wireEnergy(cfg config) {
 	}
 
 	est := h.energy
-	poller := energy.NewPoller(h.reg, est, cfg.energyAccount, energy.WithInterval(cfg.energyInterval))
+	poller := energy.NewPoller(h.reg, est, cfg.energyAccount,
+		energy.WithInterval(cfg.energyInterval),
+		energy.WithSampleRetention(cfg.energySampleRetention))
 
+	retention := "forever"
+	if cfg.energySampleRetention > 0 {
+		retention = cfg.energySampleRetention.String()
+	}
 	h.log.Info("energy poller enabled", "account", cfg.energyAccount,
-		"interval", poller.Interval(), "tz", est.TZ())
+		"interval", poller.Interval(), "tz", est.TZ(), "sample_retention", retention)
 	h.workers = append(h.workers, worker{
 		name: "energy-poller",
 		run: func(ctx context.Context) {
@@ -885,6 +900,13 @@ func (h *hub) wireEnergy(cfg config) {
 				if res.Failed > 0 || res.Foreign > 0 {
 					h.log.Warn("energy poll cycle incomplete", "meters", res.Meters,
 						"read", res.Read, "failed", res.Failed, "foreign", res.Foreign)
+				}
+				// A prune refusal is normal while the rollup backlog clears,
+				// so it is not a warning — but a hub that can NEVER prune is
+				// a disk filling quietly, which is the thing this is for.
+				if res.PruneErr != nil {
+					h.log.Info("energy sample retention did not run this cycle",
+						"reason", res.PruneErr)
 				}
 			})
 		},

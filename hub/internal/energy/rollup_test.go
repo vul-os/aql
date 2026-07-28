@@ -346,8 +346,16 @@ func TestPruneRefusesWhileBucketsArePending(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PruneSamples: %v", err)
 	}
-	if n != 2 {
-		t.Errorf("pruned %d samples, want 2", n)
+	// One of the two, not both: a channel's most recent sample is its ANCHOR
+	// and is never pruned at any age. Deltas are derived from consecutive
+	// samples, so without it a meter returning after a silence longer than the
+	// retention window would have no predecessor to pair against and its
+	// consumption would produce no delta — accepted, and invisibly lost.
+	if n != 1 {
+		t.Errorf("pruned %d samples, want 1 (the newest is the anchor)", n)
+	}
+	if got := sampleCount(t, s, acc); got != 1 {
+		t.Errorf("%d samples remain, want the anchor and nothing else", got)
 	}
 	// The evidence survives: deltas are never pruned.
 	if ds := deltaRows(t, s, acc, "mqtt:meter", "kwh"); len(ds) != 1 {

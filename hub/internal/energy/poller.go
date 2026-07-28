@@ -36,7 +36,14 @@ type PollResult struct {
 	Foreign int
 	Ingest  IngestResult
 	Rollup  RollupResult
-	Errors  []DeviceError
+	// Pruned is raw samples deleted this cycle by the retention window.
+	// Always 0 when retention is off.
+	Pruned int64
+	// PruneErr is why retention did not run, when it did not. Kept separate
+	// from Errors because those are per-DEVICE gaps in the record, and a
+	// failure to delete old rows is neither a device's fault nor a gap.
+	PruneErr error
+	Errors   []DeviceError
 }
 
 // Poller reads CapMeter devices through the registry on a fixed interval and
@@ -54,6 +61,17 @@ type Poller struct {
 	// rollupBudget caps hour buckets recomputed per cycle so one enormous
 	// backfill cannot starve the polling loop. 0 means no cap.
 	rollupBudget int
+
+	// sampleRetention is how long raw samples are kept. Zero means keep them
+	// forever, which was the ONLY behaviour before this existed: PruneSamples
+	// was written, documented and never called, so a hub polling a meter every
+	// few seconds grew its samples table without bound. On the Raspberry Pi
+	// this product targets that is a disk that fills, silently, months in.
+	//
+	// Deltas are never pruned regardless — they are the evidence a bill
+	// dispute is argued from. This only drops the bulk raw readings that
+	// nothing needs once their deltas exist.
+	sampleRetention time.Duration
 	now          func() time.Time
 }
 
@@ -81,6 +99,21 @@ func WithReadTimeout(d time.Duration) PollerOption {
 // WithRollupBudget caps hour buckets recomputed per cycle.
 func WithRollupBudget(n int) PollerOption {
 	return func(p *Poller) { p.rollupBudget = n }
+}
+
+// WithSampleRetention keeps raw samples for d and drops older ones at the end
+// of each cycle. Zero (the default) keeps them forever.
+//
+// Pruning runs AFTER the rollup in the same cycle, which is not incidental:
+// PruneSamples refuses while any bucket at or before the cutoff is still
+// dirty, so rolling up first is what lets the window actually advance instead
+// of being permanently blocked by its own backlog.
+func WithSampleRetention(d time.Duration) PollerOption {
+	return func(p *Poller) {
+		if d > 0 {
+			p.sampleRetention = d
+		}
+	}
 }
 
 // NewPoller returns a poller for one account's meters.
@@ -149,6 +182,15 @@ func (p *Poller) PollOnce(ctx context.Context) (PollResult, error) {
 	res.Rollup = roll
 	if err != nil {
 		return res, err
+	}
+
+	if p.sampleRetention > 0 {
+		// A refusal here is not a cycle failure. PruneSamples declines while a
+		// bucket at or before the cutoff is still dirty, which is the correct
+		// answer and resolves itself once the rollup backlog clears — turning
+		// it into an error would make a healthy hub look broken every time it
+		// fell behind.
+		res.Pruned, res.PruneErr = p.st.PruneSamples(ctx, p.accountID, now.Add(-p.sampleRetention))
 	}
 	return res, nil
 }

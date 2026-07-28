@@ -163,6 +163,14 @@ checking those flags is confidently wrong.
 The API is read-only. Samples come from a poller reading real meters; an endpoint that
 injects them would be a way to forge a bill.
 
+**Retention.** Raw samples are kept for 30 days by default and then pruned
+(`AQL_ENERGY_SAMPLE_RETENTION`; set it to `0` to keep everything forever). Deltas are
+never pruned at any age — they carry the counter endpoints a bill dispute is argued
+from, and they are small. Neither is a channel's most recent sample, however old: deltas
+are derived from consecutive samples, so that one row is the anchor a meter returning
+after a long silence pairs against. Without it, its first reading back would be accepted
+and then produce no delta at all.
+
 Untested against physical meters.
 
 ## Security & bots

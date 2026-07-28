@@ -544,8 +544,27 @@ func (s *Store) PruneSamples(ctx context.Context, accountID string, before time.
 	if pending > 0 {
 		return 0, errInvalid("%d rollup buckets before the cutoff are still pending; run Rollup first", pending)
 	}
-	res, err := s.db.ExecContext(ctx,
-		`DELETE FROM energy_samples WHERE account_id = ? AND at < ?`, accountID, before.Unix())
+	// Never delete a channel's most recent sample, however old it is.
+	//
+	// Deltas are derived from CONSECUTIVE samples: rederiveDeltas finds the
+	// previous endpoint with `max(at) ... at < minAt` and pairs the two. So the
+	// newest sample of every channel is the anchor the next reading pairs
+	// against. Prune it and a meter that has been silent for longer than the
+	// retention window comes back to find no predecessor — its consumption
+	// produces no delta at all, and the loss is invisible because the reading
+	// itself was accepted.
+	//
+	// The cost of keeping it is one row per channel, permanently. That is
+	// nothing against the bulk this deletes, and it is what makes a retention
+	// window safe to switch on by default rather than a trap for anyone whose
+	// meter drops off for a month.
+	res, err := s.db.ExecContext(ctx, `
+		DELETE FROM energy_samples
+		 WHERE account_id = ? AND at < ?
+		   AND (device_key, metric, at) NOT IN (
+		         SELECT device_key, metric, max(at) FROM energy_samples
+		          WHERE account_id = ? GROUP BY device_key, metric)`,
+		accountID, before.Unix(), accountID)
 	if err != nil {
 		return 0, err
 	}

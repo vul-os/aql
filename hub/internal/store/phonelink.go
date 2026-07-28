@@ -261,12 +261,9 @@ func (s *Store) RedeemPhoneLinkCode(ctx context.Context, senderPhone, code strin
 		return "", err
 	}
 
-	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO profile_phone_numbers (id, profile_id, phone_e164, verified_at, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?)
-		 ON CONFLICT (profile_id, phone_e164) DO UPDATE SET
-		   verified_at = excluded.verified_at, updated_at = excluded.updated_at`,
-		NewID(), rowUser, senderPhone, t, t, t); err != nil {
+	// The shared primitive, not a copy of it: AddVerifiedPhone and this
+	// ceremony must never disagree about what "verified" writes.
+	if err := addVerifiedPhoneTx(ctx, tx, rowUser, senderPhone, t); err != nil {
 		return "", err
 	}
 	if _, err := tx.ExecContext(ctx,

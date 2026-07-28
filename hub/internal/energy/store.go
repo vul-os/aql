@@ -29,6 +29,20 @@ import (
 //     usable — which would mean discarding the evidence a dispute needs.
 const DefaultInterval = 60 * time.Second
 
+// DefaultSampleRetention bounds the raw samples table.
+//
+// Thirty days is chosen against what is actually lost: once a sample's hour
+// bucket is rolled up, the delta carries the counter endpoints a bill dispute
+// is argued from, and the raw reading underneath it is only useful for
+// re-deriving a bucket. A month is long enough to notice a rollup was wrong
+// and recompute it, and short enough that a meter polled every 60s does not
+// quietly fill a Pi's SD card.
+//
+// It is a DEFAULT rather than an opt-in because the alternative is what
+// existed before: PruneSamples written, carefully guarded, and never called
+// by anything.
+const DefaultSampleRetention = 30 * 24 * time.Hour
+
 // DefaultGapTolerance is how long an interval between two consecutive samples
 // may be before it stops counting as observed coverage: five missed polls at
 // DefaultInterval. Below it, the span between two samples is treated as

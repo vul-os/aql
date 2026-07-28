@@ -138,6 +138,33 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 - [ ] DMTAP deliberately gets NO linking ceremony: it is a scaffold with a fail-closed
       transport, and giving it one would imply a rail that works.
 
+## the "built and unreachable" class — now found four times
+- The shape: a correct, tested, carefully-documented component that NOTHING in production
+      calls. Every existing check passes, because nothing is broken; the feature simply
+      never runs. Found so far:
+      1. Telegram long-polling — complete, tested, nothing constructed it.
+      2. store.AddVerifiedPhone — the only writer of verified_at, test callers only, so
+         no member could ever be recognised on WhatsApp.
+      3. store.LinkChannelIdentity — same, for Telegram/Slack/Discord/DMTAP.
+      4. energy.PruneSamples — retention written and guarded, never called, so the
+         samples table grew forever on a Pi.
+      Plus the sibling shape: the hub VERIFIED controller events and then dropped them.
+- [x] A scan for it: exported *Store methods with no reachable caller outside
+      internal/store, transitive (a per-file scan produces false positives — the audit
+      hash-chain verifiers are reached via VerifyHashChains and are genuinely wired).
+      After fixing the four above, the remaining list is short and triaged below.
+- [ ] Still unreachable, triaged, NOT yet acted on:
+      - AddVerifiedPhone / LinkChannelIdentity — now thin wrappers over the shared
+        tx primitives the ceremonies use; production goes through the ceremonies, so
+        these survive only as cross-package test fixtures. Honest but worth deciding on.
+      - ControllerEventsByDevice — mine, from the events work. No route exposes raw
+        signed events yet; the audit rows they produce ARE visible. Either expose it or
+        drop it; do not leave it.
+      - ExpireDeviceClaim, SetInviteTokenHash, PhoneVerified — read/maintenance helpers
+        with no caller. Check each for a hidden unbuilt feature before deleting.
+- [ ] Make the scan a CI guard rather than a thing I run by hand. Needs an allowlist
+      with REASONS, and a floor so a broken walk fails instead of reporting zero.
+
 ## spec-derived checks
 The technique that found the 2^53 rounding: derive expected behaviour from proto/*.md
 and check the code against it, rather than checking the code against itself. The vectors

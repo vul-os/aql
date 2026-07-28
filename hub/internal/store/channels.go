@@ -261,8 +261,16 @@ func (s *Store) ChannelIdentityDisplayName(ctx context.Context, channel, externa
 // Admin/onboarding surface (the portal Members page links a Slack/Telegram id
 // to a member); also used by tests.
 func (s *Store) LinkChannelIdentity(ctx context.Context, channel, externalID, profileID string) error {
-	t := now()
-	_, err := s.db.ExecContext(ctx,
+	return linkChannelIdentityTx(ctx, s.db, channel, externalID, profileID, now())
+}
+
+// linkChannelIdentityTx is the ONE place a platform account becomes a member's
+// identity. Same reason as addVerifiedPhoneTx: the link ceremony binds and
+// spends the code in a single transaction (channellink.go), so this has to be
+// callable with a *sql.Tx, and a second copy of the statement would be a
+// second opinion about who a member is.
+func linkChannelIdentityTx(ctx context.Context, x execer, channel, externalID, profileID string, t int64) error {
+	_, err := x.ExecContext(ctx,
 		`INSERT INTO channel_identities (channel, external_id, profile_id, created_at, updated_at)
 		 VALUES (?, ?, ?, ?, ?)
 		 ON CONFLICT (channel, external_id) DO UPDATE SET
@@ -275,8 +283,18 @@ func (s *Store) LinkChannelIdentity(ctx context.Context, channel, externalID, pr
 // onboarding). Idempotent per (profile, phone). The one-verified-owner unique
 // index (migration 0002) prevents two profiles claiming the same number.
 func (s *Store) AddVerifiedPhone(ctx context.Context, profileID, phoneE164 string) error {
-	t := now()
-	_, err := s.db.ExecContext(ctx,
+	return addVerifiedPhoneTx(ctx, s.db, profileID, phoneE164, now())
+}
+
+// addVerifiedPhoneTx is the ONE place a phone becomes verified.
+//
+// It takes an execer because the link ceremony has to do this inside the
+// transaction that also spends the code (phonelink.go) — those two facts must
+// commit together or a redeemed code could leave no verified number. Before
+// this existed the ceremony carried its own copy of this INSERT, which is two
+// statements that have to agree about an invariant forever.
+func addVerifiedPhoneTx(ctx context.Context, x execer, profileID, phoneE164 string, t int64) error {
+	_, err := x.ExecContext(ctx,
 		`INSERT INTO profile_phone_numbers (id, profile_id, phone_e164, verified_at, created_at, updated_at)
 		 VALUES (?, ?, ?, ?, ?, ?)
 		 ON CONFLICT (profile_id, phone_e164) DO UPDATE SET

@@ -433,6 +433,23 @@ export const FEATURES = [
     evidence: [{ file: 'hub/internal/store/admin.go', pattern: 'admin_audit_log' }],
   },
   {
+    // Energy retention. PruneSamples was written, carefully guarded and never
+    // called by anything — the fourth "built and unreachable" found in this
+    // codebase — so a hub polling a meter every 60s grew its samples table
+    // forever on the Pi this product targets.
+    id: 'energy-sample-retention',
+    label: 'Raw energy samples pruned on a retention window, keeping deltas and a per-channel anchor sample',
+    docStatus: 'shipped',
+    docRefs: ['site/docs/devices.md § Energy — Retention'],
+    evidence: [
+      { file: 'hub/internal/energy/poller.go', pattern: 'WithSampleRetention' },
+      // Wired into the cycle, not merely offered as an option.
+      { file: 'hub/internal/energy/poller.go', pattern: 'p\\.st\\.PruneSamples' },
+      { file: 'hub/internal/energy/store.go', pattern: 'DefaultSampleRetention' },
+      { file: 'hub/cmd/hub/main.go', pattern: 'AQL_ENERGY_SAMPLE_RETENTION' },
+    ],
+  },
+  {
     // The same defect as phone-link-ceremony, four rails over: Telegram,
     // Slack, Discord and DMTAP all resolve members through channel_identities,
     // whose only writer (LinkChannelIdentity) had test callers and no others.

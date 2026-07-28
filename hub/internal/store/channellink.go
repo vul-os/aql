@@ -207,12 +207,8 @@ func (s *Store) RedeemChannelLinkCode(ctx context.Context, channel, externalID, 
 		return "", err
 	}
 
-	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO channel_identities (channel, external_id, profile_id, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?)
-		 ON CONFLICT (channel, external_id) DO UPDATE SET
-		   profile_id = excluded.profile_id, updated_at = excluded.updated_at`,
-		channel, externalID, rowUser, t, t); err != nil {
+	// The shared primitive, not a copy of it.
+	if err := linkChannelIdentityTx(ctx, tx, channel, externalID, rowUser, t); err != nil {
 		return "", err
 	}
 	if _, err := tx.ExecContext(ctx,
