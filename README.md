@@ -78,7 +78,7 @@ flowchart LR
 | 🚪 **Access control, end to end** | Ed25519-signed commands, a controller that pins your hub's key at pairing, per-member time windows, geofence rules, temporary grants, and **offline emergency access** that works with the network down. |
 | 💬 **Open the gate from chat** | WhatsApp, Telegram, Slack and Discord, on your own accounts. Every rail declares [what it costs, what it can do, and who reads your messages](#what-the-chat-rails-actually-cost-you) — the platform included. |
 | 📓 **A trail you can check** | Every open and every admin action is hash-chained. `aql-hub verify-audit` checks the chain against a cold backup, independently of the running server. |
-| 🖥️ **Console, desktop and phone** | A React console served by the hub itself, and a Tauri desktop app that points at any hub you own. Emergency grants are requested and held in any build; presenting one at a gate talks straight to the controller on the LAN, so that leg needs the app rather than a browser tab. |
+| 🖥️ **Console, desktop and phone** | A React console served by the hub itself, and a Tauri desktop app that points at any hub you own. Emergency grants are requested and held in any build. Presenting one at a gate talks straight to the controller over your LAN — that works in the desktop app, and in a browser when the console is served over http; an https console can't reach a plain-http controller, and BLE needs the app either way. |
 | 🔑 **Run it your way** | Scoped API tokens, outbound webhooks, two-factor auth, and a REST API for all of it. Nothing is hosted for you, ever. |
 
 ---

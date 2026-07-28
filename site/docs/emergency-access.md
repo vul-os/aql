@@ -73,14 +73,26 @@ controller's 11-step verification, already conformance-tested), which is the fre
 possible signal anyway — a lockdown state cached at mint time could go stale seconds
 later regardless.
 
-**What is still not built: the app.** Nothing on the phone requests, stores or
-presents a grant — the Tauri app (`src/` + `src-tauri/`) ships an admin console today
-and no emergency-access UI. So the path is now three pieces of four: the wire
-contract, the controller-side verification, and hub-side issuance are all real and
-conformance-tested; the fourth — an app that holds a grant and proves it to a
-controller over LAN/BLE — does not exist yet. A resident cannot use offline emergency
-access today, because nothing on their phone can present a grant, even though the
-hub is now willing to hand one out.
+**Where the app half stands.** Requesting and holding a grant is real and driven
+end to end in a browser against a live hub: the console mints a device key, asks the
+hub, and stores the grant in an IndexedDB vault that survives a reload
+(`e2e-browser/safety-copy.spec.ts`).
+
+Presenting one at a gate works in the desktop shell, and now in a browser tab too —
+but only where the browser can reach the controller:
+
+| You are using | Presenting works? | Why |
+| --- | --- | --- |
+| The desktop app | Yes | Requests go through a native HTTP client, subject to neither CORS nor mixed content |
+| A browser, console served over **http** | Yes | The controller answers with a CORS header naming the console of the hub it is paired to |
+| A browser, console served over **https** | **No** | The controller speaks plain http on the LAN, so the request is blocked as mixed content before CORS is consulted. No header fixes this |
+
+Two limits worth knowing before you rely on it. The controller allows exactly one
+origin — the hub console it paired with — so reaching the console at a different
+address than the controller stored (an IP where it paired by hostname, say) is
+refused, and the attempt fails at the network layer rather than at the gate. And
+**BLE presentation is desktop-only**: a browser cannot speak the controller's GATT
+service at all, so a gate out of Wi-Fi range needs the app.
 
 ## Revocation and expiry
 

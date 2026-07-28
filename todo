@@ -27,9 +27,15 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 - [ ] GPIO relay validation on real hardware — the driver exists behind `-tags gpio` and
       has never driven a chip, a relay board or a gate. Fail-safe spec: normally-open,
       line drops on exit/panic.
-- [ ] Present an offline grant from a phone. Requesting and storing works and is proven
-      end to end (e2e-browser/safety-copy.spec.ts); *presenting* talks straight to the
-      controller over LAN or BLE, which a browser tab cannot do.
+- [x] Present an offline grant over LAN from a browser. The controller now allows the
+      ONE origin of the hub console it paired with (lanserver/cors.go), so an
+      http-served console can complete the handshake. Desktop shell unchanged.
+- [ ] Present over LAN from an HTTPS console — blocked by mixed content, not by CORS,
+      and no header fixes it. Would need the controller to serve TLS on the LAN, which
+      means a cert for a .local name. Open question, not a task yet.
+- [ ] Present over BLE from a browser — genuinely impossible; needs native code in
+      src-tauri (also the only way to resolve .local reliably). Tracked as the
+      offline-grant-app-client claim.
 - [ ] Bring access onto the internal device model, so it is one kind among seven rather
       than a parallel stack.
 - [ ] A robot driver — the one kind of the seven with no path at all.

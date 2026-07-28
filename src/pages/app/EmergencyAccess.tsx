@@ -240,10 +240,11 @@ export default function EmergencyAccess() {
       {!lanTransportAvailable() && (
         <Card className="mb-6 border-gold/40">
           <p className="text-sm text-ink/75">
-            <span className="font-medium">This build can't present a grant.</span> Opening a gate here talks
-            directly to the controller over your local network, and an ordinary browser tab is blocked from
-            doing that (the controller sets no CORS headers and isn't a web API). Open this from the Aql app,
-            not a browser, when you're actually at a gate. Setting up and holding a grant still works fine here.
+            <span className="font-medium">This page can't present a grant.</span> Opening a gate here talks
+            directly to the controller over your local network, in plain http. This console is served over
+            https, so the browser blocks that as mixed content before the request is made — nothing on the
+            controller can change it. Open this from the Aql desktop app when you're actually at a gate.
+            Setting up and holding a grant still works fine here.
           </p>
         </Card>
       )}

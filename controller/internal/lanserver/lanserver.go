@@ -32,14 +32,25 @@ type Server struct {
 	Env        func() grants.Env
 	OnRedeemed blesession.Redeemed
 	Log        *slog.Logger
+	// AllowOrigin is the ONE browser origin permitted to read these
+	// responses — the console of the hub this controller is paired to. Empty
+	// disables browser access entirely, which is correct for an unpaired
+	// controller. See cors.go for why it is not "*".
+	AllowOrigin string
 }
 
 // Handler returns the HTTP mux.
+//
+// OPTIONS is registered alongside each POST so a browser preflight reaches the
+// CORS wrapper instead of the mux's own 405, which carries no allow headers and
+// would fail the handshake before the real request was ever attempted.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /grant/open", s.handleOpen)
 	mux.HandleFunc("POST /grant/proof", s.handleProof)
-	return mux
+	mux.HandleFunc("OPTIONS /grant/open", func(http.ResponseWriter, *http.Request) {})
+	mux.HandleFunc("OPTIONS /grant/proof", func(http.ResponseWriter, *http.Request) {})
+	return withCORS(s.AllowOrigin, mux)
 }
 
 func (s *Server) handleOpen(w http.ResponseWriter, r *http.Request) {

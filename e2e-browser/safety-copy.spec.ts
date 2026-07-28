@@ -63,16 +63,27 @@ test('emergency access leads with "set this up before you need it"', async ({ pa
   ).toBeVisible();
 });
 
-// Presenting a grant talks straight to the controller on the LAN, which a
-// browser tab cannot do. Telling someone that AT the gate is too late, so the
-// page must say it while they are still setting up.
-test('emergency access admits a browser cannot present a grant', async ({ page }) => {
+// Presenting a grant talks straight to the controller on the LAN. A browser
+// tab used to be unable to do that at all, and this test asserted the page
+// said so. The controller now answers with a CORS header naming the console of
+// the hub it is paired to, so an http-served console CAN attempt it — and this
+// harness serves http, exactly like the documented self-hosted install.
+//
+// So the assertion inverts: the page must NOT claim it cannot present, because
+// on this console that claim is false and would send someone to install a
+// desktop app they do not need. The remaining limitation is real but narrower
+// (an https console cannot reach a plain-http controller — mixed content, which
+// no header fixes), and it is stated only where it applies.
+test('emergency access does not claim it cannot present, on a console where it can', async ({
+  page,
+}) => {
   await connectAndSignUp(page, `e2e-safety-present-${Date.now()}`);
   await page.goto(gw.url('/app/emergency'));
 
-  await expect(
-    page.getByText(/can't present a grant|cannot present a grant/i).first(),
-  ).toBeVisible();
+  // The page is reachable and rendered before asserting an ABSENCE — otherwise
+  // a screen that failed to load would pass this trivially.
+  await expect(page.getByRole('heading', { name: /before you need it/i })).toBeVisible();
+  await expect(page.getByText(/can't present a grant|cannot present a grant/i)).toHaveCount(0);
 });
 
 // The most important sentence in the product's UI.

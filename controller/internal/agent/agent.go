@@ -233,9 +233,18 @@ func (a *Agent) Run(ctx context.Context) error {
 	errc := make(chan error, 3)
 
 	if a.Opts.LANAddr != "" {
+		// The ONE browser origin allowed to read the LAN redemption
+		// responses: the console of the hub this controller paired with.
+		// Unpaired means empty means no browser access at all — the state
+		// every controller was in before this existed. See lanserver/cors.go.
+		allowOrigin := ""
+		if p := a.St.Pairing(); p != nil {
+			allowOrigin = lanserver.OriginFromWSURL(p.WSURL)
+		}
 		lan := &lanserver.Server{
 			DeviceID: a.Recorder.DeviceID, Exchange: a.Exchange,
 			Env: a.GrantEnv, OnRedeemed: a.OnRedeemed, Log: a.Log,
+			AllowOrigin: allowOrigin,
 		}
 		go func() { errc <- lan.Serve(ctx, a.Opts.LANAddr) }()
 	}

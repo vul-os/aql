@@ -120,23 +120,31 @@ export const FEATURES = [
   },
   {
     id: 'offline-grant-app-client',
-    label: 'App (Tauri) client that requests, stores and presents an offline LAN/BLE grant to a controller',
+    // RE-SCOPED. This used to read "App client that requests, stores and
+    // presents an offline grant", which has stopped being the right question:
+    // requesting and storing are real and driven end to end in a browser, and
+    // presenting over LAN works in the desktop shell and in an http-served
+    // browser tab since the controller began allowing its paired hub's origin.
+    //
+    // What a browser genuinely cannot do is BLE and mDNS. Those need native
+    // code, and native code here means src-tauri/ — so that is what this
+    // claim now tracks, and it is still correctly 'planned'.
+    label: 'Native (Rust/Tauri) support for the parts a browser cannot do — BLE grant presentation and mDNS resolution',
     docStatus: 'planned',
     docRefs: [
-      "README.md § What's real, and what isn't — presenting a grant needs the LAN or BLE",
-      'site/docs/emergency-access.md — "What is still not built: the app"',
-      'proto/grants.md "Implementation status" — "app client unbuilt"',
-      'hub/internal/channels/send.go',
+      'site/docs/emergency-access.md § Where the app half stands — the per-build table and the BLE limit',
+      'proto/grants.md § Implementation status',
     ],
-    // The app is src/ + src-tauri/ (React 19 + Tauri v2). src/ is
-    // deliberately never used as an evidence root (see this file's header —
+    // src/ is deliberately never an evidence root (see this file's header —
     // it's UI copy, the exact layer that lied nine times already), so this
-    // checks the one implementation-code root the app actually has today:
-    // the Rust shell in src-tauri/ (excluding target/, walked out by
-    // WALK_EXCLUDES). A real grant-request/store/present flow would show up
-    // here as new Rust or Tauri-command surface; today src-tauri/src/main.rs
-    // is a 12-line gateway-picker shell with none of it.
-    evidence: [{ root: 'src-tauri', pattern: 'offline.?grant|grant_id|presentGrant|requestOfflineGrant|mDNS|_lintel\\._tcp', flags: 'i' }],
+    // checks the one implementation-code root a native capability could live
+    // in: the Rust shell in src-tauri/ (target/ is walked out by
+    // WALK_EXCLUDES). Today src-tauri/src/main.rs is a small shell with none
+    // of it.
+    // Rooted at src-tauri/src, not src-tauri: a bare 'ble' matched a substring
+    // of a crate name in Cargo.lock and reported this shipped. Word-bounded
+    // for the same reason.
+    evidence: [{ root: 'src-tauri/src', pattern: '\\b(ble|gatt|bluetooth|mdns)\\b|_lintel\\._tcp', flags: 'i' }],
   },
   {
     id: 'hardware-failsafe-gpio',
@@ -455,6 +463,22 @@ export const FEATURES = [
     docStatus: 'shipped',
     docRefs: ['README.md § What the chat rails actually cost you — the Telegram row'],
     evidence: [{ file: 'hub/internal/channels/telegram.go', pattern: 'func \\(Telegram\\) Kind\\(\\)' }],
+  },
+  {
+    id: 'offline-grant-lan-cors',
+    label: 'A browser tab can present an offline grant over the LAN (controller allows the paired hub console origin)',
+    docStatus: 'shipped',
+    docRefs: [
+      'site/docs/emergency-access.md § Where the app half stands — the per-build table',
+      "README.md § the console row",
+    ],
+    // The wiring AND the narrowness. A controller that answered "*" would also
+    // satisfy a pattern looking only for a CORS header, so the evidence names
+    // the origin-derivation the policy depends on.
+    evidence: [
+      { file: 'controller/internal/lanserver/cors.go', pattern: 'func OriginFromWSURL' },
+      { file: 'controller/internal/agent/agent.go', pattern: 'lanserver\\.OriginFromWSURL' },
+    ],
   },
   {
     id: 'telegram-polling',

@@ -418,14 +418,30 @@ export function guessControllerAddress(deviceId: string | null): string {
 /**
  * Whether the LAN handshake can even be attempted from this build.
  *
- * In an ordinary browser tab it cannot: the controller's listener answers
- * signed JSON and sets no CORS headers (and an https-served portal would hit
- * mixed content first), so the request dies in the browser before reaching
- * the gate. Inside Tauri, requests go through the native HTTP plugin, which
- * is not subject to either rule.
+ * Three cases, and the middle one is new:
+ *
+ *  - **Desktop shell.** Always. Requests go through Tauri's native HTTP
+ *    plugin, which is subject to neither CORS nor mixed content.
+ *  - **A browser tab on an http console.** Yes, since the controller began
+ *    answering with a CORS header naming the console of the hub it is paired
+ *    to (controller/internal/lanserver/cors.go). Before that the browser
+ *    refused to let the page read the challenge and the handshake died before
+ *    reaching the gate.
+ *  - **A browser tab on an https console.** No, and no header can change it:
+ *    the controller speaks plain http on the LAN, so the request is blocked
+ *    as mixed content before CORS is ever consulted. Presenting from an
+ *    https-served console needs the desktop shell.
+ *
+ * This reports what can be ATTEMPTED, not what will succeed. A controller
+ * paired to a different address than the one this console is served from will
+ * refuse the origin, and the attempt fails at the network layer — which the
+ * redemption path reports as a transport failure rather than a denial, because
+ * "the gate said no" and "we never reached the gate" are different facts.
  */
 export function lanTransportAvailable(): boolean {
-  return isTauri();
+  if (isTauri()) return true;
+  if (typeof window === 'undefined') return false;
+  return window.location.protocol === 'http:';
 }
 
 export type GateStatus = {
