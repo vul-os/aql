@@ -6,18 +6,18 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/vul-os/aql/controller/internal/jcs"
+	"github.com/vul-os/aql/jcs"
 )
 
 // JCS canonicalisation, fuzzed for the properties that make a SIGNATURE mean
 // something.
 //
-// This is the highest-stakes parser in the controller and the least dramatic.
+// This is the highest-stakes parser in the product and the least dramatic.
 // Nothing here crashes a gate. What it does is decide which exact bytes a
-// signature covers, on both sides of the wire — the hub signs over its
-// canonical form, this module verifies over its own — so a canonicalisation
-// that is merely INCONSISTENT is a signature that verifies when it should not,
-// or fails when it should not.
+// signature covers, on both sides of the wire — the hub signs over this
+// canonical form, the controller verifies over it, and the app produces its
+// own in TypeScript — so a canonicalisation that is merely INCONSISTENT is a
+// signature that verifies when it should not, or fails when it should not.
 //
 // "Does not panic" is far too weak a property for that. The failures worth
 // fearing are silent and well-formed:
@@ -30,9 +30,14 @@ import (
 //   - Not deterministic. Two runs over the same input must be byte-identical,
 //     or the same document signs differently depending on map iteration order.
 //
-// proto/vectors checks 93 fixed documents byte-for-byte against a second
-// implementation, which is a stronger statement about those documents than
-// anything here. This covers the arbitrary ones.
+// proto/vectors checks 93 fixed documents byte-for-byte against the two
+// JavaScript implementations, which is a stronger statement about those
+// documents than anything here. This covers the arbitrary ones.
+//
+// It lives beside the implementation rather than in one of the three consuming
+// modules. It used to live in controller/internal/jcs, which meant the hub's
+// copy and the e2e harness's copy were fuzzed by a separate, smaller target or
+// (for e2e) not at all.
 
 func FuzzCanonicalizeJSONProperties(f *testing.F) {
 	f.Add([]byte(`{"b":1,"a":2}`))
@@ -47,6 +52,14 @@ func FuzzCanonicalizeJSONProperties(f *testing.F) {
 	f.Add([]byte(`{"dup":1,"dup":2}`))           // duplicate keys
 	f.Add([]byte("{\"ctrl\":\"\u0001\u001f\"}")) // control characters
 	f.Add([]byte(`{"":"empty key"}`))
+	// Seeds inherited from the hub's own fuzz target (FuzzHubCanonicalizeJSON),
+	// which fuzzed a hand-copy of this file until the copies were folded. They
+	// are carried across so that folding the code did not quietly fold away
+	// corpus.
+	f.Add([]byte(`{"v":0,"typ":"cmd","cmd":"open","ts":1700000000}`))
+	f.Add([]byte(`0e00`)) // a spelling of zero
+	f.Add([]byte(`{"":""}`))
+	f.Add([]byte(`{"a":9007199254740993}`)) // 2^53+1: refused, never rounded
 
 	f.Fuzz(func(t *testing.T, raw []byte) {
 		out, err := jcs.CanonicalizeJSON(raw)

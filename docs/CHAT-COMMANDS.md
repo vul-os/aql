@@ -19,10 +19,15 @@
 > This header said "nothing in this document is built" for as long as those two
 > pieces had been shipping.
 >
-> Read [`ARCHITECTURE.md`](./ARCHITECTURE.md) (Aql's device model) and
-> [`../ARCHITECTURE.md`](../ARCHITECTURE.md) (the gateway that ships today)
-> first. The wire contracts in [`../proto/`](../proto/) are normative and this
-> document does not change them.
+> Read [`../ARCHITECTURE.md`](../ARCHITECTURE.md) first. The wire contracts in
+> [`../proto/`](../proto/) are normative and this document does not change them.
+>
+> **Dangling citations.** The `docs/ARCHITECTURE.md:NN-NN` references below
+> point at a file that was **deleted** in commit `4e4e37c` and whose content was
+> not folded into the root `ARCHITECTURE.md`. They are left as written rather
+> than silently repointed — a `file:line` citation invented to satisfy a broken
+> link is worse than a visibly dead one. Recover the text with
+> `git show 4e4e37c^:docs/ARCHITECTURE.md` if you need it.
 
 ## 0. The problem
 

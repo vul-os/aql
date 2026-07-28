@@ -8,6 +8,11 @@
 // that it agrees with the Go signer and verifier is byte equality against
 // the corpus both of those are tested against. proto/vectors/ is read here
 // and never written.
+//
+// The TypeScript copy is NOT foldable into the Go one — the three Go copies
+// were folded into jcs/ because they were the same language, and this one
+// cannot be. It is held instead by data: this file, plus the shared
+// canonicalisation cases below. See proto/JCS-PROFILE.md.
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -15,7 +20,8 @@ import { fileURLToPath } from 'node:url';
 import { canonicalMinusSig, jcs, b64u, unB64u } from '../jcs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const vectorsDir = path.resolve(here, '../../../../proto/vectors');
+const protoDir = path.resolve(here, '../../../../proto');
+const vectorsDir = path.join(protoDir, 'vectors');
 
 type Signed = { object?: Record<string, unknown>; canonical?: string };
 type Vector = {
@@ -74,6 +80,58 @@ describe('JCS canonicalisation matches the conformance corpus', () => {
       }
     }
     expect(compared).toBeGreaterThan(20);
+  });
+});
+
+// Conformance layer 0 (proto/jcs-cases.json). The corpus above is the set of
+// documents this product actually sends — envelopes of integers and short
+// strings — so agreeing on it says nothing about the edges where two
+// hand-written canonicalisers most plausibly disagree. These cases are those
+// edges, derived from RFC 8785 by hand, and the SAME file is read by the Go
+// implementation (jcs/cases_test.go) and the vector generator's
+// (proto/vectors/verify.mjs). That is what makes "the app agrees with the
+// gateway" a checked statement rather than a resemblance.
+type JcsCases = {
+  cases: Array<{ name: string; input: string; canonical: string }>;
+  refused: Array<{ name: string; input: string; js_canonical?: string }>;
+};
+
+describe('JCS matches the shared canonicalisation cases', () => {
+  const doc = JSON.parse(
+    readFileSync(path.join(protoDir, 'jcs-cases.json'), 'utf-8'),
+  ) as JcsCases;
+
+  // The count guard comes first and is not a formality: a corpus-driven test
+  // whose corpus failed to load reports PASS by checking nothing.
+  it('loaded the shared corpus', () => {
+    expect(doc.cases.length).toBeGreaterThanOrEqual(14);
+    expect(doc.refused.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('reproduces every hand-derived canonical form', () => {
+    let ran = 0;
+    for (const c of doc.cases) {
+      // The inputs are raw JSON TEXT; this implementation canonicalises
+      // VALUES, so the parse is part of what is under test.
+      expect(jcs(JSON.parse(c.input)), c.name).toBe(c.canonical);
+      ran++;
+    }
+    expect(ran).toBe(doc.cases.length);
+  });
+
+  // The `refused` entries are the Go profile's documented deviation (no
+  // general double formatting), NOT an RFC rule. TypeScript gets correct
+  // ECMAScript number formatting from JSON.stringify and accepts them. That
+  // divergence is pinned, so moving it fails a test instead of surfacing as a
+  // signature that will not verify at a gate.
+  it('pins exactly where it diverges from the Go profile', () => {
+    let ran = 0;
+    for (const c of doc.refused) {
+      expect(c.js_canonical, `${c.name}: js_canonical must be pinned`).toBeTypeOf('string');
+      expect(jcs(JSON.parse(c.input)), c.name).toBe(c.js_canonical);
+      ran++;
+    }
+    expect(ran).toBe(doc.refused.length);
   });
 });
 

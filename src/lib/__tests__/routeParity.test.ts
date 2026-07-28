@@ -218,24 +218,24 @@ const NON_CONSOLE_ROUTES: Array<{ method: string; path: string; reason: string }
 // (server.go mounts exactly four tokenScoped routes; everything else is
 // session-JWT-only). These are found, not excused.
 //
-// All three are single-resource GETs that duplicate a list endpoint the
-// console does use, which is why nobody noticed. The reason they are parked
-// here rather than deleted is that the hub's own tests lean on them as
-// NEGATIVE space — tokens_test.go proves a scoped token cannot reach
-// `GET /v1/locations/{id}`, and product_test.go uses `GET /v1/accounts/{id}`
-// as a cross-tenant 404 probe. Deleting them would quietly remove coverage of
-// the tenancy and token-scope contracts, so the disposition (wire a screen to
-// them, or delete them and re-anchor those probes on a route that survives) is
-// a real decision and not a cleanup.
+// EMPTY, and it got there the honest way. The first run of this check found
+// three: GET /v1/accounts/{id}, GET /v1/locations/{id} and
+// GET /v1/accounts/{id}/automations/{ruleID}. Each was a single-resource GET
+// duplicating a list endpoint the console does use, reachable by nothing —
+// server.go mounts exactly four tokenScoped routes, so not by an API token
+// either — and documented nowhere. They were deleted.
 //
-// This list is a RATCHET, not a parking lot. It may shrink; an addition means
-// a new route shipped that no user can reach, which is the bug this file
-// exists to catch.
-const UNREACHABLE_TODAY: Array<{ method: string; path: string }> = [
-  { method: 'GET', path: '/v1/accounts/{id}' },
-  { method: 'GET', path: '/v1/locations/{id}' },
-  { method: 'GET', path: '/v1/accounts/{id}/automations/{ruleID}' },
-];
+// What made that decision non-obvious is worth recording: the hub's own tests
+// leaned on two of them as NEGATIVE space. tokens_test.go proved a scoped
+// token could not reach GET /v1/locations/{id}; product_test.go used
+// GET /v1/accounts/{id} as a cross-tenant 404 probe. Deleting a route can
+// therefore delete coverage of a contract that has nothing to do with it, and
+// the probes had to be re-anchored on routes that survive (/limits, /members)
+// rather than simply dropped.
+//
+// This list is a RATCHET, not a parking lot. An addition means a route shipped
+// that no user can reach, which is the bug this file exists to catch.
+const UNREACHABLE_TODAY: Array<{ method: string; path: string }> = [];
 
 describe('frontend/gateway route parity', () => {
   it('every apiFetch() call in src/lib/api.ts targets a route the gateway serves (or is an acknowledged gap)', () => {

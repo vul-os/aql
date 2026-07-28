@@ -92,10 +92,12 @@ func canonMinusSig(raw []byte) (string, string, error) {
 // which nothing in this module had ever run — not production, not a test. Found
 // by sweeping for exported symbols with no caller.
 //
-// It matters more than the line count suggests: this package is one of two
-// independent JCS implementations that the conformance vectors cross-check, and
-// an entry point nobody runs is an entry point nobody has checked agrees with
-// the one they do run.
+// It matters more than the line count suggests: this is the entry point the
+// controller uses to verify bytes that arrived off the wire, and an entry point
+// nobody runs is an entry point nobody has checked agrees with the one they do
+// run. (Both now delegate to github.com/vul-os/aql/jcs, so what this pins is
+// that the two ROUTES into that canonicalizer — raw bytes versus a decoded
+// value — cannot drift apart.)
 //
 // WHAT THIS COMPARES, AND WHY IT IS PHRASED THIS WAY. The vectors store each
 // `object` in insertion order (v, typ, device_id, …), which is NOT canonical
@@ -195,23 +197,4 @@ func TestCanonicalizeJSONMatchesCanonicalize(t *testing.T) {
 	if compared < 93 {
 		t.Errorf("compared only %d documents; the corpus has 93 canonical encodings", compared)
 	}
-}
-
-// withoutSig strips the top-level sig so both entry points see the same
-// document — canonMinusSig removes it internally, and CanonicalizeJSON does
-// not (it canonicalizes what it is given, by design).
-func withoutSig(t *testing.T, raw []byte) []byte {
-	t.Helper()
-	var m map[string]any
-	dec := json.NewDecoder(bytes.NewReader(raw))
-	dec.UseNumber()
-	if err := dec.Decode(&m); err != nil {
-		t.Fatal(err)
-	}
-	delete(m, "sig")
-	out, err := json.Marshal(m)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return out
 }

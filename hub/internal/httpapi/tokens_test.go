@@ -161,7 +161,7 @@ func TestAPITokenCannotReachUnscopedRoutes(t *testing.T) {
 		{"GET", "/v1/accounts"},
 		{"POST", "/v1/accounts"},
 		{"GET", "/v1/accounts/" + acct + "/members"},
-		{"GET", "/v1/locations/" + loc},
+		{"GET", "/v1/locations/" + loc + "/limits"},
 		{"GET", "/v1/grants"},
 		{"GET", "/v1/devices"},
 		{"GET", "/v1/admin/overview"},

@@ -2,10 +2,8 @@ package httpapi
 
 import (
 	"bytes"
-	"encoding/json"
 	"log/slog"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -62,7 +60,6 @@ func TestAccountsCRUDAndTenancy(t *testing.T) {
 
 	// cross-tenant reads are 404 — indistinguishable from missing
 	for _, probe := range []struct{ method, path string }{
-		{"GET", "/v1/accounts/" + acctA},
 		{"PATCH", "/v1/accounts/" + acctA},
 		{"GET", "/v1/accounts/" + acctA + "/members"},
 		{"GET", "/v1/accounts/" + acctA + "/locations"},
@@ -82,8 +79,17 @@ func TestAccountsCRUDAndTenancy(t *testing.T) {
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("rename: %d", rec.Code)
 	}
-	_, out = doJSON(t, h, "GET", "/v1/accounts/"+acctA, accessA, nil)
-	if out["name"] != "Renamed" {
+	// Read back through the list — there is no single-account GET, and the
+	// list is what the console actually reads names from.
+	_, out = doJSON(t, h, "GET", "/v1/accounts", accessA, nil)
+	var renamed bool
+	for _, a := range out["accounts"].([]any) {
+		am := a.(map[string]any)
+		if am["id"] == acctA && am["name"] == "Renamed" {
+			renamed = true
+		}
+	}
+	if !renamed {
 		t.Errorf("rename not applied: %v", out)
 	}
 
@@ -160,7 +166,7 @@ func TestInviteFlow(t *testing.T) {
 	if rec.Code != 200 || len(out["members"].([]any)) != 2 {
 		t.Errorf("roster after accept: %d %v", rec.Code, out)
 	}
-	rec, _ = doJSON(t, h, "GET", "/v1/locations/"+locA, accessC, nil)
+	rec, _ = doJSON(t, h, "GET", "/v1/accounts/"+acctA+"/locations", accessC, nil)
 	if rec.Code != 200 {
 		t.Errorf("member location read: %d", rec.Code)
 	}
@@ -210,7 +216,6 @@ func TestLocationsRoutes(t *testing.T) {
 
 	// cross-tenant probes → 404
 	for _, probe := range []struct{ method, path string }{
-		{"GET", "/v1/locations/" + locA},
 		{"PATCH", "/v1/locations/" + locA},
 		{"DELETE", "/v1/locations/" + locA},
 		{"GET", "/v1/locations/" + locA + "/limits"},
@@ -319,13 +324,5 @@ func TestAccessPointRoutes(t *testing.T) {
 	})
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("bad kind: %d", rec.Code)
-	}
-}
-
-// decode helper for subtests wanting typed access
-func mustJSON(t *testing.T, rec *httptest.ResponseRecorder, v any) {
-	t.Helper()
-	if err := json.Unmarshal(rec.Body.Bytes(), v); err != nil {
-		t.Fatalf("decode: %v (%s)", err, rec.Body)
 	}
 }

@@ -202,23 +202,6 @@ func (s *Server) handleAutomationsList(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) handleAutomationGet(w http.ResponseWriter, r *http.Request) {
-	eng, accountID, ok := s.requireAutomationsAdmin(w, r)
-	if !ok {
-		return
-	}
-	rule, err := eng.Store().RuleByID(r.Context(), accountID, r.PathValue("ruleID"))
-	if errors.Is(err, sql.ErrNoRows) {
-		writeErr(w, http.StatusNotFound, "not_found")
-		return
-	}
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal")
-		return
-	}
-	writeJSON(w, http.StatusOK, ruleJSON(rule))
-}
-
 func (s *Server) handleAutomationCreate(w http.ResponseWriter, r *http.Request) {
 	eng, accountID, ok := s.requireAutomationsAdmin(w, r)
 	if !ok {

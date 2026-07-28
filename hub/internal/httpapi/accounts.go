@@ -104,23 +104,6 @@ func (s *Server) handleAccountCreate(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, map[string]any{"id": acct.ID})
 }
 
-// GET /v1/accounts/{id}
-func (s *Server) handleAccountGet(w http.ResponseWriter, r *http.Request) {
-	c := claimsFrom(r)
-	acct, err := s.store.AccountByIDScoped(r.Context(), r.PathValue("id"), c.Sub)
-	if errors.Is(err, store.ErrNotFound) {
-		writeErr(w, http.StatusNotFound, "account_not_found")
-		return
-	}
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal")
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"id": acct.ID, "name": acct.Name, "status": acct.Status,
-	})
-}
-
 type updateAccountReq struct {
 	Name *string `json:"name"`
 }

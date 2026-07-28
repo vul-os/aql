@@ -53,11 +53,15 @@ bundle into `internal/portal/dist/`. See the porting map below.
   the Svelte portal bundle drops in here later.
 - `GET /health` → `{"ok":true,"version":...}`.
 
-**JCS note**: `../proto/vectors/` did not exist when this was written, so
-`internal/keys/jcs.go` implements an RFC 8785 subset with self-authored test
-vectors. Documented deviation: general (non-integer) number formatting is
-rejected rather than implemented — envelopes only carry integers and strings.
-When `proto/vectors/` lands, point the tests at it and extend if needed.
+**JCS note**: `internal/keys/jcs.go` no longer implements anything — it
+delegates to `github.com/vul-os/aql/jcs`, the one canonicalizer this repository
+has (`require` + relative `replace` in `go.mod`). `internal/keys/vectors_test.go`
+byte-compares its output against every `canonical` field in `../proto/vectors/`,
+and the shared edge cases in `../proto/jcs-cases.json` are checked in the module
+that owns the code. Documented deviation, unchanged: general (non-integer)
+number formatting is rejected rather than implemented — envelopes only carry
+integers and strings. Full detail, including where the TypeScript and
+JavaScript implementations diverge from Go: [`../proto/JCS-PROFILE.md`](../proto/JCS-PROFILE.md).
 
 **Schema** (folded migrations, `internal/store/migrations/`):
 

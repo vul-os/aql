@@ -85,7 +85,23 @@ func Sign(priv ed25519.PrivateKey, msg []byte) string {
 }
 
 // Verify checks a base64url signature over msg against pub.
+//
+// A pub that is not exactly 32 bytes is REFUSED, not passed on: ed25519.Verify
+// panics on a wrong-sized key rather than returning false. Every wire-borne key
+// reaches this through DecodePub, which already enforces the length — the one
+// that does not is the PINNED gateway key, which state.GatewayKey() returns as
+// nil when the persisted key will not decode. A controller whose state.json has
+// been corrupted or truncated would therefore panic on the first command it
+// received, which is a daemon that dies at a physical gate instead of a
+// controller that refuses a command it cannot authenticate.
+//
+// Refusing is the fail-closed answer, and it is also the honest one: with no
+// usable pinned key there is nothing to verify AGAINST, so nothing can be
+// accepted. (proto/PAIRING-PROFILE.md §"An unpinned controller refuses".)
 func Verify(pub ed25519.PublicKey, msg []byte, sigB64 string) bool {
+	if len(pub) != ed25519.PublicKeySize {
+		return false
+	}
 	sig, err := UnB64u(sigB64)
 	if err != nil {
 		return false

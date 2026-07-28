@@ -20,11 +20,16 @@ them, outside conformance tests.
 | `grants.json` | [grants.md](../grants.md) | full offline-redemption transcripts (grant + open + challenge + proof); rejects: stale_clock, lockdown, badsig (grant & proof), expired, wrong_device, wrong_access_point, window, wrong_grant, cnonce_expired, cnonce_replay (2-step), stale proof ts; one in-window accept |
 | `events.json` | [events.md](../events.md) | valid signed event per kind (all 10), badsig + tampered rejects |
 | `acks.json` | [commands.md §Acknowledgement](../commands.md) | success / denied / hw-error acks, badsig reject |
+| `webhooks.json` | [WEBHOOK-PROFILE.md](../WEBHOOK-PROFILE.md) | outbound HMAC-SHA256 deliveries: preimage, signature, headers, and the profile constants — a receiver can be written and checked from this file alone |
 | `generate.mjs` | — | deterministic generator (node builtins only); re-running produces byte-identical JSON |
 | `verify.mjs` | — | self-check: re-canonicalizes, re-signs, and re-runs each contract's verification rules; exit 0 = all hold |
 | `lib.mjs` | — | shared JCS + Ed25519 helpers and the test-key constants |
 
 Run: `node proto/vectors/generate.mjs` (regenerate) · `node proto/vectors/verify.mjs` (must exit 0).
+
+Copying this harness into another repository? [HARNESS-PATTERN.md](HARNESS-PATTERN.md)
+describes the shape, the determinism rules, the four conformance layers and the
+places the pattern is weakest.
 
 ## Vector shape
 
@@ -78,6 +83,12 @@ Consume by byte-comparing in three layers: (1) your JCS output == `canonical`;
 (3) your full envelope verifier applied with `check` context == `expect`/`reason`.
 
 ## JCS subset used (honesty section)
+
+Full detail, including the one place the Go and JavaScript implementations
+diverge and why: [../JCS-PROFILE.md](../JCS-PROFILE.md). The hand-derived edge
+cases all three are held to are [../jcs-cases.json](../jcs-cases.json), checked
+by `verify.mjs` (this file), `jcs/cases_test.go` (Go) and
+`src/lib/offline/__tests__/jcs.test.ts` (TypeScript).
 
 `lib.mjs` implements the RFC 8785 subset these contracts actually exercise:
 

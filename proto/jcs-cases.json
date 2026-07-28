@@ -2,27 +2,48 @@
   "$comment": [
     "Adversarial JCS canonicalisation cases, shared by every implementation.",
     "",
-    "WHY THIS FILE EXISTS. hub/internal/keys and controller/internal/jcs are two",
-    "INDEPENDENT implementations of RFC 8785, and that independence is the point:",
-    "the hub signs over its canonical form and the controller verifies over its",
-    "own, so an implementation that shared code with its counterpart would make",
-    "their agreement vacuous. Go's internal/ rule then forbids any single test",
-    "from importing both, so agreement cannot be asserted in code — it has to be",
-    "asserted against DATA that both read.",
+    "WHY THIS FILE EXISTS. Three implementations of RFC 8785 sign or verify the",
+    "documents this product puts on the wire, and they are in three different",
+    "LANGUAGES, so no single test can import them all:",
     "",
-    "proto/vectors already does that for 93 canonical encodings, but those are",
+    "  jcs/jcs.go              Go     — the hub signs with it, the controller",
+    "                                   verifies with it, the e2e harness signs",
+    "                                   as both with it.",
+    "  src/lib/offline/jcs.ts  TS     — the app signs offline grant proofs.",
+    "  proto/vectors/lib.mjs   JS     — generates the conformance vectors.",
+    "",
+    "It used to say the Go side was itself two independent implementations, and",
+    "that the independence was the point. It was three copies, and the third",
+    "(e2e/jcs.go) missed the json.Number rounding fix and canonicalised 2^53+1",
+    "to 2^53 for as long as it existed. Hand-copied implementations are not",
+    "independent implementations; they are one implementation and some stale",
+    "forks. The Go copies were folded into jcs/. The language boundary is real",
+    "and stays, and this file plus proto/vectors/ is how it is held closed.",
+    "",
+    "proto/vectors already cross-checks 93 canonical encodings, but those are",
     "the documents this product actually sends: envelopes of integers and short",
-    "strings. Nothing exercised the edges where two hand-written canonicalisers",
+    "strings. Nothing exercised the edges where hand-written canonicalisers",
     "most plausibly disagree — key ordering by UTF-16 code unit, surrogate pairs,",
     "control characters, the ±2^53 boundary, alternative spellings of a number.",
     "",
     "The expected values below are derived from RFC 8785 by hand, NOT captured",
-    "from either implementation. Captured output would only prove each side",
+    "from any implementation. Captured output would only prove a side",
     "reproduces itself.",
     "",
     "A disagreement here is not cosmetic. It means the hub signs bytes the",
     "controller does not re-derive: every command fails at a gate, or a document",
-    "differing from the one a human approved verifies anyway."
+    "differing from the one a human approved verifies anyway.",
+    "",
+    "WHO READS THIS FILE (all of these must stay green):",
+    "  jcs/cases_test.go                     Go",
+    "  src/lib/offline/__tests__/jcs.test.ts TS",
+    "  proto/vectors/verify.mjs              JS",
+    "",
+    "THE `refused` SECTION IS NOT UNIVERSAL — read `js_canonical` there before",
+    "assuming it is. Refusal is the Go profile's documented deviation (no",
+    "general double formatting); JavaScript gets correct double formatting from",
+    "JSON.stringify and accepts what Go refuses. The divergence is pinned per",
+    "case rather than left to be rediscovered. See proto/JCS-PROFILE.md."
   ],
   "cases": [
     {
@@ -109,13 +130,17 @@
   "refused": [
     {
       "name": "a non-integer number is refused, not rounded",
-      "why": "The documented deviation: full ECMAScript double formatting is not implemented, so a real must be an error rather than a guess. Rounding it would sign a number nobody sent.",
-      "input": "{\"n\":1.5}"
+      "why": "The documented Go deviation: full ECMAScript double formatting is not implemented, so a real must be an error rather than a guess. Rounding it would sign a number nobody sent.",
+      "input": "{\"n\":1.5}",
+      "js_canonical": "{\"n\":1.5}",
+      "js_why": "JavaScript is RFC-8785-correct here for free: Number::toString IS the §3.2.2.3 rule. The divergence is one-directional and safe in that direction — anything the app or the generator can produce that Go refuses fails LOUDLY at the Go verifier rather than verifying against different bytes. Nothing in proto/vectors/ contains a non-integer number, and proto/vectors/README.md says not to add one without revisiting this."
     },
     {
       "name": "one past 2^53 is refused",
       "why": "Beyond the IEEE-754 safe range the value cannot round-trip, so canonicalising it would silently change it.",
-      "input": "{\"n\":9007199254740993}"
+      "input": "{\"n\":9007199254740993}",
+      "js_canonical": "{\"n\":9007199254740992}",
+      "js_why": "NOT a divergence anybody should be comfortable with, pinned here precisely so it stays visible. JSON.parse rounds 2^53+1 to 2^53 BEFORE the canonicaliser is ever called, so no JS canonicaliser can refuse what it never saw — the value is already gone. Go refuses because it parses with json.Number and applies the bound to the literal. Consequence: never route a JSON document carrying an integer above 2^53 through a JS signer. The app does not (it builds proof objects from typed fields, all unix seconds and short strings) and the generator does not."
     }
   ]
 }

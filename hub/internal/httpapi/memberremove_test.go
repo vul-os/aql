@@ -66,7 +66,7 @@ func TestMemberRemovalAuthorization(t *testing.T) {
 		t.Errorf("member removing owner: %d %v", rec.Code, out)
 	}
 	// ...and the attempt changed nothing.
-	if rec, _ := doJSON(t, h, "GET", "/v1/accounts/"+acct, accessOwner, nil); rec.Code != 200 {
+	if rec, _ := doJSON(t, h, "GET", "/v1/accounts/"+acct+"/members", accessOwner, nil); rec.Code != 200 {
 		t.Error("the refused removal locked the owner out anyway")
 	}
 
@@ -96,7 +96,7 @@ func TestMemberRemovalAuthorization(t *testing.T) {
 	// The cleaner's still-valid session now sees the account the way any
 	// outsider does. The token was not revoked — it does not have to be,
 	// because authority is re-read from the membership on every request.
-	for _, path := range []string{"/v1/accounts/" + acct, "/v1/accounts/" + acct + "/members",
+	for _, path := range []string{"/v1/accounts/" + acct + "/members",
 		"/v1/accounts/" + acct + "/locations"} {
 		if rec, _ := doJSON(t, h, "GET", path, accessCleaner, nil); rec.Code != http.StatusNotFound {
 			t.Errorf("removed member still reads %s: %d", path, rec.Code)

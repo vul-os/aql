@@ -291,10 +291,17 @@ Stated plainly so nobody mistakes design intent for a control:
   omitted because an earlier revision of this section listed them as not built, which is
   a worse error than the reverse: it tells a reader not to look for a bypass in code that
   is live.
-- No 2FA on hub accounts, and **no in-band recovery for a lost sole instance-admin
-  password**. Regaining the seat requires direct database access, which is also why "who
-  can touch the host" *is* your real admin list. Grant a second admin early.
-- No outbound webhooks and no scoped API tokens — integrations authenticate as a user.
+- **No in-band recovery for a sole instance-admin who loses both their password and their
+  recovery codes.** 2FA does ship (TOTP, opt-in per user, ten single-use recovery codes
+  shown once at activation), and so does password reset — but the last resort on a
+  self-hosted box is still direct database access, which is why "who can touch the host"
+  *is* your real admin list. Grant a second admin early.
+- Outbound webhooks and scoped API tokens **do** ship. A webhook is a standing instruction
+  to POST from inside your network, so treat configuring one as a privileged act: the hub
+  refuses private, loopback, link-local and CGNAT targets unless `allow_private` is set,
+  and re-checks against a fresh resolution before every delivery
+  ([`proto/WEBHOOK-PROFILE.md`](../proto/WEBHOOK-PROFILE.md) §6, including the residual
+  DNS-rebinding window it does *not* close).
 
 ---
 

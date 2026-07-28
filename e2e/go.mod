@@ -10,3 +10,10 @@
 module github.com/vul-os/aql/e2e
 
 go 1.25.6
+
+require github.com/vul-os/aql/jcs v0.0.0
+
+// The shared canonicalizer lives in this repo, alongside this module. There
+// is no published version of it and there does not need to be: every consumer
+// is in the same working tree.
+replace github.com/vul-os/aql/jcs => ../jcs

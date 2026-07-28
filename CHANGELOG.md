@@ -15,6 +15,59 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed — a controller with a corrupt state file crashed instead of refusing
+
+`ed25519.Verify` **panics** on a public key that is not exactly 32 bytes rather than
+returning false. Every key that arrives off the wire is length-checked by the decoder
+that parses it; the one that is not is the *pinned* gateway key, which comes from
+`state.json` on disk. A truncated write, a half-flushed SD card or a hand-edited state
+file therefore killed the controller daemon on the first command it received — at a
+physical gate — instead of refusing that command.
+
+`wire.Verify` and `keys.Verify` now refuse an unusable key. That is the pin taken
+literally: with no key to verify against, nothing can be authenticated, so nothing may
+be accepted — including a valid command from the real hub. Held by
+`TestAnUndecodablePinnedKeyRefusesInsteadOfPanicking`.
+
+### Changed — one JCS canonicalizer in Go instead of three
+
+Every signature in `proto/` is taken over RFC 8785 canonical JSON. Go had three
+hand-copied implementations of it — `hub/internal/keys`, `controller/internal/jcs` and
+`e2e/jcs.go` — kept apart on the argument that independence made the conformance
+vectors meaningful. They were not independent: when the `json.Number` rounding bug was
+fixed, it was fixed in two of the three, and the e2e harness — which signs as *both*
+sides of the wire — canonicalised 2^53+1 to 2^53 for as long as it existed.
+
+They are now one dependency-free module, `jcs/`, imported by all three. The
+cross-implementation check that is real is the one across *languages*: Go, the app's
+TypeScript (`src/lib/offline/jcs.ts`) and the vector generator's JavaScript
+(`proto/vectors/lib.mjs`). All three are now held to `proto/jcs-cases.json`, which also
+pins the one place they diverge on numbers rather than leaving it to be rediscovered.
+See [`proto/JCS-PROFILE.md`](proto/JCS-PROFILE.md).
+
+### Added — the outbound webhook wire format is specified and has vectors
+
+[`proto/WEBHOOK-PROFILE.md`](proto/WEBHOOK-PROFILE.md) and
+`proto/vectors/webhooks.json`: header names, the exact HMAC preimage, delivery and
+retry semantics, and the SSRF discipline — enough to write a receiver without running a
+hub. The hub's own constants are now checked against that published file, so renaming a
+header is a failing test rather than a silent break for every receiver in the field.
+
+Also added: [`proto/PAIRING-PROFILE.md`](proto/PAIRING-PROFILE.md) (the accountless
+pairing + key-pinning ceremony, and how the pin is enforced rather than asserted) and
+[`proto/vectors/HARNESS-PATTERN.md`](proto/vectors/HARNESS-PATTERN.md) (how this vector
+harness is built, for anyone copying it).
+
+### Fixed — documentation that described features as unbuilt long after they shipped
+
+`ARCHITECTURE.md`, `docs/THREAT-MODEL.md`, `site/docs/api.md` and the console's own API
+reference all still said there were no outbound webhooks and no scoped API tokens; the
+architecture notes also listed geofences, online time-window rules, analytics and the
+maintenance log as unbuilt, and the threat model said there was no 2FA. All of those
+ship. The API reference additionally published a webhook-verification recipe that
+signed the body alone — it would have rejected every real delivery, which carries the
+timestamp inside the preimage.
+
 ### Fixed — login and registration were broken for anyone on a build after the email removal
 
 Removing email identity renamed the hub's auth fields to `username`. The console

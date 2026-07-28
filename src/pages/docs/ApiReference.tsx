@@ -144,40 +144,64 @@ func openGate() (*http.Response, error) {
 }`}</CodeBlock>
       </DocSection>
 
-      <DocSection heading="Webhooks (proposed, not implemented)">
+      <DocSection heading="Webhooks">
         <p>
-          There is no outbound webhook/subscription system in the hub today — nothing
-          below can be configured or called yet. This is the intended design: subscribe to
-          <code> open.succeeded</code>, <code>open.denied</code>,
-          <code> device.offline</code>, <code>device.online</code>, and <code>member.revoked</code>,
-          with payloads signed HMAC-SHA256 and verified against a shared secret shown when
-          you create the subscription. Kept here as the target shape.
+          Outbound webhooks ship. Manage subscriptions at{' '}
+          <code>GET/POST /v1/accounts/{'{id}'}/webhooks</code> and{' '}
+          <code>DELETE /v1/accounts/{'{id}'}/webhooks/{'{webhookID}'}</code> (admin only).
+          The event vocabulary is closed and currently has two members:{' '}
+          <code>access.opened</code> and <code>access.denied</code>. The payload
+          deliberately carries no member identity — a webhook target is an address on
+          somebody else&rsquo;s network.
         </p>
-        <CodeBlock lang="ts" title="Verify a webhook (Node / Hono)">{`import { createHmac, timingSafeEqual } from 'node:crypto';
+        <p>
+          The signature is HMAC-SHA256, lowercase hex, over{' '}
+          <code>timestamp + &quot;.&quot; + rawBody</code> — the timestamp is{' '}
+          <em>inside</em> the preimage, so it cannot be altered without invalidating the
+          signature. Verify against the raw bytes before parsing. Delivery is at most 3
+          attempts with linear backoff, redirects are never followed, and the response body
+          is never read. Full profile, delivery semantics and executable vectors:{' '}
+          <code>proto/WEBHOOK-PROFILE.md</code> and{' '}
+          <code>proto/vectors/webhooks.json</code>.
+        </p>
+        <CodeBlock lang="ts" title="Verify a webhook (Node)">{`import { createHmac, timingSafeEqual } from 'node:crypto';
 
-export function verifyAqlWebhook(rawBody: string, signature: string, secret: string) {
-  const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
+// rawBody must be the UNPARSED request body. If your framework already
+// parsed and discarded the bytes, fix that first — you cannot verify without them.
+export function verifyAqlWebhook(rawBody: string, headers: Headers, secret: string) {
+  const ts = headers.get('X-Aql-Timestamp') ?? '';
+  const signature = headers.get('X-Aql-Signature-256') ?? '';
+
+  // Reject stale deliveries. The hub cannot enforce your tolerance for you.
+  if (Math.abs(Date.now() / 1000 - Number(ts)) > 300) return false;
+
+  const expected = createHmac('sha256', secret).update(\`\${ts}.\${rawBody}\`).digest('hex');
   const a = Buffer.from(signature, 'hex');
   const b = Buffer.from(expected, 'hex');
   return a.length === b.length && timingSafeEqual(a, b);
 }`}</CodeBlock>
-        <CodeBlock lang="python" title="Verify a webhook (Python / Flask)">{`import hmac, hashlib
+        <CodeBlock lang="python" title="Verify a webhook (Python / Flask)">{`import hmac, hashlib, time
 
-def verify_aql_webhook(raw_body: bytes, signature: str, secret: str) -> bool:
-    expected = hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
+def verify_aql_webhook(raw_body: bytes, headers, secret: str) -> bool:
+    ts = headers.get("X-Aql-Timestamp", "")
+    signature = headers.get("X-Aql-Signature-256", "")
+    if not ts.isdigit() or abs(time.time() - int(ts)) > 300:
+        return False
+    preimage = ts.encode() + b"." + raw_body
+    expected = hmac.new(secret.encode(), preimage, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, signature)`}</CodeBlock>
-        <CodeBlock lang="json" title="open.succeeded payload">{`{
-  "id": "wh_01HZ4G…",
-  "type": "open.succeeded",
-  "delivered_at": "2026-05-14T14:02:13Z",
-  "data": {
-    "event_id": "ev_01HZ4B7Q2K7VJ",
-    "location_id": "loc_oak",
-    "access_point_id": "ap_ABC123",
-    "actor": { "phone": "+27825550144" },
-    "latency_ms": 1834
-  }
+        <CodeBlock lang="json" title="access.opened payload">{`{
+  "access_point": "ap_main",
+  "command": "open",
+  "event": "access.opened",
+  "location": "loc_office",
+  "log_id": "log_000000000001"
 }`}</CodeBlock>
+        <p>
+          Retries re-sign with a fresh timestamp, so the same event arrives with a
+          different signature each attempt. De-duplicate on <code>log_id</code>, not on the
+          signature.
+        </p>
       </DocSection>
 
       <DocSection heading="Rate limits">

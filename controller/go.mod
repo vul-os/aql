@@ -17,3 +17,10 @@ require (
 	golang.org/x/exp v0.0.0-20241204233417-43b7b7cde48d // indirect
 	golang.org/x/sys v0.11.0 // indirect
 )
+
+require github.com/vul-os/aql/jcs v0.0.0
+
+// The shared canonicalizer lives in this repo, alongside this module. There
+// is no published version of it and there does not need to be: every consumer
+// is in the same working tree.
+replace github.com/vul-os/aql/jcs => ../jcs

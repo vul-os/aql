@@ -300,7 +300,6 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("POST /v1/accounts", s.requireAuth(s.handleAccountCreate))
 	// literal "invites" segment wins over {id} in the 1.22 mux
 	mux.Handle("POST /v1/accounts/invites/{token}/accept", s.requireAuth(s.handleInviteAccept))
-	mux.Handle("GET /v1/accounts/{id}", s.requireAuth(s.handleAccountGet))
 	mux.Handle("PATCH /v1/accounts/{id}", s.requireAuth(s.handleAccountPatch))
 	mux.Handle("GET /v1/accounts/{id}/members", s.requireAuth(s.handleMembersList))
 	mux.Handle("DELETE /v1/accounts/{id}/members/{user_id}", s.requireAuth(s.handleMemberRemove))
@@ -318,7 +317,6 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("GET /v1/accounts/{id}/locations", s.requireAuth(s.handleLocationsList))
 	mux.Handle("POST /v1/accounts/{id}/locations", s.requireAuth(s.handleLocationCreate))
 	mux.Handle("POST /v1/locations", s.requireAuth(s.handleTopLevelLocationCreate))
-	mux.Handle("GET /v1/locations/{id}", s.requireAuth(s.handleLocationGet))
 	mux.Handle("PATCH /v1/locations/{id}", s.requireAuth(s.handleLocationPatch))
 	mux.Handle("DELETE /v1/locations/{id}", s.requireAuth(s.handleLocationDelete))
 	mux.Handle("GET /v1/locations/{id}/limits", s.requireAuth(s.handleLocationLimitsGet))
@@ -389,7 +387,6 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("GET /v1/accounts/{id}/automations", s.requireAuth(s.handleAutomationsList))
 	mux.Handle("POST /v1/accounts/{id}/automations", s.requireAuth(s.handleAutomationCreate))
 	mux.Handle("GET /v1/accounts/{id}/automations/runs", s.requireAuth(s.handleAutomationRuns))
-	mux.Handle("GET /v1/accounts/{id}/automations/{ruleID}", s.requireAuth(s.handleAutomationGet))
 	mux.Handle("PUT /v1/accounts/{id}/automations/{ruleID}", s.requireAuth(s.handleAutomationUpdate))
 	mux.Handle("DELETE /v1/accounts/{id}/automations/{ruleID}", s.requireAuth(s.handleAutomationDelete))
 	mux.Handle("POST /v1/accounts/{id}/automations/{ruleID}/enabled", s.requireAuth(s.handleAutomationSetEnabled))

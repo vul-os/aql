@@ -12,6 +12,7 @@
 //
 // Exit code 0 = all vectors hold. Run: node proto/vectors/verify.mjs
 
+import { createHmac } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -244,10 +245,141 @@ for (const f of ['events.json', 'acks.json']) {
   }
 }
 
+// --- webhooks.json -----------------------------------------------------------
+//
+// The outbound profile is not Ed25519-over-JCS and shares no code with
+// anything above; it is HMAC-SHA256 over "timestamp.body". Recomputed here
+// from `secret` + `headers` so that the stored signature cannot drift from the
+// stated rule, and so that a receiver implementer has a self-checking corpus.
+//
+// The Go side reads the SAME file
+// (hub/internal/httpapi/webhookvectors_test.go), which is what ties the
+// published format to the hub's constants.
+
+{
+  const doc = load('webhooks.json');
+  if (!Array.isArray(doc.vectors) || doc.vectors.length < 6) {
+    fail('webhooks', `expected >=6 vectors, loaded ${doc.vectors?.length ?? 0}`);
+  }
+  let ran = 0;
+  for (const v of doc.vectors ?? []) {
+    checked++;
+    ran++;
+    const ts = v.headers['X-Aql-Timestamp'];
+    const preimage = `${ts}.${v.body}`;
+    if (v.preimage !== preimage) {
+      fail(`webhooks/${v.name}`, `stored preimage is not <timestamp>.<body>\n  got: ${v.preimage}\n want: ${preimage}`);
+      continue;
+    }
+    const sig = createHmac('sha256', v.secret).update(preimage, 'utf8').digest('hex');
+    if (sig !== v.signature_hex) {
+      fail(`webhooks/${v.name}`, `HMAC-SHA256 over the preimage does not reproduce signature_hex`);
+      continue;
+    }
+    if (v.headers['X-Aql-Signature-256'] !== v.signature_hex) {
+      fail(`webhooks/${v.name}`, 'the signature header does not carry signature_hex');
+    }
+    if (v.headers['X-Aql-Event'] !== v.event) {
+      fail(`webhooks/${v.name}`, 'the event header does not carry `event`');
+    }
+    if (!/^[0-9a-f]{64}$/.test(v.signature_hex)) {
+      fail(`webhooks/${v.name}`, 'signature is not 64 lowercase hex characters');
+    }
+  }
+  if (ran !== (doc.vectors?.length ?? 0)) {
+    fail('webhooks', `ran ${ran} of ${doc.vectors?.length ?? 0} vectors`);
+  }
+  // The profile block is what an implementer reads first; an empty one would
+  // make the file look complete while documenting nothing.
+  for (const k of ['algorithm', 'preimage', 'signature_header', 'timestamp_header', 'event_header']) {
+    checked++;
+    if (!doc.profile?.[k]) fail('webhooks.profile', `missing ${k}`);
+  }
+  // At least two vectors must share a body and differ only in
+  // timestamp/secret, or the corpus does not actually demonstrate that either
+  // of those is inside the signature — which is the whole replay story.
+  checked++;
+  const all = doc.vectors ?? [];
+  const sameBody = all.length > 0 ? all.filter((v) => v.body === all[0].body) : [];
+  if (sameBody.length < 3) {
+    fail('webhooks', `only ${sameBody.length} vectors share a body; the corpus cannot show that the timestamp and the secret are both signed`);
+  } else if (new Set(sameBody.map((v) => v.signature_hex)).size !== sameBody.length) {
+    fail('webhooks', 'vectors sharing a body produced a repeated signature; the timestamp/secret are not covered');
+  }
+}
+
+// --- proto/jcs-cases.json ----------------------------------------------------
+//
+// Layer 0, and the reason this file can say anything about the OTHER
+// implementations. Everything above proves lib.mjs agrees with vectors lib.mjs
+// generated — which it would even if lib.mjs canonicalised wrongly, as long as
+// it did so consistently. These cases are hand-derived from RFC 8785 and are
+// read by the Go implementation (jcs/cases_test.go) and the app's TypeScript
+// one (src/lib/offline/__tests__/jcs.test.ts) from the same file.
+//
+// Inputs are raw JSON TEXT; this implementation canonicalises VALUES, so the
+// text is parsed first. That parse is part of what is being checked — see the
+// 2^53+1 case, where JSON.parse is the thing that loses.
+
+{
+  const doc = JSON.parse(readFileSync(join(DIR, '..', 'jcs-cases.json'), 'utf8'));
+  // Fail loudly rather than silently checking nothing. A gate that passes by
+  // iterating an empty array is the specific failure this suite has shipped
+  // before.
+  if (!Array.isArray(doc.cases) || doc.cases.length < 14) {
+    fail('jcs-cases', `expected >=14 cases, loaded ${doc.cases?.length ?? 0}`);
+  }
+  if (!Array.isArray(doc.refused) || doc.refused.length < 2) {
+    fail('jcs-cases', `expected >=2 refusal cases, loaded ${doc.refused?.length ?? 0}`);
+  }
+  let ran = 0;
+  for (const c of doc.cases ?? []) {
+    checked++;
+    ran++;
+    let got;
+    try {
+      got = jcs(JSON.parse(c.input));
+    } catch (e) {
+      fail(`jcs-cases/${c.name}`, `threw on a case that must canonicalise: ${e.message}`);
+      continue;
+    }
+    if (got !== c.canonical) {
+      fail(`jcs-cases/${c.name}`, `canonical form differs from the shared expectation\n  got: ${got}\n want: ${c.canonical}`);
+    }
+  }
+  // The refusals are a Go-profile deviation, not an RFC rule. This
+  // implementation is expected to ACCEPT them, and `js_canonical` pins exactly
+  // what it produces — so that a change on either side of the divergence is a
+  // failing test rather than a surprise at a gate.
+  for (const c of doc.refused ?? []) {
+    checked++;
+    ran++;
+    if (typeof c.js_canonical !== 'string') {
+      fail(`jcs-cases/refused/${c.name}`, 'no js_canonical: the JS behaviour on a Go-refused input must be pinned, not left implicit');
+      continue;
+    }
+    let got;
+    try {
+      got = jcs(JSON.parse(c.input));
+    } catch (e) {
+      fail(`jcs-cases/refused/${c.name}`, `threw; js_canonical says it should produce ${c.js_canonical} (${e.message})`);
+      continue;
+    }
+    if (got !== c.js_canonical) {
+      fail(`jcs-cases/refused/${c.name}`, `the pinned JS divergence moved\n  got: ${got}\n want: ${c.js_canonical}`);
+    }
+  }
+  const expected = (doc.cases?.length ?? 0) + (doc.refused?.length ?? 0);
+  if (ran !== expected) fail('jcs-cases', `ran ${ran} of ${expected} entries`);
+}
+
 // --- summary -----------------------------------------------------------------
 
 if (failures > 0) {
   console.error(`\n${failures} failure(s) out of ${checked} checks.`);
   process.exit(1);
 }
-console.log(`OK — ${checked} checks passed across pairing/commands/grants/events/acks vectors.`);
+console.log(
+  `OK — ${checked} checks passed across pairing/commands/grants/events/acks/webhooks ` +
+    `vectors and the shared canonicalisation cases (proto/jcs-cases.json).`
+);

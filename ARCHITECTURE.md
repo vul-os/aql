@@ -414,19 +414,21 @@ Full detail, including what "works with any hardware" does and does not mean:
   `GET /admin/limits` shows all four layers side by side.
 - **`aql-hub verify-audit`** — walks both audit chains against a cold backup without
   booting the HTTP server.
+- **Outbound webhooks and scoped API tokens** — `…/webhooks` and `…/api-tokens`,
+  admin-only. Webhook deliveries are HMAC-SHA256 signed over `timestamp.body` and the
+  target is re-validated against a fresh DNS resolution before every attempt; the wire
+  format is specified in [`proto/WEBHOOK-PROFILE.md`](proto/WEBHOOK-PROFILE.md) with
+  vectors. Integrations no longer have to authenticate as a user.
+- **Geofences, online time-window rules, analytics and the per-access-point maintenance
+  log** — `…/geofences`, `…/time-windows`, `/v1/analytics/…`,
+  `/v1/access-points/{id}/maintenance`. Each of these was listed as unbuilt here for
+  longer than it was actually unbuilt.
 
 **Not built, stated plainly:**
 
-- **No geofencing and no online time-window rules.** Weekly windows exist only inside
-  offline grants and are evaluated by the *controller*, not the hub. There is no rule
-  object in the hub at all.
-- **No analytics endpoints.** The console has an Analytics screen; the hub does not serve
-  it. The data exists in the audit log; the aggregation API does not.
-- **No Google OAuth, email verification or password reset.** The console has routes for
-  these; the hub does not serve them.
-- **No per-access-point maintenance backend.** The console posts to routes that do not
-  exist; the hub returns fixed nulls.
-- **No outbound webhooks and no scoped API tokens.** Integrations authenticate as a user.
+- **No Google OAuth and no email verification.** The console has a Google button and an
+  `/auth/callback` route; the hub serves neither. Password *reset* does ship
+  (`POST /v1/auth/forgot-password`, `POST /v1/auth/reset-password`).
 - **A sole instance-admin who loses BOTH their password and their recovery codes** has no
   in-band route back in. 2FA itself ships (TOTP, opt-in per user, ten single-use recovery
   codes shown once at activation), and the last resort on a self-hosted box is a SQL

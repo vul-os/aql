@@ -154,11 +154,19 @@ Every `proto/vectors/` file is consumed by the suite:
 
 ## Code duplication
 
-`internal/jcs` and the `Sign`/`Verify`/`VerifyRaw` helpers in `internal/wire`
-are **intentionally copied and adapted** from `hub/internal/keys`
-(`jcs.go`, `keys.go`, `envelope.go`). The controller is a standalone module so
-it can be vendored onto devices without the gateway; importing the gateway
-module would pull in its whole dependency tree. The duplicated surface is
-small (~170 lines of JCS plus a handful of crypto wrappers). **The vectors in
-`proto/vectors/` are the arbiter** — if a canonicalization or signing bug is
-found, fix it in *both* modules and re-run each one's conformance tests.
+The controller is a standalone module so it can be vendored onto devices
+without the gateway; importing the gateway module would pull in its whole
+dependency tree, and Go's `internal/` rule forbids it outright.
+
+**JCS is no longer duplicated.** `internal/jcs` is a thin delegation to
+`github.com/vul-os/aql/jcs`, a dependency-free module in this repository that
+the gateway, this module and the e2e harness all import (`require` plus a
+relative `replace` in each `go.mod`). It used to be three hand-copies of ~170
+lines; the third of them drifted, which is what ended the argument for keeping
+them. See [`proto/JCS-PROFILE.md`](../proto/JCS-PROFILE.md).
+
+The `Sign`/`Verify`/`VerifyRaw` helpers in `internal/wire` **are** still copied
+and adapted from `hub/internal/keys` (`keys.go`, `envelope.go`) — a handful of
+crypto wrappers over the standard library. **The vectors in `proto/vectors/`
+are the arbiter**: if a signing bug is found, fix it in both modules and re-run
+each one's conformance tests.

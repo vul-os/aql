@@ -2,14 +2,20 @@
 // discipline every signature in proto/ uses: sign over `JCS(message minus
 // sig)`, never over raw byte concatenation.
 //
-// This is a deliberate re-implementation of the same subset the reference
-// implementations already agree on — proto/vectors/lib.mjs (vector
-// generator), controller/internal/jcs (Go verifier) and
-// hub/internal/keys.Canonicalize (Go signer). It is NOT trusted on the
-// strength of that resemblance: src/lib/offline/__tests__/jcs.test.ts
-// byte-compares this function's output against every `canonical` string in
-// proto/vectors/grants.json, which is the same corpus the Go side is held
-// to. If this drifts, that test fails.
+// This is a deliberate re-implementation of the same subset the other two
+// implementations agree on: jcs/jcs.go (Go — the hub signs and the controller
+// verifies with it) and proto/vectors/lib.mjs (the vector generator). It
+// cannot be folded into the Go one, which is the point: it is a genuine
+// language boundary, unlike the three Go copies that were folded because they
+// were the same language and had already drifted apart.
+//
+// It is NOT trusted on the strength of resemblance.
+// src/lib/offline/__tests__/jcs.test.ts byte-compares this function's output
+// against every `canonical` string in proto/vectors/, and against the
+// hand-derived edge cases in proto/jcs-cases.json — the same two corpora the
+// Go side is held to. If this drifts, those tests fail. See
+// proto/JCS-PROFILE.md, including the one number case where this
+// implementation deliberately accepts what Go refuses.
 //
 // Subset notes (identical to proto/vectors/README.md's):
 //  * Object keys sorted by UTF-16 code unit — what Array#sort() does for

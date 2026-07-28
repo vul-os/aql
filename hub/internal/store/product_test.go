@@ -22,14 +22,17 @@ func TestMemberListAndScoping(t *testing.T) {
 	if ms[0].Role != "owner" || ms[0].Username != "a@x.com" {
 		t.Errorf("roster row: %+v", ms[0])
 	}
-	// The store method itself is unscoped-by-design (handlers gate); verify
-	// the scoped account getter honors tenancy.
+	// MemberList is unscoped-by-design (handlers gate). The tenancy property
+	// that used to be checked here through AccountByIDScoped now lives on
+	// MemberRole, which is what every account-scoped handler actually calls —
+	// the scoped account getter went with GET /v1/accounts/{id}, which no
+	// client ever reached.
 	ua, _ := s.UserByUsername(ctx, "a@x.com")
-	if _, err := s.AccountByIDScoped(ctx, acctB.ID, ua.ID); !errors.Is(err, ErrNotFound) {
-		t.Errorf("cross-tenant AccountByIDScoped: want ErrNotFound, got %v", err)
+	if _, err := s.MemberRole(ctx, acctB.ID, ua.ID); !errors.Is(err, ErrNotFound) {
+		t.Errorf("cross-tenant MemberRole: want ErrNotFound, got %v", err)
 	}
-	if got, err := s.AccountByIDScoped(ctx, acctA.ID, ua.ID); err != nil || got.Role != "owner" {
-		t.Errorf("own AccountByIDScoped: %v %+v", err, got)
+	if role, err := s.MemberRole(ctx, acctA.ID, ua.ID); err != nil || role != "owner" {
+		t.Errorf("own MemberRole: %v %q", err, role)
 	}
 }
 

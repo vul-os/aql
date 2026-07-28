@@ -64,7 +64,18 @@ func (k *Keys) Sign(msg []byte) string {
 }
 
 // Verify checks a base64url signature over msg against pub.
+//
+// A pub that is not exactly 32 bytes is REFUSED rather than handed to
+// ed25519.Verify, which panics on a wrong-sized key instead of returning false.
+// Callers here reach this through hub.DecodePubkey, which enforces the length,
+// so this is the belt on top of the braces — but the counterpart in the
+// controller (wire.Verify) has a path that genuinely can arrive with nil, and
+// the two halves of a signing discipline should not disagree about what an
+// unusable key means.
 func Verify(pub ed25519.PublicKey, msg []byte, sigB64 string) bool {
+	if len(pub) != ed25519.PublicKeySize {
+		return false
+	}
 	sig, err := base64.RawURLEncoding.DecodeString(sigB64)
 	if err != nil {
 		return false

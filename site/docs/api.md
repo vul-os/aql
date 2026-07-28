@@ -81,10 +81,34 @@ limits.
 
 ## Webhooks
 
-**Not implemented.** Outbound webhook subscriptions (`open.succeeded`, `open.denied`,
-`device.offline`, `member.revoked`) are planned, tracked in the repo todo, and ship
-alongside the API-token system — there is no `Settings → Webhooks` surface yet and
-no HMAC-signed delivery today.
+```
+GET    /v1/accounts/{id}/webhooks               # list subscriptions
+POST   /v1/accounts/{id}/webhooks               # create one; the signing secret is shown ONCE
+DELETE /v1/accounts/{id}/webhooks/{webhookID}   # remove one
+```
+
+Admin-only, and there is a `Settings → Webhooks` panel in the console. The event
+vocabulary is closed: `access.opened` and `access.denied`. The payload carries the
+access point, location, command and audit `log_id` — and deliberately **no member
+identity**, because a webhook target is an address on someone else's network.
+
+Each delivery is signed:
+
+```
+X-Aql-Event:            access.opened
+X-Aql-Timestamp:        1789000000
+X-Aql-Signature-256:    hex( HMAC-SHA256( secret, timestamp + "." + rawBody ) )
+```
+
+Verify against the **raw** body before parsing it, compare in constant time, and reject
+a timestamp outside your own skew tolerance — the hub cannot enforce that for you.
+Retries re-sign with a fresh timestamp, so de-duplicate on `log_id`, not on the
+signature.
+
+Two things worth knowing before you point one at your LAN: private, loopback,
+link-local and carrier-grade-NAT targets are refused unless you set `allow_private`,
+and the target is re-resolved and re-checked immediately before **every** attempt — a
+name that was public when you saved it can point at a metadata service tomorrow.
 
 ## Devices
 

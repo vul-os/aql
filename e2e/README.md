@@ -31,21 +31,27 @@ re-export shims to those modules — both out of scope ("do not modify
 gateway/controller source").
 
 So the harness drives the two **binaries** as subprocesses. This is a *stronger*
-interop proof than importing would be: it exercises the shipped artifacts, the
-real TCP/WebSocket/LAN transports, and the two **independent** JCS + Ed25519
-implementations against each other (the whole point of the contract).
+interop proof than importing would be: it exercises the shipped artifacts and
+the real TCP/WebSocket/LAN transports.
 
 Consequently:
 
-- **No `go.work`, no `replace`.** `e2e/go.mod` depends on *nothing* from the
-  other modules as Go imports — only the standard library. Each module's
-  `go test ./...` stays exactly as it was; adding this module is invisible to
-  the gateway/controller CI jobs (they run with `working-directory` set and
-  there is no repo-root `go.mod`).
-- The one thing the harness copies is `jcs.go` (RFC 8785), byte-identical to
-  both modules' canonicalizers, so it can sign offline **grants** as the gateway
-  and **proofs** as the app. Its correctness is checked at runtime: a grant it
-  produces is accepted by the real controller in `TestOfflineGrant_Redeem`.
+- **No imports from the gateway or controller modules.** `e2e/go.mod` depends
+  on nothing either of them owns. Each module's `go test ./...` stays exactly
+  as it was; adding this module is invisible to the gateway/controller CI jobs
+  (they run with `working-directory` set and there is no repo-root `go.mod`).
+- The harness signs offline **grants** as the gateway and **proofs** as the
+  app, so it needs the same canonical JSON both sides use. It used to keep its
+  own hand-copy of `jcs.go` for that, and the copy drifted: it missed the
+  `json.Number` rounding fix and canonicalised 2^53+1 to 2^53 for as long as it
+  existed, while both production copies refused it. It now imports the one
+  shared canonicalizer, `github.com/vul-os/aql/jcs` — a small module with no
+  dependencies, which exists precisely so a sibling module blocked by
+  `internal/` can still use it. **That is a `require` + a relative `replace` in
+  `e2e/go.mod`**, and it is not a hole in the rule above: a canonicalizer is
+  not the gateway or the controller, and the harness still speaks to both only
+  over the real wire. Its correctness is still checked at runtime too — a grant
+  it produces is accepted by the real controller in `TestOfflineGrant_Redeem`.
 
 ## What each test proves
 

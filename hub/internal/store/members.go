@@ -196,18 +196,3 @@ func (s *Store) RenameAccount(ctx context.Context, accountID, name string) error
 	}
 	return nil
 }
-
-// AccountByIDScoped returns the account iff the user is an active member —
-// the read path handlers use for GET /v1/accounts/:id.
-func (s *Store) AccountByIDScoped(ctx context.Context, accountID, userID string) (*Account, error) {
-	var a Account
-	err := s.db.QueryRowContext(ctx,
-		`SELECT a.id, a.name, a.country_code, a.status, m.role
-		 FROM accounts a JOIN account_members m ON m.account_id = a.id
-		 WHERE a.id = ? AND m.user_id = ? AND m.status = 'active'`, accountID, userID).
-		Scan(&a.ID, &a.Name, &a.CountryCode, &a.Status, &a.Role)
-	if err != nil {
-		return nil, err
-	}
-	return &a, nil
-}

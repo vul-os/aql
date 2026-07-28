@@ -12,6 +12,7 @@ be added, nothing can be removed or change meaning within a major version.
 | Offline grants | [grants.md](grants.md) | hub → app → controller |
 | Controller events | [events.md](events.md) | controller → hub |
 | Chat rail disclosure | [rails.md](rails.md) | hub ⇄ chat platform |
+| Outbound webhooks | [WEBHOOK-PROFILE.md](WEBHOOK-PROFILE.md) | hub → operator's receiver |
 
 `rails.md` is the odd one out: it is a **disclosure**, not a wire format. The four
 contracts above say what bytes cross a link we control; `rails.md` says what a link we
@@ -41,3 +42,15 @@ first third-party controller firmware ships.
 - Executable conformance vectors (fixed test keys, canonical bytes, accept/reject
   cases) live in [vectors/](vectors/) — implementations must pass them before
   claiming v0 conformance.
+
+## Cross-cutting profiles
+
+These are not wire contracts; they are the disciplines the contracts above
+depend on, written so another product can reuse them.
+
+| Profile | What it specifies |
+| --- | --- |
+| [JCS-PROFILE.md](JCS-PROFILE.md) | the RFC 8785 subset every signature is taken over, the three implementations, and the one place they diverge (pinned in [jcs-cases.json](jcs-cases.json)) |
+| [PAIRING-PROFILE.md](PAIRING-PROFILE.md) | the accountless pairing + key-pinning ceremony behind [pairing.md](pairing.md), and how the pin is enforced rather than asserted |
+| [WEBHOOK-PROFILE.md](WEBHOOK-PROFILE.md) | the outbound webhook wire format, delivery semantics and SSRF discipline, implementable from [vectors/webhooks.json](vectors/webhooks.json) alone |
+| [vectors/HARNESS-PATTERN.md](vectors/HARNESS-PATTERN.md) | how this vector harness is built, for a repository that wants to copy the approach |

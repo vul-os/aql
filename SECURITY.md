@@ -31,13 +31,13 @@ In scope, roughly in order of severity:
    bypasses Ed25519-signed open commands, pairing, or offline grants: nonce reuse, expiry
    bypass, key-pinning escape, challenge-response weaknesses, or a conformance vector that
    the implementations and the spec disagree about.
-2. **The hub** ([`gateway/`](gateway/)) — authn/authz bypass, tenant-isolation escapes,
+2. **The hub** ([`hub/`](hub/)) — authn/authz bypass, tenant-isolation escapes,
    open-path choke-point bypass, rate-limit or quota evasion, channel-identity spoofing
    that leads to an open.
 
    **Audit-log tampering, specifically:** `access_logs` and `admin_audit_log` are
    hash-chained (migration `0007_audit_hash_chain.sql`) and the chain is walkable via
-   `GET /v1/admin/audit/verify` or `gateway verify-audit`. A bug that lets an
+   `GET /v1/admin/audit/verify` or `aql-hub verify-audit`. A bug that lets an
    *authenticated request* forge, backdate or silently mutate an audit row without
    breaking that chain — or a bypass of the append-only DB triggers from application code
    — is in scope and worth a report. What is **not** a bug: someone with direct

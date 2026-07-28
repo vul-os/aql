@@ -188,21 +188,6 @@ func (s *Server) handleTopLevelLocationCreate(w http.ResponseWriter, r *http.Req
 	writeJSON(w, http.StatusCreated, map[string]any{"id": loc.ID, "account_id": acct.ID})
 }
 
-// GET /v1/locations/{id}
-func (s *Server) handleLocationGet(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	accountID, _, ok := s.locationScope(w, r, id)
-	if !ok {
-		return
-	}
-	d, err := s.store.LocationDetailByID(r.Context(), accountID, id)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal")
-		return
-	}
-	writeJSON(w, http.StatusOK, locationJSON(*d, false))
-}
-
 type patchLocationReq struct {
 	Name    *string        `json:"name"`
 	Address map[string]any `json:"address"`

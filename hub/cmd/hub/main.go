@@ -177,7 +177,7 @@ type config struct {
 }
 
 func main() {
-	// `gateway verify-audit [-data DIR]` — a CLI subcommand form of
+	// `aql-hub verify-audit [-data DIR]` — a CLI subcommand form of
 	// GET /v1/admin/audit/verify (see httpapi/adminops.go +
 	// store/audithash.go) that works against a cold backup WITHOUT booting
 	// the server or its HTTP surface at all: walks both tamper-evident

@@ -224,12 +224,6 @@ func (b *fakeBroker) drop() {
 	}
 }
 
-func (b *fakeBroker) pingCount() int {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.pings
-}
-
 func (b *fakeBroker) sessionCount() int {
 	b.mu.Lock()
 	defer b.mu.Unlock()
