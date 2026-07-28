@@ -321,10 +321,7 @@ func (s *Server) waAccessCommand(ctx contextT, to, chatID, from, apID, gateName,
 	if !v.Allowed {
 		return text(to, chatID, channels.DenialMessage(v.Reason, v.RetryAfterS, s.channelPublicURL()))
 	}
-	verb := "Opening"
-	if command == "close" {
-		verb = "Closing"
-	}
+	verb := channels.ActingWord(command)
 	out := text(to, chatID, verb+" "+gateName+"...")
 	if command == "open" {
 		out = append(out, waPending{to: to, chatID: chatID, reply: channels.PushCloseButton(apID, gateName)})

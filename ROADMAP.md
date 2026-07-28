@@ -271,8 +271,18 @@ and none has met physical hardware.
       the owning account nor that one exists
 - [ ] Bring the existing access module onto the same internal device model, so `access` is
       one kind among seven rather than a parallel stack
-- [ ] Extend the input surfaces' intent vocabulary past `open`/`close` so chat and the
-      console reach the new device classes
+- [x] Extend the input surfaces' intent vocabulary past `open`/`close` — `hold` now
+      reaches the gate from chat and the console. Adding a third verb to a fail-closed
+      type is where its safety property breaks if it is going to: every `GateVerb` method
+      was "if explicitly open, do the open thing, else the close thing", and a careless
+      third branch inverts that so an unset verb lands on the MOST permissive one. Hold is
+      reachable only on an explicit match, in all six mappings, and an unset verb still
+      resolves to close everywhere. In the text matcher hold is checked BEFORE open, which
+      is a correctness requirement rather than a preference: every natural phrasing ("hold
+      the gate open", "keep it open") contains the word "open"
+- [ ] Extend it further, to the other device classes. Chat still reaches only the access
+      module; the engine's verbs (`on`/`off`/`set`/`start`…) are recognised and honestly
+      refused (`channels/unsupported.go`) rather than driven
 
 ---
 

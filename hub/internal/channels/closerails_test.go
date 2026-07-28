@@ -220,7 +220,7 @@ func TestEverySlackActionIDIsAcceptedBack(t *testing.T) {
 func TestParseSlackActionFailsClosed(t *testing.T) {
 	for _, id := range []string{
 		"", "open_gate", "open_gate:", ":ap1", "openGate:ap1", "open_gates:ap1",
-		"hold_gate:ap1", "repair:ap1",
+		"repair:ap1", "lockdown:ap1",
 		// The other rails' scheme. Each rail's ids are its own; crossing them is
 		// how an id nobody minted for this handler gets accepted by it.
 		"open_ap:ap1", "close_ap:ap1", "select_loc:l1", "select_loc_close:l1",
@@ -236,7 +236,15 @@ func TestParseSlackActionFailsClosed(t *testing.T) {
 			t.Errorf("ParseSlackAction(%q) refusal verb actuates %q", id, v.Command())
 		}
 	}
-	// The two real ones, both ways.
+	// hold_gate is now a real id and must round-trip like the others — it was
+	// in the refused list above until the hub gained a `hold` sender, and
+	// leaving it there would have quietly asserted that a shipped button does
+	// nothing.
+	if v, apID, ok := ParseSlackAction("hold_gate:ap1"); !ok || v != VerbHold || apID != "ap1" {
+		t.Errorf("ParseSlackAction(\"hold_gate:ap1\") = (%v, %q, %v), want (hold, ap1, true)", v, apID, ok)
+	}
+
+	// The real ones, both ways.
 	if v, apID, ok := ParseSlackAction("open_gate:ap1"); !ok || v != VerbOpen || apID != "ap1" {
 		t.Errorf(`ParseSlackAction("open_gate:ap1") = (%v,%q,%v)`, v, apID, ok)
 	}

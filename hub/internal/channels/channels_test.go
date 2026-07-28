@@ -231,9 +231,14 @@ func TestSelectionCommandVerbIsAllowlisted(t *testing.T) {
 		}
 	}
 	// Whatever the allowlist yields must stay inside what the choke point
-	// accepts (store/openpath.go: open | close, nothing else).
+	// accepts (store/openpath.go: open | close | hold, nothing else). This is
+	// the property, not the specific words: a rail must never mint a
+	// selection whose verb the open path would reject, because that reads as
+	// a button which does nothing and cannot be told apart from one that
+	// failed.
+	accepted := map[string]bool{"open": true, "close": true, "hold": true}
 	for cmd := range selectionCommands {
-		if verb, ok := SelectionCommandVerb(cmd); ok && verb != "open" && verb != "close" {
+		if verb, ok := SelectionCommandVerb(cmd); ok && !accepted[verb] {
 			t.Errorf("%q yields verb %q, which store.LogAccess rejects", cmd, verb)
 		}
 	}

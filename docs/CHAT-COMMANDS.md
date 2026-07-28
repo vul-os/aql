@@ -358,8 +358,9 @@ verb is a fail-open, and the default happens to be the T3 one.
 > **FIXED.** `ParseSelection` now returns `ok=false` for an id with no prefix,
 > for an empty argument, and for any command outside the `selectionCommands`
 > table. The verb comes from `SelectionCommandVerb`, never from the id's text,
-> and `store/openpath.go` still independently rejects anything outside
-> open/close — this is a layer above that boundary, not a replacement for it.
+> and `store/openpath.go` still independently rejects anything outside its own
+> closed vocabulary (`open` / `close` / `hold`) — this is a layer above that
+> boundary, not a replacement for it.
 
 ### 2.3 Proposed resolution: narrow, score, then ask
 
@@ -893,8 +894,10 @@ if args.Command != "open" && args.Command != "close" {
 ```
 
 This is what makes it structurally impossible for any channel — today or after a
-future bug — to actuate anything but open/close. It widens to an **explicit
-allowlist derived from the tier registry**. It must never widen to "any non-empty
+future bug — to actuate anything outside the open path's own closed vocabulary
+(`open` / `close` / `hold`; a hold is refused wherever an open is, via
+`store.LogAccess`'s `opensTheWay`). It widens to an **explicit allowlist derived
+from the tier registry**. It must never widen to "any non-empty
 string". Everything else in this migration is refactoring; this line is the
 security boundary.
 

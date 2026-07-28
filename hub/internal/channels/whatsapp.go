@@ -454,6 +454,11 @@ const (
 	SelCloseAP        = "close_ap"
 	SelSelectLoc      = "select_loc"
 	SelSelectLocClose = "select_loc_close"
+	// Hold ids are NEW, so no button already sitting in somebody's chat
+	// history can resolve to one. The existing four keep their exact wire
+	// values for the same reason.
+	SelHoldAP        = "hold_ap"
+	SelSelectLocHold = "select_loc_hold"
 )
 
 // selectionCommands is the allowlist ParseSelection validates against.
@@ -462,6 +467,8 @@ var selectionCommands = map[string]bool{
 	SelCloseAP:        true,
 	SelSelectLoc:      true,
 	SelSelectLocClose: true,
+	SelHoldAP:         true,
+	SelSelectLocHold:  true,
 }
 
 // ParseSelection splits an interactive reply id "cmd:arg" (backend split(':')).
@@ -495,6 +502,8 @@ func SelectionCommandVerb(cmd string) (verb string, ok bool) {
 		return "open", true
 	case SelCloseAP:
 		return "close", true
+	case SelHoldAP:
+		return "hold", true
 	default:
 		return "", false
 	}

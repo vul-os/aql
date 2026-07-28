@@ -219,10 +219,7 @@ func (s *Server) tgAccessCommand(ctx contextT, chatNum int64, chatID, profileID,
 	if gateName == "" {
 		gateName = "the gate"
 	}
-	word := "Opening"
-	if command == "close" {
-		word = "Closing"
-	}
+	word := channels.ActingWord(command)
 	s.tgSendText(ctx, chatNum, chatID, word+" "+gateName+"...")
 }
 

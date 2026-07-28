@@ -138,10 +138,7 @@ func (s *Server) dmtapAccessCommand(ctx contextT, chatID, groupID, profileID, ap
 		s.dmtapReply(ctx, chatID, groupID, channels.DenialMessage(v.Reason, v.RetryAfterS, s.channelPublicURL()))
 		return
 	}
-	verb := "Opening"
-	if command == "close" {
-		verb = "Closing"
-	}
+	verb := channels.ActingWord(command)
 	s.dmtapReply(ctx, chatID, groupID, verb+" "+gateName+"...")
 }
 

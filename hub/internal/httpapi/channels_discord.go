@@ -242,10 +242,7 @@ func (s *Server) discordAccessCommand(ctx contextT, send channels.DiscordSender,
 	if gateName == "" {
 		gateName = "the gate"
 	}
-	word := "Opening"
-	if command == "close" {
-		word = "Closing"
-	}
+	word := channels.ActingWord(command)
 	s.discordText(ctx, send, chatID, channelID, word+" "+gateName+"...")
 }
 

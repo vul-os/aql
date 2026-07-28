@@ -86,20 +86,23 @@ type SlackAction struct {
 const (
 	SlackActOpenGate  = "open_gate"
 	SlackActCloseGate = "close_gate"
+	SlackActHoldGate  = "hold_gate"
 )
 
 // SlackActionVerb maps a Slack action command to the verb it carries. The verb
 // comes from this table, never from the id's text: ok is false for anything
-// outside the two, including the open_ap:/close_ap: ids the OTHER rails mint —
+// outside the set, including the open_ap:/close_ap: ids the OTHER rails mint —
 // an id from a different rail's scheme is an id this handler did not write.
-// store/openpath.go still independently rejects any command outside
-// open/close; this sits above that boundary, it does not replace it.
+// store/openpath.go still independently rejects any command outside its own
+// closed vocabulary; this sits above that boundary, it does not replace it.
 func SlackActionVerb(cmd string) (GateVerb, bool) {
 	switch cmd {
 	case SlackActOpenGate:
 		return VerbOpen, true
 	case SlackActCloseGate:
 		return VerbClose, true
+	case SlackActHoldGate:
+		return VerbHold, true
 	}
 	return verbUnset, false
 }

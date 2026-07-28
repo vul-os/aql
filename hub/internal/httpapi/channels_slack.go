@@ -223,10 +223,10 @@ func (s *Server) processSlackInteraction(ctx contextT, inter *channels.SlackInte
 		s.slackReply(ctx, chatID, channelID, channels.DenialMessage(v.Reason, v.RetryAfterS, s.channelPublicURL()), nil)
 		return
 	}
-	word := "Opening"
-	if verb != channels.VerbOpen {
-		word = "Closing"
-	}
+	// From the verb's own command string, not a second guess at it: this
+	// branch previously read "anything that is not open is a close", which
+	// answered a hold with "Closing".
+	word := channels.ActingWord(verb.Command())
 	s.slackReply(ctx, chatID, channelID, "✅ "+word+" gate...", nil)
 }
 
