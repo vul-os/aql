@@ -211,6 +211,27 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       discards it is perfectly "reachable". That was the controller-events defect, and
       nothing automated would have caught it.
 
+## the class, fifth instance — on the controller this time
+- [x] events.Queue.Compact: written, correct, with its own passing test, and called by
+      NOTHING. The log is append-only, so a delivered entry leaves `entries` but its line
+      stays on disk until the file is rewritten — which never happened. A controller that
+      had delivered a million events still had a million lines, on the device in this
+      system chosen for costing the least. Same shape as the hub's PruneSamples exactly.
+- NOTE: the existing TestCompact proved the FUNCTION worked and asserted entry count
+      after reopen — an assertion that passes unchanged even if the file never shrinks a
+      byte. The new tests assert bytes, and one of them lives in package transport
+      specifically to prove the CALL SITE exists, because that is the half that was
+      missing and a function test cannot see it.
+- [x] Two triggers: a one-off reclaim at Open (a controller power-cycled often would
+      otherwise accumulate a run's worth of history per boot) and a threshold after
+      drains. Open's failure is deliberately non-fatal — refusing to start because old
+      lines could not be reclaimed would turn a full disk into a gate that cannot open.
+- [ ] The controller module has NO reachability guard of its own. An ad-hoc scan lists
+      ~20 candidates, but most are false positives (build-tagged gpio/ble files, same-file
+      callers like grants.InAnyWindow which IS called at grants.go:229). Making it a real
+      guard needs the hub's treatment: transitive reachability, build-tag awareness, and
+      an allowlist with reasons. That is the next piece of this.
+
 ## spec-derived checks
 The technique that found the 2^53 rounding: derive expected behaviour from proto/*.md
 and check the code against it, rather than checking the code against itself. The vectors

@@ -207,3 +207,173 @@ func TestCompact(t *testing.T) {
 		t.Fatalf("after compact+reopen: %d", n)
 	}
 }
+
+// The queue's log is append-only, so a delivered entry leaves `entries` but
+// its line stays on disk until the file is rewritten. Compact did that and
+// nothing called it — the same "written, correct, never invoked" shape as the
+// hub's PruneSamples, on the device with the least storage in the system.
+//
+// TestCompact above proves the function works. These prove it RUNS, and that
+// the file actually gets smaller — the existing assertion (entry count after
+// reopen) passes unchanged even if the log never shrinks a byte.
+
+func logSize(t *testing.T, dir string) int64 {
+	t.Helper()
+	var total int64
+	for _, name := range []string{"events.jsonl", "grants.jsonl"} {
+		fi, err := os.Stat(filepath.Join(dir, "queue", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		total += fi.Size()
+	}
+	return total
+}
+
+func TestCompactionActuallyShrinksTheLog(t *testing.T) {
+	dir := t.TempDir()
+	q := mustOpen(t, dir)
+	defer q.Close()
+
+	for i := 0; i < 200; i++ {
+		if err := q.Enqueue("opened", []byte(fmt.Sprintf(`{"event_id":"s%d"}`, i))); err != nil {
+			t.Fatal(err)
+		}
+	}
+	grown := logSize(t, dir)
+
+	for _, p := range q.Drain(200) {
+		if err := q.Ack(p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Acking alone must not shrink anything — the point of the append-only log
+	// is that delivery is a cursor move, not a rewrite.
+	if after := logSize(t, dir); after != grown {
+		t.Fatalf("acking rewrote the log on its own: %d -> %d", grown, after)
+	}
+
+	if err := q.Compact(); err != nil {
+		t.Fatal(err)
+	}
+	if after := logSize(t, dir); after >= grown {
+		t.Fatalf("compaction did not shrink the log: %d -> %d", grown, after)
+	}
+}
+
+// The threshold exists so a controller draining a handful of events a minute
+// is not rewriting two files a minute. Below it, nothing happens.
+func TestCompactIfNeededIsQuietBelowTheThreshold(t *testing.T) {
+	dir := t.TempDir()
+	q := mustOpen(t, dir)
+	defer q.Close()
+
+	for i := 0; i < 5; i++ {
+		if err := q.Enqueue("opened", []byte(fmt.Sprintf(`{"event_id":"q%d"}`, i))); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, p := range q.Drain(5) {
+		if err := q.Ack(p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	before := logSize(t, dir)
+	if err := q.CompactIfNeeded(); err != nil {
+		t.Fatal(err)
+	}
+	if after := logSize(t, dir); after != before {
+		t.Fatalf("compacted after 5 acks with a threshold of %d: %d -> %d",
+			events.CompactThreshold, before, after)
+	}
+}
+
+func TestCompactIfNeededFiresOnceEnoughIsAcked(t *testing.T) {
+	dir := t.TempDir()
+	q := mustOpen(t, dir)
+	defer q.Close()
+
+	n := events.CompactThreshold + 10
+	for i := 0; i < n; i++ {
+		if err := q.Enqueue("opened", []byte(fmt.Sprintf(`{"event_id":"f%d"}`, i))); err != nil {
+			t.Fatal(err)
+		}
+	}
+	before := logSize(t, dir)
+	for _, p := range q.Drain(n) {
+		if err := q.Ack(p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := q.CompactIfNeeded(); err != nil {
+		t.Fatal(err)
+	}
+	if after := logSize(t, dir); after >= before {
+		t.Fatalf("threshold passed and nothing was reclaimed: %d -> %d", before, after)
+	}
+}
+
+// A controller that is power cycled often would otherwise accumulate one run's
+// worth of delivered history per boot, forever. Opening reclaims it once.
+func TestOpeningReclaimsThePreviousRunsDeliveredEntries(t *testing.T) {
+	dir := t.TempDir()
+	q := mustOpen(t, dir)
+	for i := 0; i < 50; i++ {
+		if err := q.Enqueue("opened", []byte(fmt.Sprintf(`{"event_id":"r%d"}`, i))); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, p := range q.Drain(50) {
+		if err := q.Ack(p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	grown := logSize(t, dir)
+	q.Close()
+
+	// No explicit Compact call anywhere in this test.
+	q2 := mustOpen(t, dir)
+	defer q2.Close()
+	if after := logSize(t, dir); after >= grown {
+		t.Fatalf("reopening did not reclaim the previous run: %d -> %d", grown, after)
+	}
+	if n, g := q2.Len(); n != 0 || g != 0 {
+		t.Fatalf("reclaim lost or invented undelivered entries: normal=%d grant=%d", n, g)
+	}
+}
+
+// The reclaim must never touch what has NOT been delivered — that is the whole
+// contract of the queue, and grant redemptions are the entries it exists for.
+func TestReclaimNeverDropsUndeliveredEntries(t *testing.T) {
+	dir := t.TempDir()
+	q := mustOpen(t, dir)
+
+	for i := 0; i < 20; i++ {
+		if err := q.Enqueue("opened", []byte(fmt.Sprintf(`{"event_id":"u%d"}`, i))); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := q.EnqueueGrantRedeemed([]byte(`{"event_id":"g-keep"}`)); err != nil {
+		t.Fatal(err)
+	}
+	// Deliver only some of the normal ones; nothing of the grant partition.
+	for _, p := range q.Drain(5) {
+		if p.Grant {
+			continue
+		}
+		if err := q.Ack(p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	q.Close()
+
+	q2 := mustOpen(t, dir)
+	defer q2.Close()
+	normal, grant := q2.Len()
+	if grant != 1 {
+		t.Fatalf("the undelivered grant redemption did not survive reclaim: %d", grant)
+	}
+	if normal == 0 {
+		t.Fatal("reclaim dropped undelivered normal events")
+	}
+}

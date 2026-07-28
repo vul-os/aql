@@ -198,6 +198,12 @@ func (r *Runner) drainEvents(conn *WSConn, log *slog.Logger) {
 			return
 		}
 	}
+	// Housekeeping, not delivery: the queue decides whether enough has been
+	// acked to be worth rewriting the logs. A failure here costs disk, never
+	// an event — the entries are already delivered and their cursors saved.
+	if err := r.Queue.CompactIfNeeded(); err != nil {
+		log.Warn("event log compaction failed", "err", err)
+	}
 }
 
 // longPollCycle is the HTTPS fallback when the WebSocket cannot be

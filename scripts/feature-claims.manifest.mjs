@@ -433,6 +433,22 @@ export const FEATURES = [
     evidence: [{ file: 'hub/internal/store/admin.go', pattern: 'admin_audit_log' }],
   },
   {
+    // The controller's own version of the retention gap. Queue.Compact was
+    // written, tested, and called by nothing, so the durable event log grew
+    // forever on the device with the least storage in the system.
+    id: 'controller-queue-compaction',
+    label: 'The controller reclaims its durable event log — at startup, and once enough entries are acked',
+    docStatus: 'shipped',
+    docRefs: ['proto/events.md § Delivery'],
+    evidence: [
+      { file: 'controller/internal/events/queue.go', pattern: 'func \\(q \\*Queue\\) CompactIfNeeded' },
+      // Wired, not merely offered: the drain path calls it, and Open reclaims
+      // the previous run.
+      { file: 'controller/internal/transport/runner.go', pattern: 'CompactIfNeeded' },
+      { file: 'controller/internal/events/queue.go', pattern: 'q\\.compactLocked\\(\\)' },
+    ],
+  },
+  {
     // Energy retention. PruneSamples was written, carefully guarded and never
     // called by anything — the fourth "built and unreachable" found in this
     // codebase — so a hub polling a meter every 60s grew its samples table

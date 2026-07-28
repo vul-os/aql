@@ -72,6 +72,13 @@ type Queue struct {
 	normal       *partition
 	grants       *partition
 	overflowPath string // last-resort grant_redeemed overflow log; see overflowFileName
+
+	// ackedSinceCompact drives CompactIfNeeded. The log is append-only, so a
+	// delivered entry leaves `entries` but its line stays on disk forever
+	// until the file is rewritten. Nothing rewrote it: Compact existed and had
+	// no caller, so a controller that had delivered a million events still had
+	// a million lines on a device chosen for costing very little.
+	ackedSinceCompact int
 	// syncEveryWrite fsyncs after every append (default true): each event
 	// — especially grant_redeemed — must survive kill -9 / power loss
 	// (load-shedding reality). Bulk perf tests may disable it via
@@ -93,7 +100,25 @@ func Open(dir string) (*Queue, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Queue{normal: n, grants: g, overflowPath: filepath.Join(qdir, overflowFileName), syncEveryWrite: true}, nil
+	q := &Queue{normal: n, grants: g, overflowPath: filepath.Join(qdir, overflowFileName), syncEveryWrite: true}
+
+	// Reclaim what the previous run delivered, once, at startup.
+	//
+	// openPartition has just read the whole log to rebuild `entries`, so every
+	// line for an already-delivered event was paid for and then discarded. The
+	// rewrite costs one pass over what is left — which is the UNDELIVERED set,
+	// normally near-empty — and it bounds both the file and the next boot's
+	// replay. Doing it here rather than lazily means a controller that is power
+	// cycled often still converges instead of accumulating a run's worth of
+	// history each time.
+	//
+	// A failure is not fatal: compaction is housekeeping, and refusing to start
+	// the agent because old lines could not be reclaimed would turn a full disk
+	// into a gate that cannot open.
+	if err := q.compactLocked(); err != nil {
+		return q, nil
+	}
+	return q, nil
 }
 
 // SetSyncForTest toggles fsync-per-append. TEST-ONLY: production keeps it on
@@ -294,6 +319,7 @@ func (q *Queue) Ack(p Pending) error {
 	if p.Seq > part.deliv {
 		part.deliv = p.Seq
 	}
+	q.ackedSinceCompact++
 	return part.saveCursor()
 }
 
@@ -312,16 +338,41 @@ func (q *Queue) Len() (normal, grant int) {
 	return len(q.normal.entries), len(q.grants.entries)
 }
 
-// Compact rewrites the logs keeping only undelivered entries (called
-// opportunistically after big drains).
+// CompactThreshold is how many acked entries accumulate before the logs are
+// rewritten. Compaction costs one pass over the UNDELIVERED entries, so it is
+// cheap; the threshold exists so a controller draining a few events a minute
+// is not rewriting two files a minute for no reason.
+const CompactThreshold = 128
+
+// Compact rewrites the logs keeping only undelivered entries.
 func (q *Queue) Compact() error {
 	q.mu.Lock()
 	defer q.mu.Unlock()
+	return q.compactLocked()
+}
+
+// CompactIfNeeded rewrites the logs once enough entries have been acked since
+// the last rewrite, and is a cheap no-op otherwise — so a caller can invoke it
+// after every drain without thinking about it. That is the point: the reason
+// Compact was never called is that every call site would have had to decide
+// when compaction was worth it, and none of them wanted to own that decision.
+func (q *Queue) CompactIfNeeded() error {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if q.ackedSinceCompact < CompactThreshold {
+		return nil
+	}
+	return q.compactLocked()
+}
+
+// compactLocked assumes q.mu is held.
+func (q *Queue) compactLocked() error {
 	for _, part := range []*partition{q.normal, q.grants} {
 		if err := part.compact(); err != nil {
 			return err
 		}
 	}
+	q.ackedSinceCompact = 0
 	return nil
 }
 
