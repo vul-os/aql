@@ -356,6 +356,30 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       consumer would be the sixth "built and unreachable" in a repo that has spent this
       long removing five.
 
+## structural claims, held
+- The technique that worked on automations generalises: a package doc saying "structurally
+      cannot" / "the ONLY ones" / "by construction" is making a checkable claim, and those
+      rot silently — the code still compiles, the tests still pass, the sentence is just
+      false. Swept for them across both modules.
+- [x] internal/automations: no internal/store, no HTTP surface, narrow DB and Auditor
+      seams. All true, none guarded.
+- [x] httpapi/server.go's API-TOKEN SURFACE. It claims exhaustively that four routes are
+      the only ones a token can reach. TestAPITokenCannotReachUnscopedRoutes probes a
+      dozen routes with a live token and is the right test of the MECHANISM — but it names
+      its probes by hand, so a route that did not exist when it was written is invisible to
+      it. The surface could grow with every existing test green. Now the route table itself
+      is read and the set compared.
+- NOTE: the second guard is the one worth having. A read scope guarding a mutating route —
+      `tokenScoped(store.ScopeAccessRead, fence, s.handleSomethingCreate)` — reads
+      perfectly naturally in review, and every existing token test still passes, because
+      they check that the scope is ENFORCED rather than what it is attached to. That is a
+      read-only token that can actuate.
+- [ ] Remaining unguarded structural claims found in the sweep, in rough order of stakes:
+      store/authrecovery.go ("a username-verification token must be structurally unable to
+      reset a password"), httpapi/twofactor.go ("plaintext, by construction"),
+      devices/modbus/config.go ("structurally read-only: the registry will not route a
+      verb"). Each is a real claim; none is held by anything today.
+
 ## spec-derived checks
 The technique that found the 2^53 rounding: derive expected behaviour from proto/*.md
 and check the code against it, rather than checking the code against itself. The vectors

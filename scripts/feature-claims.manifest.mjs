@@ -449,6 +449,19 @@ export const FEATURES = [
     ],
   },
   {
+    // server.go claims EXHAUSTIVELY that four routes are the only ones an API
+    // token can reach. The existing token tests probe a hand-listed sample, so
+    // a NEW tokenScoped route would be invisible to all of them.
+    id: 'api-token-surface-pinned',
+    label: 'The set of API-token-reachable routes is pinned, and a read scope can never guard a mutation',
+    docStatus: 'shipped',
+    docRefs: ['hub/internal/httpapi/server.go — "are the ONLY ones an API token can"'],
+    evidence: [
+      { file: 'hub/internal/httpapi/tokenroutes_test.go', pattern: 'TestOnlyTheDeclaredRoutesAreReachableByAnAPIToken' },
+      { file: 'hub/internal/httpapi/tokenroutes_test.go', pattern: 'TestAReadScopeNeverGuardsAMutation' },
+    ],
+  },
+  {
     // The automations package doc's safety story is an IMPORT-BOUNDARY claim,
     // and imports rot silently: the package would still compile, its tests
     // would still pass, and the sentence would simply be false.
