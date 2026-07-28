@@ -93,6 +93,16 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 - [ ] DMTAP channel stays a scaffold with a fail-closed transport until there is a real
       wire format. Do not present it as a channel.
 
+## fuzzing
+- [x] No fuzz target existed anywhere. Four now, on the two parsers that read
+      UNAUTHENTICATED bytes: mDNS parseResponse/decodeName (any host on the LAN, one
+      UDP datagram) and the LAN grant HandleOpen/HandleProof (any host on the LAN, one
+      POST at a gate). ~5M executions by hand found nothing; 30s each in CI as a
+      tripwire. Seeds run free in the ordinary suite.
+- [ ] Parsers still unfuzzed, in rough order of exposure: controller/internal/framing
+      (BLE frames from a phone), hub/internal/devices/modbus decode (a meter), the
+      camera RTSP/RTP reader, hub/internal/keys JCS canonicalisation.
+
 ## race detector
 - [x] Never run on this repo before. Run by hand across hub, controller and e2e, plus
       the gpio and ble tagged builds: CLEAN, no data races anywhere. Now a CI job so it

@@ -106,6 +106,23 @@ jobs:
       - name: go test
         working-directory: hub
         run: go test ./...
+      # A short fuzz run on the parsers that read UNAUTHENTICATED bytes.
+      #
+      # Seed inputs already run for free in `go test ./...` above — a Fuzz
+      # target executes its corpus as an ordinary test — so this step is for
+      # finding inputs nobody has thought of yet. Thirty seconds each is not a
+      # thorough campaign; it is a tripwire that costs a minute and has years of
+      # pushes to get lucky in.
+      #
+      # Run by hand at length first: ~5 million executions across the four
+      # targets found nothing, which is why they are worth keeping green rather
+      # than a reason to skip them.
+      - name: fuzz (short)
+        working-directory: hub
+        run: |
+          set -eux
+          go test ./internal/discovery/ -run xxx -fuzz FuzzParseResponse -fuzztime 30s
+          go test ./internal/discovery/ -run xxx -fuzz FuzzDecodeName -fuzztime 30s
 
   race:
     # The race detector, which had never been run on this repository until it
@@ -230,6 +247,23 @@ jobs:
           set -eux
           go test -tags gpio ./...
           go test -tags ble ./...
+      # A short fuzz run on the parsers that read UNAUTHENTICATED bytes.
+      #
+      # Seed inputs already run for free in `go test ./...` above — a Fuzz
+      # target executes its corpus as an ordinary test — so this step is for
+      # finding inputs nobody has thought of yet. Thirty seconds each is not a
+      # thorough campaign; it is a tripwire that costs a minute and has years of
+      # pushes to get lucky in.
+      #
+      # Run by hand at length first: ~5 million executions across the four
+      # targets found nothing, which is why they are worth keeping green rather
+      # than a reason to skip them.
+      - name: fuzz (short)
+        working-directory: controller
+        run: |
+          set -eux
+          go test ./internal/grants/ -run xxx -fuzz FuzzHandleOpen -fuzztime 30s
+          go test ./internal/grants/ -run xxx -fuzz FuzzHandleProof -fuzztime 30s
 
   e2e-browser:
     name: e2e-browser (real Chromium against a real hub binary)
