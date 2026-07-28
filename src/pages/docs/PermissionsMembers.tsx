@@ -79,21 +79,46 @@ export default function PermissionsMembers() {
       </DocSection>
 
       <DocSection heading="Revoking access">
-        <div className="rounded-2xl border border-gold/40 bg-gold/[0.06] px-5 py-4 sm:px-6 sm:py-5">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-ink/55 font-mono">
-            Status: not implemented
-          </p>
-          <p className="mt-2 text-[15px] text-ink/80 leading-relaxed">
-            There is currently no route to remove a member or revoke their access once
-            they&rsquo;ve accepted an invite — not in the hub API, not in the
-            reference backend, not in the app. (Temporary access <em>grants</em> are
-            different and do revoke instantly — <code>POST /v1/grants/{'{id}'}/revoke</code> —
-            this gap is specifically about standing memberships.) Until member
-            offboarding ships, pulling a phone number&rsquo;s access means asking your
-            instance admin to edit the <code>account_members</code> row directly on the
-            hub&rsquo;s own database.
-          </p>
-        </div>
+        <p>
+          <code>DELETE /v1/accounts/{'{id}'}/members/{'{user_id}'}</code>, or the
+          <em> Remove</em> action on the Members page. One request ends the membership;
+          nothing else needs revoking separately.
+        </p>
+        <p>
+          That is worth being precise about, because a membership is not the only thing
+          the person holds. The hub re-reads it on every request, so all three of these
+          stop at the same moment:
+        </p>
+        <ul className="list-disc pl-6 space-y-2">
+          <li>the dashboard — every account-scoped route resolves the caller&rsquo;s role first;</li>
+          <li>
+            any <Link to="/docs/api-tokens" className="underline underline-offset-4 decoration-terracotta">API tokens</Link> they
+            created — these outlive a session by design, and are re-checked against the
+            membership on each call rather than swept;
+          </li>
+          <li>
+            their phone — the chat lookups that decide which gates a number may open
+            require an active membership, so texting the hub stops working too.
+          </li>
+        </ul>
+        <p>
+          The membership row is kept, marked revoked, rather than deleted: the roster still
+          shows that they were here, and a later invite reactivates the same row. Any
+          location-level rows are deleted outright, since those have no revoked state to
+          sit in.
+        </p>
+        <p>
+          Two refusals are deliberate. An account&rsquo;s last active owner cannot be
+          removed (<code>409 last_owner</code>) — there is no route in the product that
+          could give the account an owner back. And only an owner may remove an owner
+          (<code>403 owner_removal_requires_owner</code>); admins hold every other power,
+          so without that rule the two roles would be the same after one request.
+        </p>
+        <p className="text-ink/70">
+          Temporary access <em>grants</em> are a separate mechanism with their own
+          revocation — <code>POST /v1/grants/{'{id}'}/revoke</code>. Removing a member does
+          not retroactively revoke grants they issued to visitors; revoke those directly.
+        </p>
       </DocSection>
     </>
   );

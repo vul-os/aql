@@ -303,6 +303,7 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("GET /v1/accounts/{id}", s.requireAuth(s.handleAccountGet))
 	mux.Handle("PATCH /v1/accounts/{id}", s.requireAuth(s.handleAccountPatch))
 	mux.Handle("GET /v1/accounts/{id}/members", s.requireAuth(s.handleMembersList))
+	mux.Handle("DELETE /v1/accounts/{id}/members/{user_id}", s.requireAuth(s.handleMemberRemove))
 	mux.Handle("POST /v1/accounts/{id}/invites", s.requireAuth(s.handleInviteCreate))
 
 	// scoped API tokens (see tokens.go). Session-only routes: a token can

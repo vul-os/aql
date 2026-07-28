@@ -171,9 +171,64 @@ func (s *Server) handleMembersList(w http.ResponseWriter, r *http.Request) {
 		list = append(list, map[string]any{
 			"user_id": m.UserID, "role": m.Role, "status": m.Status,
 			"username": m.Username, "display_name": dn,
+			// Removing this member does not revoke these; see store.Member.
+			"active_grants_issued": m.ActiveGrantsIssued,
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"members": list})
+}
+
+// DELETE /v1/accounts/{id}/members/{user_id} — revoke a membership.
+//
+// Until this existed, offboarding meant editing account_members by hand on the
+// hub's database. For an access-control product that is not an inconvenience:
+// the window between "they should not have access" and "someone with SQLite on
+// the box gets to it" is the window in which their phone still opens the gate.
+//
+// The revocation itself is one status flip; see store.RemoveAccountMember for
+// why that reaches the console, API tokens and chat together.
+func (s *Server) handleMemberRemove(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	c := claimsFrom(r)
+
+	// memberRole rather than requireAccountAdmin, because the actor's own role
+	// is needed below: only an owner may remove an owner.
+	actorRole, ok := s.memberRole(w, r, id)
+	if !ok {
+		return
+	}
+	if !isAdminRole(actorRole) {
+		writeErr(w, http.StatusForbidden, "not_account_admin")
+		return
+	}
+
+	target := r.PathValue("user_id")
+	// Self-removal is allowed — an admin walking away from an account should
+	// not need someone else's help — but only through the same rules. An owner
+	// removing themselves still hits ErrLastOwner if they are the last one,
+	// which is the case that would otherwise orphan the account.
+	role, err := s.store.RemoveAccountMember(r.Context(), id, target, actorRole)
+	switch {
+	case errors.Is(err, store.ErrNotFound):
+		writeErr(w, http.StatusNotFound, "member_not_found")
+		return
+	case errors.Is(err, store.ErrOwnerRemovalRequiresOwner):
+		writeErr(w, http.StatusForbidden, "owner_removal_requires_owner")
+		return
+	case errors.Is(err, store.ErrLastOwner):
+		writeErr(w, http.StatusConflict, "last_owner")
+		return
+	case err != nil:
+		writeErr(w, http.StatusInternalServerError, "internal")
+		return
+	}
+
+	if err := s.store.WriteAdminAudit(r.Context(), c.Sub, "member_remove", "account", id, true,
+		map[string]any{"account_id": id, "user_id": target, "role": role,
+			"self": target == c.Sub}); err != nil {
+		s.log.Error("member remove audit write failed", "account_id", id, "user_id", target, "err", err)
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 type inviteReq struct {

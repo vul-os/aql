@@ -23,10 +23,22 @@ function initials(name: string | null, username: string): string {
 }
 
 export default function MembersPage() {
-  const { currentAccount } = useAuth();
+  const { currentAccount, user } = useAuth();
   const [members, setMembers] = useState<AccountMemberRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
+  const [removing, setRemoving] = useState<AccountMemberRow | null>(null);
+
+  // What the hub will accept, mirrored here so the UI does not offer an action
+  // that comes back 403. The hub decides regardless — this only keeps the
+  // button from appearing where it cannot work.
+  const myRole = currentAccount?.role ?? '';
+  const canRemove = (m: AccountMemberRow) => {
+    if (m.status !== 'active') return false;
+    if (myRole !== 'owner' && myRole !== 'admin') return false;
+    if (m.role === 'owner' && myRole !== 'owner') return false;
+    return true;
+  };
 
   const refresh = useCallback(async () => {
     if (!currentAccount) return;
@@ -103,6 +115,15 @@ export default function MembersPage() {
                       {m.role}
                     </span>
                     <span className="text-[11px] text-ink/60 capitalize">{m.status}</span>
+                    {canRemove(m) && (
+                      <button
+                        type="button"
+                        onClick={() => setRemoving(m)}
+                        className="ml-auto text-[11px] text-terracotta-deep underline underline-offset-2"
+                      >
+                        {m.user_id === user?.id ? 'Leave' : 'Remove'}
+                      </button>
+                    )}
                   </div>
                 </div>
               </li>
@@ -113,9 +134,9 @@ export default function MembersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-ink/10">
-                  {['Name', 'Username', 'Role', 'Status'].map((c) => (
+                  {['Name', 'Username', 'Role', 'Status', ''].map((c, i) => (
                     <th
-                      key={c}
+                      key={c || `actions-${i}`}
                       className="text-left px-6 py-4 text-[11px] uppercase tracking-[0.18em] text-ink/55 font-normal"
                     >
                       {c}
@@ -146,12 +167,36 @@ export default function MembersPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-ink/65 capitalize">{m.status}</td>
+                    <td className="px-6 py-4 text-right">
+                      {canRemove(m) && (
+                        <button
+                          type="button"
+                          onClick={() => setRemoving(m)}
+                          className="text-xs text-terracotta-deep hover:underline underline-offset-2"
+                        >
+                          {m.user_id === user?.id ? 'Leave account' : 'Remove'}
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </Card>
+      )}
+
+      {removing && (
+        <RemoveMemberModal
+          accountId={currentAccount.id}
+          member={removing}
+          isSelf={removing.user_id === user?.id}
+          onClose={() => setRemoving(null)}
+          onRemoved={() => {
+            setRemoving(null);
+            refresh();
+          }}
+        />
       )}
 
       {inviting && (
@@ -165,6 +210,91 @@ export default function MembersPage() {
         />
       )}
     </>
+  );
+}
+
+// Removal is the one action on this page that changes what someone can do in
+// the physical world, so the confirmation says which doors close rather than
+// asking a generic "are you sure?".
+function RemoveMemberModal({
+  accountId,
+  member,
+  isSelf,
+  onClose,
+  onRemoved,
+}: {
+  accountId: string;
+  member: AccountMemberRow;
+  isSelf: boolean;
+  onClose: () => void;
+  onRemoved: () => void;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const who = member.display_name ?? member.username;
+
+  async function onConfirm() {
+    setErrorMsg(null);
+    setSubmitting(true);
+    try {
+      await api.memberRemove(accountId, member.user_id);
+      onRemoved();
+    } catch (err) {
+      // The two refusals the hub makes on purpose deserve their own words —
+      // "last_owner" as a raw code tells an operator nothing about why the
+      // account would be stuck.
+      const code = err instanceof ApiError ? err.code : null;
+      setErrorMsg(
+        code === 'last_owner'
+          ? 'This is the account’s only owner. Removing them would leave nobody able to invite, re-role, or remove anyone — make someone else an owner first.'
+          : code === 'owner_removal_requires_owner'
+            ? 'Only an owner can remove another owner.'
+            : err instanceof Error
+              ? err.message
+              : 'Failed to remove this member.',
+      );
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose}>
+      <h2 className="font-display text-2xl mb-1">
+        {isSelf ? 'Leave this account?' : `Remove ${who}?`}
+      </h2>
+      <p className="text-sm text-ink/65 mt-3">
+        {isSelf ? 'You' : who} will lose access immediately — the dashboard, any API tokens
+        {isSelf ? ' you' : ' they'} created, and {isSelf ? 'your' : 'their'} phone’s ability to
+        open a gate over chat. Nothing needs to be revoked separately.
+      </p>
+      {member.active_grants_issued > 0 && (
+        <div className="mt-4 rounded-xl border border-gold/40 bg-gold/[0.08] px-4 py-3">
+          <p className="text-[15px] text-ink/85 leading-relaxed">
+            {isSelf ? 'You have' : `${who} has`} {member.active_grants_issued} active visitor{' '}
+            {member.active_grants_issued === 1 ? 'grant' : 'grants'} out. Those keep working —
+            a grant is matched on the visitor&rsquo;s phone and never checks who issued it.
+            Revoke them on the Grants page if they should end too.
+          </p>
+        </div>
+      )}
+      <p className="text-xs text-ink/50 mt-3">
+        The roster keeps a record that {isSelf ? 'you were' : `${who} was`} here, and an invite
+        can restore access later.
+      </p>
+      {errorMsg && <p className="text-sm text-terracotta-deep mt-4">{errorMsg}</p>}
+      <div className="flex justify-end gap-2 mt-6">
+        <button
+          type="button"
+          onClick={onClose}
+          className="h-10 px-4 rounded-full text-sm text-ink/65 hover:text-ink"
+        >
+          Cancel
+        </button>
+        <Button variant="ink" onClick={onConfirm} disabled={submitting}>
+          {submitting ? 'Removing…' : isSelf ? 'Leave account' : 'Remove member'}
+        </Button>
+      </div>
+    </Modal>
   );
 }
 

@@ -1025,6 +1025,17 @@ export const api = {
   accountMembers: (accountId: string) =>
     apiFetch<{ members: AccountMemberRow[] }>(`/accounts/${accountId}/members`),
 
+  // Revokes a membership. The hub keeps the row (status 'revoked') so the
+  // roster still shows who was here and a later invite reactivates them —
+  // but every gate reads `status = 'active'`, so their console access, their
+  // API tokens and their phone's ability to open a gate all stop at once.
+  //
+  // Errors worth handling: 409 last_owner (would leave the account with no
+  // administrator), 403 owner_removal_requires_owner (admins cannot evict
+  // owners).
+  memberRemove: (accountId: string, userId: string) =>
+    apiFetch<void>(`/accounts/${accountId}/members/${userId}`, { method: 'DELETE' }),
+
   inviteCreate: (accountId: string, body: { username: string; role?: 'owner' | 'admin' | 'member' | 'viewer'; phone_e164: string }) =>
     apiFetch<{ id: string; username_sent: boolean; whatsapp_sent: boolean }>(
       `/accounts/${accountId}/invites`,
@@ -1269,6 +1280,12 @@ export type AccountMemberRow = {
   status: string;
   username: string;
   display_name: string | null;
+  /**
+   * Live temporary grants this member handed out. Removing them does NOT
+   * revoke these — a grant is matched on the visitor's phone and never looks
+   * at who issued it — so this is what the removal confirmation warns about.
+   */
+  active_grants_issued: number;
 };
 
 export type AccountSummary = {

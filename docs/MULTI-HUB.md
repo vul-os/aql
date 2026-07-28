@@ -886,6 +886,8 @@ rather than a new mechanism.
   keys the UI on `(hubPubkey, accessPointId)`; if a restore can reissue ids, the
   display snapshot could mislabel a gate (it would not misauthorise one — the
   controller checks the signed list). Settle by reading the restore path.
-- **`ARCHITECTURE.md:117`'s "7 migrations, 22 tables"** is stale — there are 11
-  migration files (no `0008`) and 30 `CREATE TABLE` statements. Unrelated to this
-  design, but worth fixing while nearby.
+- **`ARCHITECTURE.md:121`'s "7 migrations, 22 tables"** is stale — there are 19
+  migration files (`0001`–`0020`, no `0008`) and 42 `CREATE TABLE` statements.
+  Unrelated to this design, but worth fixing while nearby. Counting them is a
+  one-liner, so prefer re-deriving over trusting this note, which has already
+  gone stale once.
