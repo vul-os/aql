@@ -42,6 +42,41 @@ import (
 // request body: not a permission, a second deliberate act. The refusal names
 // the field so an honest client can offer a confirmation dialog, and a script
 // that has not thought about it fails closed.
+// # Who may drive it — a question this file did not ask for too long
+//
+// The reasoning above is entirely about WHAT a verb does. It said nothing
+// about WHOSE device it is, and neither did the routes: all four were
+// `requireAuth`, so any signed-in user of any account on the hub could
+// enumerate every device, turn on someone else's lamp, and — with `confirm` —
+// start someone else's mower. That was demonstrated, not inferred: a second
+// account registered on the same hub, with no relationship to the first, drove
+// `mock:mower-1` at tier hazardous-motion.
+//
+// The confirm gate did not stop it and was never going to. Its own doc says
+// what it is — "not a permission, a second deliberate act" — and a stranger is
+// perfectly capable of a second deliberate act.
+//
+// # Why the fix is a hub-wide authority test rather than device scoping
+//
+// The obvious repair is to scope devices to accounts. There is nothing to
+// scope them BY. A driver discovers devices from an MQTT broker, a Modbus PLC
+// or an ONVIF probe; none of those carries a tenant, and inventing an
+// attribution at the registry would be a guess wearing the costume of a
+// permission. Giving the device model an owner is real product design (it is
+// on the roadmap), not something to bolt on beneath a security fix.
+//
+// So the gate tests the honest invariant instead: THE ENGINE IS HUB-WIDE, SO
+// AUTHORITY OVER IT MUST BE TOO. Two ways to hold that:
+//
+//   - be the instance admin, whose seat is hub-wide by definition; or
+//   - be a member of the hub's ONLY account, in which case "everyone on this
+//     hub" and "everyone in this account" are the same set of people and the
+//     question this gate exists to ask does not arise.
+//
+// The common deployment — one household, one account — is unchanged. A hub
+// serving several accounts stops handing each of them the others' devices,
+// and says so with a distinct code rather than an empty fleet, because "you
+// may not see these" and "there are none" are different answers.
 const (
 	// engineTierCeiling is the highest tier this surface will actuate at all.
 	engineTierCeiling = devices.TierHazardousMotion
@@ -50,12 +85,51 @@ const (
 	engineConfirmAbove = devices.TierPhysicalAccess
 )
 
+// requireEngineAuthority gates every engine route. See the note above for why
+// it asks about the hub rather than about the device.
+//
+// Fail-closed at every branch: an error counting accounts denies, because a
+// gate that cannot establish its precondition has not established it.
+func (s *Server) requireEngineAuthority(w http.ResponseWriter, r *http.Request) bool {
+	c := claimsFrom(r)
+	u, err := s.store.UserByID(r.Context(), c.Sub)
+	if err != nil || u.Status != "active" {
+		writeErr(w, http.StatusForbidden, "not_engine_authority")
+		return false
+	}
+	if u.IsPlatformAdmin {
+		return true
+	}
+
+	n, err := s.store.AccountCount(r.Context())
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "internal")
+		return false
+	}
+	if n == 1 {
+		member, err := s.store.IsMemberOfAnyAccount(r.Context(), c.Sub)
+		if err != nil {
+			writeErr(w, http.StatusInternalServerError, "internal")
+			return false
+		}
+		if member {
+			return true
+		}
+	}
+
+	writeErr(w, http.StatusForbidden, "not_engine_authority")
+	return false
+}
+
 // registry returns the device engine, or nil when no driver was configured.
 // A hub with no device config is the default and is not an error — it simply
 // has no devices to report, which is different from failing.
 func (s *Server) registry() *devices.Registry { return s.devices }
 
 func (s *Server) handleEngineDevices(w http.ResponseWriter, r *http.Request) {
+	if !s.requireEngineAuthority(w, r) {
+		return
+	}
 	reg := s.registry()
 	if reg == nil {
 		// Not 404 and not an error: an unconfigured engine honestly has an
@@ -93,6 +167,9 @@ func engineDeviceJSON(d devices.IndexedDevice) map[string]any {
 }
 
 func (s *Server) handleEngineReadings(w http.ResponseWriter, r *http.Request) {
+	if !s.requireEngineAuthority(w, r) {
+		return
+	}
 	reg := s.registry()
 	if reg == nil {
 		writeErr(w, http.StatusNotFound, "no_device_engine")
@@ -126,6 +203,9 @@ type engineExecuteReq struct {
 }
 
 func (s *Server) handleEngineExecute(w http.ResponseWriter, r *http.Request) {
+	if !s.requireEngineAuthority(w, r) {
+		return
+	}
 	reg := s.registry()
 	if reg == nil {
 		writeErr(w, http.StatusNotFound, "no_device_engine")
@@ -165,6 +245,9 @@ func (s *Server) handleEngineExecute(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleEngineHealth(w http.ResponseWriter, r *http.Request) {
+	if !s.requireEngineAuthority(w, r) {
+		return
+	}
 	reg := s.registry()
 	if reg == nil {
 		writeJSON(w, http.StatusOK, map[string]any{"engine": false, "drivers": map[string]any{}})

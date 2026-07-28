@@ -272,14 +272,38 @@ Aql actuates the physical world, so some commands need care a dashboard would no
 
 Stated plainly so nobody mistakes design intent for a control:
 
-- **No Matter driver, and no native Zigbee or Z-Wave radio.** Three drivers do ship —
-  HTTP/webhook, ONVIF camera, MQTT — and Zigbee/Z-Wave hardware is reachable through a
-  bridge (`zigbee2mqtt`, `zwave-js-ui`) that republishes onto MQTT. Those are a real
-  onboarding surface and are defended: every driver validates its whole config at
-  construction, capabilities are a closed catalogue, and a verb above the engine's tier
-  ceiling is refused rather than attempted. A Modbus `Driver` does not exist (the
-  frame/decode layer does), and there is no device discovery — every device is configured
-  by hand, which is a smaller attack surface than pairing, deliberately.
+- **No Matter driver, and no native Zigbee or Z-Wave radio.** Four drivers ship —
+  HTTP/webhook, ONVIF camera, MQTT and Modbus TCP — and Zigbee/Z-Wave hardware is
+  reachable through a bridge (`zigbee2mqtt`, `zwave-js-ui`) that republishes onto MQTT.
+  Those are a real onboarding surface and are defended: every driver validates its whole
+  config at construction, capabilities are a closed catalogue, and a verb above the
+  engine's tier ceiling is refused rather than attempted. Modbus is read-only
+  *structurally* — its config accepts only capabilities whose entire verb set is
+  `TierRead`, verified against the catalogue rather than an allowlist — so the registry
+  cannot route an actuating verb to one. Discovery exists (MQTT bridge scan, ONVIF
+  WS-Discovery, mDNS for controllers) but **registers nothing**: it proposes candidates
+  with their evidence and a human decides, because the capability a device is given is
+  what decides which verbs the engine will route to it.
+
+- **The device engine has no tenancy.** A driver discovers devices from a broker, a PLC
+  or an ONVIF probe, and none of those carries an account, so a device cannot say whose
+  it is. This was worse than it sounds until recently: all four engine routes were
+  authenticated only, so on a hub serving more than one account any signed-in member of
+  any account could enumerate every device on the hub, actuate a reversible one, and —
+  with the `confirm` flag, which is a deliberateness check and never was a permission —
+  start a mower belonging to someone else. That was demonstrated against the mock driver,
+  not merely inferred from the routes.
+
+  What now stands in for tenancy is a hub-wide authority test
+  (`hub/internal/httpapi/engine.go`): the engine is hub-wide, so a caller must be the
+  instance admin, or a member of the hub's **only** account — the case where "everyone on
+  this hub" and "everyone in this account" are the same people and the question does not
+  arise. The single-household deployment is unaffected. A multi-account hub now refuses
+  with a distinct code rather than an empty fleet, because "you may not see these" and
+  "there are none" are different answers.
+
+  This is a gate, not a model. Real per-device ownership is on the roadmap and is product
+  design, not something to infer inside an authorization check.
 - **No HTTP surface for automations or energy.** Both runtimes exist, are tested, and run
   as background workers when configured (`internal/automations/`, `internal/energy/`).
   Neither is reachable over the API: there is no endpoint to create a rule or read a

@@ -118,7 +118,7 @@ ports.
 aql/
 ├── hub/          # 🟢 the hub: Go, the whole product server (auth, open path, device hub, admin)
 │                 #    …plus channels/, the transitional chat adapters moving to Ephor (§3a)
-│   └── migrations/   # SQLite schema, clean folded baseline (7 migrations, 22 tables)
+│   └── migrations/   # SQLite schema, clean folded baseline (19 migrations, 42 tables)
 ├── controller/   # 🟢 reference gate device agent (own Go module); GPIO/BLE need real hardware
 ├── e2e/          # 🟢 cross-module suite, real hub + controller binaries over the wire
 ├── proto/        # 🟢 pairing · commands · grants · events contracts (+ vectors/ fixtures)

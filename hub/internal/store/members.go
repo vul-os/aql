@@ -196,3 +196,30 @@ func (s *Store) RenameAccount(ctx context.Context, accountID, name string) error
 	}
 	return nil
 }
+
+// AccountCount is the number of accounts on this hub.
+//
+// It exists for one caller: the device engine's authority gate. The engine has
+// no tenancy — drivers discover devices from a broker or a PLC, and nothing in
+// that path knows which account a lamp belongs to — so "may this member drive
+// this device" has no answer to give. On a hub with exactly one account the
+// question does not arise, and this is how the gate knows which hub it is on.
+func (s *Store) AccountCount(ctx context.Context) (int, error) {
+	var n int
+	err := s.db.QueryRowContext(ctx, `SELECT count(*) FROM accounts`).Scan(&n)
+	return n, err
+}
+
+// IsMemberOfAnyAccount reports whether the user holds a live membership
+// anywhere on this hub. Paired with AccountCount == 1 it means "a member of
+// the only account there is", which is the one case where account-wide and
+// hub-wide authority are the same set.
+func (s *Store) IsMemberOfAnyAccount(ctx context.Context, userID string) (bool, error) {
+	var n int
+	err := s.db.QueryRowContext(ctx,
+		`SELECT count(*) FROM account_members m
+		 JOIN accounts a ON a.id = m.account_id
+		 WHERE m.user_id = ? AND m.status = 'active' AND a.status <> 'suspended'`,
+		userID).Scan(&n)
+	return n > 0, err
+}
