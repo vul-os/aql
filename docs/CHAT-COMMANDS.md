@@ -217,12 +217,27 @@ sign a `proto/commands.md` envelope, dispatch over the hub, record the outcome.
 
 **Every other capability returns `not_implemented`, and the chat reply says so.**
 This is not a placeholder to be quietly filled in with a stub that returns
-success. Aql's device engine does not exist: the driver-adapter seam is Phase 1,
-unbuilt (`ROADMAP.md:17-27`), the automation runtime is Phase 3, unbuilt
-(`ROADMAP.md:34-37`), and robot control is Phase 5, unbuilt (`ROADMAP.md:48`).
-Today, a chat message can actuate a gate and nothing else. A spec that lets
-"turn off the garden lights" return "OK" against a demo dataset would be a lie
-told by a system that opens doors.
+success. A spec that lets "turn off the garden lights" return "OK" against a
+demo dataset would be a lie told by a system that opens doors.
+
+> [!NOTE]
+> **The premise of this paragraph has changed, and the design should change
+> with it.** When it was written, Aql's device engine did not exist — the
+> driver-adapter seam, the automation runtime and robot control were all
+> unbuilt phases, so a gate was genuinely the only thing a chat message could
+> actuate.
+>
+> That is no longer true. The engine, its registry and four drivers (MQTT,
+> Modbus TCP, generic HTTP, ONVIF) ship, `Registry.Execute` actuates through
+> them, and the tier ladder in `hub/internal/devices/capability.go` already
+> assigns a safety class to every `(capability, verb)` pair. So a second
+> implementation is now honest where it was not: an `EnginePort` routing to the
+> registry alongside `AccessPort`.
+>
+> `not_implemented` remains a first-class outcome — it is simply narrower than
+> "everything except gates". Robot control still has no driver, and the rule
+> that a stub must never return success is unchanged and is the reason this
+> note does not just delete the paragraph.
 
 The `not_implemented` reply is a first-class outcome, alongside the existing
 `no_device` (`open.go:96-100`).
@@ -266,7 +281,15 @@ capability.
 
 ### 2.2 Why it does not scale to a heterogeneous fleet
 
-Four specific failures, all verifiable in the current code:
+> [!NOTE]
+> **All four failures below have since been fixed.** They are kept because the
+> reasoning is why the current behaviour has the shape it does, and because
+> §2.3's proposal is still built on top of them — but a reader must not take
+> them as a description of today's code. Each is annotated with what replaced
+> it. The example in (a) cites `src/lib/demoData.ts`, which no longer exists:
+> the console reads live device state.
+
+Four specific failures, all verifiable in the code at the time of writing:
 
 **(a) First match wins, silently.** `FindMentionedGate` returns the first
 candidate whose name is a substring of the message
@@ -276,15 +299,31 @@ both `Gate Lock` and `Front Gate Camera` (`src/lib/demoData.ts`). First-match
 is a fail-**open** on ambiguity, and it is the single most important behaviour to
 change.
 
+> **FIXED.** `FindMentionedGate` now collects every hit and returns a
+> `GateMatch` carrying an outcome and the full candidate set; the resolved
+> access point is populated *only* when the match is unique. An ambiguous
+> message actuates nothing and asks — `PushAmbiguousGateMenu` replies "That
+> matches more than one gate, so I haven't opened anything", which is the
+> fail-**closed** behaviour this item asked for.
+
 **(b) Pickers truncate without saying so.** WhatsApp gate and location menus
 break at ten rows (`channels/whatsapp.go:189-191`, `:216-218`), Telegram at ten
 (`channels/telegram.go:86-88`). A member with forty devices sees ten and no
 indication that thirty are missing.
 
+> **FIXED.** The cap is now the shared `PickerCapacity`, and a truncated menu
+> carries `TruncationNotice(shown, total, publicURL)` in the body — the count
+> that was dropped and where to see the rest. A list that silently omits a
+> resident's gate is indistinguishable from one they do not have access to.
+
 **(c) Slack's picker is unbounded.** `AccessBlocks` appends one section per gate
 with no cap at all (`channels/slack.go:99-110`). Block Kit rejects oversized
 payloads, so past a certain fleet size the reply simply fails to send and the
 member gets nothing.
+
+> **FIXED.** `AccessBlocks` stops at `PickerCapacity`, the same constant the
+> other rails use, so a large fleet degrades to a truncated list with a notice
+> rather than to silence.
 
 **(d) A selection id with no prefix defaults to `open`.**
 
@@ -300,6 +339,12 @@ func ParseSelection(id string) (cmd, arg string) {
 
 Harmless when `open` is the only verb. Under a multi-verb registry, a default
 verb is a fail-open, and the default happens to be the T3 one.
+
+> **FIXED.** `ParseSelection` now returns `ok=false` for an id with no prefix,
+> for an empty argument, and for any command outside the `selectionCommands`
+> table. The verb comes from `SelectionCommandVerb`, never from the id's text,
+> and `store/openpath.go` still independently rejects anything outside
+> open/close — this is a layer above that boundary, not a replacement for it.
 
 ### 2.3 Proposed resolution: narrow, score, then ask
 

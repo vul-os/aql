@@ -449,6 +449,24 @@ export const FEATURES = [
     ],
   },
   {
+    // docs/CHAT-COMMANDS.md §2.2 lists four defects in the chat targeting path
+    // and now annotates each FIXED. This pins the safety-relevant one so the
+    // annotation cannot become a lie: an ambiguous message must actuate
+    // NOTHING. First-match-wins was a fail-open on ambiguity in the one path
+    // that opens gates.
+    id: 'chat-ambiguity-fail-closed',
+    label: 'An ambiguous chat message opens nothing and asks, rather than acting on the first name that matched',
+    docStatus: 'shipped',
+    docRefs: ['docs/CHAT-COMMANDS.md § 2.2 (a) — "FIXED"'],
+    evidence: [
+      { file: 'hub/internal/channels/whatsapp.go', pattern: 'func FindMentionedGate' },
+      { file: 'hub/internal/channels/whatsapp.go', pattern: 'PushAmbiguousGateMenu' },
+      // The cap and the notice, so a truncated picker cannot go back to lying.
+      { file: 'hub/internal/channels/channels.go', pattern: 'PickerCapacity = ' },
+      { file: 'hub/internal/channels/reply.go', pattern: 'func TruncationNotice' },
+    ],
+  },
+  {
     // The safety rule under the whole tier ladder. Worth a claim because its
     // enforcement was procedural (a test) while its own doc comment said it was
     // structural ("the registry refuses to build") — now it actually is.

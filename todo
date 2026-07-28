@@ -296,10 +296,31 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       verb set, §3's tier ladder and this rule had all been shipping. Header corrected to
       name exactly the two pieces that exist and to keep everything else PROPOSAL — the
       actuation Port seam of §1.4 still has no `actuate` package.
-- [ ] The rest of CHAT-COMMANDS remains the largest designed-but-unbuilt surface here:
-      the actuation Port, capability-aware targeting, progressive narrowing, confirmation
-      and step-up, time windows. It is a multi-session project and the doc is good; the
-      next increment is the `actuate` package, since everything chat-side depends on it.
+- [x] Verified §2.2's "four specific failures, all verifiable in the current code" against
+      the code. ALL FOUR are fixed, and the doc still presented them as live — someone
+      reading it would either re-fix fixed things or distrust code that is correct.
+      (a) FindMentionedGate collects every hit and resolves only when unique; an ambiguous
+      message actuates nothing and asks. (b) The cap is the shared PickerCapacity and a
+      truncated menu carries TruncationNotice. (c) Slack's picker stops at the same
+      constant instead of being unbounded. (d) ParseSelection returns ok=false with no
+      prefix; the verb comes from a table, never the id's text. Each annotated FIXED in
+      place rather than deleted, since the reasoning is why the code has its shape.
+- NOTE: all four are pinned by tests already — disambiguation_test.go is organised around
+      the defects by name — so the FIXED annotations cannot quietly become lies. Added a
+      claim for the safety-relevant one, and confirmed the docRef quote is really checked
+      by swapping it for a sentence the file does not contain.
+- [x] §1.4's PREMISE was stale in a way that changes the design, not just the prose. It
+      argued every non-access capability must return not_implemented BECAUSE the device
+      engine did not exist. It does now — registry, four drivers, Execute, and a tier
+      ladder that already classes every (capability, verb) pair — so a second
+      implementation is honest where it was not: an EnginePort beside AccessPort.
+      not_implemented stays a first-class outcome, just narrower than "everything except
+      gates"; robot control still has no driver.
+- [ ] NEXT, and deliberately not started in a hurry: the `actuate` package. It is now a
+      TWO-implementation seam rather than one, which is a bigger and better change than
+      the doc describes. Build it with a caller in the same change — a Port with no
+      consumer would be the sixth "built and unreachable" in a repo that has spent this
+      long removing five.
 
 ## spec-derived checks
 The technique that found the 2^53 rounding: derive expected behaviour from proto/*.md
