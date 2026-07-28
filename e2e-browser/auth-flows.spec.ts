@@ -74,46 +74,80 @@ test('a stale access token triggers a transparent 401 -> refresh -> retry', asyn
   const originalRefresh = await page.evaluate(() => localStorage.getItem('aql.refresh_token'));
   expect(originalRefresh).not.toBeNull();
 
+  // Everything that observes the refresh is armed BEFORE the token is
+  // corrupted, and that ordering is load-bearing. Arming afterwards leaves a
+  // window of several round-trips in which an in-flight request can 401,
+  // trigger the refresh, and repair the token — so the reload below then
+  // succeeds outright, no second refresh ever happens, and the wait times out
+  // against a product that behaved correctly.
+  //
+  // 401s here are the test's deliberate premise, not bugs. Chromium logs every
+  // non-2xx fetch to the console regardless of apiFetch handling it, and the
+  // boot fires SEVERAL authenticated requests at once — /v1/auth/me and the
+  // account's locations among them. Which of those loses the race to the
+  // shared refresh is genuine nondeterminism, so any 401 from this hub is
+  // allowed. Anything that is not a 401 still fails the run.
+  allowExpectedConsoleError(page, (text, locationUrl) =>
+    text.includes('401') && locationUrl.startsWith(gw.baseUrl),
+  );
+
+  const statuses = new Map<string, number[]>();
+  page.on('response', (res) => {
+    const p = new URL(res.url()).pathname;
+    statuses.set(p, [...(statuses.get(p) ?? []), res.status()]);
+  });
+
+  // Intercepted rather than observed with waitForResponse, because reading a
+  // response body after the page has navigated fails with "No resource with
+  // given identifier found" — Chromium may evict it. Fetching the response
+  // here means the bytes are ours and survive the navigation.
+  let refreshBody: { tokens?: { access_token?: string; refresh_token?: string } } | null = null;
+  let refreshStatus = 0;
+  await page.route(gw.url('/v1/auth/refresh'), async (route) => {
+    const res = await route.fetch();
+    refreshStatus = res.status();
+    const text = await res.text();
+    try {
+      refreshBody = JSON.parse(text);
+    } catch {
+      refreshBody = null;
+    }
+    await route.fulfill({ response: res, body: text });
+  });
+
   // Corrupt the access token so the next authenticated request 401s, while
   // leaving the real refresh token in place — this is "access token expired
   // mid-session" without waiting out the real 15-minute TTL.
-  await page.evaluate(() => {
+  //
+  // Written as an init script rather than an evaluate on the live page, and
+  // that matters. The running app holds its tokens in memory and rewrites
+  // them to storage, so a value poked in from outside can be overwritten
+  // before the reload ever reads it — the boot then sees a perfectly valid
+  // token, never 401s, and the test fails against correct behaviour. An init
+  // script runs on the NEW document before any application code, so the
+  // corrupted token is what boot actually finds.
+  await page.addInitScript(() => {
     localStorage.setItem('aql.access_token', 'corrupted.not-a-real.jwt');
   });
-  // The 401 below is this test's deliberate premise, not a bug — but
-  // Chromium logs any non-2xx fetch response to the console as an "error"
-  // regardless of apiFetch's graceful auto-refresh handling it correctly, so
-  // declare it expected rather than let the cleanPage fixture flag it.
-  allowExpectedConsoleError(
-    page,
-    (text, locationUrl) => text.includes('401') && locationUrl.endsWith('/v1/auth/me'),
-  );
-
-  const meStatuses: number[] = [];
-  page.on('response', (res) => {
-    if (new URL(res.url()).pathname === '/v1/auth/me') meStatuses.push(res.status());
-  });
-  const refreshResponsePromise = page.waitForResponse(
-    (r) => r.url() === gw.url('/v1/auth/refresh') && r.request().method() === 'POST',
-  );
 
   // AuthProvider's boot effect calls GET /v1/auth/me on mount — reloading
   // with the corrupted token re-triggers it for real, exactly like an
   // access token expiring while the user is sitting on the page.
   await page.reload();
 
-  const refreshResponse = await refreshResponsePromise;
-  expect(refreshResponse.status(), 'refresh must succeed with the still-valid refresh token').toBe(
-    200,
-  );
-  const refreshBody = await refreshResponse.json();
+  await expect
+    .poll(() => refreshStatus, {
+      message: 'the app never refreshed after a 401 — it either gave up or signed the user out',
+    })
+    .toBe(200);
+
   // The exact historical bug this test targets: RefreshResponse assumed
   // flat tokens on the response; the hub nests them under `tokens`. If
   // that parsing regresses, refreshAccessToken() silently returns false,
   // tokens get cleared, and the assertions below fail loudly instead of the
   // user just getting logged out for no visible reason.
-  expect(refreshBody.tokens?.access_token).toEqual(expect.any(String));
-  expect(refreshBody.tokens?.refresh_token).toEqual(expect.any(String));
+  expect(refreshBody!.tokens?.access_token).toEqual(expect.any(String));
+  expect(refreshBody!.tokens?.refresh_token).toEqual(expect.any(String));
 
   // The app must recover silently — no forced logout, no crash, no stuck
   // spinner. Still a fresh account with a location but no access points, so
@@ -121,8 +155,20 @@ test('a stale access token triggers a transparent 401 -> refresh -> retry', asyn
   await expect(page).toHaveURL(`${gw.baseUrl}/app`);
   await expect(page.getByText('One more step before your first gate opens.')).toBeVisible();
 
-  await expect.poll(() => meStatuses).toContain(401);
-  await expect.poll(() => meStatuses).toContain(200);
+  // A 401 really happened (the refresh was provoked, not spontaneous) and the
+  // app really recovered. Which path 401'd is a race between concurrent boot
+  // requests and deliberately not asserted; that /v1/auth/me ends up answering
+  // 200 is the recovery itself.
+  await expect
+    .poll(() => [...statuses.values()].flat(), {
+      message: 'nothing ever returned 401, so this test did not exercise the path it claims to',
+    })
+    .toContain(401);
+  await expect
+    .poll(() => statuses.get('/v1/auth/me') ?? [], {
+      message: 'the session never recovered — /v1/auth/me never succeeded after the refresh',
+    })
+    .toContain(200);
 
   const newAccess = await page.evaluate(() => localStorage.getItem('aql.access_token'));
   const newRefresh = await page.evaluate(() => localStorage.getItem('aql.refresh_token'));

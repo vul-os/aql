@@ -131,3 +131,111 @@ test('the automations screen says there is no rule engine, rather than showing a
     page.getByText(/no rule engine|rule engine is running|not configured/i).first(),
   ).toBeVisible();
 });
+
+// Requesting and storing a grant, against a real hub that really mints one.
+//
+// The offline library has unit tests against mocks; the screen renders; nothing
+// had ever joined the two. A hub could have had a working issuance endpoint and
+// an app that never successfully stored what it returned, and both suites would
+// have stayed green — on the one path whose entire purpose is working later,
+// when nobody can fix it.
+//
+// This covers the half that works in any build. PRESENTING a grant talks
+// straight to the controller on the LAN, which a browser tab cannot do, and the
+// screen says so rather than failing at a gate.
+test('a grant is really issued by the hub and really stored on the device', async ({ page }) => {
+  await connectAndSignUp(page, `e2e-grant-${Date.now()}`);
+
+  // A grant is scoped to access points, so there has to be one. Created
+  // through the API rather than the UI on purpose: money-path.spec.ts already
+  // drives that form, and re-driving it here would make this test fail for
+  // reasons that have nothing to do with grants.
+  const created = await page.evaluate(async () => {
+    const token = localStorage.getItem('aql.access_token');
+    const base = localStorage.getItem('aql.gateway_url');
+    const me = await (
+      await fetch(`${base}/v1/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+    ).json();
+    const locId = (
+      await (
+        await fetch(`${base}/v1/accounts/${me.accounts[0].id}/locations`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      ).json()
+    ).locations[0].id;
+    // A grant is bound to the CONTROLLER that would redeem it, so the access
+    // point needs a device. The hub refuses otherwise — correctly: a grant for
+    // a gate with no controller could never open anything, and issuing one
+    // would silently widen a signed document for nothing.
+    const devRes = await fetch(`${base}/v1/devices`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ location_id: locId, label: 'Emergency Controller' }),
+    });
+    if (devRes.status !== 201) {
+      return { status: devRes.status, body: 'device: ' + (await devRes.text()) };
+    }
+    const device = await devRes.json();
+
+    const res = await fetch(`${base}/v1/access-points`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location_id: locId,
+        name: 'Emergency Gate',
+        kind: 'gate',
+        device_id: device.id,
+      }),
+    });
+    return { status: res.status, body: await res.text() };
+  });
+  expect(created.status, `could not create an access point: ${created.body}`).toBe(201);
+
+  await page.goto(gw.url('/app/emergency'));
+
+  // Pick the gate, then ask the hub. The response is watched directly so a
+  // silent client-side failure cannot pass as success.
+  await page.getByRole('button', { name: /Emergency Gate/ }).click();
+
+  const issuePromise = page.waitForResponse(
+    (r) => r.url() === gw.url('/v1/offline-grants') && r.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: /Get emergency access/i }).click();
+  const issued = await issuePromise;
+  expect(issued.status(), 'the hub refused to mint a grant').toBe(201);
+
+  // The hub minted one. The claim under test is that the APP kept it.
+  await expect(page.getByText(/Saved\./i).first()).toBeVisible();
+
+  // Stored in the vault, not merely rendered. This is the assertion that
+  // matters: a grant that exists only in React state is gone the moment the
+  // page reloads, which is exactly when it is needed.
+  //
+  // Read the RECORDS, not the database. The screen opens the vault on load, so
+  // the database exists whether or not anything was ever written to it — an
+  // earlier version of this test asserted only on indexedDB.databases() and
+  // stayed green with the write commented out, which is the exact failure the
+  // test was written to catch.
+  const held = await page.evaluate<{ ids: string[]; err?: string }>(() => {
+    return new Promise((resolve) => {
+      const open = indexedDB.open('lintel.offline-access');
+      open.onerror = () => resolve({ ids: [], err: 'the vault could not be opened' });
+      open.onsuccess = () => {
+        const db = open.result;
+        if (!db.objectStoreNames.contains('grants')) {
+          resolve({ ids: [], err: 'the vault has no grants store' });
+          return;
+        }
+        const req = db.transaction('grants', 'readonly').objectStore('grants').getAllKeys();
+        req.onerror = () => resolve({ ids: [], err: 'the grants store could not be read' });
+        req.onsuccess = () => resolve({ ids: req.result.map(String) });
+      };
+    });
+  });
+  expect(
+    held.ids.length,
+    `the hub minted a grant and the screen said "Saved.", but the vault holds no ` +
+      `grant record${held.err ? ` (${held.err})` : ''}. It would not survive a ` +
+      `reload, let alone the outage it exists for.`,
+  ).toBeGreaterThan(0);
+});
