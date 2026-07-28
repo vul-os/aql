@@ -83,10 +83,13 @@ hub serves. Adding an entry back is a real decision, not bookkeeping.
 - [ ] API docs with python/go/curl examples
 
 ## conformance
-- [ ] The uncalled-exported-symbol sweep that found this turned up ~40 candidates in
-      hub/ and controller/. Most are legitimate (test helpers, functional options,
-      build-tagged constructors, encoding/json interface methods) but several look like
-      superseded store methods — store/tenants.go has six. Work the list.
+- [x] store/tenants.go's six superseded methods are gone; the tenancy-scoping test now
+      drives the accessors production uses.
+- [ ] 34 uncalled exported symbols remain (hub 25, controller 9). Most are legitimate —
+      test helpers, functional options, build-tagged constructors, encoding/json
+      interface methods — but the sweep is worth re-running after any big change. The
+      first version of it reported ZERO because a function's own doc comment counts as
+      a use; strip comments before counting.
 
 ## security / ops
 - [ ] grant revocation beyond "wait for the TTL" (accepted v0 non-goal today)

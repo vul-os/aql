@@ -16,7 +16,7 @@ func TestInsertAccessLogChainsHashes(t *testing.T) {
 	s := openTest(t)
 	ctx := context.Background()
 	acctA, _, locA, _ := twoTenants(t, s)
-	ap, err := s.CreateAccessPoint(ctx, acctA.ID, locA.ID, "Gate", "gate")
+	ap, err := s.CreateAccessPointFull(ctx, acctA.ID, locA.ID, "Gate", "gate", "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,7 @@ func TestAccessLogsTriggerBlocksDirectMutation(t *testing.T) {
 	s := openTest(t)
 	ctx := context.Background()
 	acctA, _, locA, _ := twoTenants(t, s)
-	ap, err := s.CreateAccessPoint(ctx, acctA.ID, locA.ID, "Gate", "gate")
+	ap, err := s.CreateAccessPointFull(ctx, acctA.ID, locA.ID, "Gate", "gate", "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func TestHashChainDetectsTamper(t *testing.T) {
 	s := openTest(t)
 	ctx := context.Background()
 	acctA, _, locA, _ := twoTenants(t, s)
-	ap, err := s.CreateAccessPoint(ctx, acctA.ID, locA.ID, "Gate", "gate")
+	ap, err := s.CreateAccessPointFull(ctx, acctA.ID, locA.ID, "Gate", "gate", "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +185,7 @@ func TestHashChainTamperRecomputingDownstreamIsUndetected(t *testing.T) {
 	s := openTest(t)
 	ctx := context.Background()
 	acctA, _, locA, _ := twoTenants(t, s)
-	ap, err := s.CreateAccessPoint(ctx, acctA.ID, locA.ID, "Gate", "gate")
+	ap, err := s.CreateAccessPointFull(ctx, acctA.ID, locA.ID, "Gate", "gate", "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -261,7 +261,7 @@ func TestReconciledRowIsNotAFalsePositive(t *testing.T) {
 	s := openTest(t)
 	ctx := context.Background()
 	acctA, _, locA, _ := twoTenants(t, s)
-	ap, err := s.CreateAccessPoint(ctx, acctA.ID, locA.ID, "Gate", "gate")
+	ap, err := s.CreateAccessPointFull(ctx, acctA.ID, locA.ID, "Gate", "gate", "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -317,7 +317,7 @@ func TestLocationDeleteCascadeDoesNotBreakChain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ap, err := s.CreateAccessPoint(ctx, acct.ID, loc.ID, "Gate", "gate")
+	ap, err := s.CreateAccessPointFull(ctx, acct.ID, loc.ID, "Gate", "gate", "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -369,7 +369,7 @@ func TestBackfillHashesLegacyRows(t *testing.T) {
 	s := openTest(t)
 	ctx := context.Background()
 	acctA, _, locA, _ := twoTenants(t, s)
-	ap, err := s.CreateAccessPoint(ctx, acctA.ID, locA.ID, "Gate", "gate")
+	ap, err := s.CreateAccessPointFull(ctx, acctA.ID, locA.ID, "Gate", "gate", "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -495,7 +495,7 @@ func TestVerifyHashChainsReportsBothTables(t *testing.T) {
 	s := openTest(t)
 	ctx := context.Background()
 	acctA, _, locA, _ := twoTenants(t, s)
-	ap, err := s.CreateAccessPoint(ctx, acctA.ID, locA.ID, "Gate", "gate")
+	ap, err := s.CreateAccessPointFull(ctx, acctA.ID, locA.ID, "Gate", "gate", "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

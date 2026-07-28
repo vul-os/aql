@@ -164,7 +164,7 @@ func TestDeleteLocationKeepsAccountWithSiblings(t *testing.T) {
 	s := openTest(t)
 	ctx := context.Background()
 	acctA, _, locA, _ := twoTenants(t, s)
-	if _, err := s.CreateLocation(ctx, acctA.ID, "house", "Second"); err != nil {
+	if _, err := s.CreateLocationFull(ctx, acctA.ID, CreateLocationArgs{Type: "house", Name: "Second"}); err != nil {
 		t.Fatal(err)
 	}
 	dropped, err := s.DeleteLocation(ctx, acctA.ID, locA.ID)
@@ -214,7 +214,7 @@ func TestAccessPointDetailTenancyAndDeviceCheck(t *testing.T) {
 	ctx := context.Background()
 	acctA, acctB, locA, locB := twoTenants(t, s)
 
-	dA, err := s.CreateDevice(ctx, acctA.ID, locA.ID, "ctrl-a")
+	dA, err := s.CreateDeviceWithClaim(ctx, acctA.ID, locA.ID, "ctrl-a", "", 0)
 	if err != nil {
 		t.Fatal(err)
 	}

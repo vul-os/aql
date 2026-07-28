@@ -113,40 +113,47 @@ func TestTenancyScoping(t *testing.T) {
 	ctx := context.Background()
 	acctA, acctB, locA, locB := twoTenants(t, s)
 
-	apA, err := s.CreateAccessPoint(ctx, acctA.ID, locA.ID, "Main gate", "gate")
+	apA, err := s.CreateAccessPointFull(ctx, acctA.ID, locA.ID, "Main gate", "gate", "", nil, nil)
 	if err != nil {
-		t.Fatalf("CreateAccessPoint: %v", err)
+		t.Fatalf("CreateAccessPointFull: %v", err)
 	}
-	if _, err := s.CreateDevice(ctx, acctA.ID, locA.ID, "controller-1"); err != nil {
-		t.Fatalf("CreateDevice: %v", err)
+	if _, err := s.CreateDeviceWithClaim(ctx, acctA.ID, locA.ID, "controller-1", "", 0); err != nil {
+		t.Fatalf("CreateDeviceWithClaim: %v", err)
 	}
 
 	// B cannot read A's location, access point, or devices through any
 	// scoped accessor — indistinguishable from not-found.
+	//
+	// These are the accessors PRODUCTION uses. They were not, until recently:
+	// this test drove CreateAccessPoint / AccessPointByID / DevicesByAccount,
+	// a parallel set of store methods no handler called, so the tenancy
+	// guarantee was verified on code that does not ship. The production
+	// readers were correctly scoped — but a regression in them would not have
+	// failed the test whose entire purpose is to catch one.
 	if _, err := s.LocationByID(ctx, acctB.ID, locA.ID); !errors.Is(err, ErrNotFound) {
 		t.Errorf("cross-tenant LocationByID: want ErrNotFound, got %v", err)
 	}
-	if _, err := s.AccessPointByID(ctx, acctB.ID, apA.ID); !errors.Is(err, ErrNotFound) {
-		t.Errorf("cross-tenant AccessPointByID: want ErrNotFound, got %v", err)
+	if _, err := s.AccessPointDetailByID(ctx, acctB.ID, apA.ID); !errors.Is(err, ErrNotFound) {
+		t.Errorf("cross-tenant AccessPointDetailByID: want ErrNotFound, got %v", err)
 	}
-	if aps, _ := s.AccessPointsByAccount(ctx, acctB.ID); len(aps) != 0 {
+	if aps, _ := s.AccessPointsByAccountDetailed(ctx, acctB.ID); len(aps) != 0 {
 		t.Errorf("B sees %d of A's access points", len(aps))
 	}
-	if ds, _ := s.DevicesByAccount(ctx, acctB.ID); len(ds) != 0 {
+	if ds, _ := s.DevicesByAccountDetailed(ctx, acctB.ID, ""); len(ds) != 0 {
 		t.Errorf("B sees %d of A's devices", len(ds))
 	}
 
 	// B cannot create resources under A's location.
-	if _, err := s.CreateAccessPoint(ctx, acctB.ID, locA.ID, "sneaky", "gate"); !errors.Is(err, ErrNotFound) {
-		t.Errorf("cross-tenant CreateAccessPoint: want ErrNotFound, got %v", err)
+	if _, err := s.CreateAccessPointFull(ctx, acctB.ID, locA.ID, "sneaky", "gate", "", nil, nil); !errors.Is(err, ErrNotFound) {
+		t.Errorf("cross-tenant CreateAccessPointFull: want ErrNotFound, got %v", err)
 	}
-	if _, err := s.CreateDevice(ctx, acctB.ID, locA.ID, "sneaky"); !errors.Is(err, ErrNotFound) {
-		t.Errorf("cross-tenant CreateDevice: want ErrNotFound, got %v", err)
+	if _, err := s.CreateDeviceWithClaim(ctx, acctB.ID, locA.ID, "sneaky", "", 0); !errors.Is(err, ErrNotFound) {
+		t.Errorf("cross-tenant CreateDeviceWithClaim: want ErrNotFound, got %v", err)
 	}
 
 	// A still sees its own.
-	if got, err := s.AccessPointByID(ctx, acctA.ID, apA.ID); err != nil || got.Name != "Main gate" {
-		t.Errorf("own AccessPointByID: %v %+v", err, got)
+	if got, err := s.AccessPointDetailByID(ctx, acctA.ID, apA.ID); err != nil || got.Name != "Main gate" {
+		t.Errorf("own AccessPointDetailByID: %v %+v", err, got)
 	}
 	if locs, _ := s.LocationsByAccount(ctx, acctA.ID); len(locs) != 1 || locs[0].ID != locA.ID {
 		t.Errorf("own locations wrong: %+v", locs)

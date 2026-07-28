@@ -149,19 +149,6 @@ func (s *Store) MemberRole(ctx context.Context, accountID, userID string) (strin
 // Locations — every accessor scoped by accountID
 // ---------------------------------------------------------------------------
 
-// CreateLocation inserts a location under the account.
-func (s *Store) CreateLocation(ctx context.Context, accountID, typ, name string) (*Location, error) {
-	t := now()
-	l := Location{ID: NewID(), AccountID: accountID, Type: typ, Name: name, Slug: Slugify(name), Status: "active"}
-	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO locations (id, account_id, type, name, slug, status, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, 'active', ?, ?)`, l.ID, l.AccountID, l.Type, l.Name, l.Slug, t, t)
-	if err != nil {
-		return nil, err
-	}
-	return &l, nil
-}
-
 // LocationsByAccount lists the account's locations.
 func (s *Store) LocationsByAccount(ctx context.Context, accountID string) ([]Location, error) {
 	rows, err := s.db.QueryContext(ctx,
@@ -199,98 +186,9 @@ func (s *Store) LocationByID(ctx context.Context, accountID, id string) (*Locati
 // Access points — scoped via JOIN to locations.account_id
 // ---------------------------------------------------------------------------
 
-// CreateAccessPoint inserts an access point after verifying the target
-// location belongs to the account.
-func (s *Store) CreateAccessPoint(ctx context.Context, accountID, locationID, name, kind string) (*AccessPoint, error) {
-	if _, err := s.LocationByID(ctx, accountID, locationID); err != nil {
-		return nil, err
-	}
-	t := now()
-	ap := AccessPoint{ID: NewID(), LocationID: locationID, Name: name, Kind: kind, Status: "active"}
-	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO access_points (id, location_id, name, kind, status, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, 'active', ?, ?)`, ap.ID, ap.LocationID, ap.Name, ap.Kind, t, t)
-	if err != nil {
-		return nil, err
-	}
-	return &ap, nil
-}
-
-// AccessPointsByAccount lists every access point across the account's locations.
-func (s *Store) AccessPointsByAccount(ctx context.Context, accountID string) ([]AccessPoint, error) {
-	rows, err := s.db.QueryContext(ctx,
-		`SELECT ap.id, ap.location_id, ap.name, ap.kind, ap.status
-		 FROM access_points ap JOIN locations l ON l.id = ap.location_id
-		 WHERE l.account_id = ? ORDER BY ap.created_at`, accountID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out []AccessPoint
-	for rows.Next() {
-		var ap AccessPoint
-		if err := rows.Scan(&ap.ID, &ap.LocationID, &ap.Name, &ap.Kind, &ap.Status); err != nil {
-			return nil, err
-		}
-		out = append(out, ap)
-	}
-	return out, rows.Err()
-}
-
-// AccessPointByID fetches one access point iff it belongs to the account.
-func (s *Store) AccessPointByID(ctx context.Context, accountID, id string) (*AccessPoint, error) {
-	var ap AccessPoint
-	err := s.db.QueryRowContext(ctx,
-		`SELECT ap.id, ap.location_id, ap.name, ap.kind, ap.status
-		 FROM access_points ap JOIN locations l ON l.id = ap.location_id
-		 WHERE ap.id = ? AND l.account_id = ?`, id, accountID).
-		Scan(&ap.ID, &ap.LocationID, &ap.Name, &ap.Kind, &ap.Status)
-	if err != nil {
-		return nil, err
-	}
-	return &ap, nil
-}
-
 // ---------------------------------------------------------------------------
 // Devices — scoped via JOIN to locations.account_id
 // ---------------------------------------------------------------------------
-
-// CreateDevice inserts an unpaired device under a location of the account.
-func (s *Store) CreateDevice(ctx context.Context, accountID, locationID, label string) (*Device, error) {
-	if _, err := s.LocationByID(ctx, accountID, locationID); err != nil {
-		return nil, err
-	}
-	t := now()
-	d := Device{ID: NewID(), LocationID: locationID, Label: label, Status: "unpaired"}
-	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO devices (id, location_id, label, status, created_at, updated_at)
-		 VALUES (?, ?, ?, 'unpaired', ?, ?)`, d.ID, d.LocationID, d.Label, t, t)
-	if err != nil {
-		return nil, err
-	}
-	return &d, nil
-}
-
-// DevicesByAccount lists every device across the account's locations.
-func (s *Store) DevicesByAccount(ctx context.Context, accountID string) ([]Device, error) {
-	rows, err := s.db.QueryContext(ctx,
-		`SELECT d.id, d.location_id, coalesce(d.label, ''), d.status, coalesce(d.public_key, '')
-		 FROM devices d JOIN locations l ON l.id = d.location_id
-		 WHERE l.account_id = ? ORDER BY d.created_at`, accountID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out []Device
-	for rows.Next() {
-		var d Device
-		if err := rows.Scan(&d.ID, &d.LocationID, &d.Label, &d.Status, &d.PublicKey); err != nil {
-			return nil, err
-		}
-		out = append(out, d)
-	}
-	return out, rows.Err()
-}
 
 // ---------------------------------------------------------------------------
 // Access logs — append-only, listed per account

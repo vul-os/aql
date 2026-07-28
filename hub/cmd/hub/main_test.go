@@ -63,7 +63,7 @@ func TestVerifyAuditCLICleanDatabase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ap, err := st.CreateAccessPoint(ctx, acct.ID, loc.ID, "Gate", "gate")
+	ap, err := st.CreateAccessPointFull(ctx, acct.ID, loc.ID, "Gate", "gate", "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +110,7 @@ func TestVerifyAuditCLIDetectsTamper(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ap, err := st.CreateAccessPoint(ctx, acct.ID, loc.ID, "Gate", "gate")
+	ap, err := st.CreateAccessPointFull(ctx, acct.ID, loc.ID, "Gate", "gate", "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
