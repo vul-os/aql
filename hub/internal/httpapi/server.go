@@ -348,6 +348,14 @@ func (s *Server) Router() http.Handler {
 	// the open path + temporary grants (spec: backend access.ts logAccess)
 	mux.Handle("POST /v1/access-points/{id}/open", s.tokenScoped(store.ScopeAccessOpen, fenceAccessPointPath, s.handleAccessPointOpen))
 	mux.Handle("POST /v1/access-points/{id}/close", s.tokenScoped(store.ScopeAccessOpen, fenceAccessPointPath, s.handleAccessPointClose))
+	// A hold goes through the same choke point as an open (see
+	// handleAccessPointHold) but is deliberately NOT token-reachable. The
+	// four tokenScoped routes above are the whole list, and the reasoning the
+	// maintenance log already uses applies here exactly: a scoped token can
+	// read access points and open them, and neither of those implies a right
+	// to leave one standing open. Somebody who minted an open-scoped token
+	// consented to pulses, not to a gate held wide. Session only.
+	mux.Handle("POST /v1/access-points/{id}/hold", s.requireAuth(s.handleAccessPointHold))
 	mux.Handle("GET /v1/grants", s.requireAuth(s.handleGrantsList))
 	mux.Handle("POST /v1/grants", s.requireAuth(s.handleGrantCreate))
 	mux.Handle("GET /v1/grants/{id}", s.requireAuth(s.handleGrantGet))

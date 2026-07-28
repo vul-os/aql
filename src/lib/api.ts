@@ -744,6 +744,25 @@ export const api = {
       body,
     }),
 
+  /**
+   * Leave a gate standing open until the controller's own `hold_max` releases
+   * it. `seconds` is optional and capped by that ceiling on the device, so
+   * omitting it means "as long as this site allows".
+   *
+   * Subject to EVERY refusal an open is — suspension, quotas, time windows,
+   * geofence — and drawing on the same per-access-point cooldown, because a
+   * hold is an open that lasts. A 429 here means the same thing it means for
+   * an open.
+   */
+  accessHold: (
+    id: string,
+    body: { seconds?: number; lat?: number; long?: number; source?: 'web' | 'whatsapp' | 'telegram' | 'slack' | 'api' } = {},
+  ) =>
+    apiFetch<{ ok: boolean; command: 'hold'; delivery: string }>(`/access-points/${id}/hold`, {
+      method: 'POST',
+      body: { source: 'web', ...body },
+    }),
+
   // NOT IMPLEMENTED on the gateway (no /analytics route group ported yet).
   locationSummary: (id: string) =>
     apiFetch<LocationSummary>(`/analytics/locations/${id}/summary`),

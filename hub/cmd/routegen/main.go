@@ -213,7 +213,12 @@ func envelopeOf(pkg []*ast.File, handler string) []string {
 			return true
 		}
 		id, ok := call.Fun.(*ast.Ident)
-		if !ok || (id.Name != "writeJSON" && id.Name != "writeErrDetail") {
+		// writeJSON ONLY. A writeErrDetail map is the shape of a REFUSAL, not
+		// of the response a client reads on success, and conflating them made
+		// a handler that validates its input before delegating look as though
+		// its envelope were its error detail. The doc comment above always
+		// said writeJSON; the code did not.
+		if !ok || id.Name != "writeJSON" {
 			return true
 		}
 		for _, arg := range call.Args {

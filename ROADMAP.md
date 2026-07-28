@@ -158,29 +158,17 @@ hub's issuance endpoint):
       has never run on hardware on either. darwin returns `ErrUnsupported`: CoreBluetooth
       offers peripheral mode, that library does not bind it, and writing a CGO binding
       that cannot be tested here would be worse than the gap
-- [ ] **Three signed command types the hub still cannot send.** `proto/commands.md` defines
-      eight — open, hold, close, lockdown, lift, ping, config, repair — and the controller
-      implements and conformance-tests all eight. `config` now has a sender
-      (`PATCH /v1/devices/{id}/config`, bounds enforced hub-side because the controller
-      stores whatever it is given). `hold`, standalone `ping` and — most seriously —
-      `repair` still do not. `repair` is the disaster-recovery path for a leaked or
-      rotated hub signing key: without a sender, the only remedy is physically
-      factory-resetting every paired controller. Doing it properly needs two-key retention
-      on the hub and per-controller ack tracking, because switching the signing key while
-      one controller is offline strands it permanently. (`lockdown`/`lift` are deliberately
-      controller-local — `offline_grants.go` says so explicitly — and are NOT part of this
-      gap)
-- [x] **Energy ingestion respects device ownership.** `PollOnce` used to poll every
-      `CapMeter` device on the hub and write all of them under one process-wide
-      `-energy-account` — wrong in both directions once a second account exists: the
-      account that claimed a meter saw nothing for it, while the configured account's
-      Energy screen showed meters it never claimed. Samples now route to the claiming
-      account. An UNCLAIMED meter still falls back to the configured account, because a
-      hub that predates ownership has claimed nothing and dropping real metering history
-      to be principled is the wrong trade. A lookup that ERRORED is not treated as
-      unclaimed — it has not established anything — so those samples are skipped and
-      counted as `Unattributed`, making a persistent failure look like a meter that
-      stopped reporting rather than one silently filed under the wrong owner
+- [ ] **Two signed command types the hub still cannot send.** `proto/commands.md` defines
+      eight; the controller implements and conformance-tests all eight. `config` and
+      `hold` now have senders. Standalone `ping` and — the serious one — `repair` do not.
+      `repair` is the recovery path for a leaked or rotated hub signing key, and doing it
+      properly is a programme rather than a feature: the hub needs two-key retention and
+      per-controller ack tracking (switching the signing key while one controller is
+      offline strands it until a factory reset), and the blast radius reaches past
+      controllers to every phone holding an offline grant, since those pin the hub key too
+      and the app already treats a change as a re-enrolment event. (`lockdown`/`lift` are
+      deliberately controller-local — `offline_grants.go` says so — and are NOT part of
+      this gap)
 - [ ] Controller position/tamper sensors return static values
 
 **Console screens ahead of their backend** (tracked mechanically by the route-parity test):

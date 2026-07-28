@@ -26,20 +26,29 @@ type opReq struct {
 }
 
 func (s *Server) handleAccessPointOpen(w http.ResponseWriter, r *http.Request) {
-	s.handleOp(w, r, "open")
+	s.handleOp(w, r, "open", nil)
 }
 
 func (s *Server) handleAccessPointClose(w http.ResponseWriter, r *http.Request) {
-	s.handleOp(w, r, "close")
+	s.handleOp(w, r, "close", nil)
 }
 
-func (s *Server) handleOp(w http.ResponseWriter, r *http.Request, command string) {
-	c := claimsFrom(r)
-	id := r.PathValue("id")
+func (s *Server) handleOp(w http.ResponseWriter, r *http.Request, command string, payload map[string]any) {
 	var req opReq
 	if !readJSON(w, r, &req) {
 		return
 	}
+	s.handleOpWithBody(w, r, command, payload, req)
+}
+
+// handleOpWithBody is handleOp for a caller that has already read the body —
+// `hold` parses its own duration out of it first. Splitting here rather than
+// re-reading keeps ONE authorization path: there is exactly one place that
+// decides whether somebody may be let through, and adding a way through means
+// passing a different command to it, never writing a second copy.
+func (s *Server) handleOpWithBody(w http.ResponseWriter, r *http.Request, command string, payload map[string]any, req opReq) {
+	c := claimsFrom(r)
+	id := r.PathValue("id")
 	if req.Source == "" {
 		req.Source = "web"
 	}
@@ -84,7 +93,7 @@ func (s *Server) handleOp(w http.ResponseWriter, r *http.Request, command string
 		return
 	}
 
-	delivery := s.dispatchCommand(r.Context(), command, verdict)
+	delivery := s.dispatchCommandWithPayload(r.Context(), command, payload, verdict)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"ok": true, "command": command, "delivery": delivery,
 	})
@@ -99,11 +108,18 @@ func (s *Server) handleOp(w http.ResponseWriter, r *http.Request, command string
 //	no_device    access point has no controller attached (backend parity:
 //	             the open still succeeds; dispatch was a backend TODO)
 func (s *Server) dispatchCommand(ctx context.Context, command string, verdict *store.LogAccessResult) string {
+	return s.dispatchCommandWithPayload(ctx, command, nil, verdict)
+}
+
+// dispatchCommandWithPayload is dispatchCommand for the commands that carry
+// parameters — today that is `hold`, whose optional `seconds` the controller
+// caps at its own hold_max.
+func (s *Server) dispatchCommandWithPayload(ctx context.Context, command string, payload map[string]any, verdict *store.LogAccessResult) string {
 	if verdict.AP.DeviceID == "" {
 		return "no_device"
 	}
 	cause := map[string]any{"source": "gateway", "log_id": verdict.LogID}
-	env, err := s.keys.SignCommand(command, verdict.AP.DeviceID, verdict.AP.ID, 30*time.Second, cause)
+	env, err := s.keys.SignCommandWithPayload(command, verdict.AP.DeviceID, verdict.AP.ID, payload, 30*time.Second, cause)
 	if err != nil {
 		s.log.Error("sign command", "err", err)
 		if _, rerr := s.store.RecordDispatchOutcome(ctx, verdict.LogID, "undelivered"); rerr != nil {
@@ -388,3 +404,60 @@ func (s *Server) handleGrantRevoke(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, grantJSON(*revoked))
 }
+
+// holdReq is opReq plus the optional duration.
+type holdReq struct {
+	opReq
+	// Seconds is how long to hold. Omitted or zero means "the controller's
+	// own hold_max", which is the honest default: the hub does not know what
+	// that controller was configured with, and guessing a number the
+	// controller will silently cap is worse than deferring to it.
+	//
+	// The controller caps this at hold_max regardless (command.go: the
+	// payload's seconds is used only when `> 0 && < holdMax`), so this can
+	// never extend a hold beyond what the site's own configuration permits.
+	Seconds int64 `json:"seconds"`
+}
+
+// POST /v1/access-points/{id}/hold — leave a gate standing open.
+//
+// # Why this goes through the open path unchanged
+//
+// A hold is an open that lasts. Everything that would refuse an open must
+// refuse a hold — a suspended account, a disabled user, an exhausted quota, a
+// closed time window, a phone outside its geofence — because the alternative
+// is a gate that cannot be opened but can be held open, which is a worse
+// version of the same permission. store.LogAccess's opensTheWay covers both
+// for exactly that reason, and the audit row records `hold` rather than
+// flattening it to `open`, so a reader can tell how long the gate was
+// intended to stand open.
+//
+// The controller enforces the ceiling and the release: it schedules the
+// release itself and refuses `hold` entirely during lockdown
+// (proto/commands.md §66 admits only lift/ping/config/repair). Nothing here
+// needs to replicate that, and replicating it would be a second copy to drift.
+func (s *Server) handleAccessPointHold(w http.ResponseWriter, r *http.Request) {
+	var req holdReq
+	if !readJSON(w, r, &req) {
+		return
+	}
+	if req.Seconds < 0 || req.Seconds > maxHoldSeconds {
+		writeErrDetail(w, http.StatusBadRequest, "invalid_hold_seconds", map[string]any{
+			"max": maxHoldSeconds,
+			"message": "A hold longer than this is a gate left open, not a gate held open. " +
+				"Omit the field to use the controller's own configured maximum.",
+		})
+		return
+	}
+	var payload map[string]any
+	if req.Seconds > 0 {
+		payload = map[string]any{"seconds": req.Seconds}
+	}
+	s.handleOpWithBody(w, r, "hold", payload, req.opReq)
+}
+
+// maxHoldSeconds bounds what this API will ASK for. The controller's hold_max
+// is the real ceiling and is lower on most sites; this exists so a typo in a
+// client cannot request a hold measured in days, and so the refusal names a
+// number instead of being silently capped somewhere the caller cannot see.
+const maxHoldSeconds = 4 * 3600

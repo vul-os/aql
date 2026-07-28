@@ -247,8 +247,27 @@ type LogAccessResult struct {
 // The caller is responsible for the MEMBERSHIP gate (portal/API paths 404
 // non-members before calling; chat channels resolve members/grants by phone
 // first) — exactly the backend's split between RLS-at-route and logAccess.
+// opensTheWay reports whether a command lets somebody THROUGH.
+//
+// `open` pulses the gate; `hold` leaves it standing open until the
+// controller's own hold_max releases it. For every question this file asks —
+// is the account suspended, is the user disabled, is there budget left, is it
+// inside the permitted window, is the phone where it claims to be — the
+// answer must be identical for the two, because `hold` is strictly the more
+// permissive of them. A gate held open is a gate opened, for longer.
+//
+// This function exists rather than an `== "open"` comparison at each site
+// precisely so that adding a third way through cannot be done by widening one
+// branch and forgetting five. Every denial below funnels through it.
+//
+// `close` is deliberately NOT here: it is the safe direction and is never
+// denied, because someone who got in must be able to get out.
+func opensTheWay(command string) bool {
+	return command == "open" || command == "hold"
+}
+
 func (s *Store) LogAccess(ctx context.Context, envCfg RateLimitConfig, args LogAccessArgs) (*LogAccessResult, error) {
-	if args.Command != "open" && args.Command != "close" {
+	if !opensTheWay(args.Command) && args.Command != "close" {
 		return nil, fmt.Errorf("bad command %q", args.Command)
 	}
 	ap, err := s.AccessPointContextByID(ctx, args.AccessPointID)
@@ -270,14 +289,14 @@ func (s *Store) LogAccess(ctx context.Context, envCfg RateLimitConfig, args LogA
 
 	// Suspended account: every open denied, regardless of channel,
 	// membership or grants. 'close' stays allowed (safe direction).
-	if args.Command == "open" && ap.AccountStatus == "suspended" {
+	if opensTheWay(args.Command) && ap.AccountStatus == "suspended" {
 		return deny("account_suspended", 0, "")
 	}
 
 	// Disabled user: chat paths resolve members without a JWT, so the choke
 	// point must check users.status itself. Fail-closed: a missing users row
 	// or any non-active status denies. Visitor grants (UserID=="") unaffected.
-	if args.Command == "open" && args.UserID != "" {
+	if opensTheWay(args.Command) && args.UserID != "" {
 		u, err := s.UserByID(ctx, args.UserID)
 		if err != nil || u.Status != "active" {
 			if err != nil {
@@ -307,7 +326,7 @@ func (s *Store) LogAccess(ctx context.Context, envCfg RateLimitConfig, args LogA
 	// Nothing above or below was reordered or weakened. With no rule stored
 	// this is one indexed read that returns nothing and allows — an install
 	// that does not use windows behaves exactly as it did before.
-	if args.Command == "open" && args.UserID != "" {
+	if opensTheWay(args.Command) && args.UserID != "" {
 		if d := s.CheckTimeWindows(ctx, ap.AccountID, args.UserID, ap.ID, ap.LocationID, 0); !d.Allowed {
 			return deny(d.Reason, d.RetryAfterS, "")
 		}
@@ -335,7 +354,7 @@ func (s *Store) LogAccess(ctx context.Context, envCfg RateLimitConfig, args LogA
 	// Nothing above or below was reordered or weakened. With no rule stored
 	// this is one indexed read that returns nothing and allows — an install
 	// that does not use geofencing behaves exactly as it did before.
-	if args.Command == "open" {
+	if opensTheWay(args.Command) {
 		if d := s.CheckGeofence(ctx, ap.AccountID, ap.ID, ap.LocationID, args.Lat, args.Long); !d.Allowed {
 			// No RetryAfterS: waiting does not fix being in the wrong place,
 			// and inventing a number here would render as "try again in ~N
@@ -345,7 +364,7 @@ func (s *Store) LogAccess(ctx context.Context, envCfg RateLimitConfig, args LogA
 	}
 
 	degradedNote := ""
-	if args.Command == "open" {
+	if opensTheWay(args.Command) {
 		decision := s.GuardedCheckOpenLimits(ctx, envCfg, OpenLimitInput{
 			UserID: args.UserID, PhoneE164: args.PhoneE164,
 			AccessPointID: ap.ID, LocationID: ap.LocationID, AccountID: ap.AccountID,

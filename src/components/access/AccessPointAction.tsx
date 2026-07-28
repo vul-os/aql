@@ -49,15 +49,22 @@ export function AccessPointAction({
   }, [stage]);
 
   const send = useCallback(
-    async (cmd: 'open' | 'close') => {
+    async (cmd: 'open' | 'close' | 'hold') => {
       setErrorMsg(null);
       setDenial(null);
-      setStage(cmd === 'open' ? 'opening' : 'closing');
+      setStage(cmd === 'close' ? 'closing' : 'opening');
 
       const submit = async (lat?: number, long?: number) => {
         try {
           if (cmd === 'open') {
             await api.accessOpen(ap.id, { source: 'web', lat, long });
+            setStage('open');
+          } else if (cmd === 'hold') {
+            // No `seconds`: the controller's own hold_max is the honest
+            // ceiling, and this console does not know what this site was
+            // configured with. Asking for a number it would silently cap
+            // would show the operator a duration that is not what happens.
+            await api.accessHold(ap.id, { source: 'web', lat, long });
             setStage('open');
           } else {
             await api.accessClose(ap.id, { source: 'web', lat, long });
@@ -185,6 +192,22 @@ export function AccessPointAction({
 
         {/* Action button — fills the remaining space */}
         <div className="mt-auto">
+          {/* Hold sits under the primary action, not beside it: it is the rarer
+              intent (a delivery, a gate day) and it leaves the gate standing
+              open, so it should not be a mis-tap away from Open. It is offered
+              only when the gate is not already open, and it is subject to every
+              refusal an open is — the same 429, the same suspension, the same
+              geofence — because a hold is an open that lasts. */}
+          {!isOpen && (
+            <button
+              type="button"
+              disabled={isPending || denial?.reason === 'rate_limited'}
+              onClick={() => send('hold')}
+              className="mb-2 w-full h-9 rounded-full text-xs text-ink/65 hover:text-ink border border-ink/15 disabled:opacity-50"
+            >
+              Hold open
+            </button>
+          )}
           <button
             type="button"
             disabled={isPending || denial?.reason === 'rate_limited'}
