@@ -175,10 +175,31 @@ func startGatewayWithDevices(t *testing.T, deviceConfig string) *gateway {
 	})
 }
 
+// startGatewayWithAutomations boots a hub with the HTTP driver AND the rule
+// scheduler, so a test can exercise the automations runtime end to end rather
+// than only its HTTP surface.
+func startGatewayWithAutomations(t *testing.T, deviceConfig string) *gateway {
+	return startGatewayWith(t, []string{
+		"-device-drivers", "http",
+		"-device-config", deviceConfig,
+		"-automations",
+	})
+}
+
 func startGatewayWith(t *testing.T, extraArgs []string) *gateway {
+	return startGatewayIn(t, t.TempDir(), extraArgs)
+}
+
+// startGatewayIn boots a hub on a GIVEN data directory, so a test can stop one
+// and start another over the same database.
+//
+// That is not a contrivance: -energy-account names an account that must already
+// exist, and main.go logs-and-skips rather than failing when it does not. So
+// exercising the meter poller genuinely requires creating the tenant first and
+// restarting pointed at it — the same two steps an operator takes.
+func startGatewayIn(t *testing.T, dataDir string, extraArgs []string) *gateway {
 	t.Helper()
 	port := freePort(t)
-	dataDir := t.TempDir()
 	adminToken := "e2e-admin-claim-" + randHex(8)
 	url := fmt.Sprintf("http://127.0.0.1:%d", port)
 
@@ -199,7 +220,7 @@ func startGatewayWith(t *testing.T, extraArgs []string) *gateway {
 		t.Fatalf("start gateway: %v", err)
 	}
 	gw.cmd = cmd
-	t.Cleanup(func() { killProc(cmd); t.Logf("gateway log:\n%s", gw.logs.String()) })
+	t.Cleanup(func() { gw.stop(t) })
 
 	// Wait for health (tolerating connection-refused while it boots).
 	deadline := time.Now().Add(20 * time.Second)
@@ -254,6 +275,19 @@ type tenant struct {
 
 // register creates a user (owner of a fresh personal account + anchor
 // location) and claims platform-admin so audit endpoints are reachable.
+// stop kills the hub and logs its output. Safe to call twice: a test that
+// restarts a hub over the same data dir stops the first one explicitly, and the
+// cleanup then finds nothing left to do.
+func (gw *gateway) stop(t *testing.T) {
+	t.Helper()
+	if gw.cmd == nil {
+		return
+	}
+	killProc(gw.cmd)
+	gw.cmd = nil
+	t.Logf("hub log:\n%s", gw.logs.String())
+}
+
 func (gw *gateway) register(t *testing.T) *tenant {
 	t.Helper()
 	// A USERNAME, not an email. This product has no email identity, and

@@ -101,6 +101,15 @@ func deviceConfigFile(t *testing.T, deviceURL string) string {
 			}},
 		},
 	}
+	return writeDeviceConfig(t, cfg)
+}
+
+// writeDeviceConfig marshals a device-config map to a temp file and returns its
+// path. Shared by the engine and automations suites so the two cannot drift on
+// the file's shape — which matters more than usual here, because httpdev has no
+// json tags, so these map keys ARE its Go field names.
+func writeDeviceConfig(t *testing.T, cfg map[string]any) string {
+	t.Helper()
 	raw, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		t.Fatal(err)
