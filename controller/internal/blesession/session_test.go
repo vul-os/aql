@@ -166,3 +166,49 @@ func TestGarbageMessage(t *testing.T) {
 		t.Fatalf("expected denied, got %s", conn.out[len(conn.out)-1])
 	}
 }
+
+// A complete frame followed by an oversized header, in ONE write.
+//
+// Found by fuzzing the reassembler: `02 00 00 00 30 30 30 30 30 30` is a valid
+// 2-byte frame, then four bytes read as a header declaring 771 MiB. Push
+// returns the completed message AND frame_too_large together, which is a case
+// TestFrameTooLargeDeniesAndDrops cannot reach — it sends an oversized header
+// alone, with no completed frame in front of it.
+//
+// The session must fail closed: deny, drop, and never act on the message that
+// arrived in the same write. It does, because it checks the error before
+// looking at the messages. Nothing tested that ordering, and reversing those
+// two statements is a small, plausible edit that this asserts against — a
+// stranger in radio range could otherwise get one message processed on a
+// connection being torn down for protocol abuse.
+func TestValidFrameFollowedByAnOversizedHeaderIsNotProcessed(t *testing.T) {
+	_, env, x := fixture(t)
+	conn := &memConn{}
+	sess := blesession.New(x, env, conn, nil, nil)
+
+	// A complete frame carrying a well-formed grant.open, so that processing it
+	// would produce a visible extra reply rather than being a no-op.
+	payload := []byte(`{"v":0,"typ":"grant.open","grant":{"v":0},"access_point":"main"}`)
+	chunk := binary.LittleEndian.AppendUint32(nil, uint32(len(payload)))
+	chunk = append(chunk, payload...)
+	// …then four bytes the reassembler reads as the next length header.
+	chunk = append(chunk, 0x30, 0x30, 0x30, 0x30)
+
+	if done := sess.HandleChunk(chunk); !done {
+		t.Fatal("expected the session to end")
+	}
+	if !conn.closed {
+		t.Fatal("connection not dropped")
+	}
+	if len(conn.out) != 1 {
+		t.Fatalf("expected exactly one reply (the denial); got %d: %s", len(conn.out), conn.out)
+	}
+	var res grants.Result
+	if err := json.Unmarshal(conn.out[0], &res); err != nil {
+		t.Fatalf("reply is not a result: %s", conn.out[0])
+	}
+	if res.Detail != "frame_too_large" {
+		t.Fatalf("expected frame_too_large, got %+v — the message that arrived in the "+
+			"same write was acted on before the error was checked", res)
+	}
+}

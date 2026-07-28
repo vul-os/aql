@@ -264,6 +264,8 @@ jobs:
           set -eux
           go test ./internal/grants/ -run xxx -fuzz FuzzHandleOpen -fuzztime 30s
           go test ./internal/grants/ -run xxx -fuzz FuzzHandleProof -fuzztime 30s
+          go test ./internal/framing/ -run xxx -fuzz FuzzReassemblerPush -fuzztime 30s
+          go test ./internal/framing/ -run xxx -fuzz FuzzChunkRoundTrip -fuzztime 30s
 
   e2e-browser:
     name: e2e-browser (real Chromium against a real hub binary)

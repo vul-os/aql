@@ -99,9 +99,15 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       UDP datagram) and the LAN grant HandleOpen/HandleProof (any host on the LAN, one
       POST at a gate). ~5M executions by hand found nothing; 30s each in CI as a
       tripwire. Seeds run free in the ordinary suite.
-- [ ] Parsers still unfuzzed, in rough order of exposure: controller/internal/framing
-      (BLE frames from a phone), hub/internal/devices/modbus decode (a meter), the
-      camera RTSP/RTP reader, hub/internal/keys JCS canonicalisation.
+- [x] controller/internal/framing (BLE frames from anyone in radio range). Found a
+      real gap: Push returns a COMPLETED message alongside frame_too_large when a valid
+      frame precedes an oversized header in one write. Safe, because blesession checks
+      the error first — but nothing tested that ordering, and the existing
+      frame_too_large test could not reach the case. Reversing two statements in the
+      session issues a challenge on a connection being dropped for protocol abuse.
+- [ ] Parsers still unfuzzed, in rough order of exposure: hub/internal/devices/modbus
+      decode (a meter), the camera RTSP/RTP reader, hub/internal/keys JCS
+      canonicalisation.
 
 ## race detector
 - [x] Never run on this repo before. Run by hand across hub, controller and e2e, plus
