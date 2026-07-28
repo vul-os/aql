@@ -283,3 +283,52 @@ func TestUnlinkRemovesOnlyYourOwnNumber(t *testing.T) {
 		t.Fatalf("phones = %+v after unlink", phones)
 	}
 }
+
+// The commonest real journey, and the one the ceremony exists to serve: a
+// member is invited with their number (which links it UNVERIFIED, because
+// accepting an invite proves nothing about who holds the handset), and then
+// verifies it themselves. The row must be FLIPPED, not duplicated — the
+// unique index is on (profile_id, phone_e164), so a second insert would fail
+// and a member who had been invited could never link.
+func TestAnInviteLinkedNumberIsUpgradedInPlace(t *testing.T) {
+	f := newLinkFixture(t)
+	ctx := context.Background()
+
+	// What AcceptInvite writes: linked, non-primary, verified_at NULL.
+	if _, err := f.s.db.ExecContext(ctx,
+		`INSERT INTO profile_phone_numbers (id, profile_id, phone_e164, is_primary, verified_at, created_at, updated_at)
+		 VALUES (?, ?, ?, 0, NULL, ?, ?)`,
+		NewID(), f.alice.ID, alicePhone, now(), now()); err != nil {
+		t.Fatal(err)
+	}
+	linked, verified, err := f.s.PhoneVerified(ctx, f.alice.ID, alicePhone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !linked || verified {
+		t.Fatalf("fixture: linked=%v verified=%v, want linked-and-unverified", linked, verified)
+	}
+
+	code, err := f.s.MintPhoneLinkCode(ctx, f.alice.ID, alicePhone)
+	if err != nil {
+		t.Fatalf("minting for an already-linked unverified number: %v", err)
+	}
+	if _, err := f.s.RedeemPhoneLinkCode(ctx, alicePhone, code.Code); err != nil {
+		t.Fatalf("redeeming for an invite-linked number: %v", err)
+	}
+
+	linked, verified, err = f.s.PhoneVerified(ctx, f.alice.ID, alicePhone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !linked || !verified {
+		t.Fatalf("after redemption linked=%v verified=%v", linked, verified)
+	}
+	phones, err := f.s.PhonesForUser(ctx, f.alice.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(phones) != 1 {
+		t.Fatalf("the number was duplicated rather than upgraded: %+v", phones)
+	}
+}
