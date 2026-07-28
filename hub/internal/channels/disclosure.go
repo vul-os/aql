@@ -207,13 +207,30 @@ var disclosures = map[string]RailDisclosure{
 			Note:       "Requires a shared guild; the bot cannot reach someone outside it.",
 		},
 		SelfHostable: true,
+		// Not config-derivable: the Interactions Endpoint URL is set in
+		// Discord's own app settings, so this hub cannot see it. Stated in the
+		// note instead, because it is the one way a Discord operator can
+		// accidentally put the rail back into needing ingress.
 		SelfHostNote: "Your own bot application. No public endpoint needed — the hub " +
-			"holds the Gateway WebSocket open.",
+			"holds the Gateway WebSocket open. Leave the Interactions Endpoint URL " +
+			"UNSET in your Discord app: setting it turns button taps into webhooks " +
+			"and this rail then needs a reachable endpoint after all.",
 	},
 	KindSlack: {
-		Rail:             KindSlack,
-		Platform:         "Slack",
-		InboundTransport: OutboundPersistent,
+		Rail:     KindSlack,
+		Platform: "Slack",
+		// WEBHOOK, because that is what an install without an app token runs.
+		//
+		// Slack has BOTH paths and the hub serves both: Socket Mode (outbound
+		// WSS) when SLACK_APP_TOKEN is set, and the Events API webhook at
+		// /webhooks/slack, which is registered unconditionally. This entry
+		// declared outbound-persistent regardless, so an operator with a bot
+		// token and a signing secret — a complete, working Slack install — was
+		// told the rail needs no inbound reachability. It does.
+		//
+		// Same reasoning as Telegram: declare the more demanding answer and let
+		// DisclosureFor relax it when the configuration actually earns it.
+		InboundTransport: Webhook,
 		Inbound: Direction{
 			Initiation: InboundTriggered,
 			Price:      Free,
@@ -226,7 +243,9 @@ var disclosures = map[string]RailDisclosure{
 			Note:       "Requires a workspace install; the app cannot reach someone outside it.",
 		},
 		SelfHostable: true,
-		SelfHostNote: "Your own Slack app with Socket Mode. No public endpoint needed.",
+		SelfHostNote: "Your own Slack app. With an app token (Socket Mode) the hub dials " +
+			"out and needs no public endpoint; without one, events arrive by webhook " +
+			"and you need a reachable HTTPS endpoint.",
 	},
 }
 
@@ -252,6 +271,16 @@ func DisclosureFor(k string, cfg Config) (RailDisclosure, bool) {
 		d.SelfHostNote = "A bot token from @BotFather. This hub is configured for long " +
 			"polling, so it dials out and needs no public endpoint — the rail works " +
 			"behind CGNAT."
+	}
+
+	// Slack's mode is decided by whether an app token exists, not by an engine
+	// setting: Socket Mode runs only when SLACK_APP_TOKEN is set
+	// (httpapi.Server.New), and the Events API webhook is always registered.
+	if k == KindSlack && cfg.SlackAppToken != "" {
+		d.InboundTransport = OutboundPersistent
+		d.SelfHostNote = "Your own Slack app. This hub has an app token, so Socket Mode " +
+			"holds an outbound WebSocket and no public endpoint is needed — the rail " +
+			"works behind CGNAT."
 	}
 
 	// WhatsApp's bridge engine is a different rail wearing the same name, and

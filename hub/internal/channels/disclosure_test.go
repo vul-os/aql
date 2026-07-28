@@ -116,12 +116,13 @@ func TestCGNATAnswerFollowsFromTheDeclaredTransport(t *testing.T) {
 			"a webhook needs a reachable endpoint by definition")
 	}
 
-	// Telegram is deliberately NOT in this list. It is the one rail whose
-	// transport depends on configuration, so the unconditional answer belongs
-	// to DisclosureFor — see TestTelegramDisclosureFollowsTheConfiguredEngine.
-	// This test used to assert Telegram was outbound-persistent, which is how
-	// the false claim survived: the guard agreed with it.
-	for _, k := range []string{KindSlack, KindDiscord} {
+	// Only Discord is unconditional. Telegram (engine setting) and Slack
+	// (app token present or not) both depend on configuration, so their answer
+	// belongs to DisclosureFor — see the per-rail tests below.
+	//
+	// This test used to assert all three were outbound-persistent, which is
+	// how both false claims survived: the guard agreed with them.
+	for _, k := range []string{KindDiscord} {
 		d, _ := Disclosure(k)
 		if d.InboundTransport != OutboundPersistent {
 			t.Errorf("%s transport = %q, want outbound-persistent", k, d.InboundTransport)
@@ -215,19 +216,34 @@ func TestTelegramDisclosureFollowsTheConfiguredEngine(t *testing.T) {
 // Every other rail is mode-free, and must not acquire a mode by accident: an
 // override keyed on the wrong rail would silently change what a self-hoster is
 // told about Slack or Discord.
-func TestOnlyTelegramVariesWithConfiguration(t *testing.T) {
-	base := DisclosuresFor(Config{})
-	polling := DisclosuresFor(Config{TelegramEngine: "polling"})
-	if len(base) != len(polling) {
-		t.Fatalf("rail count changed with configuration: %d vs %d", len(base), len(polling))
+func TestOneRailsSettingDoesNotMoveAnother(t *testing.T) {
+	// Three rails now vary with configuration — Telegram's engine, Slack's app
+	// token, WhatsApp's engine — so the interesting property is no longer
+	// "only Telegram varies". It is that a knob belongs to exactly one rail:
+	// an override keyed on the wrong Kind would silently change what a
+	// self-hoster is told about a rail they did not touch.
+	knobs := []struct {
+		name string
+		cfg  Config
+		rail string
+	}{
+		{"telegram engine", Config{TelegramEngine: "polling"}, KindTelegram},
+		{"slack app token", Config{SlackAppToken: "xapp-1"}, KindSlack},
+		{"whatsapp engine", Config{WhatsAppEngine: "bridge"}, KindWhatsApp},
 	}
-	for i := range base {
-		if base[i].Rail == KindTelegram {
-			continue
+	base := DisclosuresFor(Config{})
+	for _, k := range knobs {
+		got := DisclosuresFor(k.cfg)
+		if len(base) != len(got) {
+			t.Fatalf("%s: rail count changed, %d vs %d", k.name, len(base), len(got))
 		}
-		if base[i].InboundTransport != polling[i].InboundTransport ||
-			base[i].SelfHostNote != polling[i].SelfHostNote {
-			t.Errorf("%s changed with the Telegram engine setting", base[i].Rail)
+		for i := range base {
+			if base[i].Rail == k.rail {
+				continue
+			}
+			if base[i] != got[i] {
+				t.Errorf("%s moved %s, which it has nothing to do with", k.name, base[i].Rail)
+			}
 		}
 	}
 }
@@ -286,5 +302,43 @@ func TestEngineOverridesStayOnTheirOwnRail(t *testing.T) {
 		if base[i] != both[i] {
 			t.Errorf("%s changed when another rail's engine was set", base[i].Rail)
 		}
+	}
+}
+
+// Slack's mode is decided by whether an app token exists, not by an engine
+// setting: Socket Mode runs only when SLACK_APP_TOKEN is set, and the Events
+// API webhook is registered unconditionally. A bot token plus a signing secret
+// is a complete, working Slack install — and it needs ingress.
+func TestSlackDisclosureFollowsTheAppToken(t *testing.T) {
+	d, ok := DisclosureFor(KindSlack, Config{SlackBotToken: "xoxb-1", SlackSigningSecret: "s"})
+	if !ok {
+		t.Fatal("no disclosure for slack")
+	}
+	if d.InboundTransport != Webhook {
+		t.Errorf("without an app token: transport %q, want %q", d.InboundTransport, Webhook)
+	}
+	if d.RunsBehindCGNAT() {
+		t.Error("without an app token Slack arrives by webhook, which needs a reachable " +
+			"endpoint; claiming CGNAT is safe here sends someone to set up a rail that " +
+			"cannot receive")
+	}
+
+	withToken, _ := DisclosureFor(KindSlack, Config{SlackAppToken: "xapp-1"})
+	if withToken.InboundTransport != OutboundPersistent {
+		t.Errorf("with an app token: transport %q, want %q", withToken.InboundTransport, OutboundPersistent)
+	}
+	if !withToken.RunsBehindCGNAT() {
+		t.Error("Socket Mode holds an outbound WebSocket and must report it runs behind CGNAT")
+	}
+}
+
+// Discord's equivalent hazard cannot be read from this hub's config — the
+// Interactions Endpoint URL lives in Discord's app settings — so it has to be
+// said in words instead of derived.
+func TestDiscordDisclosureNamesTheInteractionsEndpointFootgun(t *testing.T) {
+	d, _ := DisclosureFor(KindDiscord, Config{})
+	if !strings.Contains(d.SelfHostNote, "Interactions Endpoint") {
+		t.Errorf("Discord's note does not warn that setting the Interactions Endpoint URL "+
+			"puts the rail back into needing ingress: %q", d.SelfHostNote)
 	}
 }

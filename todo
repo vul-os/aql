@@ -90,6 +90,19 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 - [ ] DMTAP channel stays a scaffold with a fail-closed transport until there is a real
       wire format. Do not present it as a channel.
 
+## §26.3 disclosure — swept, all four rails
+Three of the four declared a configuration-dependent property unconditionally, and each
+time the existing guard AGREED with the false claim. Now mode-aware, with a generic
+endpoint test that fails if a moded rail stops passing config through.
+- Telegram: webhook by default, outbound only with AQL_TELEGRAM_ENGINE=polling.
+- Slack: webhook by default, outbound only when SLACK_APP_TOKEN is set.
+- WhatsApp: the bridge engine changes price AND initiation (it can cold-call).
+- Discord: genuinely unconditional here, but the Interactions Endpoint URL lives in
+  Discord's settings and this hub cannot see it — stated in the note instead.
+- LESSON: site/docs/reachability.md had Slack right all along. The prose doc was more
+  accurate than the machine-readable table, which is the opposite of the usual
+  assumption.
+
 ## console ↔ hub drift (tracked by src/lib/__tests__/routeParity.test.ts)
 CLOSED. routeParity's KNOWN_UNAVAILABLE list is empty — every route api.ts calls, the
 hub serves. Adding an entry back is a real decision, not bookkeeping.
