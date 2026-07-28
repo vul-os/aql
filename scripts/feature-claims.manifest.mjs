@@ -500,6 +500,10 @@ export const FEATURES = [
       { file: 'hub/internal/store/migrations/0019_controller_events.sql', pattern: 'event_id\\s+TEXT PRIMARY KEY' },
       // The wiring, which is the half that was absent: a handler that calls it.
       { file: 'hub/internal/httpapi/devices.go', pattern: 'handleControllerEvent' },
+      // And retrievable: the migration stores each envelope verbatim so a
+      // signature stays re-checkable, which is only true if the bytes can be
+      // read back out.
+      { file: 'hub/internal/httpapi/devices.go', pattern: 'handleDeviceEvents' },
     ],
   },
   {

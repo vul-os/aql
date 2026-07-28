@@ -176,6 +176,22 @@ func (s *Store) appendEventAuditRow(ctx context.Context, ev ControllerEvent, com
 	})
 }
 
+// DeviceAccountID resolves which account owns a device, via its location.
+//
+// Used to authorise reads of that device's controller events: the events are
+// audit evidence about one account's gates, and a device id is guessable.
+func (s *Store) DeviceAccountID(ctx context.Context, deviceID string) (string, error) {
+	var acct string
+	err := s.db.QueryRowContext(ctx,
+		`SELECT l.account_id FROM devices d
+		   JOIN locations l ON l.id = d.location_id
+		  WHERE d.id = ?`, deviceID).Scan(&acct)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	return acct, err
+}
+
 // ControllerEventsByDevice lists stored events for a device, newest first,
 // ordered by the HUB's receive clock rather than the controller's ts (which
 // events.md documents as unreliable after a power cut on a device with no RTC).

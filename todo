@@ -153,17 +153,22 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       internal/store, transitive (a per-file scan produces false positives — the audit
       hash-chain verifiers are reached via VerifyHashChains and are genuinely wired).
       After fixing the four above, the remaining list is short and triaged below.
-- [ ] Still unreachable, triaged, NOT yet acted on:
-      - AddVerifiedPhone / LinkChannelIdentity — now thin wrappers over the shared
-        tx primitives the ceremonies use; production goes through the ceremonies, so
-        these survive only as cross-package test fixtures. Honest but worth deciding on.
-      - ControllerEventsByDevice — mine, from the events work. No route exposes raw
-        signed events yet; the audit rows they produce ARE visible. Either expose it or
-        drop it; do not leave it.
-      - ExpireDeviceClaim, SetInviteTokenHash, PhoneVerified — read/maintenance helpers
-        with no caller. Check each for a hidden unbuilt feature before deleting.
-- [ ] Make the scan a CI guard rather than a thing I run by hand. Needs an allowlist
-      with REASONS, and a floor so a broken walk fails instead of reporting zero.
+- [x] The scan is now a CI guard: store/reachability_test.go, run by `go test ./...`.
+      Transitive reachability, an allowlist where every entry carries a REASON, a floor
+      that fails if the walk finds <100 methods, and a rot check so an allowlist entry
+      naming a deleted or now-reachable method fails too. Tampered all three: a new
+      unreachable method, a stale exemption, and a broken walk each fail by name.
+- [x] Triaged the three it found. ControllerEventsByDevice was MINE and would have been
+      the fifth instance, added by the same pass that catalogued the other four — now
+      exposed at GET /v1/devices/{id}/events (admin-only, 404 for outsiders so a
+      guessable device id leaks nothing). ExpireDeviceClaim and SetInviteTokenHash are
+      genuine dev/test hooks whose own declarations say so and whose exposure would be
+      a vulnerability (claim DoS; invite-credential replacement) — allowlisted with that
+      reasoning. AddVerifiedPhone/LinkChannelIdentity/PhoneVerified are cross-package
+      test fixtures over primitives production reaches through the ceremonies.
+- NOTE: the guard cannot see the SIBLING shape — a handler that receives something and
+      discards it is perfectly "reachable". That was the controller-events defect, and
+      nothing automated would have caught it.
 
 ## spec-derived checks
 The technique that found the 2^53 rounding: derive expected behaviour from proto/*.md

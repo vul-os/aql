@@ -434,6 +434,10 @@ func (s *Server) Router() http.Handler {
 	// devices + pairing + controller transport (spec: backend devices.ts +
 	// proto/pairing.md)
 	mux.Handle("GET /v1/devices", s.requireAuth(s.handleDevicesList))
+	// The raw signed events a controller has delivered (see devices.go).
+	// Admin-only; the access-relevant ones are already in every member's
+	// audit view.
+	mux.Handle("GET /v1/devices/{id}/events", s.requireAuth(s.handleDeviceEvents))
 	mux.Handle("POST /v1/devices", s.requireAuth(s.handleDeviceCreate))
 	// proto/pairing.md's diagram specifies POST /pair/redeem — that's the path
 	// the controller builds from its --gateway URL. Serve it there (spec form)

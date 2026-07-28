@@ -227,3 +227,80 @@ func waitForControllerEvents(t *testing.T, st *store.Store, deviceID string, wan
 	}
 	t.Fatalf("controller events never reached the store")
 }
+
+// The read side of the stored evidence.
+//
+// 0019 stores each event's envelope VERBATIM on the grounds that a signature
+// is only re-checkable against the exact bytes it covered. That rationale is
+// only true if the bytes can be got back out — a stored signature nobody can
+// retrieve is decorative — so this route is part of the feature rather than a
+// convenience on top of it.
+func TestStoredEventsAreRetrievableWithTheirSignedBytes(t *testing.T) {
+	ts, _, _ := newLiveServer(t)
+	access, _, locationID, deviceID, priv := pairDevice(t, ts)
+
+	code, out := liveJSON(t, ts, "POST", "/v1/access-points", access, map[string]any{
+		"location_id": locationID, "name": "Gate", "kind": "gate", "device_id": deviceID,
+	})
+	if code != http.StatusCreated {
+		t.Fatalf("ap create: %d %v", code, out)
+	}
+
+	conn, ctx := authedWS(t, ts, priv, deviceID)
+	raw := signEvent(t, priv, deviceID, "ev-read-1", "grant_redeemed", map[string]any{"grant_id": "g-1"})
+	if err := conn.Write(ctx, websocket.MessageText, raw); err != nil {
+		t.Fatal(err)
+	}
+
+	var events []any
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		code, out = liveJSON(t, ts, "GET", "/v1/devices/"+deviceID+"/events", access, nil)
+		if code != 200 {
+			t.Fatalf("events: %d %v", code, out)
+		}
+		events, _ = out["events"].([]any)
+		if len(events) > 0 {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if len(events) != 1 {
+		t.Fatalf("got %d events, want 1", len(events))
+	}
+	ev, _ := events[0].(map[string]any)
+	if ev["event_id"] != "ev-read-1" || ev["kind"] != "grant_redeemed" {
+		t.Errorf("event: %v", ev)
+	}
+	// The exact bytes, not a re-rendering: an auditor verifies the signature
+	// against these, so anything else makes the stored sig unusable.
+	if env, _ := ev["envelope"].(string); env != string(raw) {
+		t.Errorf("envelope is not the signed bytes:\n got %s\nwant %s", env, raw)
+	}
+}
+
+// Signed evidence about one account's gates, behind a guessable device id.
+func TestDeviceEventsAreAdminOnlyAndDoNotLeakExistence(t *testing.T) {
+	ts, _, _ := newLiveServer(t)
+	_, _, _, deviceID, _ := pairDevice(t, ts)
+
+	// A second account with no relationship to that device.
+	code, out := liveJSON(t, ts, "POST", "/v1/auth/register", "", map[string]any{
+		"username": "outsider@events.com", "password": "hunter2hunter2", "location_name": "Elsewhere",
+	})
+	if code != http.StatusCreated {
+		t.Fatalf("register outsider: %d %v", code, out)
+	}
+	other := out["tokens"].(map[string]any)["access_token"].(string)
+
+	code, _ = liveJSON(t, ts, "GET", "/v1/devices/"+deviceID+"/events", other, nil)
+	if code != http.StatusNotFound {
+		t.Errorf("outsider got %d, want 404 (not 403 — a device they cannot see must be "+
+			"indistinguishable from one that does not exist)", code)
+	}
+	// And an id that really does not exist answers the same way.
+	code, _ = liveJSON(t, ts, "GET", "/v1/devices/does-not-exist/events", other, nil)
+	if code != http.StatusNotFound {
+		t.Errorf("unknown device: %d, want 404", code)
+	}
+}

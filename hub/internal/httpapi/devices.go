@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -548,4 +549,70 @@ func readRawJSON(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
 		return nil, false
 	}
 	return raw, true
+}
+
+// GET /v1/devices/{id}/events — the raw, controller-signed events this hub has
+// stored for one device (see store/controllerevents.go and proto/events.md).
+//
+// This exists because the migration's rationale demanded it. 0019 stores each
+// event's envelope VERBATIM, on the grounds that a signature is only
+// re-checkable against the exact bytes it covered — and a stored signature
+// nobody can retrieve is decorative. Until this route, nothing could read
+// those rows back, which would have made ControllerEventsByDevice the fifth
+// "built and unreachable" in this codebase, added by the same pass that
+// catalogued the other four.
+//
+// Admin-only, and not because the content is secret — the access-relevant
+// events already appear in the audit log every member's console can reach.
+// It is that this returns the signed evidence for a named device id, which is
+// guessable, so it is gated on membership of the owning account exactly like
+// the audit tooling it belongs with.
+func (s *Server) handleDeviceEvents(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		writeErr(w, http.StatusBadRequest, "missing_id")
+		return
+	}
+	accountID, err := s.store.DeviceAccountID(r.Context(), id)
+	if errors.Is(err, store.ErrNotFound) {
+		// 404 rather than 403: a device this caller cannot see must be
+		// indistinguishable from one that does not exist.
+		writeErr(w, http.StatusNotFound, "device_not_found")
+		return
+	}
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	if !s.requireAccountAdmin(w, r, accountID) {
+		return
+	}
+
+	limit := 100
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			limit = n
+		}
+	}
+	evs, err := s.store.ControllerEventsByDevice(r.Context(), id, limit)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "internal")
+		return
+	}
+
+	out := make([]map[string]any, 0, len(evs))
+	for _, e := range evs {
+		out = append(out, map[string]any{
+			"event_id": e.EventID,
+			"kind":     e.Kind,
+			"ts":       e.TS,
+			"data":     e.Data,
+			"sig":      e.Sig,
+			// The exact bytes the signature covers, so an auditor can verify
+			// it against the device's enrolled key rather than trusting this
+			// hub's re-rendering of the fields above.
+			"envelope": string(e.Envelope),
+		})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"events": out})
 }
