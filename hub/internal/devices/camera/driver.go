@@ -14,6 +14,26 @@ import (
 	"github.com/vul-os/aql/hub/internal/devices"
 )
 
+// Thresholds for calling a flowing stream unusable.
+//
+// Both are judgement calls, stated as such rather than dressed up as science.
+//
+// lossDegradeRate: RTP/H.264 carries no FEC, so a lost packet can destroy a
+// whole slice and smear or freeze the picture until the next keyframe. Visible
+// damage starts well below 5%; 2% is chosen as clearly-broken rather than
+// borderline, because this flips an operator-visible state.
+//
+// minLossSample: the probe watches for roughly two seconds. On a small burst
+// one dropped packet is a large percentage, and degrading on that would make
+// the state flap between polls for a camera that is fine. 100 expected packets
+// is a few tenths of a second of real video and is cleared easily by any
+// working stream — while a stream too short to reach it is not evidence of
+// anything either way.
+const (
+	lossDegradeRate = 0.02
+	minLossSample   = 100
+)
+
 // Driver exposes discovered and declared ONVIF cameras across the device seam.
 //
 // It reports two things and no others: whether a camera answers, and where its
@@ -433,7 +453,29 @@ func (d *Driver) Read(ctx context.Context, deviceID string) ([]devices.Reading, 
 		summary = info.Summary() + " · " + flow.Summary()
 		readings = append(readings,
 			devices.Reading{DeviceID: deviceID, Metric: "media_flowing", Value: 1, At: at},
-			devices.Reading{DeviceID: deviceID, Metric: "media_packets", Value: float64(flow.Packets), At: at})
+			devices.Reading{DeviceID: deviceID, Metric: "media_packets", Value: float64(flow.Packets), At: at},
+			// Emitted whatever the verdict below. These are measurements, and
+			// a caller drawing a graph of stream health needs them on the good
+			// days too — a loss figure that only appears once something is
+			// already wrong has no baseline to be judged against.
+			devices.Reading{DeviceID: deviceID, Metric: "media_lost", Value: float64(flow.Lost), At: at},
+			devices.Reading{DeviceID: deviceID, Metric: "media_expected", Value: float64(flow.Expected), At: at})
+
+		// Flowing but lossy: DEGRADED, for the same reason "described a stream
+		// and sent nothing" is. The camera is reachable and demonstrably not
+		// delivering a usable picture, and "online" sends an operator looking
+		// somewhere else while they stare at a smeared player.
+		//
+		// Guarded by a minimum sample on purpose. The probe watches for about
+		// two seconds, and on a small burst one dropped packet is a large
+		// percentage — degrading on that would make the state flap between
+		// polls for a camera that is fine. A real stream clears this easily; a
+		// short or stuttering one does not, and a short one is not evidence.
+		if flow.Expected >= minLossSample && flow.LossRate() >= lossDegradeRate {
+			d.observe(deviceID, devices.AvailDegraded,
+				info.Summary()+" · "+flow.Summary())
+			return readings, nil
+		}
 	}
 
 	d.observe(deviceID, devices.AvailOnline, summary)

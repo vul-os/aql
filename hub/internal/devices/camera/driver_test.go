@@ -450,3 +450,118 @@ func equal(a, b []string) bool {
 	}
 	return true
 }
+
+// ── media-flow verdicts, through the driver ─────────────────────────────────
+//
+// The driver's media path had no test at all: not the pre-existing
+// "described a stream and sent nothing → degraded", and not the loss verdict
+// added alongside it. The measurement living in ProbeMedia proves nothing on
+// its own if nothing acts on it, which is this repository's most-repeated
+// defect and one I had just created the conditions for.
+//
+// These drive ONVIF and RTSP together — a fake camera whose stream URI points
+// at a fake RTSP server — so the assertion is on what an operator would
+// actually be told.
+
+func readWithMediaFlow(t *testing.T, tune func(*fakeRTSP)) (devices.Availability, string, map[string]devices.Reading) {
+	t.Helper()
+	rtsp := newFakeRTSP(t)
+	rtsp.set(tune)
+
+	cam := newFakeCam(t)
+	cam.streamURI = rtsp.url("/cam")
+
+	d := newDriver(t, Config{
+		Cameras:         []CameraConfig{declared(cam)},
+		VerifyMediaFlow: true,
+		MediaFlowWindow: 600 * time.Millisecond,
+		Timeout:         2 * time.Second,
+	})
+	readings, err := d.Read(context.Background(), "gate-cam")
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	byMetric := map[string]devices.Reading{}
+	for _, r := range readings {
+		byMetric[r.Metric] = r
+	}
+	// Read back through the public snapshot rather than internal state: this
+	// is what a console would show, which is the thing the verdict is for.
+	var got Camera
+	for _, c := range d.Cameras() {
+		if c.ID == "gate-cam" {
+			got = c
+		}
+	}
+	if got.ID == "" {
+		t.Fatal("no camera in the snapshot")
+	}
+	return got.Availability, got.Detail, byMetric
+}
+
+// A stream that flows and loses a quarter of its packets is not a working
+// camera, and reporting it online sends an operator looking elsewhere while
+// they stare at a smeared player.
+func TestReadDegradesOnALossyStream(t *testing.T) {
+	avail, detail, m := readWithMediaFlow(t, func(f *fakeRTSP) {
+		f.rtpPackets = 600
+		f.rtpDropEvery = 4
+	})
+	if avail != devices.AvailDegraded {
+		t.Errorf("availability = %q, want degraded: %s", avail, detail)
+	}
+	if !strings.Contains(detail, "lost") {
+		t.Errorf("the detail does not mention loss, so an operator cannot act on it: %q", detail)
+	}
+	// Measurements are emitted whatever the verdict — a health graph needs the
+	// numbers on the good days too.
+	if m["media_lost"].Value == 0 {
+		t.Error("media_lost reading is zero on a deliberately lossy stream")
+	}
+	if m["media_expected"].Value == 0 {
+		t.Error("media_expected reading is missing")
+	}
+	if m["media_flowing"].Value != 1 {
+		t.Error("media_flowing should still be 1: packets did arrive")
+	}
+}
+
+func TestReadStaysOnlineOnACleanStream(t *testing.T) {
+	avail, detail, m := readWithMediaFlow(t, func(f *fakeRTSP) { f.rtpPackets = 600 })
+	if avail != devices.AvailOnline {
+		t.Errorf("availability = %q, want online: %s", avail, detail)
+	}
+	if m["media_lost"].Value != 0 {
+		t.Errorf("media_lost = %v on a clean stream", m["media_lost"].Value)
+	}
+	if m["media_expected"].Value == 0 {
+		t.Error("media_expected is missing on a clean stream; a loss figure with no " +
+			"baseline cannot be judged")
+	}
+}
+
+// The minimum-sample guard. A short burst with one drop is a large percentage
+// and no evidence at all; degrading on it would flap the state between polls
+// for a camera that is fine.
+func TestASmallSampleDoesNotDegrade(t *testing.T) {
+	avail, detail, _ := readWithMediaFlow(t, func(f *fakeRTSP) {
+		f.rtpPackets = 20
+		f.rtpDropEvery = 4
+	})
+	if avail != devices.AvailOnline {
+		t.Errorf("availability = %q on a %d-packet sample; too few packets to judge: %s",
+			avail, 20, detail)
+	}
+}
+
+// The pre-existing verdict, which also had no test: described a perfectly good
+// stream, sent nothing.
+func TestReadDegradesWhenNoMediaArrives(t *testing.T) {
+	avail, detail, m := readWithMediaFlow(t, func(f *fakeRTSP) { f.rtpPackets = 0 })
+	if avail != devices.AvailDegraded {
+		t.Errorf("availability = %q, want degraded: %s", avail, detail)
+	}
+	if m["media_flowing"].Value != 0 {
+		t.Errorf("media_flowing = %v, want 0", m["media_flowing"].Value)
+	}
+}

@@ -192,6 +192,15 @@ summary reports how many of the expected packets never arrived. Reordering, dupl
 and the 16-bit sequence wrap are all kept out of that figure, because each of them makes a
 naive count report a fault on a perfectly good stream.
 
+A stream losing **2% or more** reports as **degraded**, not online — the same verdict a
+camera that sends nothing gets, and for the same reason: it is reachable and not
+delivering, and "online" sends you looking somewhere else. That threshold only applies
+once at least 100 packets were expected; on a shorter burst one dropped packet is a large
+percentage and no evidence at all, and degrading on it would flap the state between polls.
+Both numbers are judgement calls rather than measurements, and they are written down as
+such in `driver.go`. The counts (`media_lost`, `media_expected`) are reported whatever the
+verdict, so a health graph has a baseline on the good days too.
+
 None of this decodes anything. H.264 depacketization is where a fake written from the
 same RFC would simply agree with the code under test, so it waits for a real camera.
 
