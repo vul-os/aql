@@ -32,6 +32,13 @@ const apiPath = path.join(repo, 'src/lib/api.ts');
  * Every entry is a claim that the console genuinely should not call this, and
  * needs a reason that still makes sense to whoever reads it next. "Not needed
  * yet" is not a reason — that is unfinished work, and it belongs in todo.
+ *
+ * This list started three entries longer. adminAccount and adminClaimState
+ * were never uncalled at all: the scan that produced this list could not see
+ * `api\n  .method()`, so I wrote reasons for two methods the admin screens
+ * have always called. Fabricated exemptions are worse than none — they read as
+ * a decision someone made. Both are gone, and callRe now matches the chained
+ * form.
  */
 const ALLOWED_UNCALLED: Record<string, string> = {
   refresh:
@@ -49,11 +56,6 @@ const ALLOWED_UNCALLED: Record<string, string> = {
   accountCreate:
     'Account creation happens through registration (an account is created with its owner); ' +
     'there is no second path in the console that creates a bare account.',
-  adminAccount:
-    'Platform-admin bootstrap surface, exercised by the admin claim flow rather than by a ' +
-    'screen a member reaches.',
-  adminClaimState:
-    'Same: part of the one-time platform-admin claim, not a console feature.',
   energyChannels:
     'The Energy screen renders series and source mix, which is what a resident reads. The ' +
     'raw per-channel listing is an operator-level view that does not exist yet — if that ' +
@@ -61,11 +63,24 @@ const ALLOWED_UNCALLED: Record<string, string> = {
   engineHealth:
     'Device-engine health is surfaced per device on the Devices screen from the device ' +
     'payload; the aggregate health endpoint has no screen of its own yet.',
-  railDisclosures:
-    'The §26.3 per-rail disclosure data (initiation class, inbound transport, price ' +
-    'shape, exposure). It has no console surface yet, which is a real gap in the honesty ' +
-    'story rather than a decision — tracked in todo, not resolved here.',
 };
+
+/**
+ * Matches `api.method(` INCLUDING the chained-on-a-new-line form:
+ *
+ *     api
+ *       .railDisclosures()
+ *
+ * The first version of this file required `api.` to be contiguous, and that
+ * was a real hole rather than a nicety. It did not just under-report calls —
+ * it meant a method that had since been wired up still looked uncalled, so the
+ * stale-allowlist check stayed quiet and the allowlist widened silently. Found
+ * by writing exactly that call style in RailDisclosureSection.tsx and noticing
+ * the rot check did not fire.
+ */
+function callRe(name: string): RegExp {
+  return new RegExp(`\\bapi\\s*\\.\\s*${name}\\b`);
+}
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
@@ -94,7 +109,7 @@ describe('every api client method is reachable from the console', () => {
     const bodies = files.map((f) => readFileSync(f, 'utf-8'));
     const called = new Set<string>();
     for (const name of methods) {
-      const re = new RegExp(`\\bapi\\.${name}\\b`);
+      const re = callRe(name);
       if (bodies.some((b) => re.test(b))) called.add(name);
     }
 
@@ -121,7 +136,7 @@ describe('every api client method is reachable from the console', () => {
     const stale = Object.keys(ALLOWED_UNCALLED)
       .filter((m) => {
         if (!methods.includes(m)) return true;
-        const re = new RegExp(`\\bapi\\.${m}\\b`);
+        const re = callRe(m);
         return bodies.some((b) => re.test(b));
       })
       .sort();

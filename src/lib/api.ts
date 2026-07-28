@@ -779,7 +779,11 @@ export const api = {
    * the other sessions off. That is a security control being unreachable, which
    * is worse than it being absent — the feature is documented as existing.
    */
-  logoutAll: () => apiFetch<{ ok: boolean; revoked: number }>('/auth/logout-all', {
+  // `{ok: true}` and nothing else — handleLogoutAll writes exactly that. An
+  // earlier version of this type also promised a `revoked` count the hub has
+  // never sent, which would have rendered as "undefined sessions ended" for
+  // whoever first tried to show it.
+  logoutAll: () => apiFetch<{ ok: boolean }>('/auth/logout-all', {
     method: 'POST',
   }),
 

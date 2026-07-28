@@ -188,10 +188,25 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       guard checks client → screen. Three links, three checks now: routeParity (client →
       route), routeCoverage (route → client), apiReachability (client → screen). I ran
       only the Go suite after adding the events route and missed routeCoverage failing.
-- [ ] railDisclosures has no console surface. The §26.3 per-rail disclosure data
-      (initiation class, inbound transport, price shape, exposure) is computed, tested and
-      served, and nothing shows it to anyone — which for an HONESTY feature is worse than
-      for an ordinary one. Allowlisted with that stated, not resolved.
+- [x] railDisclosures now renders, in Settings directly under the two linking sections —
+      where someone actually CHOOSES a rail, not in a doc they open afterwards. The hub's
+      `note` is rendered verbatim and unconditionally: the four fields cannot say the
+      thing most likely to be misread (self-hosting removes the middleman operator, not
+      the platform), and a table without that sentence lets "you host it yourself" read as
+      "nobody else sees your messages". runs_behind_cgnat comes from the hub, never
+      re-derived locally. Both pinned by tests, both tampered.
+- LESSON: my apiReachability guard could not see `api\n  .method()` — the regex needed
+      `api.` contiguous. That was not a cosmetic under-report: it meant a method that HAD
+      been wired up still looked uncalled, so the stale-allowlist check stayed quiet and
+      the allowlist could widen silently. Worse, two of the entries I wrote reasons for
+      (adminAccount, adminClaimState) were never uncalled at all — the admin screens have
+      always called them in the chained style, so I had invented justifications for
+      exemptions that should not exist. Fabricated exemptions are worse than none: they
+      read as a decision somebody made. Fixed, all three removed, and reverting the regex
+      now produces false alarms, which is how I know the fix matters.
+- LESSON: api.ts typed logoutAll as returning {ok, revoked} and the hub sends {ok} only.
+      Nothing read it yet, so nothing was broken — but the first person to render "N
+      sessions ended" would have shipped "undefined".
 - NOTE: the guard cannot see the SIBLING shape — a handler that receives something and
       discards it is perfectly "reachable". That was the controller-events defect, and
       nothing automated would have caught it.

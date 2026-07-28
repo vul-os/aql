@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from './AppLayout';
 import { Card } from '@/components/ui/Card';
+import { RailDisclosureSection } from '@/components/settings/RailDisclosureSection';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Avatar, resolveAvatarUrl } from '@/components/ui/Avatar';
@@ -38,6 +39,10 @@ export default function Settings() {
         <ProfileSection />
         <PhoneNumbersSection />
         <ChatAccountsSection />
+        {/* Directly after the two linking sections: this is what someone
+            needs in order to CHOOSE a rail, so it belongs next to the choice
+            rather than in a doc nobody opens first. */}
+        <RailDisclosureSection />
         <LocationsSection />
         <PasswordSection />
         <TwoFactorSection />
