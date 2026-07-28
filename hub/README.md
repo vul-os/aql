@@ -14,14 +14,17 @@ device), temporary grants, and the platform-admin console. `go build ./...`,
 `go vet ./...`, `go test ./...` are green (default build); `-tags portal`
 builds and tests green too.
 
-The chat channels are now ported too: **WhatsApp, Slack (Events API + Socket
-Mode) and Telegram** all funnel opens through the same open-path choke point.
-See **Chat channels** below.
+The chat channels are now ported too, and one exceeds the backend spec:
+**WhatsApp, Slack (Events API + Socket Mode), Telegram (webhook or dial-out
+polling) and Discord (dial-out Gateway — not in the Workers backend at all)**
+all funnel opens through the same open-path choke point. See **Chat
+channels** below.
 
-Remaining (not blocking the core): phone-OTP verify routes, analytics
-endpoints, maintenance/meter records + device-fed movement metering, Google
-OAuth / email-verify / password-reset ceremony, and dropping the real Vite
-bundle into `internal/portal/dist/`. See the porting map below.
+Remaining (not blocking the core): device-fed movement metering, Google OAuth,
+and dropping the real Vite bundle into `internal/portal/dist/`. See the
+porting map below. (Phone verification, analytics, maintenance records and
+password reset all shipped since the paragraph above was last true — see
+**Chat channels** and the porting map.)
 
 **Works today**
 
@@ -50,7 +53,8 @@ bundle into `internal/portal/dist/`. See the porting map below.
   `../proto/commands.md` (nonce, iat/exp with the 60 s cap, JCS
   canonicalization).
 - `internal/portal` — `go:embed` seam serving a placeholder page at `/`;
-  the Svelte portal bundle drops in here later.
+  the real React portal bundle (`../src`, Vite) drops in here later — see
+  **Build modes** below.
 - `GET /health` → `{"ok":true,"version":...}`.
 
 **JCS note**: `internal/keys/jcs.go` no longer implements anything — it
@@ -84,10 +88,12 @@ JavaScript implementations diverge from Go: [`../proto/JCS-PROFILE.md`](../proto
   triggers for `access_logs` and `admin_audit_log` — see **Tamper-evident
   audit log** below.
 
-Still deferred (ported with their routes): countries, oauth_identities,
-password/email token tables, device_commands (dispatch is in-memory via the
-hub for now), maintenance_events + access_point_meters (movement metering).
-(The channel chat/message tables landed in `0005_channels.sql`.)
+Still deferred: countries, oauth_identities (Google OAuth is not built),
+device_commands (dispatch is in-memory via the hub for now), and
+access_point_meters (device-fed movement metering). `auth_recovery_tokens`
+(`0009_auth_recovery.sql`) and `maintenance_events` (`0017_maintenance.sql`)
+have since landed — see the porting map. (The channel chat/message tables
+landed in `0005_channels.sql`.)
 
 ## Chat channels
 
@@ -101,11 +107,25 @@ whether the gate may open. Identity is keyed on `(channel, external id)`
 (`channel_identities`), except WhatsApp whose identity is the **verified phone**
 (`profile_phone_numbers`).
 
+A rail only answers people it recognises, and recognition has to be earned
+once per identity, not assumed. `POST /v1/phones/me/link` (`internal/httpapi/phones.go`,
+migration `0018_phone_link_codes.sql`) is that ceremony for WhatsApp: the
+console mints a short code (proving an authenticated session on this
+account) and the member sends it to the bot from the number being linked
+(proving control of the number, via the provider's signature on the inbound
+webhook). It is **not SMS OTP** — the hub sends no SMS and no email, ever;
+the "verification" is a code round-tripped through the chat rail itself.
+Telegram, Slack and Discord identities are linked the same way, one level up
+(`internal/httpapi/channellink.go`, migration `0020_channel_link_codes.sql`):
+a twelve-character code minted from the console, redeemed from the platform
+account itself.
+
 | Channel | Endpoint(s) | Auth (fail-closed) | Identity |
 | --- | --- | --- | --- |
 | WhatsApp | `GET/POST /webhooks/whatsapp` | `X-Hub-Signature-256` HMAC (app secret); GET verify-token handshake; `phone_number_id` filter | verified phone |
 | Slack | `POST /webhooks/slack` + `/webhooks/slack/interactions`, **or Socket Mode** | signing secret, 300 s replay window (missing headers never skip); Socket Mode uses the app token | `slack_user_id` |
-| Telegram | `POST /webhooks/telegram` | `X-Telegram-Bot-Api-Secret-Token` | telegram user id |
+| Telegram | `POST /webhooks/telegram`, **or dial-out long-poll** (`AQL_TELEGRAM_ENGINE=polling`) | `X-Telegram-Bot-Api-Secret-Token` on the webhook; the bot token itself authenticates `getUpdates` on the poll path | telegram user id |
+| Discord | dial-out Gateway WebSocket only — no webhook, no inbound port at all | `Authorization: Bot <token>`; the bot token is the entire trust root on the way in | discord snowflake |
 
 - **WhatsApp** ports the full conversational contract from
   `backend/src/routes/whatsapp.ts`: interactive **list picker** for multiple
@@ -119,7 +139,18 @@ whether the gate may open. Identity is keyed on `(channel, external id)`
   flood-throttles, replies `success`/`failed`). **This hub wires it to the
   REAL open path**: a linked user's `open` runs the choke point, with an
   inline-keyboard picker when several gates are available and callback taps
-  re-entering the same path. This **exceeds the backend stub**.
+  re-entering the same path. This **exceeds the backend stub**. It also has a
+  second transport the backend never had: `AQL_TELEGRAM_ENGINE=polling` swaps
+  the authenticated webhook for a dial-out long-poll against `getUpdates`, the
+  same no-inbound-port shape as Slack Socket Mode, for a hub with no public URL.
+- **Discord** has no equivalent in the Workers backend at all — this hub adds
+  it whole. It dials out to the Discord Gateway (`internal/channels/discord_gateway.go`)
+  and never opens an inbound port: no webhook, no Interactions Endpoint URL
+  configured in the developer portal. Component taps (button presses) arrive
+  as `INTERACTION_CREATE` dispatches over the same held-open socket. The
+  origin of an inbound message is platform-asserted only — Discord's snowflake
+  is a lookup key into `channel_identities`, never a signature — the same
+  standing Slack and Telegram user ids already have here.
 
 ### Slack Socket Mode — the zero-URL install (ARCHITECTURE §4)
 
@@ -133,7 +164,7 @@ complete installation" real. It is gated behind config (no token → no dial),
 uses `github.com/coder/websocket` (the hub's existing dependency), and is
 launched by `Server.StartChannels(ctx)` from `main` with automatic reconnect.
 
-### Configuration (env, names match the backend)
+### Configuration (env, names match the backend where the backend has the feature at all)
 
 ```sh
 # WhatsApp (Meta Cloud API)
@@ -151,7 +182,25 @@ SLACK_APP_TOKEN=xapp-…         # OPTIONAL → enables Socket Mode (zero public
 # Telegram
 TELEGRAM_BOT_TOKEN=…           # Bot API send
 TELEGRAM_WEBHOOK_SECRET=…      # must match the secret_token you register
+AQL_TELEGRAM_ENGINE=polling    # OPTIONAL, hub-only (no backend equivalent) → dial-out
+                                #   getUpdates instead of the webhook; unset/misspelled
+                                #   keeps the webhook
+
+# Discord — hub-only, no backend equivalent at all
+DISCORD_BOT_TOKEN=…            # the entire trust root; dial-out Gateway only, no other config
 ```
+
+**WhatsApp also has an opt-in `AQL_WHATSAPP_ENGINE=bridge` mode** —
+`AQL_WHATSAPP_BRIDGE_URL` / `AQL_WHATSAPP_BRIDGE_API_KEY` /
+`AQL_WHATSAPP_BRIDGE_INSTANCE` point it at a self-hosted bridge (target:
+Evolution API) instead of the Meta Cloud API. Selecting it logs a startup
+warning naming the risk, and this README is **not** recommending it: it
+routes traffic through a reverse-engineered client, violates KOTVA
+§26.8.2's unconditional MUST NOT, and risks the linked number being banned.
+See `../docs/THREAT-MODEL.md` § Reducing chat-rail exposure and
+`../site/docs/linking-whatsapp.md` before turning it on. The default,
+`AQL_WHATSAPP_ENGINE=cloud` (or unset), is the Meta Cloud API row documented
+above and carries none of that risk.
 
 Every sender no-ops (returns a logged `…_unset` error) when its credentials are
 unconfigured, so a half-configured install still records replies without
@@ -160,9 +209,9 @@ crashing — exactly the backend's behaviour.
 ## Build / run / test
 
 ```sh
-go build -o aql-hub ./cmd/hub   # or: make build
-go test ./...                        # or: make test
-./aql-hub -data ./data -listen :8080
+make build                       # CGO_ENABLED=0 go build -o bin/aql-hub ./cmd/hub
+make test                        # or: go test ./...
+./bin/aql-hub -data ./data -listen :8080
 ```
 
 Config (flags override env):
@@ -174,6 +223,10 @@ Config (flags override env):
 | `-public-url` | `AQL_PUBLIC_URL` | — | external base URL (webhooks, links) |
 | `-admin-claim-token` | `ADMIN_CLAIM_TOKEN` | — | one-shot admin claim; empty = claiming disabled |
 | `-behind-proxy` | `AQL_BEHIND_PROXY` | `false` | permit binding a non-loopback `-listen` address — only set this when TLS is terminated upstream by a reverse proxy; see **Deployment & TLS** below |
+| `-device-drivers` | `AQL_DEVICE_DRIVERS` | — | comma-separated device drivers to construct; empty disables the device engine entirely |
+| `-device-config` | `AQL_DEVICE_CONFIG` | — | path to the JSON device-driver config file; required when `-device-drivers` names anything |
+| `-energy-account` | `AQL_ENERGY_ACCOUNT_ID` | — | account id the energy poller writes meter readings under; empty disables polling |
+| `-automations` | `AQL_AUTOMATIONS` | `false` | run the automation rule scheduler (tick interval: `AQL_AUTOMATIONS_INTERVAL`, default 30s) |
 
 Every `AQL_*` variable above still accepts its old `LINTEL_*` name: if `AQL_DATA_DIR` is
 unset, the hub reads `LINTEL_DATA_DIR` instead and logs a `WARN` naming both, once, after
@@ -228,8 +281,10 @@ Two supported shapes:
   a per-account **soft** limit on top of that only counts *failed* logins,
   in a single fixed 5-minute window that never compounds — so a distributed
   attacker guessing one victim's password is still capped, but flooding failed
-  logins against a victim's email costs them at most one bounded 5-minute
-  window of friction, never an indefinite lockout. A rate-limit-store error
+  logins against a victim's username costs them at most one bounded 5-minute
+  window of friction, never an indefinite lockout. (There is no email identity
+  here to flood against — identity is a local username, `0001_baseline.sql`.)
+  A rate-limit-store error
   here **fails closed** (`503`) — the opposite policy from the physical-access
   limiter in `openpath.go` (which fails open because a locked gate is the
   worse outcome; a brute-force gate silently disabling itself is not).
@@ -237,7 +292,7 @@ Two supported shapes:
   | Env | Default | Guards |
   | --- | --- | --- |
   | `RATE_LOGIN_IP_PER_5MIN` | 20 | `POST /v1/auth/login`, per source IP |
-  | `RATE_LOGIN_ACCOUNT_PER_5MIN` | 10 | `POST /v1/auth/login`, failed attempts per account (email) |
+  | `RATE_LOGIN_ACCOUNT_PER_5MIN` | 10 | `POST /v1/auth/login`, failed attempts per account (username) — `auth.go` builds the subject as `"username:" + username` |
   | `RATE_REGISTER_IP_PER_5MIN` | 10 | `POST /v1/auth/register`, per source IP |
   | `RATE_REFRESH_IP_PER_5MIN` | 30 | `POST /v1/auth/refresh`, per source IP |
   | `RATE_ADMIN_CLAIM_IP_PER_5MIN` | 10 | `POST /v1/admin/claim`, per source IP |
@@ -286,6 +341,25 @@ a backup data directory and it prints pass/fail per table with a non-zero exit
 code on failure. Run it against a *copy*, never the original evidence file:
 opening the store applies any pending migration, a real (if small) mutation.
 
+**The other operator subcommand: `aql-hub 2fa disable -user NAME -reason TEXT
+[-data DIR]`.** This is the last-resort escape hatch for a user who has lost
+both their authenticator *and* every recovery code — every route in the
+product requires a live TOTP code or an unspent recovery code to turn 2FA
+off (`store.DisableTOTP`'s `SecondFactorClaim`), so that person holds no
+claim and no route can help them. What authorises this command is not a
+claim and not a role: it is possession of the hub's data directory. The CLI
+opens the SQLite file directly, which already means shell access to the
+host — game over for the deployment regardless — so the command grants no
+power the filesystem did not already grant; what it adds is a record. `-user`
+and `-reason` are both required — `-reason` is mandatory specifically
+because it is what the audit entry is *for*: the disable and the audit write
+happen in the same transaction (`store.DisableTOTPByOperator`,
+`internal/store/twofactor_operator.go`), the actor is recorded as the empty
+string rather than a user id (whoever holds the host is not a user of this
+hub, and naming one would misattribute the act), and nothing served over the
+network may reach this path — `TestNoHTTPHandlerCanDisableTOTPWithoutAClaim`
+pins that half.
+
 **The honest ceiling.** A hash chain does **not** stop an attacker who edits the
 SQLite file directly *and* recomputes every downstream hash after their edit —
 that attacker can rewrite history undetectably, exactly as before this
@@ -304,17 +378,17 @@ trigger.
 
 | Backend (spec) | Hub | Status |
 | --- | --- | --- |
-| `routes/auth.ts` register/login/refresh/logout/me | `internal/httpapi/auth.go` | core done (verify-email, password reset, Google OAuth, profile patch pending) |
+| `routes/auth.ts` register/login/refresh/logout/me | `internal/httpapi/auth.go` | core done — password reset (`authrecovery.go`) and profile patch (`profile.go`) also done; Google OAuth still pending. There is no email to verify: identity is a local username (`0001_baseline.sql`), and email verification was **removed**, not deferred |
 | `routes/admin.ts` claim | `internal/httpapi/admin.go` | done |
 | `routes/admin.ts` overview/accounts/users/limits(+kill-switch)/audit | `internal/httpapi/adminops.go` + `store/admin.go` | **done** |
 | `routes/accounts.ts` (list/create/get/rename, members, invites) | `internal/httpapi/accounts.go` + `store/{members,invites}.go` | **done** (accept never auto-verifies phones) |
 | `routes/locations.ts` (CRUD, limits/quotas, usage) | `internal/httpapi/locations.go` + `store/locations.go` | **done** |
-| `routes/access.ts` access points + **open/close** + grants | `internal/httpapi/{access,open}.go` + `store/{accesspoints,openpath,grants}.go` | **done** — open path signs envelopes (`internal/keys`) and dispatches via the hub; maintenance/meters deferred |
+| `routes/access.ts` access points + **open/close** + grants | `internal/httpapi/{access,open}.go` + `store/{accesspoints,openpath,grants}.go` | **done** — open path signs envelopes (`internal/keys`) and dispatches via the hub; maintenance records **done** (`internal/httpapi/maintenance.go`), device-fed movement metering (`access_point_meters`) still deferred |
 | `lib/rate-limit.ts` | `store/ratelimit.go` + `store/openpath.go` | **done** (SQLite atomic try-bump; exact-once under concurrency) |
 | `routes/devices.ts` (+ `proto/pairing.md`) | `internal/httpapi/devices.go` + `internal/hub` | **done** — claim/redeem, WS challenge/auth, ack correlation, HTTPS long-poll fallback |
-| `routes/whatsapp.ts` / `slack.ts` / `telegram.ts` | `internal/channels/` seam + `internal/httpapi/channels_*.go` | **done** — WhatsApp full contract, Slack Events API **+ Socket Mode** (zero-URL), Telegram wired to the real open path (exceeds the backend stub) |
-| `routes/analytics.ts` | `internal/httpapi/analytics.go` | planned |
-| `routes/phones.ts` (OTP verify) | with profile_phone_numbers migration | planned (schema + invite-side linking done; verify routes pending) |
+| `routes/whatsapp.ts` / `slack.ts` / `telegram.ts` | `internal/channels/` seam + `internal/httpapi/channels_*.go` | **done** — WhatsApp full contract, Slack Events API **+ Socket Mode** (zero-URL), Telegram wired to the real open path (exceeds the backend stub) **and** dial-out polling; **plus Discord**, which has no backend route at all |
+| `routes/analytics.ts` | `internal/httpapi/analytics.go` | **done** — `GET /v1/analytics/accounts/{id}/{summary,insights}`, `GET /v1/analytics/locations/{id}/summary`, read-only over the hash-chained audit rows |
+| `routes/phones.ts` | `internal/httpapi/phones.go` + `profile_phone_numbers`/`phone_link_codes` migrations | **done** — not OTP: the console mints a code and the member sends it back over WhatsApp from the number being linked; see **Chat channels** above |
 | React portal (`../src`, Vite) | embedded via `internal/portal` (`-tags portal`) | **seam done** — placeholder default; `make portal && make build-portal` embeds the real bundle |
 
 Backend vitest cases (unit/integration/security/contract) are ported alongside
@@ -340,13 +414,18 @@ is tested against those vectors.
 hub/
 ├── cmd/hub/          # main: config, bootstrap, serve
 ├── internal/store/       # SQLite + embedded migrations + tenancy-scoped methods
-│   └── migrations/       # folded baseline + 0002..0007 (SQLite)
+│   └── migrations/       # folded baseline + 0002..0021 (no 0008; SQLite)
 ├── internal/httpapi/     # net/http 1.22-pattern router; auth, accounts,
 │                         #   locations, access, open path, devices, admin
 ├── internal/hub/         # device registry, ws.challenge/auth, ack correlation
 ├── internal/keys/        # Ed25519 identity, JCS, signed command envelopes
 ├── internal/channels/    # chat-channel seam: verify, wire parse, render, senders,
 │                         #   Slack Socket Mode (coder/websocket)
+├── internal/devices/     # device engine: driver registry + capability catalogue
+│                         #   (MQTT/Modbus/ONVIF/HTTP drivers under it), default off
+├── internal/discovery/   # mDNS controller discovery, POST /v1/accounts/{id}/discover/controllers
+├── internal/automations/ # rule engine + scheduler, GET/POST /v1/accounts/{id}/automations/*
+├── internal/energy/      # meter polling, retention-pruned samples, GET .../energy/*
 └── internal/portal/      # go:embed portal seam: static/ default, dist/ (-tags portal)
 ```
 
