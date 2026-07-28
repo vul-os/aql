@@ -443,6 +443,9 @@ func (s *Server) Router() http.Handler {
 	// Admin-only; the access-relevant ones are already in every member's
 	// audit view.
 	mux.Handle("GET /v1/devices/{id}/events", s.requireAuth(s.handleDeviceEvents))
+	// Remote controller retuning (deviceconfig.go). The hub is the only place
+	// a bad value can be stopped: the controller stores whatever it is sent.
+	mux.Handle("PATCH /v1/devices/{id}/config", s.requireAuth(s.handleDeviceConfig))
 	mux.Handle("POST /v1/devices", s.requireAuth(s.handleDeviceCreate))
 	// proto/pairing.md's diagram specifies POST /pair/redeem — that's the path
 	// the controller builds from its --gateway URL. Serve it there (spec form)

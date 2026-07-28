@@ -31,6 +31,7 @@ import { Link } from 'react-router-dom';
 import { PageHeader } from './AppLayout';
 import { Card } from '@/components/ui/Card';
 import { ClaimableDevices, ReleaseDeviceButton } from '@/components/device/ClaimableDevices';
+import { ControllerConfig } from '@/components/device/ControllerConfig';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { DevicePairing } from '@/components/illustrations/DevicePairing';
@@ -436,7 +437,14 @@ function DetailPanel({ row, onPairedRefresh }: { row: Row; onPairedRefresh: () =
 
         {row.source === 'gateway' && row.kind === 'Access' && <AccessDetail row={row} />}
         {row.source === 'gateway' && row.kind === 'Controller' && (
-          <ControllerDetail row={row} onPairedRefresh={onPairedRefresh} />
+          <>
+            <ControllerDetail row={row} onPairedRefresh={onPairedRefresh} />
+            {/* Only for a controller that has actually paired: an unpaired one
+                has no session to deliver a signed command over, and offering
+                the form would queue changes for a device that may never
+                arrive. */}
+            {row.device.status !== 'unpaired' && <ControllerConfig deviceId={row.device.id} />}
+          </>
         )}
         {row.source === 'engine' && <EngineDetail key={row.id} row={row} />}
         {row.source === 'engine' && accountId && (

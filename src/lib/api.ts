@@ -1069,6 +1069,25 @@ export const api = {
     );
   },
 
+  /**
+   * Retune a paired controller's actuation timings (`config` command).
+   *
+   * The hub is the only place a bad value can be stopped: the controller
+   * accepts any key with a non-negative integer and stores it. `pulse_ms`
+   * above the relay's maximum does not open the gate for longer — the relay
+   * REFUSES an out-of-range pulse, so every subsequent open fails. Errors
+   * worth handling: 400 `config_out_of_range` (carries `min`/`max`/`message`)
+   * and 400 `unknown_config_key` (carries `accepted`).
+   *
+   * `delivery` is "queued" for an offline controller, which is not the same
+   * as applied.
+   */
+  deviceConfig: (deviceId: string, config: Record<string, number>) =>
+    apiFetch<{ delivery: string; config: Record<string, number> }>(
+      `/devices/${encodeURIComponent(deviceId)}/config`,
+      { method: 'PATCH', body: { config } },
+    ),
+
   // Device ownership (hub/internal/httpapi/deviceclaims.go).
   //
   // The engine cannot infer whose a device is — a driver discovers it from a

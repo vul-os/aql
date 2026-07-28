@@ -70,7 +70,25 @@ func (e *Envelope) signable() map[string]any {
 
 // SignCommand builds and signs a command envelope. ttl is clamped to
 // MaxCommandTTL, fail-closed at the controller anyway.
+//
+// For the commands that carry parameters — `config` and `repair`, whose
+// payloads proto/commands.md §47 defines — use SignCommandWithPayload.
 func (k *Keys) SignCommand(cmd, deviceID, accessPoint string, ttl time.Duration, cause map[string]any) (*Envelope, error) {
+	return k.SignCommandWithPayload(cmd, deviceID, accessPoint, nil, ttl, cause)
+}
+
+// SignCommandWithPayload is SignCommand for the commands that carry one.
+//
+// The payload is covered by the signature — it goes through the same
+// canonicalisation as every other field — which is the only reason a
+// controller can trust a `config` that changes how long its relay fires, or a
+// `repair` that replaces the key it verifies everything else against.
+//
+// This existed as a gap rather than a decision: until now the hub could sign
+// only bare commands, so four of proto/commands.md's eight types (hold,
+// config, ping, repair) had no sender at all despite the controller
+// implementing and conformance-testing every one of them.
+func (k *Keys) SignCommandWithPayload(cmd, deviceID, accessPoint string, payload map[string]any, ttl time.Duration, cause map[string]any) (*Envelope, error) {
 	if ttl <= 0 || ttl > MaxCommandTTL {
 		ttl = MaxCommandTTL
 	}
@@ -83,7 +101,7 @@ func (k *Keys) SignCommand(cmd, deviceID, accessPoint string, ttl time.Duration,
 		V: 0, Typ: "cmd", Cmd: cmd,
 		DeviceID: deviceID, AccessPoint: accessPoint,
 		Nonce: nonce, IAT: now, EXP: now + int64(ttl/time.Second),
-		Cause: cause,
+		Payload: payload, Cause: cause,
 	}
 	msg, err := Canonicalize(e.signable())
 	if err != nil {
