@@ -92,7 +92,7 @@ curl -X POST https://<your-hub>/v1/access-points/ap_ABC123/open \\
       <DocSection heading="Where to next">
         <ul className="list-disc pl-6 space-y-2">
           <li><Link to="/docs/permissions-members" className="underline underline-offset-4 decoration-terracotta">Invite members &amp; set roles</Link> — owner, admin, member, viewer.</li>
-          <li><Link to="/docs/geofence-safety" className="underline underline-offset-4 decoration-terracotta">Geofence safety</Link> — designed, not built yet: only allow opens when the sender is physically near.</li>
+          <li><Link to="/docs/geofence-safety" className="underline underline-offset-4 decoration-terracotta">Geofence safety</Link> — enforced: only allow opens when the sender reports being physically near. A convenience, not a security control.</li>
           <li><Link to="/docs/api-reference" className="underline underline-offset-4 decoration-terracotta">API reference</Link> — REST + webhooks for integrations.</li>
         </ul>
       </DocSection>

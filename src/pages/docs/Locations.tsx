@@ -40,8 +40,8 @@ export default function LocationsDoc() {
         <ol className="list-decimal pl-6 space-y-3">
           <li>From the dashboard sidebar, click <strong>Locations</strong> then <em>New location</em>.</li>
           <li>Pick the kind, give it a name (residents see this in their WhatsApp replies), and a city.</li>
-          <li>Optional: drop a pin on the map. This is where a geofence anchor would attach if that
-          feature ships — <Link to="/docs/geofence-safety" className="underline underline-offset-4 decoration-terracotta">designed, not built yet</Link>.</li>
+          <li>Optional: drop a pin on the map. This is the anchor a geofence rule measures from —
+          <Link to="/docs/geofence-safety" className="underline underline-offset-4 decoration-terracotta">geofencing is enforced</Link>, though it stops mistakes rather than attackers.</li>
           <li>You&rsquo;re ready to add an access point.</li>
         </ol>
       </DocSection>
