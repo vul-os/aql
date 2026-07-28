@@ -75,12 +75,6 @@ const AWAITING_ENDPOINT = new Map<string, string>([
   // the resolved date, never echoing the interval back, so a response will
   // never carry it.
   ['next_due_in_days', 'request body — maintenance create; the hub resolves it to next_due_at and never echoes it'],
-
-  // Reference data the hub does not serve. api.ts already documents that there
-  // is no /reference/countries route; these are CountryRef's fields, kept here
-  // so the widened extractor does not report them as drift.
-  ['code', 'reference data — GET /reference/countries, not served by the hub'],
-  ['flag', 'reference data — GET /reference/countries, not served by the hub'],
 ]);
 
 function goEmittedKeys(): Set<string> {
@@ -131,7 +125,26 @@ function tsDeclaredFields(): Map<string, number> {
   const src = readFileSync(path.join(repo, 'src/lib/api.ts'), 'utf-8');
   const lines = src.split('\n');
   const fields = new Map<string, number>();
+  // Class bodies are skipped. A `class` here is client-side machinery, not a
+  // wire shape: ApiError's `code` is DERIVED from the hub's error body, never
+  // sent as a field called "code", and reporting it as drift sends the reader
+  // looking for a handler that should not exist. This was masked for a while
+  // by an unrelated exemption that happened to name the same field, which is
+  // the argument for fixing the extractor rather than adding another entry —
+  // an exemption with the wrong reason hides the next real finding.
+  let classDepth = 0;
+  let inClass = false;
+
   lines.forEach((line, i) => {
+    if (!inClass && /^export\s+(abstract\s+)?class\b/.test(line)) {
+      inClass = true;
+      classDepth = 0;
+    }
+    if (inClass) {
+      classDepth += (line.match(/\{/g) ?? []).length - (line.match(/\}/g) ?? []).length;
+      if (classDepth <= 0 && /\}/.test(line)) inClass = false;
+      return;
+    }
     // A lower-case object field in a type literal. camelCase is skipped —
     // those are client-side shapes, not wire fields.
     //

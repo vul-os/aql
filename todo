@@ -69,7 +69,8 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 ## console ↔ hub drift (tracked by src/lib/__tests__/routeParity.test.ts)
 Each of these is UI with no backend, or a backend nothing calls. Either build the route
 or remove the screen.
-- [ ] `/reference/countries`, `/phones/me/phones`, `PUT /auth/me/slack`
+- [ ] `/phones/me/phones`, `PUT /auth/me/slack` — both are chat/phone identity,
+      which is moving to Ephor. Decide there rather than building here.
 - Not doing: Google OAuth, and any email-based auth. The hub is meant to work off nodes;
   recovery is username-based through a delivery seam, not an email dependency.
 

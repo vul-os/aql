@@ -62,6 +62,17 @@ test('sign up, sign in, create a location + access point, attempt an open, read 
   // no join-only registration mode, so this is genuinely how every account's
   // first location gets created on this product.
   await expect(page.getByRole('heading', { name: 'Your first location' })).toBeVisible();
+  // The country selector is the fix for a silent one-option list: it used to
+  // be populated from GET /reference/countries, a route the hub never served,
+  // and the 404 handler fell back to a single hardcoded entry — so nobody
+  // outside South Africa could answer this correctly. country_code is stored
+  // on the account and validated by the hub, so the list has to be real.
+  const countryCount = await page.locator('select').first().locator('option').count();
+  expect(
+    countryCount,
+    'the country selector is back to a stub list — see src/lib/countries.ts',
+  ).toBeGreaterThan(200);
+
   await page.getByLabel('Location name').fill(LOCATION_NAME);
 
   const registerResponsePromise = page.waitForResponse(

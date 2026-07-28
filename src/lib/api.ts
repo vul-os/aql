@@ -328,12 +328,6 @@ export type MeResponse = {
   }>;
 };
 
-export type CountryRef = {
-  code: string;
-  name: string;
-  flag: string;
-};
-
 export const api = {
   login: (body: { username: string; password: string }) =>
     apiFetch<LoginResponse>('/auth/login', { method: 'POST', body }),
@@ -414,10 +408,6 @@ export const api = {
       method: 'POST',
       body: { current_password, new_password },
     }),
-
-  // NOT IMPLEMENTED on the gateway (no /reference/countries route). Callers
-  // already fall back to a static list on failure (see src/pages/Signup.tsx).
-  countries: () => apiFetch<{ countries: CountryRef[] }>('/reference/countries'),
 
   accountUpdate: (accountId: string, body: { name?: string }) =>
     apiFetch<void>(`/accounts/${accountId}`, { method: 'PATCH', body }),

@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { useAuth } from '@/lib/auth';
-import { ApiError, api, friendlyApiError, type CountryRef } from '@/lib/api';
+import { ApiError, api, friendlyApiError } from '@/lib/api';
+import { COUNTRIES } from '@/lib/countries';
 
 const PENDING_INVITE_KEY = KEYS.pendingInvite;
 export const PENDING_WHATSAPP_PHONE_KEY = KEYS.pendingWhatsAppPhone;
@@ -46,7 +47,6 @@ export default function Signup() {
   const [locationName, setLocationName] = useState('');
   const [locationType, setLocationType] = useState<'house' | 'complex' | 'building' | 'other'>('house');
   const [country, setCountry] = useState('ZA');
-  const [countries, setCountries] = useState<CountryRef[]>([]);
 
   // Submission + flow
   const [submitting, setSubmitting] = useState(false);
@@ -76,21 +76,6 @@ export default function Signup() {
       return null;
     }
   }, [searchParams]);
-
-  useEffect(() => {
-    let cancelled = false;
-    api
-      .countries()
-      .then((r) => !cancelled && setCountries(r.countries))
-      .catch(() => {
-        if (!cancelled) {
-          setCountries([{ code: 'ZA', name: 'South Africa', flag: '🇿🇦' }]);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // Smart default: personal account → "Home", business → user's name + " HQ"
   const placeholderForKind =
@@ -408,7 +393,7 @@ export default function Signup() {
                       onChange={(e) => setCountry(e.target.value)}
                       className="appearance-none w-full h-11 rounded-xl bg-paper-cool border border-ink/15 pl-3 pr-10 text-[15px] text-ink hover:border-ink/30 focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink/40 transition-colors"
                     >
-                      {countries.map((c) => (
+                      {COUNTRIES.map((c) => (
                         <option key={c.code} value={c.code}>
                           {c.flag} {c.name}
                         </option>

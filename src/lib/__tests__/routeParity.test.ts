@@ -153,7 +153,6 @@ function normalizeGoPath(p: string): string {
 // failing the build — keep it short, and delete entries the moment the
 // gateway implements the route for real.
 const KNOWN_UNAVAILABLE: Array<{ method: string; path: string }> = [
-  { method: 'GET', path: '/reference/countries' },
   { method: 'GET', path: '/phones/me/phones' },
   { method: 'POST', path: '/phones/me/phones' },
   { method: 'PUT', path: '/auth/me/slack' },
