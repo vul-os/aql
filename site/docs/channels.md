@@ -253,12 +253,13 @@ TELEGRAM_BOT_TOKEN=123456:ABC-…
 TELEGRAM_WEBHOOK_SECRET=…   # must match the secret_token you registered
 ```
 
-## Discord — not built
+## Discord
 
-The Discord channel (bot token, identity by user id) fits the channel seam but **does
-not exist in code** — there is no Discord source file in the hub. When it lands, setup
-will be a bot token and an invite link, mirroring Slack's minutes-not-days flow. Track
-progress on [GitHub](https://github.com/vul-os/aql).
+The Discord channel ships: a Gateway WebSocket connection, identity by user id, and the
+same open path as every other rail. It is outbound-only like Slack's Socket Mode, so it
+needs no inbound reachability. Setup is a bot token, the MESSAGE CONTENT intent, and no
+Interactions Endpoint URL — leaving that URL set is the one footgun, because Discord then
+stops delivering over the Gateway.
 
 ## Trigger words and pickers
 

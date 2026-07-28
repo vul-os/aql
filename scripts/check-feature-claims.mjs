@@ -221,7 +221,11 @@ function evaluateFeature(feature) {
 function checkDocRefs(feature) {
   const problems = [];
   for (const ref of feature.docRefs) {
-    const named = ref.match(/^([A-Za-z0-9_./-]+\.(?:md|html|json|ts|tsx|go))/);
+    // tsx BEFORE ts: alternation is first-match, so `ts` would win against a
+    // .tsx path and truncate it — the ref then names a file that does not
+    // exist, and the error blames the doc rather than this regex. Longest
+    // extension first is the rule.
+    const named = ref.match(/^([A-Za-z0-9_./-]+\.(?:md|html|json|tsx|ts|go))/);
     if (!named) continue; // a ref that names no file, e.g. a bare note
     const rel = named[1];
     const body = readSafe(path.join(repoRoot, rel));

@@ -50,18 +50,22 @@ export const FEATURES = [
   // geofence.go + migration 0015, enforced inside the LogAccess choke point,
   // with POST/GET/DELETE /v1/accounts/{id}/geofences to manage the rules.
   //
-  // ⚠ DOC DEBT, OPEN. This entry is flipped to 'shipped' because the CODE now
-  // exists and this checker's job is to catch exactly that divergence. The
-  // prose in README.md, ARCHITECTURE.md §8, site/index.html, site/docs/
-  // security.md, site/docs/getting-started.md, site/docs/troubleshooting.md
-  // and src/pages/docs/GeofenceSafety.tsx still says "designed, not built" and
-  // is now WRONG — undersell rather than overclaim, but wrong. Those files
-  // were outside the shipping change's file scope; someone must update them.
+  // DOC DEBT, now CLOSED except for one file. This entry was flipped to
+  // 'shipped' when the code landed, and the prose everywhere else still said
+  // "designed, not built" — undersell rather than overclaim, but wrong.
   //
-  // When they are updated, the one thing that copy MUST keep saying is that
-  // this is a convenience and not a security control: the position it tests is
-  // client-supplied and unverified, so it stops mistakes, not attackers (see
-  // hub/internal/store/geofence.go's package comment for the full claim).
+  // Corrected since: site/index.html (the ledger), site/docs/getting-started.md
+  // and src/pages/docs/GeofenceSafety.tsx, whose banner claimed "there is no
+  // geofencing code in the Go hub" while three routes and the open-path check
+  // were live. README.md and site/docs/security.md were checked and carry no
+  // stale claim. STILL OPEN: ARCHITECTURE.md §8, which is mid-edit under
+  // another change and was left alone deliberately rather than edited
+  // underneath it.
+  //
+  // The one thing this copy MUST keep saying, and still does everywhere it was
+  // corrected: this is a convenience and not a security control. The position
+  // it tests is client-supplied and unverified, so it stops mistakes, not
+  // attackers (see hub/internal/store/geofence.go's package comment).
   {
     id: 'geofencing',
     label: 'Geofencing (block opens outside a per-access-point/per-location radius)',
@@ -70,7 +74,8 @@ export const FEATURES = [
       'hub/internal/store/geofence.go — package comment: what it buys, and what it explicitly does not',
       'hub/internal/store/migrations/0015_geofence.sql — the geofence_rules table',
       'hub/internal/store/openpath.go — the check inside LogAccess, after time windows, before the limit block',
-      'STALE, needs updating: README.md, ARCHITECTURE.md §8, site/index.html, site/docs/security.md, site/docs/getting-started.md, site/docs/troubleshooting.md, src/pages/docs/GeofenceSafety.tsx',
+      'src/pages/docs/GeofenceSafety.tsx — "Status: enforced" and why the JSON below it is historical',
+      'STILL STALE: ARCHITECTURE.md §8 (left alone — mid-edit under another change)',
     ],
     evidence: [{ root: 'hub/internal', pattern: 'geofenc', flags: 'i' }],
   },

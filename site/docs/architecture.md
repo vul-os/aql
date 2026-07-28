@@ -6,8 +6,9 @@ that are designed but not built — lives in the repository's
 
 Aql is one hub that owns the devices around a home or a business. Its device model has
 seven kinds — camera, lighting, robot, climate, energy, sensor and **access** — and one of
-them, access, is driven end to end today. The engine that would drive the other six is
-[not built](devices.md). Everything below describes the hub as it exists.
+them, access, is driven end to end today. The engine behind the others is
+[running](devices.md), with four drivers on it; what varies is how far each kind's path
+goes. Everything below describes the hub as it exists.
 
 ## No cloud centre
 
@@ -114,7 +115,8 @@ them — the *controller* does, at redemption time. Geofencing does not exist in
    platform sees the plaintext, whichever component terminates the rail; see
    [Security](security.md).
 2. **App** — emergency. Short-TTL signed grants verified offline by the controller.
-   Controller verification and hub issuance are real; the phone half is not built.
+   Controller verification, hub issuance and the app's request/hold/present half are all
+   real; what is missing is presenting from an https console or over BLE in a browser.
 3. **Console** — fallback. Unlimited, served by the hub itself.
 
 ## Reachability

@@ -32,8 +32,8 @@ reference for how every other device kind should eventually work: a versioned wi
 contract, a device that verifies rather than trusts, and an audit trail you can check
 after the fact.
 
-**The hub** (`hub/`) — one Go binary, SQLite inside, **60 HTTP routes, 219 tests
-green** across 8 packages:
+**The hub** (`hub/`) — one Go binary, SQLite inside, **111 HTTP routes over 19
+migrations, and more than 870 tests green** across 16 packages:
 
 - [x] Accounts, locations, access points, members with roles, invites
 - [x] An **instance-admin** operator seat above every account: one-shot claim
@@ -74,8 +74,8 @@ green** across 8 packages:
 - [x] Refuses to bind a non-loopback address without `-behind-proxy` (resolution-aware,
       not a string match)
 
-**The controller agent** (`controller/`) — its own Go module, std-lib first, **45 tests
-green**:
+**The controller agent** (`controller/`) — its own Go module, std-lib first, **over 120
+tests green**:
 
 - [x] Claim-token pairing that **pins** the hub's signing key permanently
 - [x] Fail-closed command verification in a fixed normative order (signature → addressing
@@ -87,8 +87,9 @@ green**:
 
 **Contracts and harnesses:**
 
-- [x] `proto/` — pairing, commands, grants and events, with **63 conformance vectors /
-      70 checks** consumed by both implementations and an independent `verify.mjs`
+- [x] `proto/` — pairing, commands, grants, events, acks and webhooks, with **98 checks**
+      consumed by the implementations and an independent `verify.mjs` that trusts none of
+      them
 - [x] `e2e/` — boots the real hub and controller binaries and drives the open path over
       the wire, including adversarial cases
 - [x] `e2e-browser/` — Playwright against the real hub binary with the embedded console

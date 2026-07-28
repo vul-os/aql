@@ -7,8 +7,10 @@ the software brain for your physical space. One self-hosted hub, on a box you ow
 see and control everything physical around a home or a business.
 
 Its device model has seven kinds: **camera, lighting, robot, climate, energy, sensor and
-access**. One of them — access — is finished and running. The engine that would drive the
-other six is not built. Both halves of that sentence matter.
+access**. One of them — access — is finished and running end to end. The engine behind the
+others is running too, with four drivers on it, and energy metering is read end to end —
+but a camera is discovered and never decoded, and a robot has no driver at all. How far
+each kind's path goes is the thing to check, not whether the engine exists.
 
 ### What can it actually do today?
 

@@ -65,8 +65,10 @@ detail.
    before first boot, then redeem it exactly once against `POST /admin/claim`, as
    described in [Instance admin](admin.md).
 3. **Name your location** — house, complex, building or other. Give it a name residents
-   will recognise. (A map pin is stored but nothing reads it: geofencing is designed and
-   **not built** — see [Geofence safety](security.md#geofence-safety).) Then add an
+   will recognise. (The map pin is read: geofencing is enforced inside the same choke
+   point as every other limit — but it is a convenience, not a security control, because
+   the position it tests is client-supplied. See
+   [Geofence safety](security.md#geofence-safety).) Then add an
    access point under
    **Access points → New** — main gate, pedestrian gate, parking barrier; each gets its
    own controller.

@@ -6,20 +6,22 @@ export default function GeofenceSafety() {
       <DocLead
         kicker="02 · Concepts"
         title="Geofence safety"
-        intro="A geofence would stop people from opening your gate when they're nowhere near it — off by default for homes, on by default for complexes, pairing with phone-number identity to form a defence-in-depth layer, not a magic shield. It's designed and documented here in full; it is not built."
+        intro="A geofence stops people from opening your gate when they're nowhere near it — a defence-in-depth layer, not a magic shield. It is enforced today, inside the same choke point as every other limit. It is a convenience and not a security control, because the position it tests is supplied by the caller."
       />
 
       <div className="mb-10 sm:mb-12 rounded-2xl border border-gold/40 bg-gold/[0.06] px-5 py-4 sm:px-6 sm:py-5">
         <p className="text-[11px] uppercase tracking-[0.18em] text-ink/55 font-mono">
-          Status: designed, not implemented
+          Status: enforced &mdash; but read the API shapes below as the original proposal
         </p>
         <p className="mt-2 text-[15px] text-ink/80 leading-relaxed">
-          Nothing on this page runs today. There is no geofencing code in the Go hub
-          or the reference backend — no location field on the open path, no radius
-          config, no <code>open.geofence_check</code> event. Everything below is the
-          intended design, kept here so operators know what's coming and implementers
-          know the target. Read it as a spec, not a live control, until this notice is
-          removed. Current, verified status lives in the{' '}
+          Geofencing runs. Rules are managed at{' '}
+          <code>GET/POST /v1/accounts/&#123;id&#125;/geofences</code> and{' '}
+          <code>DELETE …/geofences/&#123;ruleID&#125;</code>, and the check happens inside
+          the open path alongside the cooldown, the caps and the time windows, so a denial
+          is audited like any other. What has <em>not</em> aged well is the request shape
+          drawn further down: this page was written against a proposed
+          location-policy endpoint, and what shipped is account-scoped rules. Treat the
+          reasoning as current and the JSON as historical. Current, verified status lives in the{' '}
           <a
             href="https://github.com/vul-os/aql#features"
             className="underline underline-offset-4 decoration-terracotta"
