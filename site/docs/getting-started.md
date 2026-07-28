@@ -104,6 +104,12 @@ Members are people whose chat identity can text the gate. An identity is a
 `(channel, external id)` pair — a WhatsApp phone number, a Slack member id — so one
 person can be reachable on more than one channel.
 
+A phone number has to be **verified** before any rail will act on it. Accepting an
+invite links the number but leaves it unverified, since accepting proves nothing about
+who holds the handset; verifying is a separate step the member does themselves from
+**Settings → Phone numbers** (see the WhatsApp chapter). Until then their messages are
+ignored rather than refused, which is why the console flags unverified numbers.
+
 - **Owner** — the account holder. Account and danger-zone settings.
 - **Admin** — manages devices, members and access for assigned locations.
 - **Member** — can open what they've been given. Can't change settings.

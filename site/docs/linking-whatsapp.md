@@ -20,9 +20,19 @@ resident's message → Meta Cloud API → your hub
                      └─ resolve (whatsapp, +27…) → memberships → location
 ```
 
-Invite a member by phone number and they can text the gate immediately — WhatsApp is
-their identity, not their configuration. The number residents should save is shown in
-the portal under **Settings → Channels → WhatsApp**.
+Invite a member by phone number, then have them **verify** it: the console mints a
+short `LINK-XXXXXX` code under **Settings → Phone numbers**, and the member sends that
+code to the gate bot from the number itself. Two facts in one act — the code proves
+they are looking at this account's console, and the inbound message proves they hold
+the number.
+
+Accepting an invite links a number but never verifies it, because accepting proves
+nothing about who holds the handset. An unverified number is ignored by the chat rails,
+so a member who skips this step will text the gate and get no reply. The console shows
+unverified numbers distinctly for exactly that reason.
+
+The number residents should save is shown in the portal under **Settings → Channels →
+WhatsApp**.
 
 ## Bring your own WABA
 

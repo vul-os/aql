@@ -6,7 +6,7 @@ export default function PermissionsMembers() {
       <DocLead
         kicker="02 · Concepts"
         title="Permissions & Members"
-        intro="Members are people invited onto an account by username; their phone number is what lets them text the gate. Roles control what they can do beyond opening it."
+        intro="Members are people invited onto an account by username; a verified phone number is what lets them text the gate. Roles control what they can do beyond opening it."
       />
 
       <DocSection heading="The four roles">
@@ -29,7 +29,8 @@ export default function PermissionsMembers() {
         <ol className="list-decimal pl-6 space-y-3">
           <li>Members → <em>Invite</em>. You&rsquo;ll need a username for the invitee and their phone number — no email address, the hub doesn&rsquo;t have one for anybody.</li>
           <li>Pick a role: owner, admin, member or viewer.</li>
-          <li>An accept token is generated, valid for 7 days. Accepting binds the invitee&rsquo;s phone number to the account — that&rsquo;s what lets them text the gate.</li>
+          <li>An accept token is generated, valid for 7 days. Accepting binds the invitee&rsquo;s phone number to the account, but leaves it <em>unverified</em> — accepting proves nothing about who holds that handset.</li>
+          <li>The member then verifies the number themselves: <em>Settings &rarr; Phone numbers</em> mints a short <code>LINK-</code> code, which they send to the gate bot from that number. Until they do, the chat rails ignore their messages.</li>
         </ol>
         <div className="rounded-2xl border border-gold/40 bg-gold/[0.06] px-5 py-4 sm:px-6 sm:py-5 mt-4">
           <p className="text-[11px] uppercase tracking-[0.18em] text-ink/55 font-mono">
