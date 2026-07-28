@@ -94,6 +94,13 @@ hub serves. Adding an entry back is a real decision, not bookkeeping.
       tested (the poller's clock on untimed readings, the per-device read timeout, the
       rollup budget), each confirmed by tampering first. They earn their place; they now
       have callers. UnmarshalJSON is called by encoding/json and is fine.
+- [x] Same sweep run over TypeScript (exported VALUES with no use anywhere, counting
+      in-file use — the Go version's lesson). 4 candidates from 302 exports: two false
+      positives (sample code inside a CodeBlock template literal; a type-only export),
+      one unused component (deleted), and one real find — src/lib/offline/grant.ts
+      restates four wire constants in TS with nothing pinning them to the contract.
+      Now guarded by wireConstants.test.ts against proto/vectors' spec_constants AND
+      both Go declarations.
 - LESSON: "no caller" is a question, not a verdict. Of the six symbols with no caller at
       all, one was an unwired feature, one an unrun entry point in a safety-critical
       package, three were untested seams, and one was a false positive. Delete last. Most are legitimate —

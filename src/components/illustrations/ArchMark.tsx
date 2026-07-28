@@ -46,11 +46,3 @@ export function ArchMark({
     </svg>
   );
 }
-
-export function Wordmark({ className }: { className?: string }) {
-  return (
-    <span className={className}>
-      <em className="font-display not-italic [font-style:italic] tracking-tight">Aql</em>
-    </span>
-  );
-}
