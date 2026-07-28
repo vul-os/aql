@@ -138,8 +138,19 @@ cannot catch what both implementations get wrong together.
       actuate" was already covered (TestOnRedeemedRecordsBeforeActuating), and the
       no-ack / no-sequence-number gaps are documented as v0-open in the spec, not
       claims. The claim worth checking was the one asserted in passing, mid-paragraph.
-- [ ] Remaining normative claim worth the same treatment: grants.md's revocation
-      window.
+- [x] grants.md's revocation window. No defect and, unusually, no behavioural gap
+      either: the section is almost entirely honest NEGATIVES ("only the grant's own
+      exp bounds the exposure", "no message tells a controller a grant is revoked",
+      v0-undefined), and the one lever it names — lockdown — is already covered by the
+      vector corpus and by the multi-fault ordering test. What was unguarded is the
+      STRUCTURAL claim underneath it: "the verification core takes no input besides the
+      presented grant and local controller state". Two drift alarms now pin that — Env's
+      exact field set, and no net/db/transport imports reachable from the core. Neither
+      forbids the spec's own v1 revocation-list proposal; they fail naming the paragraph
+      that must change with it, because an operator reads that paragraph when deciding
+      how fast to latch lockdown after firing a resident. Tampered three ways: added an
+      Env field, added a net/http import, and broke the file walk (the scan floor fired,
+      which is the failure mode that made naming.test.ts vacuous).
 
 ## fuzzing
 - [x] No fuzz target existed anywhere. Four now, on the two parsers that read
