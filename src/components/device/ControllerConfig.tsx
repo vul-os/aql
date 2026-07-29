@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { ApiError, api } from '@/lib/api';
+import { describeDelivery } from '@/components/access/delivery';
 
 /**
  * Retune a paired controller without visiting it.
@@ -80,16 +81,20 @@ export function ControllerConfig({ deviceId }: { deviceId: string }) {
     }
     try {
       const r = await api.deviceConfig(deviceId, config);
+      // Every non-acked outcome, not just `queued`. This branch previously read
+      // `queued ? … : acknowledged`, so `undelivered` and `no_device` both
+      // claimed the controller had acknowledged a change it never saw — the
+      // same bug the gate buttons had, in the same shape.
+      const outcome = describeDelivery(r.delivery, 'applied');
       setResult(
-        r.delivery === 'queued'
-          ? {
-              kind: 'queued',
-              message:
-                'Queued. This controller is not connected right now — it will apply these when it next reconnects, and not before.',
-            }
-          : { kind: 'ok', message: 'Sent, and the controller acknowledged it.' },
+        outcome.confirmed
+          ? { kind: 'ok', message: 'Sent, and the controller acknowledged it.' }
+          : { kind: 'queued', message: outcome.message },
       );
-      setValues({});
+      // Only cleared on a confirmed apply. Wiping the fields after a queued or
+      // unconfirmed send would leave an operator with no record of what they
+      // asked for and no way to retype it.
+      if (outcome.confirmed) setValues({});
     } catch (err) {
       // The hub's refusals carry the bound and the reason. Showing our own
       // wording instead would drop the one number the operator needs.

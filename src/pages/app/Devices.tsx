@@ -75,12 +75,24 @@ import {
 import type { DeviceState } from '@/lib/deviceKinds';
 import { fromUnix } from '@/lib/time';
 
-const STATUS_LABEL: Record<string, string> = {
-  unpaired: 'awaiting pair',
-  active: 'online',
-  online: 'online',
-  offline: 'offline',
-};
+/**
+ * What to print beside a controller.
+ *
+ * Not derived from `status`, which is pairing state and said "online" for a
+ * controller that had been unplugged for months. The only field that knows
+ * whether a command could be delivered right now is `connected`.
+ */
+export function controllerLabel(d: { status: string; connected?: boolean; last_seen_at: number | null }): string {
+  if (d.status === 'unpaired') return 'awaiting pair';
+  if (d.connected === undefined) {
+    // An older hub that does not report liveness. Say that, rather than
+    // picking one of the two answers.
+    return 'paired — this hub does not report whether it is connected';
+  }
+  if (d.connected) return 'connected';
+  const seen = relativeTime(d.last_seen_at);
+  return seen ? `not connected — last seen ${seen}` : 'not connected';
+}
 
 function relativeTime(sec: number | null): string {
   const d = fromUnix(sec);
@@ -111,12 +123,27 @@ function SourceChip({ source }: { source: Row['source'] }) {
   return <EngineChip />;
 }
 
-/** Map a paired-controller status onto the shared four-state vocabulary. */
-function controllerState(status: string): DeviceState {
-  if (status === 'active' || status === 'online') return 'live';
+/**
+ * Map a controller onto the shared four-state vocabulary.
+ *
+ * `status` is PAIRING state and nothing else: it goes unpaired → active when a
+ * claim is redeemed and is never written again. Nothing in the hub ever sets
+ * `offline`, so keying liveness on it drew every controller that had ever
+ * paired as live — including one unplugged for months — while the hub was
+ * sending `connected` in the same payload and being ignored.
+ *
+ * `connected` is the live WebSocket. A controller that is paired but not
+ * connected is `alert`, not `live`: a command sent to it will be QUEUED, and
+ * an operator looking at a green row would believe the gate would open now.
+ *
+ * `connected` undefined means an older hub that does not report it. That is
+ * `unknown`, never `live` — guessing live is the one wrong direction to guess
+ * in, and it is exactly the guess that produced this bug.
+ */
+export function controllerState(status: string, connected?: boolean): DeviceState {
   if (status === 'unpaired') return 'warn';
-  if (status === 'offline') return 'alert';
-  return 'off';
+  if (connected === undefined) return 'unknown';
+  return connected ? 'live' : 'alert';
 }
 
 export default function DevicesPage() {
@@ -183,8 +210,8 @@ export default function DevicesPage() {
       id: d.id,
       name: d.label ?? `Controller ${d.id.slice(0, 8)}`,
       zone: locationName(d.location_id),
-      state: controllerState(d.status),
-      read: STATUS_LABEL[d.status] ?? d.status,
+      state: controllerState(d.status, d.connected),
+      read: controllerLabel(d),
       device: d,
     }));
     // Engine devices are real, chipped "Engine" beside the hub's own rows,
@@ -548,7 +575,10 @@ function ControllerDetail({
     <>
       <Rows
         items={[
-          { k: 'Status', v: STATUS_LABEL[device.status] ?? device.status },
+          // Two separate facts, kept separate. Collapsing them is what let a
+          // paired-but-dead controller read as "online".
+          { k: 'Pairing', v: device.status === 'unpaired' ? 'not paired' : 'paired' },
+          { k: 'Connection', v: controllerLabel(device) },
           { k: 'Last seen', v: relativeTime(device.last_seen_at), mono: true },
           { k: 'Paired', v: relativeTime(device.paired_at), mono: true },
           { k: 'Device ID', v: device.id, mono: true },

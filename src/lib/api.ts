@@ -1301,7 +1301,24 @@ export type DeviceRow = {
   id: string;
   location_id: string;
   label: string | null;
-  status: 'unpaired' | 'active' | 'offline' | string;
+  /**
+   * PAIRING state, not liveness. It goes `unpaired` → `active` when a claim is
+   * redeemed and is never written again — nothing in the hub sets `offline`.
+   * A controller unplugged for a month still reads `active` here.
+   *
+   * Use `connected` for whether it is actually there.
+   */
+  status: 'unpaired' | 'active' | string;
+  /**
+   * Whether the hub holds a live WebSocket to this controller right now
+   * (`hub.Connected`). This is the only field that says a command could
+   * actually be delivered.
+   *
+   * The console ignored it and drew every paired controller as live, so a dead
+   * controller showed green on the fleet screen — an operator looking at gates
+   * they cannot see would believe they would open.
+   */
+  connected?: boolean;
   paired_at: UnixSeconds | null;
   last_seen_at: UnixSeconds | null;
   claim_expires_at: UnixSeconds | null;
