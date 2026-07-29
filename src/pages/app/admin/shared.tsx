@@ -12,7 +12,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { ApiError, isUnavailable } from '@/lib/api';
+import { ApiError, isHubUnreachable, isUnavailable } from '@/lib/api';
 import { fromUnix } from '@/lib/time';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -64,8 +64,21 @@ const ADMIN_ERROR_COPY: Record<string, string> = {
 
 export function adminErrorMessage(err: unknown): string {
   if (isUnavailable(err)) return "This isn't available on this hub yet.";
+  // The hub was never reached. Distinct from every coded refusal below, and
+  // worth its own sentence because it is the one case where the operator's next
+  // step is "check the hub", not "check what you asked for".
+  if (isHubUnreachable(err)) {
+    return 'Could not reach the hub. Nothing here has been decided — this is a failed request, not a refusal.';
+  }
   if (err instanceof ApiError) {
-    return ADMIN_ERROR_COPY[err.code] ?? err.detail ?? err.code;
+    // `err.code` was the final fallback, so an operator could be shown a bare
+    // `cannot_revoke_last_admin`-style identifier — a string written for a
+    // switch statement, not for a person. A code with no copy is a gap in this
+    // map; say so plainly and show the code as evidence rather than as prose.
+    const copy = ADMIN_ERROR_COPY[err.code];
+    if (copy) return copy;
+    if (err.detail) return err.detail;
+    return `The hub refused this (${err.code}). That refusal has no explanation in this console yet.`;
   }
   return err instanceof Error ? err.message : 'Something went wrong.';
 }

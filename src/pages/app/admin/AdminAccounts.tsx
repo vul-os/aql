@@ -1,11 +1,15 @@
 // Accounts: searchable, paginated instance-wide account table. Row opens a
 // detail drawer (members, locations, recent access logs) with a confirmed
-// suspend/unsuspend action — optimistic, with toast + revert on failure.
+// suspend/unsuspend action — optimistic, reverted on a REFUSAL. A transport
+// failure is not reverted: the write may have committed before the response was
+// lost, and asserting "still active" about an account that may be suspended is a
+// claim this console never observed. See applyStatus.
 
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   api,
+  isHubUnreachable,
   type AdminAccountDetail,
   type AdminAccountRow,
 } from '@/lib/api';
@@ -161,6 +165,9 @@ function AccountDrawer({
   const [confirming, setConfirming] = useState<'active' | 'suspended' | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
+  // True when a status write was neither confirmed nor refused — the hub was
+  // unreachable, so whether it committed is unknown.
+  const [statusUnknown, setStatusUnknown] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -197,6 +204,7 @@ function AccountDrawer({
     onStatusChanged(id, status);
     try {
       const r = await api.adminAccountSetStatus(id, status);
+      setStatusUnknown(false);
       setDetail((d) => (d ? { ...d, account: r.account } : d));
       onStatusChanged(id, r.account.status);
       setConfirming(null);
@@ -206,9 +214,36 @@ function AccountDrawer({
           : `${r.account.name} reactivated.`,
       );
     } catch (err) {
-      setDetail((d) => (d ? { ...d, account: { ...d.account, status: prev } } : d));
-      onStatusChanged(id, prev);
-      setConfirmError(adminErrorMessage(err));
+      // A REFUSAL is safe to revert: the hub answered, and its answer was no,
+      // so the account is definitely still in its previous state.
+      //
+      // A TRANSPORT failure is not. The PATCH may have reached the hub and
+      // committed before the response was lost, so reverting the row asserts
+      // "still active" about an account that may now be suspended — a negative
+      // this console never observed. Suspension decides whether a household's
+      // opens are denied, so guessing it wrong in the reassuring direction is
+      // the wrong way to guess.
+      //
+      // Same distinction the gate buttons draw for `undelivered`: an outcome
+      // nobody knows must not be reported as an outcome.
+      if (isHubUnreachable(err)) {
+        // The row is left EXACTLY as the optimistic flip set it, and a separate
+        // flag records that this console does not know whether that is true.
+        // A sentinel in `status` would be worse than the bug: `suspended` is
+        // derived as `status === 'suspended'`, so anything else reads as "not
+        // suspended" — the reassuring guess this is meant to remove.
+        setStatusUnknown(true);
+        setConfirmError(
+          `Could not reach the hub, so it is not known whether ${detail.account.name} was ` +
+            `${status === 'suspended' ? 'suspended' : 'reactivated'}. The change may have ` +
+            `gone through. Reload once the hub is reachable rather than trying again.`,
+        );
+      } else {
+        setStatusUnknown(false);
+        setDetail((d) => (d ? { ...d, account: { ...d.account, status: prev } } : d));
+        onStatusChanged(id, prev);
+        setConfirmError(adminErrorMessage(err));
+      }
     } finally {
       setBusy(false);
     }
@@ -253,6 +288,22 @@ function AccountDrawer({
           <LoadingRow />
         ) : (
           <div className="px-6 py-5 flex flex-col gap-6">
+            {/* Rendered ABOVE the pill it contradicts, because the pill is
+                showing the optimistic flip and this is the reason not to trust
+                it. Amber rather than red: nothing failed and nothing is known
+                to be wrong — the outcome is simply unobserved. */}
+            {statusUnknown && (
+              <div className="rounded-2xl border border-gold/50 bg-gold/[0.08] px-4 py-3">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-ink/55 font-mono">
+                  Status not confirmed
+                </p>
+                <p className="mt-2 text-[15px] text-ink/85 leading-relaxed">
+                  The hub could not be reached after this change was sent, so whether it took
+                  effect is unknown — the badge below shows what was asked for, not what the
+                  hub has. Reload once the hub is reachable rather than sending it again.
+                </p>
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-3">
               <StatusPill status={acct.status} />
               <span className="font-mono text-[10px] uppercase text-ink/45">{acct.country_code}</span>
