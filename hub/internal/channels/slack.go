@@ -179,9 +179,10 @@ func AccessBlocks(verb GateVerb, profileName string, gates []store.AvailableAP, 
 	}
 	prompt := "Hi *" + name + "*, which gate would you like to open?"
 	if verb != VerbOpen {
-		// Reached only from a close request: it says plainly that nothing has
-		// moved yet, the same honesty rule PushGateMenu follows.
-		prompt = "Hi *" + name + "*, I haven't closed anything. Which gate would you like to close?"
+		// Any non-open request: it says plainly that nothing has moved yet, in
+		// the verb's own words, the same honesty rule PushGateMenu follows.
+		prompt = "Hi *" + name + "*, " + verb.NothingMovedYet() +
+			" Which gate would you like to " + verb.Infinitive() + "?"
 	}
 	blocks := []Block{
 		{

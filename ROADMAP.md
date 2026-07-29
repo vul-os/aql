@@ -174,6 +174,12 @@ hub's issuance endpoint):
       the hub key too and the app already treats a change as a re-enrolment event.
       (`lockdown`/`lift` are deliberately controller-local — `offline_grants.go` says so —
       and are NOT part of this gap)
+- [ ] **A controller never reports its configuration back.** `cmd.ack` carries a result
+      and a detail and nothing else, so the hub cannot show an operator what `pulse_ms`,
+      `hold_max` or `sensor_debounce_ms` are currently set to — only send new ones. The
+      console says so plainly rather than leaving empty boxes to be read as "unset". Fixing
+      it means widening the ack (or adding a report) in `proto/`, which is a wire-contract
+      change across both modules and the conformance vectors
 - [ ] Controller position/tamper sensors return static values
 
 **Console screens ahead of their backend** (tracked mechanically by the route-parity test):

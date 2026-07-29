@@ -15,7 +15,10 @@ package channels
 // controller's hold_max releases it. It must therefore be reachable ONLY on an
 // explicit match, in every single method, and never as anybody's fallback.
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // everyVerbMethod runs a verb through all six mappings, so a new method added
 // later without a hold branch shows up here rather than in production.
@@ -162,5 +165,50 @@ func TestHoldSurvivesTheCommandRoundTrip(t *testing.T) {
 		if _, ok := GateVerbForCommand(bad); ok {
 			t.Errorf("GateVerbForCommand(%q) was accepted", bad)
 		}
+	}
+}
+
+// Copy and action must agree, for every verb.
+//
+// Seven prompt sites read `if verb != VerbOpen` and wrote close wording. That
+// was correct while there were two verbs and became a lie the moment there
+// were three: a hold picker said "I haven't closed anything. Which gate would
+// you like to close?" while its buttons carried hold_ap ids and would have
+// held the gate open. The member reads one thing, the button does another.
+//
+// This is the test that would have caught it, so it is written from the shape
+// of the mistake rather than from the fix: for each verb, the words a picker
+// leads with must name THAT verb.
+func TestPickerCopyNamesTheVerbItWillActuate(t *testing.T) {
+	for _, tc := range []struct {
+		verb           GateVerb
+		wantIn         string
+		mustNotContain []string
+	}{
+		{VerbOpen, "open", []string{"closed", "held"}},
+		{VerbClose, "close", []string{"held open"}},
+		// The one that was wrong: a hold must never describe itself as a close.
+		{VerbHold, "hold open", []string{"closed anything", "like to close"}},
+	} {
+		phrase := tc.verb.NothingMovedYet() + " Which gate would you like to " + tc.verb.Infinitive() + "?"
+		if !strings.Contains(phrase, tc.wantIn) {
+			t.Errorf("verb %v produced %q, which does not name the verb", tc.verb, phrase)
+		}
+		for _, bad := range tc.mustNotContain {
+			if strings.Contains(phrase, bad) {
+				t.Errorf(`verb %v produced %q, which contains %q.
+
+The buttons under this prompt carry %v. Copy that describes a different action
+from the one the button takes is worse than either being wrong alone.`,
+					tc.verb, phrase, bad, tc.verb.SelectionCommand())
+			}
+		}
+	}
+
+	// And the fallback stays safe: a verb nobody set describes the direction
+	// that cannot let anyone in.
+	var unset GateVerb
+	if unset.Infinitive() != "close" {
+		t.Errorf("an unset verb's infinitive is %q, want close", unset.Infinitive())
 	}
 }

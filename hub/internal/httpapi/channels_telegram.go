@@ -138,7 +138,7 @@ func (s *Server) processTGMessage(ctx contextT, msg *channels.TGMessage) {
 		default:
 			prompt := "Which gate would you like to open?"
 			if verb != channels.VerbOpen {
-				prompt = "I haven't closed anything. Which gate would you like to close?"
+				prompt = verb.NothingMovedYet() + " Which gate would you like to " + verb.Infinitive() + "?"
 			}
 			body, kb := channels.TelegramGatePicker(verb, prompt, gates, s.channelPublicURL())
 			s.tgSendKeyboard(ctx, msg.Chat.ID, chatID, body, kb)

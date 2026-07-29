@@ -148,6 +148,34 @@ func (v GateVerb) Past() string {
 	return "closed"
 }
 
+// Infinitive is the verb as it appears after "would you like to" — "open",
+// "close", "hold open".
+//
+// It exists because seven prompt sites asked `if verb != VerbOpen` and wrote
+// close wording, which was correct while there were exactly two verbs and
+// became a lie the moment there were three: a hold picker said "I haven't
+// closed anything. Which gate would you like to close?" while its buttons
+// carried hold ids and would have held the gate open. The words and the action
+// disagreeing is worse than either being wrong alone.
+//
+// Fail-safe like the rest of this type: an unset verb yields "close", so a
+// prompt built from a verb nobody set still describes the safe direction.
+func (v GateVerb) Infinitive() string {
+	switch v {
+	case VerbOpen:
+		return "open"
+	case VerbHold:
+		return "hold open"
+	}
+	return "close"
+}
+
+// NothingMovedYet is the sentence a picker leads with when the request was not
+// an open: it says plainly that nothing has happened, in the verb's own words.
+func (v GateVerb) NothingMovedYet() string {
+	return "I haven't " + v.Past() + " anything."
+}
+
 func (v GateVerb) String() string {
 	if v.Valid() {
 		return v.Command()

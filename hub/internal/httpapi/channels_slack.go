@@ -166,10 +166,7 @@ func (s *Server) processSlackEvent(ctx contextT, teamID string, ev *channels.Sla
 			s.slackReply(ctx, chatID, channelID, "You don't have any active gate access. Please contact the administrator.", nil)
 			return
 		}
-		notify := "Select a gate to open"
-		if verb != channels.VerbOpen {
-			notify = "Select a gate to close"
-		}
+		notify := "Select a gate to " + verb.Infinitive()
 		s.slackReply(ctx, chatID, channelID, notify, channels.AccessBlocks(verb, displayName, gates, s.channelPublicURL()))
 	default:
 		// A verb chat cannot serve is answered, not redirected to a gate menu

@@ -152,7 +152,7 @@ func (s *Server) processDiscordMessage(ctx contextT, send channels.DiscordSender
 		default:
 			prompt := "Which gate would you like to open?"
 			if verb != channels.VerbOpen {
-				prompt = "I haven't closed anything. Which gate would you like to close?"
+				prompt = verb.NothingMovedYet() + " Which gate would you like to " + verb.Infinitive() + "?"
 			}
 			body, components := channels.DiscordGatePicker(verb, prompt, gates, s.channelPublicURL())
 			s.discordComponents(ctx, send, chatID, msg.ChannelID, body, components)

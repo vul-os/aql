@@ -118,6 +118,16 @@ export function ControllerConfig({ deviceId }: { deviceId: string }) {
         Changes are signed by this hub and applied by the controller. Leave a field blank to
         leave it as it is — the controller merges rather than replaces.
       </p>
+      {/* Said plainly rather than implied by empty inputs. A controller never
+          reports its configuration back: the ack carries a result and a detail
+          and nothing else, so the hub genuinely does not know what these are
+          set to. Blank boxes on their own would read as "unset" or "zero" to a
+          reasonable person, which is a different and wrong thing. */}
+      <p className="mt-2 text-xs text-ink/55">
+        This console cannot show the current values. A controller does not report its
+        configuration back to the hub, so these boxes start empty whatever the device is
+        set to — they are changes to send, not a reflection of what it holds now.
+      </p>
       <div className="mt-4 space-y-4">
         {FIELDS.map((f) => (
           <label key={f.key} className="block">

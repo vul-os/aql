@@ -199,9 +199,10 @@ func PushGateMenu(verb GateVerb, locationName string, gates []store.AvailableAP,
 		g := gates[0]
 		body := `Welcome to ` + locationName + `. Message "open" any time, or tap below to open ` + g.APName + `.`
 		if verb != VerbOpen {
-			// Reached only from a close request: no welcome, and it says plainly
-			// that nothing has moved yet.
-			body = `I haven't closed anything. Tap below to close ` + g.APName + `.`
+			// Any non-open request: no welcome, and it says plainly that
+			// nothing has moved yet — in the verb's own words, because the
+			// button below carries that verb and the two must agree.
+			body = verb.NothingMovedYet() + ` Tap below to ` + verb.Infinitive() + ` ` + g.APName + `.`
 		}
 		i := WhatsAppInteractive{
 			Type: "button",
@@ -224,7 +225,7 @@ func PushGateMenu(verb GateVerb, locationName string, gates []store.AvailableAP,
 	rows := waGateRows(verb, gates)
 	prompt := "Welcome to " + locationName + ". Which gate would you like to open?"
 	if verb != VerbOpen {
-		prompt = "I haven't closed anything. Which gate would you like to close?"
+		prompt = verb.NothingMovedYet() + " Which gate would you like to " + verb.Infinitive() + "?"
 	}
 	i := WhatsAppInteractive{
 		Type:   "list",
@@ -278,7 +279,7 @@ func PushLocationMenu(verb GateVerb, locations []store.LinkedLocation, publicURL
 	}
 	prompt := "Welcome back. Which location do you want to use?"
 	if verb != VerbOpen {
-		prompt = "I haven't closed anything. Which location is the gate at?"
+		prompt = verb.NothingMovedYet() + " Which location is the gate at?"
 	}
 	return waInteractiveReply(WhatsAppInteractive{
 		Type:   "list",

@@ -22,6 +22,9 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"os"
+	"regexp"
+	"strconv"
 	"testing"
 	"time"
 
@@ -111,7 +114,22 @@ func TestClockSyncIsQuietWithNothingConnected(t *testing.T) {
 // controller side; this is asserted here because the two live in different
 // modules and nothing else connects them.
 func TestClockSyncIntervalIsWellInsideTheStalenessLimit(t *testing.T) {
-	const controllerStaleLimit = 14 * 24 * time.Hour // wire.StaleClockLimitSeconds
+	// READ from the controller's source, not hand-copied.
+	//
+	// This test previously declared `const controllerStaleLimit = 14 * 24 *
+	// time.Hour // wire.StaleClockLimitSeconds` — a literal in this file with
+	// the real constant's name in a comment beside it. That is the exact
+	// unenforced-boundary shape this whole worker exists to fix: two modules,
+	// one depending on the other's number, and nothing connecting them.
+	// Lowering StaleClockLimitSeconds to an hour left this test green.
+	//
+	// hub and controller are separate Go modules and cannot import each
+	// other, so the constant is read as TEXT — the technique
+	// src/lib/offline/__tests__/wireConstants.test.ts already uses to hold
+	// the TypeScript mirrors of these same constants honest.
+	controllerStaleLimit := time.Duration(goConstSeconds(t,
+		"../../../controller/internal/wire/wire.go", "StaleClockLimitSeconds")) * time.Second
+
 	if clockSyncInterval >= controllerStaleLimit {
 		t.Fatalf("clockSyncInterval %v is not inside the controller's %v staleness limit",
 			clockSyncInterval, controllerStaleLimit)
@@ -142,4 +160,31 @@ func newServerForClockSync(t *testing.T) (*Server, *store.Store) {
 	s := New(Config{Version: "test", JWTSecret: []byte("0123456789abcdef0123456789abcdef")},
 		st, ks, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)))
 	return s, st
+}
+
+// goConstSeconds reads `name = <integer>` out of a Go source file.
+//
+// Deliberately strict: it fails the test if the constant is missing, renamed,
+// or no longer a bare integer, rather than falling back to a default. A
+// cross-module check that silently stops checking is worse than no check,
+// because its name goes on claiming the property is held.
+func goConstSeconds(t *testing.T, relPath, name string) int64 {
+	t.Helper()
+	b, err := os.ReadFile(relPath)
+	if err != nil {
+		t.Fatalf("read %s: %v — this test asserts a constant that lives in another module, "+
+			"and cannot do so if it cannot find it", relPath, err)
+	}
+	re := regexp.MustCompile(`(?m)^\s*` + regexp.QuoteMeta(name) + `\s*=\s*(\d+)`)
+	m := re.FindSubmatch(b)
+	if m == nil {
+		t.Fatalf("%s does not define %s as a bare integer any more. If it moved or changed "+
+			"shape, this check must be updated with it — not deleted, because the hub's ping "+
+			"interval is only safe relative to whatever that value now is.", relPath, name)
+	}
+	n, err := strconv.ParseInt(string(m[1]), 10, 64)
+	if err != nil {
+		t.Fatalf("parse %s: %v", name, err)
+	}
+	return n
 }
