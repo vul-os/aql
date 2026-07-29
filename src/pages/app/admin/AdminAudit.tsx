@@ -314,6 +314,12 @@ function ChainVerify() {
     try {
       setResult(await api.adminAuditVerify());
     } catch (err) {
+      // The previous run's result MUST go. Without this, a re-verify that
+      // fails renders its error banner directly above the last run's green
+      // "Intact" ticks — and the person re-verifying is very often doing it
+      // BECAUSE they suspect tampering. A stale pass presented beside a fresh
+      // failure is the worst possible answer to that question.
+      setResult(null);
       setError(friendlyApiError(err, 'Could not verify the audit chain.'));
     } finally {
       setRunning(false);

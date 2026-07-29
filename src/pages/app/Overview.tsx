@@ -17,6 +17,7 @@
 // reasoning killed the fake camera REC dot — don't bring either back.
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { AccessPointAction } from '@/components/access/AccessPointAction';
 import { CreateAccessPointModal } from '@/components/access/CreateAccessPointModal';
@@ -98,6 +99,9 @@ export default function Overview() {
   // either — see energyState() in components/device/liveState.ts.
   const [energy, setEnergy] = useState<EnergyState | null>(null);
   const [dataLoaded, setDataLoaded] = useState(false);
+  // Whether the last load actually failed. `accessPoints.length === 0` cannot
+  // answer that on its own, and it is what decides the onboarding screen.
+  const [loadFailed, setLoadFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCreateAp, setShowCreateAp] = useState(false);
   // Locations whose daily open quota is ≥80% consumed (admin-only heads-up).
@@ -126,14 +130,26 @@ export default function Overview() {
       // Summary isn't available on every gateway (see isRealSummary above) —
       // its absence must never block locations/access points from loading,
       // otherwise a fully set-up account falls back to the onboarding screen.
+      // accessPoints is NOT allowed to swallow its own failure. It used to
+      // `.catch(() => ({ access_points: [] }))`, and the very next thing this
+      // component does is render the first-time ONBOARDING screen when that
+      // list is empty. So a dropped connection told a household with a working
+      // gate that they had never set one up, and offered to walk them through
+      // it — an empty list and a failed request are different facts and this
+      // was the most damaging place to conflate them.
+      //
+      // Summary may still degrade to null: isRealSummary already treats it as
+      // optional (not every hub serves /analytics), and its absence changes a
+      // few figures rather than the whole screen.
       const [s, l, ap] = await Promise.all([
         api.accountSummary(currentAccount.id).catch(() => null),
         api.locationsList(currentAccount.id),
-        api.accessPoints(currentAccount.id).catch(() => ({ access_points: [] })),
+        api.accessPoints(currentAccount.id),
       ]);
       setSummary(isRealSummary(s) ? s : null);
       setLocations(l.locations);
       setAccessPoints(ap.access_points);
+      setLoadFailed(false);
       // Non-blocking: check each location's daily quota consumption so admins
       // get a heads-up chip when a cap is ≥80% used. Failures are silent —
       // the chip is informational only.
@@ -162,6 +178,10 @@ export default function Overview() {
         setQuotaWatch([]);
       }
     } catch (err) {
+      // Recorded as a FAILURE, distinct from "loaded, and there is nothing".
+      // Without this flag the two are indistinguishable downstream, because
+      // both leave the lists empty.
+      setLoadFailed(true);
       setError(err instanceof Error ? err.message : 'Failed to load dashboard.');
     } finally {
       setDataLoaded(true);
@@ -201,6 +221,26 @@ export default function Overview() {
     return (
       <div className="min-h-[60vh] flex items-center justify-center text-ink/40 text-sm">
         Loading…
+      </div>
+    );
+  }
+
+  // A failed load is not a new account. Offering to set up a first gate to
+  // someone whose gate already exists is worse than showing nothing: it
+  // suggests their configuration is gone.
+  if (loadFailed) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 text-center px-6">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-ink/55 font-mono">
+          Could not load this account
+        </p>
+        <p className="text-[15px] text-ink/80 max-w-md leading-relaxed">
+          {error ??
+            'The hub did not answer. This is a failed request, not an empty account — your locations and gates are still there.'}
+        </p>
+        <Button variant="ink" onClick={() => void load()}>
+          Try again
+        </Button>
       </div>
     );
   }

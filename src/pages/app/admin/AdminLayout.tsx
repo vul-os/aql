@@ -89,7 +89,31 @@ function AdminGate() {
   }
 
   if (state?.claimable) return <ClaimScreen />;
+  // `failed` was tracked and then thrown away: a network error fell through to
+  // Forbidden, which states "403 · not_platform_admin" and "Your account
+  // doesn't have platform-admin access" as fact. That is a claim about the
+  // caller's permissions derived from a request that never arrived — and it
+  // sends the actual operator of the instance to ask themselves for access.
+  if (failed) return <CouldNotCheck />;
   return <Forbidden />;
+}
+
+function CouldNotCheck() {
+  return (
+    <div className="max-w-lg mx-auto mt-[12vh]">
+      <Card className="p-8 text-center">
+        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-ink/45 mb-3">
+          could not check
+        </p>
+        <h1 className="font-display text-3xl mb-3">Not sure yet</h1>
+        <p className="text-sm text-ink/60 leading-relaxed">
+          This console could not ask the hub whether your account has platform-admin access.
+          That is a failed request, not a refusal — nothing here has been decided about your
+          permissions. Reload once the hub is reachable.
+        </p>
+      </Card>
+    </div>
+  );
 }
 
 function Forbidden() {
