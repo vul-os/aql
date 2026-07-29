@@ -66,6 +66,7 @@ Consequently:
 | `TestOfflineGrant_Redeem` | hub-signed grant redeemed over the LAN with the hub absent → relay pulse + `grant_redeemed` drains on the live WS |
 | `TestOfflineGrant_Rejects` | adversarial grants at the real `grants.Exchange`: tampered→`badsig`, wrong device→`wrong_device`, replayed cnonce→`cnonce_replay`, each fail-closed with no pulse |
 | `TestLockdown_DeniesOfflineRedeem` | lockdown latch (set via `controller-sim` stdin) denies a valid offline redemption → `lockdown`, no pulse |
+| `TestHold_Acked` / `TestHold_WithSecondsIsAcceptedAndSigned` / `TestHold_RateLimitNeverReachesController` | `hold` end to end — the first command whose PAYLOAD the signature covers. Proves the hub's signed map and the controller's canonicalisation agree (they would not if key ordering differed, and each module's own tests would still pass), that the controller reports `held` rather than `opened`, and that a rate-limited hold never reaches the controller at all |
 | `TestPairing_PathContract` / `TestPairing_DocumentedInvocationWorks` | pairing redeem path at both `/pair/redeem` and `/api/pair/redeem`, including the controller's documented bare `--hub` invocation — see the fixed **interop finding #1** below |
 
 ## Interop findings (for the module owners)
