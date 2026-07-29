@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { PageHeader } from './AppLayout';
 import { Card } from '@/components/ui/Card';
+import { ListStateCard, listLoading, loadList, type ListState } from '@/components/ui/ListState';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { useAuth } from '@/lib/auth';
 import {
   ApiError,
   api,
+  friendlyApiError,
   type AccessPointDetail,
   type GrantCreateInput,
   type TemporaryAccessGrant,
@@ -40,27 +42,34 @@ function defaultEndsAtIso(): string {
 }
 
 export default function Grants() {
-  const [grants, setGrants] = useState<TemporaryAccessGrant[] | null>(null);
+  const [state, setState] = useState<ListState<TemporaryAccessGrant>>(listLoading);
   const [accessPoints, setAccessPoints] = useState<AccessPointDetail[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [filter, setFilter] = useState<'all' | 'active' | 'past'>('all');
 
   const { currentAccount } = useAuth();
   const refresh = useCallback(async () => {
     if (!currentAccount) return;
-    try {
-      const [g, ap] = await Promise.all([
-        api.grants({ account_id: currentAccount.id }),
-        api.accessPoints(currentAccount.id),
-      ]);
-      setGrants(g.grants);
-      setAccessPoints(ap.access_points);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load grants.');
-    }
+    // See components/ui/ListState. A failed fetch left `grants` null, which
+    // the filter memo passes straight through as null, which this screen
+    // renders as "Loading…" — forever, for a list of who currently has
+    // temporary access.
+    setState(
+      await loadList(
+        async () => {
+          const [g, ap] = await Promise.all([
+            api.grants({ account_id: currentAccount.id }),
+            api.accessPoints(currentAccount.id),
+          ]);
+          setAccessPoints(ap.access_points);
+          return g.grants;
+        },
+        'Could not load temporary access grants.',
+        friendlyApiError,
+      ),
+    );
   }, [currentAccount]);
+  const grants = state.status === 'ready' ? state.items : null;
 
   useEffect(() => {
     refresh();
@@ -94,11 +103,6 @@ export default function Grants() {
         }
       />
 
-      {error && (
-        <Card className="mb-6 border-terracotta/40">
-          <p className="text-sm text-terracotta-deep">{error}</p>
-        </Card>
-      )}
 
       <div className="mb-4 inline-flex rounded-full border border-ink/10 p-1 bg-paper-cool">
         {(['all', 'active', 'past'] as const).map((f) => (
@@ -114,18 +118,19 @@ export default function Grants() {
         ))}
       </div>
 
-      {filtered === null ? (
-        <Card>
-          <p className="text-ink/55 text-sm">Loading…</p>
-        </Card>
-      ) : filtered.length === 0 ? (
-        <Card>
-          <p className="text-ink/65 text-sm">
-            {accessPoints.length === 0
+      {state.status !== 'ready' || filtered === null || filtered.length === 0 ? (
+        // The empty message still distinguishes "no access points to grant on"
+        // from "nothing matches this filter" — a confirmed-empty list has more
+        // to say than a failed one, and only this branch knows which it is.
+        <ListStateCard
+          state={state}
+          emptyMessage={
+            accessPoints.length === 0
               ? 'Add an access point first, then you can grant temporary access to it.'
-              : 'No grants match this filter.'}
-          </p>
-        </Card>
+              : 'No grants match this filter.'
+          }
+          onRetry={() => void refresh()}
+        />
       ) : (
         <ul className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map((g) => (

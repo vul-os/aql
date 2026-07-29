@@ -4,7 +4,8 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { useAuth } from '@/lib/auth';
-import { ApiError, api, type AccountMemberRow } from '@/lib/api';
+import { ApiError, api, friendlyApiError, type AccountMemberRow } from '@/lib/api';
+import { ListStateCard, listLoading, loadList, type ListState } from '@/components/ui/ListState';
 
 const roleStyles: Record<AccountMemberRow['role'], string> = {
   owner: 'bg-ink text-paper',
@@ -24,14 +25,14 @@ function initials(name: string | null, username: string): string {
 
 export default function MembersPage() {
   const { currentAccount, user } = useAuth();
-  const [members, setMembers] = useState<AccountMemberRow[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [state, setState] = useState<ListState<AccountMemberRow>>(listLoading);
   const [inviting, setInviting] = useState(false);
   const [removing, setRemoving] = useState<AccountMemberRow | null>(null);
 
   // What the hub will accept, mirrored here so the UI does not offer an action
   // that comes back 403. The hub decides regardless — this only keeps the
   // button from appearing where it cannot work.
+  const members = state.status === 'ready' ? state.items : null;
   const myRole = currentAccount?.role ?? '';
   const canRemove = (m: AccountMemberRow) => {
     if (m.status !== 'active') return false;
@@ -42,13 +43,16 @@ export default function MembersPage() {
 
   const refresh = useCallback(async () => {
     if (!currentAccount) return;
-    try {
-      const r = await api.accountMembers(currentAccount.id);
-      setMembers(r.members);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load members.');
-    }
+    // A failure is its own state, not a null the render path reads as
+    // "Loading…". It used to be exactly that, so a dropped connection left
+    // this screen spinning forever with an error banner above it.
+    setState(
+      await loadList(
+        async () => (await api.accountMembers(currentAccount.id)).members,
+        'Could not load the member list.',
+        friendlyApiError,
+      ),
+    );
   }, [currentAccount]);
 
   useEffect(() => {
@@ -79,20 +83,12 @@ export default function MembersPage() {
         }
       />
 
-      {error && (
-        <Card className="mb-6 border-terracotta/40">
-          <p className="text-sm text-terracotta-deep">{error}</p>
-        </Card>
-      )}
-
-      {members === null ? (
-        <Card>
-          <p className="text-ink/55 text-sm">Loading…</p>
-        </Card>
-      ) : members.length === 0 ? (
-        <Card>
-          <p className="text-ink/65 text-sm">No members yet — that's unusual, you should at least be in here.</p>
-        </Card>
+      {state.status !== 'ready' || members === null || members.length === 0 ? (
+        <ListStateCard
+          state={state}
+          emptyMessage="No members yet — that's unusual, you should at least be in here."
+          onRetry={() => void refresh()}
+        />
       ) : (
         <Card className="p-0 overflow-hidden">
           {/* Mobile: card list. Tables don't fit comfortably on phones, and the

@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { useAuth } from '@/lib/auth';
 import { CreateAccessPointModal } from '@/components/access/CreateAccessPointModal';
+import { ListStateCard, listLoading, loadList, type ListState } from '@/components/ui/ListState';
 import {
   ApiError,
   api,
+  friendlyApiError,
   type AccessPointDetail,
   type MaintenanceCreateInput,
   type MaintenanceEvent,
@@ -40,21 +42,23 @@ function relTime(sec: number | null): string {
 
 export default function AccessPointsPage() {
   const { currentAccount } = useAuth();
-  const [points, setPoints] = useState<AccessPointDetail[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [state, setState] = useState<ListState<AccessPointDetail>>(listLoading);
   const [openMaintenanceFor, setOpenMaintenanceFor] = useState<AccessPointDetail | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!currentAccount) return;
-    try {
-      const r = await api.accessPoints(currentAccount.id);
-      setPoints(r.access_points);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load access points.');
-    }
+    // See components/ui/ListState: a failed fetch used to leave `points` null,
+    // which this screen renders as "Loading access points…" — forever.
+    setState(
+      await loadList(
+        async () => (await api.accessPoints(currentAccount.id)).access_points,
+        'Could not load access points.',
+        friendlyApiError,
+      ),
+    );
   }, [currentAccount]);
+  const points = state.status === 'ready' ? state.items : null;
 
   useEffect(() => {
     refresh();
@@ -73,22 +77,13 @@ export default function AccessPointsPage() {
         }
       />
 
-      {error && (
-        <Card className="mb-6 border-terracotta/40">
-          <p className="text-sm text-terracotta-deep">{error}</p>
-        </Card>
-      )}
-
-      {points === null ? (
-        <Card>
-          <p className="text-ink/55 text-sm">Loading access points…</p>
-        </Card>
-      ) : points.length === 0 ? (
-        <Card>
-          <p className="text-ink/65 text-sm">
-            No access points yet. Add one and pair a device to start tracking opens.
-          </p>
-        </Card>
+      {state.status !== 'ready' || points === null || points.length === 0 ? (
+        <ListStateCard
+          state={state}
+          loadingMessage="Loading access points…"
+          emptyMessage="No access points yet. Add one and pair a device to start tracking opens."
+          onRetry={() => void refresh()}
+        />
       ) : (
         <ul className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {points.map((ap) => (
