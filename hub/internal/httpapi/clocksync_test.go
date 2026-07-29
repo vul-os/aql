@@ -33,16 +33,18 @@ import (
 )
 
 func TestClockSyncPingsEveryConnectedController(t *testing.T) {
-	s, _ := newServerForClockSync(t)
+	s, st := newServerForClockSync(t)
+	a := pairDeviceForClockSync(t, st, "dev-a")
+	b := pairDeviceForClockSync(t, st, "dev-b")
 
-	sendA, _, unregA := s.hub.Register("dev-a")
+	sendA, _, unregA := s.hub.Register(a)
 	defer unregA()
-	sendB, _, unregB := s.hub.Register("dev-b")
+	sendB, _, unregB := s.hub.Register(b)
 	defer unregB()
 
 	go s.SyncControllerClocks(context.Background())
 
-	for name, ch := range map[string]<-chan []byte{"dev-a": sendA, "dev-b": sendB} {
+	for name, ch := range map[string]<-chan []byte{a: sendA, b: sendB} {
 		select {
 		case payload := <-ch:
 			var env keys.Envelope
@@ -76,15 +78,9 @@ func TestClockSyncPingsEveryConnectedController(t *testing.T) {
 // controller every six hours forever.
 func TestClockSyncWritesNoAccessLog(t *testing.T) {
 	s, st := newServerForClockSync(t)
-	_, _, unreg := s.hub.Register("dev-quiet")
-	defer unreg()
-
-	// Drain so Dispatch does not block on the unread channel.
-	go func() {
-		send, _, u := s.hub.Register("dev-drain")
-		defer u()
-		<-send
-	}()
+	quiet := pairDeviceForClockSync(t, st, "dev-quiet")
+	// Not WS-connected, so the ping queues rather than blocking on a reader.
+	_ = quiet
 	s.SyncControllerClocks(context.Background())
 
 	logs, err := st.AccessLogsByAccount(context.Background(), "any-account", 50)
@@ -102,12 +98,86 @@ func TestClockSyncWritesNoAccessLog(t *testing.T) {
 // With nothing connected the sweep is a no-op rather than an error: a hub whose
 // controllers are all offline is an ordinary state, and they will sync at the
 // handshake when they return.
-func TestClockSyncIsQuietWithNothingConnected(t *testing.T) {
+func TestClockSyncIsQuietWithAnEmptyFleet(t *testing.T) {
 	s, _ := newServerForClockSync(t)
 	if n := s.SyncControllerClocks(context.Background()); n != 0 {
-		t.Errorf("pinged %d devices with none connected", n)
+		t.Errorf("pinged %d devices with no paired controllers at all", n)
 	}
 }
+
+// THE case the first version of this worker missed entirely.
+//
+// A controller on the HTTPS long-poll fallback holds no WebSocket, so it never
+// completes a handshake and never reaches runner.go's SyncFromGateway. The
+// worker used to iterate the live WS map, so it was never sent a ping either —
+// leaving it with NO path to a fresh clock, and every offline grant it holds
+// refused after fourteen days.
+//
+// The hub looked fine throughout: last_seen_at is stamped on every poll, so
+// such a controller reads as recently seen while its clock freezes.
+func TestClockSyncReachesAPairedControllerWithNoLiveSocket(t *testing.T) {
+	s, st := newServerForClockSync(t)
+	id := pairDeviceForClockSync(t, st, "dev-longpoll")
+
+	// Deliberately NOT registered on the WS hub — this is the long-poll case.
+	if s.hub.Connected(id) {
+		t.Fatal("fixture: the device must not hold a live socket")
+	}
+
+	if n := s.SyncControllerClocks(context.Background()); n != 1 {
+		t.Fatalf(`pinged %d devices; want 1.
+
+A paired controller with no live socket is exactly the one that cannot sync its
+clock any other way. Enumerating only the connected set skipped it.`, n)
+	}
+
+	// The ping must be QUEUED for it, which is how a long-poll controller
+	// receives commands: it drains the queue on its next poll and runs each
+	// through the same command processor a live one uses.
+	queued := s.hub.DrainQueue(id)
+	if len(queued) != 1 {
+		t.Fatalf("%d commands queued for a long-poll controller, want 1", len(queued))
+	}
+	var env keys.Envelope
+	if err := json.Unmarshal(queued[0], &env); err != nil {
+		t.Fatal(err)
+	}
+	if env.Cmd != "ping" {
+		t.Errorf("queued command is %q, want ping", env.Cmd)
+	}
+	if env.IAT <= 0 {
+		t.Error("the queued ping carries no usable time, so it would sync nothing")
+	}
+}
+
+// pairDeviceForClockSync creates a real paired device row, because the worker
+// enumerates the FLEET from the store — a WS registration alone is not a paired
+// controller, and a fixture that only registered would have hidden the very
+// case this worker exists to cover.
+func pairDeviceForClockSync(t *testing.T, st *store.Store, label string) string {
+	t.Helper()
+	ctx := context.Background()
+	u, err := st.CreateUser(ctx, label+"@clock.test", "hash", "C", "ZA")
+	if err != nil {
+		t.Fatal(err)
+	}
+	acct, loc, err := st.CreateAccountWithOwner(ctx, u.ID, label+" home", "ZA")
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, err := st.CreateDeviceWithClaim(ctx, acct.ID, loc.ID, label, "hash-"+label, now()+3600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.DB().ExecContext(ctx,
+		`UPDATE devices SET paired_at = ?, public_key = 'x', status = 'active' WHERE id = ?`,
+		now(), d.ID); err != nil {
+		t.Fatal(err)
+	}
+	return d.ID
+}
+
+func now() int64 { return time.Now().Unix() }
 
 // The interval has to stay far inside the controller's staleness limit, or the
 // worker is decoration. 14 days is wire.StaleClockLimitSeconds on the

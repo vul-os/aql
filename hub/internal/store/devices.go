@@ -153,3 +153,37 @@ func (s *Store) TouchDeviceSeen(ctx context.Context, deviceID string) error {
 		`UPDATE devices SET last_seen_at = ?, updated_at = ? WHERE id = ?`, now(), now(), deviceID)
 	return err
 }
+
+// PairedDeviceIDs is every device that has completed pairing and is still
+// active — the fleet, whether or not it currently holds a live WebSocket.
+//
+// It exists for the clock-sync worker, and the distinction it draws is the
+// whole point. That worker used to iterate the hub's live WS map, which omits
+// a controller running on the HTTPS long-poll fallback (proto/pairing.md rule
+// 5). Such a controller never completes a WS handshake, so it never syncs its
+// clock that way either — leaving it with no path to a fresh clock at all, and
+// every offline grant it holds refused with stale_clock after fourteen days.
+//
+// A ping dispatched to a device with no live socket is QUEUED, and a long-poll
+// controller drains that queue on its next poll and feeds it through the same
+// command processor. So enumerating the fleet rather than the connected subset
+// is what makes those controllers reachable.
+func (s *Store) PairedDeviceIDs(ctx context.Context) ([]string, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id FROM devices
+		 WHERE status = 'active' AND paired_at IS NOT NULL
+		 ORDER BY id ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}

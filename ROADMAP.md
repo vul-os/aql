@@ -158,6 +158,13 @@ hub's issuance endpoint):
       has never run on hardware on either. darwin returns `ErrUnsupported`: CoreBluetooth
       offers peripheral mode, that library does not bind it, and writing a CGO binding
       that cannot be tested here would be worse than the gap
+- [ ] **`last_seen_at` is not a clock-freshness signal, and nothing surfaces the real one.**
+      It is stamped on polls, uplink events and acks — only some of which sync a controller's
+      clock — so a long-poll controller reads as recently seen while its `LastGatewaySync`
+      ages out. An operator warning built on it would give false reassurance, which is worse
+      than no warning. The honest signal is the controller's own last sync, and the hub does
+      not receive it: `cmd.ack` carries a result and a detail and nothing else (see the
+      config-readback gap above). Both want the same widening of the ack
 - [x] **`ping` — and it was not the minor one.** A controller learns the hub's time at
       the WS handshake and on an accepted `ping`, and nowhere else. The hub had never sent
       a ping, and a healthy WS connection carries no read deadline, so a controller that
@@ -165,7 +172,7 @@ hub's issuance endpoint):
       grant verification refuses EVERYTHING with `stale_clock` — step 1, before lockdown,
       before the grant is examined. The failure lands exactly inverted: flawless
       connectivity for a fortnight, then a hub outage, and every offline emergency grant
-      denied at the gate. A six-hourly sweep of connected controllers fixes it
+      denied at the gate. A six-hourly sweep of the whole PAIRED fleet fixes it — not the connected subset, which excluded the case that needed it most: a controller on the long-poll fallback never handshakes either, so it had no path to a fresh clock at all. A ping to a device with no live socket queues, and the long-poll handler drains it
 - [ ] **`repair` is the last one, and it is a programme rather than a feature.** It is the
       recovery path for a leaked or rotated hub signing key. The hub needs two-key
       retention and per-controller ack tracking — switching the signing key while one

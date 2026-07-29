@@ -28,6 +28,30 @@ package httpapi
 // controller, at the gate, with the person standing there. The connection
 // being healthy is what caused it.
 //
+// # Why the whole fleet and not just the connected subset
+//
+// The first version of this worker iterated the hub's live WebSocket map. That
+// silently excluded the case that needs it MOST: a controller on the HTTPS
+// long-poll fallback (proto/pairing.md rule 5).
+//
+// Such a controller never completes a WS handshake, so it never reaches
+// `runner.go`'s `Clock.SyncFromGateway(ch.IAT)`. And it was never in the
+// connected map, so it was never sent a ping. Its LastGatewaySync therefore sat
+// frozen at pairing time — no path to a fresh clock at all — and after fourteen
+// days every offline grant it held was refused.
+//
+// Worse, the hub looked healthy: `last_seen_at` is stamped on every poll
+// (`handleControllerPoll`), so a long-poll controller reads as recently seen
+// while its clock ages out. `last_seen_at` is NOT a proxy for clock freshness
+// and must not be used as one — it advances on polls, uplink events and acks,
+// only some of which sync anything.
+//
+// Dispatching to a device with no live socket QUEUES the envelope, the
+// long-poll handler drains that queue, and the controller runs it through the
+// same `Proc.Process` — so a queued ping syncs a long-poll controller exactly
+// as a live one. For a genuinely dead controller the ping expires (30s) and the
+// next dispatch prunes it, so this cannot accumulate.
+//
 // # Why a periodic ping rather than a periodic reconnect
 //
 // Dropping a working connection to refresh a timestamp trades a real
@@ -65,7 +89,17 @@ const (
 // the worker is alive. Errors are deliberately not aggregated: a ping that
 // fails is not an event, it is a controller that will be pinged again.
 func (s *Server) SyncControllerClocks(ctx context.Context) int {
-	devices := s.hub.ConnectedDevices()
+	// The whole paired fleet, not the connected subset — see the note above for
+	// why the connected subset excluded exactly the controllers that cannot
+	// sync any other way. Falls back to the connected set if the fleet cannot
+	// be read, so a database hiccup degrades to the old behaviour rather than
+	// to no clock sync at all.
+	devices, err := s.store.PairedDeviceIDs(ctx)
+	if err != nil {
+		s.log.Error("clock sync could not enumerate the fleet; falling back to connected devices",
+			"err", err)
+		devices = s.hub.ConnectedDevices()
+	}
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	sent := 0
