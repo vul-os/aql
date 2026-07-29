@@ -75,7 +75,14 @@ export function describeDelivery(delivery: string, verbPast: string): DeliveryOu
         kind: 'no_device',
         confirmed: false,
         retryable: false,
-        message: 'No controller is attached to this access point, so nothing was sent.',
+        // BOTH facts, because each alone misleads. The hub authorised this and
+        // wrote an audit row — it is, in dispatchCommand's words, "a real,
+        // audited success" — so saying only "nothing was sent" would suggest
+        // the request was rejected. But no controller is attached, so no gate
+        // moved, and saying only "logged" is what let this render as success.
+        message:
+          'The command was logged, but no controller is attached to this access point — ' +
+          'so no gate moved. Pair a controller to actuate it.',
       };
 
     default:

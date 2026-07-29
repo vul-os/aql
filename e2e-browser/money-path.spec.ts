@@ -152,7 +152,12 @@ test('sign up, sign in, create a location + access point, attempt an open, read 
     openBody.delivery,
     'no controller is paired, so delivery must be the honest no_device state',
   ).toBe('no_device');
-  await expect(page.getByText('The command was logged.')).toBeVisible();
+  // Both halves, because either alone misleads. The hub authorised and audited
+  // this open (that is what `no_device` means), AND no gate moved because no
+  // controller is attached. The screen used to say only the first, which
+  // rendered an un-actuated open as a plain success.
+  await expect(page.getByText(/The command was logged/)).toBeVisible();
+  await expect(page.getByText(/no gate moved/)).toBeVisible();
 
   // ── Audit log: dates must render as real dates, not 1970 ──────────────
   // The original bug fed raw Unix-seconds integers straight into

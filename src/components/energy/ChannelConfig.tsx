@@ -52,7 +52,27 @@ export function ChannelConfig({ accountId }: { accountId: string }) {
     };
   }, [accountId]);
 
-  if (unsupported) return null;
+  if (unsupported) {
+    // Said, not vanished. The rest of this console answers an unsupported hub
+    // in words (engineNotice's `unsupported` state: "it's running a build from
+    // before /v1/engine existed"), and a panel that silently disappears leaves
+    // an operator looking for a screen the docs describe with no idea why it
+    // is not there.
+    //
+    // The energy figures above are unaffected and stay honest on their own:
+    // mixIsProportional/mixCaveat in Energy.tsx carry the source-attribution
+    // caveat independently of this panel.
+    return (
+      <Card className="mt-6">
+        <h2 className="font-display text-2xl">Meter channels</h2>
+        <p className="text-sm text-ink/65 mt-1">
+          This hub doesn&rsquo;t serve the meter-channel API — it&rsquo;s running a build from
+          before it existed. Upgrade the hub to see and assign what the figures above are built
+          from. The figures themselves are unaffected.
+        </p>
+      </Card>
+    );
+  }
 
   return (
     <Card className="mt-6">

@@ -12,9 +12,16 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
-  // Two spec files today, each booting its own gateway process; cap workers
-  // so CI runners don't try to boot a pile of gateway processes at once.
-  workers: process.env.CI ? 2 : undefined,
+  // FIVE spec files, each booting its own gateway process — the comment here
+  // said "two" long after that stopped being true.
+  //
+  // Capped everywhere, not just in CI. Unbounded local workers default to the
+  // core count, so a developer machine boots as many gateway processes as it
+  // has cores and the sign-up flow starts timing out: a green suite becomes an
+  // intermittently red one that passes on re-run. A verification step that is
+  // only usually right is worse than a slow one, because the first instinct on
+  // a red run is to blame the run rather than the code.
+  workers: process.env.CI ? 2 : 2,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   timeout: 45_000,
   use: {
