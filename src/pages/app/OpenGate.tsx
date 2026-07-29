@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { describeDelivery } from '@/components/access/delivery';
 import { PageHeader } from './AppLayout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -13,7 +14,7 @@ import {
   type RateLimitDenial,
 } from '@/lib/api';
 
-type Stage = 'pick' | 'confirm' | 'locating' | 'sent' | 'denied';
+type Stage = 'pick' | 'confirm' | 'locating' | 'sent' | 'denied' | 'undelivered';
 
 export default function OpenGate() {
   const { currentAccount } = useAuth();
@@ -22,6 +23,9 @@ export default function OpenGate() {
   const [stage, setStage] = useState<Stage>('pick');
   const [distance, setDistance] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // The hub accepted the command but the gate has not moved: queued for an
+  // offline controller, unconfirmed, or no controller at all.
+  const [notice, setNotice] = useState<string | null>(null);
   const [denial, setDenial] = useState<RateLimitDenial | null>(null);
   // For rate_limited denials the retry button unlocks when the countdown ends.
   const [retryLocked, setRetryLocked] = useState(false);
@@ -51,7 +55,16 @@ export default function OpenGate() {
     const submit = async (lat?: number, long?: number, dist?: number) => {
       if (dist !== undefined) setDistance(dist);
       try {
-        await api.accessOpen(ap.id, { source: 'web', lat, long });
+        // `delivery` read rather than discarded: a 200 means the hub accepted
+        // the request, not that the gate moved. See components/access/delivery.ts.
+        const res = await api.accessOpen(ap.id, { source: 'web', lat, long });
+        const outcome = describeDelivery(res.delivery, 'opened');
+        if (!outcome.confirmed) {
+          setStage('undelivered');
+          setNotice(outcome.message);
+          return;
+        }
+        setNotice(null);
         setStage('sent');
       } catch (err) {
         // 429 → friendly rate-limit / quota state instead of a raw error.
@@ -194,6 +207,27 @@ export default function OpenGate() {
                       className="border-paper/30 text-paper hover:bg-paper hover:text-ink"
                     >
                       Open another
+                    </Button>
+                  </div>
+                )}
+
+                {stage === 'undelivered' && (
+                  <div className="space-y-3">
+                    {/* Amber, not green and not red. Nothing failed — the hub
+                        did exactly what it said — but the gate has not opened,
+                        and "Sent" alone would read as though it had. */}
+                    <div className="inline-flex items-center gap-3 bg-gold text-ink rounded-full px-5 py-2.5">
+                      <span className="h-2 w-2 rounded-full bg-ink/60" />
+                      <span className="font-medium">Not opened</span>
+                    </div>
+                    <p className="text-paper/75">{notice}</p>
+                    <Button
+                      onClick={reset}
+                      variant="outline"
+                      size="md"
+                      className="border-paper/30 text-paper hover:bg-paper hover:text-ink"
+                    >
+                      Back
                     </Button>
                   </div>
                 )}

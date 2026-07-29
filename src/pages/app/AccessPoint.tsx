@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { describeDelivery } from '@/components/access/delivery';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -59,6 +60,8 @@ export default function AccessPointPage() {
   const [stage, setStage] = useState<Stage>('idle');
   const [actionError, setActionError] = useState<string | null>(null);
   const [denial, setDenial] = useState<RateLimitDenial | null>(null);
+  // Hub accepted, gate did not move: queued, unconfirmed, or no controller.
+  const [notice, setNotice] = useState<string | null>(null);
   const [showMaintenance, setShowMaintenance] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -105,13 +108,22 @@ export default function AccessPointPage() {
 
       const submit = async (lat?: number, long?: number) => {
         try {
-          if (cmd === 'open') {
-            await api.accessOpen(ap.id, { source: 'web', lat, long });
-            setStage('open');
-          } else {
-            await api.accessClose(ap.id, { source: 'web', lat, long });
+          // `delivery` read rather than discarded — a 200 is the hub accepting
+          // the request, not the gate moving. See components/access/delivery.ts.
+          const res =
+            cmd === 'open'
+              ? await api.accessOpen(ap.id, { source: 'web', lat, long })
+              : await api.accessClose(ap.id, { source: 'web', lat, long });
+          const outcome = describeDelivery(res.delivery, cmd === 'open' ? 'opened' : 'closed');
+          if (!outcome.confirmed) {
+            // Back to idle rather than to a state that claims the gate moved.
             setStage('idle');
+            setNotice(outcome.message);
+            refresh();
+            return;
           }
+          setNotice(null);
+          setStage(cmd === 'open' ? 'open' : 'idle');
           // Refresh in the background so the meter + last op time update.
           refresh();
         } catch (err) {

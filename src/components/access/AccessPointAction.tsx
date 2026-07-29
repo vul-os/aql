@@ -23,6 +23,7 @@ import {
   type RateLimitDenial,
 } from '@/lib/api';
 import { RateLimitNotice } from './RateLimitNotice';
+import { describeDelivery } from './delivery';
 import { cn } from '@/lib/cn';
 
 type Stage = 'idle' | 'opening' | 'closing' | 'open' | 'done' | 'error';
@@ -39,6 +40,9 @@ export function AccessPointAction({
   const [stage, setStage] = useState<Stage>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [denial, setDenial] = useState<RateLimitDenial | null>(null);
+  // An honest non-success: queued, undelivered or no_device. Distinct from
+  // errorMsg because nothing failed — the hub did exactly what it said.
+  const [notice, setNotice] = useState<string | null>(null);
 
   // After 'done' from an open, hold the 'open' state briefly so the button
   // shows 'Close'. Then auto-revert to 'idle' if user doesn't close manually.
@@ -56,20 +60,39 @@ export function AccessPointAction({
 
       const submit = async (lat?: number, long?: number) => {
         try {
+          // The hub's `delivery` is READ, not discarded. A 200 means the hub
+          // accepted the request, not that the gate moved: the controller may
+          // be offline (queued), silent (undelivered) or absent (no_device).
+          // Rendering all four as success is how a button flips to "Close"
+          // over a gate that never opened. See ./delivery.ts.
+          let res: { delivery: string };
+          let past: string;
           if (cmd === 'open') {
-            await api.accessOpen(ap.id, { source: 'web', lat, long });
-            setStage('open');
+            res = await api.accessOpen(ap.id, { source: 'web', lat, long });
+            past = 'opened';
           } else if (cmd === 'hold') {
             // No `seconds`: the controller's own hold_max is the honest
             // ceiling, and this console does not know what this site was
             // configured with. Asking for a number it would silently cap
             // would show the operator a duration that is not what happens.
-            await api.accessHold(ap.id, { source: 'web', lat, long });
-            setStage('open');
+            res = await api.accessHold(ap.id, { source: 'web', lat, long });
+            past = 'held open';
           } else {
-            await api.accessClose(ap.id, { source: 'web', lat, long });
-            setStage('idle');
+            res = await api.accessClose(ap.id, { source: 'web', lat, long });
+            past = 'closed';
           }
+
+          const outcome = describeDelivery(res.delivery, past);
+          if (!outcome.confirmed) {
+            // Not an error state — nothing failed — but not success either.
+            // The stage stays where it was so the button does not claim the
+            // gate is now open, and the sentence says what did happen.
+            setStage('idle');
+            setNotice(outcome.message);
+            return;
+          }
+          setNotice(null);
+          setStage(cmd === 'close' ? 'idle' : 'open');
           onActivity?.();
         } catch (err) {
           setStage('error');
@@ -257,6 +280,14 @@ export function AccessPointAction({
           ) : errorMsg ? (
             <p className="mt-2 text-[11px] text-terracotta-deep truncate" title={errorMsg}>
               {errorMsg}
+            </p>
+          ) : notice ? (
+            // Not styled as an error: nothing failed. The hub accepted the
+            // command and told us honestly that the gate has not moved (yet,
+            // or at all). Not truncated either — every one of these sentences
+            // ends with what the person should do next.
+            <p className={cn('mt-2 text-[11px]', isOpen ? 'text-paper/80' : 'text-ink/70')}>
+              {notice}
             </p>
           ) : null}
         </div>

@@ -382,7 +382,13 @@ export default function DevicesPage() {
         </Card>
 
         <div className="lg:col-span-4 flex flex-col gap-6">
-          {selected && <DetailPanel row={selected} onPairedRefresh={refresh} />}
+          {selected && (
+            <DetailPanel
+              row={selected}
+              accountId={currentAccount?.id ?? null}
+              onPairedRefresh={refresh}
+            />
+          )}
 
           {currentAccount && <ControllerDiscoveryCard accountId={currentAccount.id} />}
 
@@ -418,7 +424,18 @@ export default function DevicesPage() {
 
 // ── detail panel ─────────────────────────────────────────────────────────────
 
-function DetailPanel({ row, onPairedRefresh }: { row: Row; onPairedRefresh: () => void }) {
+function DetailPanel({
+  row,
+  accountId,
+  onPairedRefresh,
+}: {
+  row: Row;
+  // Needed to release a device claim. Threaded in rather than read from a
+  // context here, so the panel cannot render a release control for an account
+  // the page is not actually showing.
+  accountId: string | null;
+  onPairedRefresh: () => void;
+}) {
   return (
     <Card className="p-0 overflow-hidden">
       <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-ink/8">
