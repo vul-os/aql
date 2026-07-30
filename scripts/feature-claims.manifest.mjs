@@ -383,6 +383,83 @@ export const FEATURES = [
       { root: 'controller/internal', pattern: 'RTSP|rtsp://|ffmpeg|onvif', flags: 'i' },
     ]],
   },
+  // ── claims that something is NOT built ────────────────────────────────
+  //
+  // These use docStatus 'planned', which INVERTS the check: the evidence must
+  // NOT be found, and the build fails the day it appears. That is the guard
+  // for the direction this repository actually keeps failing in — a document
+  // saying a thing is unbuilt after it shipped, which tells a reader not to
+  // look at live code.
+  //
+  // It has happened repeatedly and expensively. ROADMAP called a complete
+  // Linux GPIO driver "a stub whose Pulse/Hold/Release all panic"; rtsp.go's
+  // header said "No SETUP, no PLAY, no RTP" four hundred lines above code
+  // doing all three; devices.md said live view and recording were "still not
+  // built" after both shipped. The last one was read by an agent, believed
+  // over the code, and rewritten onto the marketing page as fact.
+  //
+  // Each entry below guards a claim the docs make in several places at once,
+  // so building the feature fails the build until every one is updated.
+  //
+  // Evidence patterns are deliberately implementation-shaped, not word-shaped:
+  // an earlier attempt at the Modbus RTU entry matched the comment in
+  // modbus/doc.go that EXPLAINS its absence, which would have failed the guard
+  // on day one and taught everyone to disable it.
+  {
+    id: 'matter-driver',
+    label: 'A Matter/CHIP driver — claimed unbuilt in ten documents',
+    docStatus: 'planned',
+    docRefs: [
+      'README.md — "Matter, Modbus RTU, native Zigbee and Z-Wave radios"',
+      'ROADMAP.md Phase 1',
+      'site/docs/devices.md',
+      'site/docs/faq.md — "No Matter and no robot driver"',
+    ],
+    evidence: [[
+      { root: 'hub/internal/devices', pattern: 'package matter|chip-tool|matter-sdk|MatterDriver' },
+      { file: 'hub/go.mod', pattern: 'matter|project-chip', flags: 'i' },
+    ]],
+  },
+  {
+    id: 'modbus-rtu-serial',
+    label: 'Modbus RTU over a serial line — the driver is TCP only, deliberately',
+    docStatus: 'planned',
+    docRefs: [
+      'README.md — the unbuilt list',
+      'site/docs/devices.md — Modbus is TCP only',
+    ],
+    // A serial DEPENDENCY, not the letters "RTU": modbus/doc.go says "NOT
+    // Modbus RTU or ASCII over a serial line", and a word-shaped pattern would
+    // match the sentence disclaiming the feature.
+    evidence: [[{ file: 'hub/go.mod', pattern: 'go\\.bug\\.st/serial|tarm/serial|serial-port' }]],
+  },
+  {
+    id: 'robot-driver',
+    label: 'A robot driver — robots are a device kind with no driver behind them',
+    docStatus: 'planned',
+    docRefs: [
+      'ROADMAP.md Phase 5 — robot control beyond a static status row',
+      'site/docs/devices.md',
+      'site/index.html — the ledger marks robots not built',
+    ],
+    evidence: [[
+      { root: 'hub/internal/devices', pattern: 'package robot|RobotDriver|robot\\.New\\(' },
+    ]],
+  },
+  {
+    id: 'google-oauth-signin',
+    label: 'Google OAuth sign-in — a console screen exists, no backend does',
+    docStatus: 'planned',
+    docRefs: [
+      'ROADMAP.md — console screens ahead of their backend',
+    ],
+    // Routes rather than the word: AuthCallback.tsx exists on the frontend and
+    // auth.go has a comment calling OAuth deferred, so a text search finds
+    // both and proves neither.
+    evidence: [[
+      { file: 'hub/internal/httpapi/server.go', pattern: '"(GET|POST) /v1/[^"]*oauth' },
+    ]],
+  },
   {
     id: 'keychain-credential-vault',
     label: 'OS-keychain-backed credential vault for device/service secrets',
