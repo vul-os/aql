@@ -309,39 +309,12 @@ func runVerifyAudit(args []string) int {
 	dataDir := fs.String("data", envOr("AQL_DATA_DIR", "./data"), "data directory")
 	fs.Parse(args)
 
-	// Refuse a directory with no database, rather than creating one and
-	// verifying that.
-	//
-	// store.Open creates the database if it is absent — correct for a hub
-	// starting up, and wrong here. Without this check, `verify-audit -data
-	// /mnt/backup-typo` created an empty lintel.db, walked its two empty hash
-	// chains and printed:
-	//
-	//	access_logs      OK   (0 rows)
-	//	admin_audit_log  OK   (0 rows)
-	//
-	// A green result for a backup that was not there. That is precisely what
-	// scripts/verify.sh's header refuses to do for release artifacts — "a
-	// verifier that shrugs at a 404 prints a line that looks like verification
-	// happened while checking nothing at all, and is strictly worse than no
-	// verifier: it converts 'I don't know' into 'it's fine'" — and this is the
-	// audit chain, where the whole point is detecting that something is missing.
-	//
-	// It also stopped the command WRITING to a directory it was asked only to
-	// read. hub/README documents this as safe to run against a cold backup.
-	dbPath := store.DatabaseFile(*dataDir)
-	if _, statErr := os.Stat(dbPath); statErr != nil {
-		fmt.Fprintf(os.Stderr, "verify-audit: no database at %s\n\n", dbPath)
-		fmt.Fprintln(os.Stderr, "NOTHING WAS VERIFIED. This is a refusal, not a pass: an empty or")
-		fmt.Fprintln(os.Stderr, "missing directory has no audit chain to check, and reporting OK for")
-		fmt.Fprintln(os.Stderr, "one would be the failure this command exists to detect.")
-		fmt.Fprintln(os.Stderr, "\nCheck -data points at a hub data directory (it should contain lintel.db).")
-		return 1
-	}
-
-	st, err := store.Open(*dataDir)
+	// One door for every subcommand — see openexisting.go. Inline here first,
+	// then two more subcommands turned out to have the same defect, which is
+	// what a point fix looks like just before it becomes a shared one.
+	st, err := openExistingStore(*dataDir, "verify-audit")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "open store: %v\n", err)
+		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
 	defer st.Close()
@@ -397,9 +370,9 @@ func runTwoFactorDisable(args []string) int {
 		return 2
 	}
 
-	st, err := store.Open(*dataDir)
+	st, err := openExistingStore(*dataDir, "2fa disable")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "open store: %v\n", err)
+		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
 	defer st.Close()

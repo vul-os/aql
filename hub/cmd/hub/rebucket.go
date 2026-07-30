@@ -41,7 +41,6 @@ import (
 	"time"
 
 	"github.com/vul-os/aql/hub/internal/energy"
-	"github.com/vul-os/aql/hub/internal/store"
 )
 
 func runEnergyRebucket(args []string) int {
@@ -68,9 +67,9 @@ func runEnergyRebucket(args []string) int {
 		loc = l
 	}
 
-	st, err := store.Open(*dataDir)
+	st, err := openExistingStore(*dataDir, "energy rebucket")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "energy rebucket: open %s: %v\n", *dataDir, err)
+		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
 	defer st.Close()

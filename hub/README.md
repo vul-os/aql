@@ -255,10 +255,12 @@ aql-hub 2fa disable -user NAME -reason TEXT [-data DIR]
 aql-hub energy rebucket -account ID [-tz ZONE] [-dry-run]
 ```
 
-`verify-audit` refuses a directory with no `lintel.db` rather than creating one:
-pointed at a wrong path or an incomplete backup it would otherwise report
-`OK (0 rows)` for the chains it had just made, and write to a directory you asked
-it only to read.
+**Every subcommand refuses a directory with no `lintel.db` rather than creating
+one.** Pointed at a wrong path or an incomplete backup they would otherwise
+answer a question about a database they had just made: `verify-audit` reported
+`OK (0 rows)` for chains that never existed, `2fa disable` said "no such user"
+when the truth was "no hub here", and `energy rebucket` said "no account on this
+hub". All three also wrote into a directory you asked them only to read.
 
 Anything else that is not a flag is refused with exit 2 and that list. It has to
 be: the hub takes no positional arguments, so a mistyped subcommand used to fall
