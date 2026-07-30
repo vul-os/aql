@@ -371,17 +371,29 @@ export const FEATURES = [
   },
   {
     id: 'camera-pipeline',
-    label: 'ONVIF discovery / stream-address resolution code exists (NOT live view, NOT recording — there is no RTSP client and no pixel ever moves)',
+    // This label read "NOT live view, NOT recording — there is no RTSP client
+    // and no pixel ever moves" for a while AFTER all three shipped. The docs it
+    // points at were corrected; this was the last copy of the falsehood, which
+    // is a fair illustration of why the 'planned' guards below exist.
+    label: 'ONVIF discovery, an RTSP client that receives media, RTP→H.264 depacketization, fMP4 muxing, recording with retention, and MSE live view',
     docStatus: 'shipped',
     docRefs: [
       "README.md § What's real, and what isn't — the camera pipeline",
       'ROADMAP.md Phase 5',
-      'site/docs/devices.md § Security & bots — what the ONVIF driver does and does not do',
+      'docs/CAMERA-RETENTION.md § 4',
+      'site/docs/devices.md § Cameras',
     ],
-    evidence: [[
-      { root: 'hub/internal', pattern: 'RTSP|rtsp://|ffmpeg|onvif', flags: 'i' },
-      { root: 'controller/internal', pattern: 'RTSP|rtsp://|ffmpeg|onvif', flags: 'i' },
-    ]],
+    // One clause per stage, so the claim cannot survive any single stage being
+    // deleted. A single `rtsp|onvif` pattern passed on the discovery code alone
+    // and would have gone on passing with the whole media path removed.
+    evidence: [
+      [{ root: 'hub/internal/devices/camera', pattern: 'func ConsumeMedia' }],
+      [{ root: 'hub/internal/devices/camera', pattern: 'func ParseSPS' }],
+      [{ root: 'hub/internal/devices/camera', pattern: 'func NewFragmenter' }],
+      [{ root: 'hub/internal/recording', pattern: 'func \\(r \\*Recorder\\) WriteClip' }],
+      [{ root: 'hub/internal/recording', pattern: 'func \\(r \\*Recorder\\) ReclaimOrphans' }],
+      [{ root: 'src/components/camera', pattern: 'addSourceBuffer' }],
+    ],
   },
   // ── claims that something is NOT built ────────────────────────────────
   //

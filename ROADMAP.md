@@ -380,7 +380,7 @@ and none has met physical hardware.
 
 ---
 
-## Phase 5 — Security & bots (camera reachability built; pixels are not)
+## Phase 5 — Security & bots (the camera pipeline records and plays; no camera has been involved)
 
 - [x] ONVIF discovery and stream-address resolution (`hub/internal/devices/camera/`)
 - [x] RTSP reachability probe (`VerifyStream`) — DESCRIBE, digest/basic auth, SDP parse, so
@@ -392,9 +392,9 @@ and none has met physical hardware.
       that streams real interleaved framing; neither has met a real camera
 - [x] The retention design — [`docs/CAMERA-RETENTION.md`](docs/CAMERA-RETENTION.md). Where
       clips live, how long they last, who may watch, what a full disk does, and what a
-      resident is told when retention drops the evening they cared about. Design only; no
-      code implements it
-- [ ] Camera live view and recording. **H.264 depacketization now exists** — RFC 6184
+      resident is told when retention drops the evening they cared about. Every decision in
+      it is now code, and its §5 open question about grant scope is decided
+- [x] Camera live view and recording. **H.264 depacketization now exists** — RFC 6184
       single-NAL, STAP-A and FU-A, emitting Annex-B, with the failure modes that matter
       covered explicitly: a lost middle fragment discards the partial NAL rather than
       emitting it half-formed, a continuation with no start bit is dropped rather than
@@ -479,15 +479,21 @@ and none has met physical hardware.
       discover it by waving at a gate. A viewer that falls behind is dropped rather than allowed
       to apply back-pressure into the capture loop — recording is the durable job and watching
       the disposable one.
+      **Retention had a hole and it is closed.** Every expiry query starts from the clip
+      index, so a file with no index row was invisible to all of them — and a clip is renamed
+      into place and THEN indexed, so a crash between those two steps left one, as did a
+      `.part` abandoned mid-write. Nothing would ever have reclaimed either: the retention
+      setting would have been honoured exactly and the disk would still have filled. The
+      hourly pass now also walks the recordings tree and deletes what the index does not know
+      about, skipping anything touched in the last hour so it cannot take a clip being written
+      right now. Found by looking, not by a test failing, in code written earlier the same day.
       That completes `docs/CAMERA-RETENTION.md` §4's five steps in code. What is left is the
       thing no amount of code closes: **hardware**. Nothing in this pipeline has met a camera,
       and the retention arithmetic now deletes real files, so it wants review before it runs
       anywhere that matters. Recording is one RTSP session per window rather than one held open, which is
       worse on a real camera and honest about what has been verified — a long-lived session
       means keepalives, mid-stream parameter-set changes and servers that drop connections,
-      none of which can be developed against a fake without inventing the behaviour. The retention worker, the `camera:view` permission and
-      the viewer do not — but building a retention policy for footage that does not exist yet
-      is the wrong order
+      none of which can be developed against a fake without inventing the behaviour.
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
 - [ ] Rate-limiting and scoping on movement commands, so a compromised client cannot drive

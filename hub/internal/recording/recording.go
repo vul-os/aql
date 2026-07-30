@@ -38,9 +38,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/vul-os/aql/hub/internal/devices/camera"
@@ -396,4 +398,78 @@ func (r *Recorder) ExpireAll(ctx context.Context) (int, error) {
 		}
 	}
 	return total, nil
+}
+
+// OrphanGrace is how old a file must be before a sweep will treat it as
+// orphaned.
+//
+// WriteClip renames a clip into place and then indexes it, so between those two
+// steps a file legitimately exists with no row. A sweep that ignored that window
+// would delete clips as they were being recorded. An hour is far longer than the
+// window and far shorter than the shortest useful retention, so it costs nothing
+// and cannot race.
+const OrphanGrace = time.Hour
+
+// ReclaimOrphans deletes clip files the index does not know about.
+//
+// Retention works from the index — every expiry query starts there — so a file
+// with no row is invisible to it and grows the disk forever. That is the failure
+// this repository's reclaim guard exists to name: correct code, and storage it
+// was meant to bound growing without limit until somebody went looking.
+//
+// Three ways a file ends up here, all real: a crash between WriteClip's rename
+// and its insert, an insert that failed while the rename succeeded, and a `.part`
+// abandoned mid-write.
+//
+// Conservative by construction. It deletes only what it can prove is unclaimed —
+// a regular file under the recordings root, older than OrphanGrace, whose path
+// is not in the index — and a failure to read the index aborts the whole sweep
+// rather than proceeding on a partial set, because an empty set would look
+// exactly like "every file is an orphan".
+func (r *Recorder) ReclaimOrphans(ctx context.Context) (int, error) {
+	known, err := r.store.LiveClipPaths(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("recording: orphan sweep needs the index: %w", err)
+	}
+	cutoff := r.now().Add(-OrphanGrace)
+	removed := 0
+
+	err = filepath.WalkDir(r.cfg.Root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			// A directory that cannot be read is logged and skipped rather than
+			// failing the sweep: one unreadable corner must not stop the rest of
+			// the disk being bounded.
+			r.cfg.Log.Warn("recording: orphan sweep could not read a path", "path", path, "err", err)
+			return nil
+		}
+		if d.IsDir() || ctx.Err() != nil {
+			return ctx.Err()
+		}
+		name := d.Name()
+		if !strings.HasSuffix(name, ".mp4") && !strings.HasSuffix(name, ".mp4.part") {
+			// Not something this package writes. Left alone — the recordings
+			// directory is on somebody's disk and this is not a general-purpose
+			// file deleter.
+			return nil
+		}
+		rel, rerr := filepath.Rel(r.cfg.Root, path)
+		if rerr != nil {
+			return nil
+		}
+		if known[rel] {
+			return nil
+		}
+		info, ierr := d.Info()
+		if ierr != nil || info.ModTime().After(cutoff) {
+			return nil // in flight, or unreadable — leave it
+		}
+		if derr := os.Remove(path); derr != nil {
+			r.cfg.Log.Warn("recording: could not reclaim an orphaned clip", "path", rel, "err", derr)
+			return nil
+		}
+		r.cfg.Log.Info("recording: reclaimed an orphaned clip file", "path", rel, "bytes", info.Size())
+		removed++
+		return nil
+	})
+	return removed, err
 }

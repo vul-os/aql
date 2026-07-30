@@ -140,3 +140,29 @@ func (s *Store) ClipOwners(ctx context.Context) ([][2]string, error) {
 	}
 	return out, rows.Err()
 }
+
+// LiveClipPaths is every clip path the index still expects to exist on disk.
+//
+// The complement of this set, walked from the filesystem, is what nothing will
+// ever reclaim: WriteClip renames a file into place and THEN inserts its row,
+// so a crash in between leaves a file no index-driven expiry can see. Deleted
+// rows are excluded deliberately — if a row says the file is gone and the file
+// is there, the delete failed, and it is as orphaned as one that was never
+// indexed at all.
+func (s *Store) LiveClipPaths(ctx context.Context) (map[string]bool, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT rel_path FROM camera_clips WHERE deleted_at IS NULL`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]bool{}
+	for rows.Next() {
+		var p string
+		if err := rows.Scan(&p); err != nil {
+			return nil, err
+		}
+		out[p] = true
+	}
+	return out, rows.Err()
+}

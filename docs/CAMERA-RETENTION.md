@@ -1,38 +1,38 @@
-# Camera recording: the design that has to exist before any of it is built
+# Camera recording: the design that had to exist before any of it was built
 
-**Status: design only. No code implements this** — meaning the retention policy
-below: there is no retention worker, no clip store, no `camera:view` permission
-and no viewer.
+**Status: built, and never run against a camera.** Those are two different
+statements and both matter.
 
-The package under it has moved on since that was written, and saying so matters
-because "no code implements this" reads as "the camera package does nothing yet".
-`hub/internal/devices/camera/` discovers cameras, resolves stream addresses,
-probes with RTSP `DESCRIBE` and reports the encoder's real cropped resolution from
-the stream's own sequence parameter set; it depacketizes RTP into H.264 NAL units,
-groups them into access units, and muxes them into a fragmented MP4 that a real
-Chromium `MediaSource` accepts. It ACCEPTS rather than plays, and the difference
-is load-bearing: the fixture payloads are not decodable pictures, so Chromium's
-container parser validates the boxes, the `avcC` and the SPS, and its decoder
-never gets a real frame. Verified by a streaming test that gives the decoder time
-to try — it errors, and the appends after it are refused.
+Built means §2's policy is code. `hub/internal/devices/camera/` discovers
+cameras, resolves stream addresses, opens an RTSP session — `DESCRIBE`, `SETUP`,
+`PLAY`, RTP over interleaved TCP — depacketizes RTP into H.264 NAL units, reports
+the encoder's real cropped resolution from the stream's own sequence parameter
+set, groups NAL units into access units and muxes them into a fragmented MP4.
+`hub/internal/recording/` writes those clips, indexes them, expires them on the
+per-camera window, holds the free-space floor, and sweeps files the index does
+not know about. `camera:view` is a grant per member per camera, every viewing is
+in the hash-chained audit log, and every member of the account can read that log.
+There is a clip list that renders its own gaps and an MSE live view.
 
-What remains true, and is the reason this document is still design-only:
-**nothing has ever received a frame from a camera** — the media probe has only
-seen an in-process RTSP server — and **nothing in this repository stores one**.
+Never run against a camera means exactly that: **nothing here has received a
+frame from real hardware.** Every test drives an in-process RTSP server, and the
+fixture payloads are not decodable pictures. A real Chromium `MediaSource`
+ACCEPTS the muxer's output — its container parser validates the boxes, the
+`avcC` and the SPS — and its decoder never gets a real frame. That distinction is
+load-bearing and a streaming test pins it: given time to try, the decoder errors
+and the appends after it are refused. So the container is verified against a
+third-party demuxer and the *pictures* are verified against nothing.
 
-Stated bluntly because it is the shape this repository has been caught by
-repeatedly: `Fragmenter` has no production caller. Grep it and the only hit
-outside tests is its own definition. That is a component that is complete,
-tested, validated against a third-party demuxer, and reachable by nobody —
-normally a defect here, and normally the sign of a feature that does not work.
+Two other things this document will not pretend about. The retention arithmetic
+deletes real files under rules nobody has exercised on real footage. And live
+view is a window behind — the capture loop records a window and then muxes it —
+which is recent rather than live, said in the UI to the person watching rather
+than left to be discovered while watching a gate.
 
-It is deliberate this time, and the ordering is the reason: the consumer would be
-a recording worker, a recording worker writes footage to a disk, and writing
-footage to a disk without the policy below settled is how a product ends up
-retaining video it cannot justify keeping. The muxer exists first so the policy
-is written against something real rather than against a guess. When the worker
-lands, this note should be deleted along with the design-only status — and if the
-worker never lands, the muxer is dead weight and should be said to be.
+The ordering below was deliberate and is worth keeping in the record: the muxer
+was written before its consumer, because the consumer writes footage to a disk,
+and writing footage to a disk before settling the policy is how a product ends up
+retaining video it cannot justify keeping.
 
 This document exists because "camera live view and recording" has sat on the
 roadmap as blocked on *hardware*, and that was only half true. The other half is
@@ -123,6 +123,17 @@ runs on its own goroutine; a full disk must not delay or fail a gate opening. Th
 audit database and the recordings directory should ideally be on different
 filesystems, and the hub warns at startup when they are not.
 
+**Expiry works from the index, so something else has to sweep the disk.** Every
+query above starts from the clip index, which means a file with no index row is
+invisible to all of them. That is not hypothetical: a clip is renamed into place
+and *then* indexed, so a crash between those two steps — or an insert that fails
+after the rename succeeds — leaves a file nothing would ever reclaim, and so does
+a `.part` abandoned mid-write. The retention pass therefore also walks the
+recordings tree and deletes files the index does not know about, skipping
+anything modified within the last hour so it cannot take a clip that is being
+written right now. Without it, the retention setting would be honoured exactly
+and the disk would still fill.
+
 ### 2.4 Who may watch: a new permission, not an existing role
 
 Viewing footage requires an explicit `camera:view` grant per member. It is **not**
@@ -200,22 +211,31 @@ one of them is honest.
 
 ## 4. What building this actually requires
 
-For the record, since "needs hardware" has been the summary until now. The
-hardware is necessary and it is not sufficient:
+Kept because "needs hardware" was the summary for a long time, and it was only
+half true. The hardware is necessary and it was never sufficient — five things
+had to be built, and all five now are:
 
 1. **An RTSP client that receives media** — `SETUP`, `PLAY`, RTP over interleaved
-   TCP. The current probe stops at `DESCRIBE` deliberately.
-2. **A container writer.** The RTP payload is H.264/H.265 NAL units; a playable
-   file needs fMP4 remuxing. No transcoding — that means a codec dependency and
-   CPU a Pi does not have.
-3. **The retention worker** — expiry sweep, free-space floor, tombstones.
+   TCP, RFC 6184 depacketization. `camera/rtsp.go`, `camera/accessunit.go`. The
+   probe used to stop at `DESCRIBE`.
+2. **A container writer.** The RTP payload is H.264 NAL units; a playable file
+   needs fMP4 remuxing. `camera/fmp4.go`, with the SPS parsed in `camera/sps.go`
+   so `avcC` and the cropped dimensions come from the stream rather than a guess.
+   No transcoding — that means a codec dependency and CPU a Pi does not have.
+3. **The retention worker** — expiry sweep, free-space floor, tombstones, and a
+   sweep of files the index does not know about, because every other query here
+   starts from the index and cannot see them. `internal/recording/`.
 4. **The permission and its audit surface** — §2.4 and §2.5.
-5. **A viewer**, which is where fMP4 pays off: a browser can play it without a
-   plugin.
+   `store/cameraview.go`, `httpapi/cameraview.go`.
+5. **A viewer**, which is where fMP4 pays off: a browser plays it without a
+   plugin. `src/pages/app/Footage.tsx`, `src/components/camera/LiveView.tsx`.
 
-Steps 1 and 2 need a real camera. Steps 3, 4 and 5 do not, and could be built and
-tested against synthesised files — but building them first would mean shipping a
-retention policy for footage that does not exist, which is the wrong order.
+Steps 1 and 2 were said to need a real camera. They were built against an
+in-process RTSP server instead, which is why the status at the top of this
+document distinguishes built from run: the wire format is exercised and the
+hardware is not. Steps 3, 4 and 5 never needed one — but building them first
+would have meant shipping a retention policy for footage that did not exist,
+which is the wrong order and is the reason this document exists at all.
 
 ---
 
@@ -224,9 +244,10 @@ retention policy for footage that does not exist, which is the wrong order.
 Listed because pretending a design is complete is how the gaps become someone
 else's surprise.
 
-- **Is `camera:view` per-camera or per-account?** Per-camera is obviously more
-  correct — a doorbell and a bedroom hallway are not the same permission — and
-  obviously more UI. Not decided.
+- ~~**Is `camera:view` per-camera or per-account?**~~ **Decided: per-camera**, and
+  built that way — a grant row per member per camera, with no wildcard, because a
+  doorbell and a bedroom hallway are not the same permission. It did cost the
+  extra UI this question anticipated.
 - **What happens to footage when a member is removed?** Their past views stay in
   the audit trail, which is correct. Whether footage *of* them should be
   affected is a question this document cannot answer, because the hub does not

@@ -783,3 +783,76 @@ func clipRelPath(t *testing.T, st *store.Store, id string) string {
 	}
 	return rel
 }
+
+// A clip file with no index row is invisible to retention, because every
+// expiry query starts from the index. Nothing would ever reclaim it.
+//
+// That is not hypothetical: WriteClip renames the file into place and THEN
+// inserts the row, so a crash in between — or a failing insert — leaves exactly
+// this. So does a `.part` abandoned by a crash mid-write. Both grow the disk
+// forever, which is the precise failure the reclaim guard in this repository
+// warns about: "the code was correct and the storage it was meant to bound grew
+// without limit until someone went looking."
+func TestOrphanedFilesAreReclaimed(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+	acct := seedAccount(t, st)
+	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	r := testRecorder(t, st, nil, now, map[string]int{"cam": 240})
+
+	mk := func(rel string, age time.Duration) string {
+		t.Helper()
+		full := filepath.Join(r.cfg.Root, rel)
+		if err := os.MkdirAll(filepath.Dir(full), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte("clip"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		when := now.Add(-age)
+		if err := os.Chtimes(full, when, when); err != nil {
+			t.Fatal(err)
+		}
+		return full
+	}
+
+	// A clip that IS indexed, well inside its retention. Must survive.
+	indexed := filepath.Join(acct, "cam", "2026-06-01", "1000-2s.mp4")
+	mk(indexed, 2*time.Hour)
+	if _, err := st.RecordClip(ctx, store.Clip{
+		AccountID: acct, DeviceKey: "cam", StartedAt: now.Add(-2 * time.Hour).Unix(),
+		DurationS: 2, SizeBytes: 4, RelPath: indexed,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// An orphan: on disk, no row, old enough to be past any write in flight.
+	orphan := mk(filepath.Join(acct, "cam", "2026-05-30", "999-2s.mp4"), 26*time.Hour)
+	// A stale .part from a crash mid-write.
+	part := mk(filepath.Join(acct, "cam", "2026-05-30", "998-2s.mp4.part"), 26*time.Hour)
+	// A file young enough that a clip could be mid-write right now. Must NOT be
+	// taken: WriteClip renames before it indexes, so a sweep racing that window
+	// would delete a clip somebody is about to record.
+	fresh := mk(filepath.Join(acct, "cam", "2026-06-01", "1100-2s.mp4"), 30*time.Second)
+
+	n, err := r.ReclaimOrphans(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 2 {
+		t.Errorf("reclaimed %d files, want 2 (the orphan and the stale .part)", n)
+	}
+	if _, err := os.Stat(orphan); !os.IsNotExist(err) {
+		t.Error("an indexed-nowhere clip survived; nothing else will ever reclaim it")
+	}
+	if _, err := os.Stat(part); !os.IsNotExist(err) {
+		t.Error("a stale .part survived")
+	}
+	if _, err := os.Stat(fresh); err != nil {
+		t.Error("a file young enough to be mid-write was deleted; WriteClip renames " +
+			"before it indexes, so this races a clip being recorded right now")
+	}
+	if _, err := os.Stat(filepath.Join(r.cfg.Root, indexed)); err != nil {
+		t.Error("an indexed clip inside its retention was deleted")
+	}
+}

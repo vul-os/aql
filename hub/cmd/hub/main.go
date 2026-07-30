@@ -721,6 +721,16 @@ func buildHub(cfg config, log *slog.Logger) (*hub, error) {
 					} else if n > 0 {
 						h.log.Info("camera clip retention", "expired", n)
 					}
+					// Expiry works from the index, so it cannot see a file that
+					// has no row — a crash between WriteClip's rename and its
+					// insert leaves exactly that, and nothing else would ever
+					// reclaim it. Same pass, because the two together are what
+					// actually bounds the disk.
+					if n, err := rec.ReclaimOrphans(ctx); err != nil {
+						h.log.Error("camera clip orphan sweep failed", "err", err)
+					} else if n > 0 {
+						h.log.Info("camera clip orphan sweep", "reclaimed", n)
+					}
 					select {
 					case <-ctx.Done():
 						return
