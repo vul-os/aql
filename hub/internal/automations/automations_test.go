@@ -873,3 +873,71 @@ func TestAnIndeterminateActuationStartsTheCooldown(t *testing.T) {
 		t.Fatalf("after the cooldown: %s", run.Outcome)
 	}
 }
+
+// Every access verb sits above the ceiling — pinned directly, against the
+// catalogue, rather than inferred from access points being absent.
+//
+// Today an automation cannot open a gate for TWO independent reasons: access
+// points are not in the device registry at all, so no rule can name one, and
+// every access verb's tier is above MaxActionTier. docs/ACCESS-ON-THE-ENGINE.md
+// proposes folding access into the engine, which would remove the FIRST reason
+// and leave only the second.
+//
+// That is the whole cost of that fold, and this is what pays for it. A tier
+// lowered by a future edit to capability.go — `open` marked TierConsequential
+// because someone wanted a scheduled unlock — is caught here and nowhere else
+// once the fold lands. Written before the fold deliberately: a compensating
+// control added at the same time as the thing it compensates for is one review
+// away from being dropped as noise.
+//
+// Asserted against the catalogue rather than a hand-written list of verbs, so a
+// NEW access verb is covered the day it is added rather than the day somebody
+// remembers this test.
+func TestNoAccessVerbIsEverActuableByAnAutomation(t *testing.T) {
+	// The capabilities that grant or deny entry to a space. If a third is added
+	// to the catalogue, add it here — the sub-test below fails loudly if this
+	// list stops covering what the catalogue calls access.
+	accessCaps := []devices.CapabilityID{devices.CapBarrier, devices.CapLock}
+
+	// Verbs that are genuinely safe for a rule: closing and locking REDUCE
+	// access, and status reads nothing. Naming them explicitly means the loop
+	// below can demand that everything else is refused, instead of just
+	// checking that something is.
+	permitted := map[devices.Verb]bool{
+		devices.VerbClose: true, devices.VerbLock: true, devices.VerbStatus: true,
+	}
+
+	checked := 0
+	for _, capID := range accessCaps {
+		verbs := devices.VerbsOf(capID)
+		if len(verbs) == 0 {
+			t.Fatalf("capability %q is not in the catalogue", capID)
+		}
+		for _, vs := range verbs {
+			checked++
+			err := checkActionTier(vs.Tier)
+			if permitted[vs.Verb] {
+				if err != nil {
+					t.Errorf("%s.%s (tier %v) is refused to automations, but closing or "+
+						"locking REDUCES access and should stay available to a rule", capID, vs.Verb, vs.Tier)
+				}
+				continue
+			}
+			if err == nil {
+				t.Errorf("%s.%s is at tier %v, which an automation MAY actuate. Every verb "+
+					"that grants entry must sit above MaxActionTier (%v): an automation fires "+
+					"with nobody watching, and once access is folded into the device engine "+
+					"this ceiling is the ONLY thing standing between a rule and an open gate. "+
+					"See docs/ACCESS-ON-THE-ENGINE.md §2.1.",
+					capID, vs.Verb, vs.Tier, MaxActionTier)
+			}
+		}
+	}
+
+	// Without this the test would pass if the catalogue lookup silently returned
+	// nothing — the shape that makes a guard look green while checking air.
+	if checked < 6 {
+		t.Errorf("only %d access verbs were checked; the catalogue has more than that, so "+
+			"this test is not covering what it claims to", checked)
+	}
+}

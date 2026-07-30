@@ -42,6 +42,24 @@
 // checker's header for what that means this tool cannot catch.
 
 export const FEATURES = [
+  // ── access as a device kind. docs/ACCESS-ON-THE-ENGINE.md is the design and
+  // says "Status: designed, not built" in those words. This entry holds that
+  // line: the day an access driver lands, this check fails until the design
+  // doc, ARCHITECTURE §8, ROADMAP and site/docs/devices.md stop calling it
+  // outstanding — six documents currently do.
+  {
+    id: 'access-on-the-engine',
+    label: 'Access points driven through the device engine as a seventh kind (design only — actuation stays on the signed Ed25519 path)',
+    docStatus: 'planned',
+    docRefs: [
+      'docs/ACCESS-ON-THE-ENGINE.md — the design, and why actuation deliberately does not move',
+      'ARCHITECTURE.md §8 — "still runs as a parallel stack"',
+      'site/docs/devices.md — the seven-kinds table',
+    ],
+    evidence: [[
+      { root: 'hub/internal/devices', pattern: 'func NewAccessDriver|package accessdev' },
+    ]],
+  },
   // ── planned / not implemented — the nine (ten, by plain count) 2026-07-20
   // overclaims, now correctly marked in the docs. This check's job is to
   // make sure nobody re-overclaims them by accident, and to catch the day

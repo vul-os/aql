@@ -319,7 +319,9 @@ and none has met physical hardware.
       knowing whose a device is, is not a licence to actuate it. The refusal names neither
       the owning account nor that one exists
 - [ ] Bring the existing access module onto the same internal device model, so `access` is
-      one kind among seven rather than a parallel stack
+      one kind among seven rather than a parallel stack. Designed in
+      [`docs/ACCESS-ON-THE-ENGINE.md`](docs/ACCESS-ON-THE-ENGINE.md) — actuation deliberately
+      does not move; the fold buys one fleet list and nothing more
 - [x] Extend the input surfaces' intent vocabulary past `open`/`close` — `hold` now
       reaches the gate from chat and the console. Adding a third verb to a fail-closed
       type is where its safety property breaks if it is going to: every `GateVerb` method

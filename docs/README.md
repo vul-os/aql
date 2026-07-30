@@ -18,7 +18,8 @@ cross-link instead of duplicating.
 
 | File | What it covers |
 | --- | --- |
-| [`CAMERA-RETENTION.md`](CAMERA-RETENTION.md) | Where footage lives, how long, who may watch it, and what a full disk does. **Design only — no code implements it.** Written before the pipeline on purpose: recording is a data-retention policy with a UI attached. |
+| [`CAMERA-RETENTION.md`](CAMERA-RETENTION.md) | Where footage lives, how long, who may watch it, and what a full disk does. **Built, and never run against a camera** — every decision here is code; no frame has come from real hardware. Written before the pipeline on purpose: recording is a data-retention policy with a UI attached. |
+| [`ACCESS-ON-THE-ENGINE.md`](ACCESS-ON-THE-ENGINE.md) | Folding access into the device engine as a seventh kind. **Designed, not built.** Actuation deliberately does not move — the fold buys one fleet list, and two actuation routes to a gate is worse than one. |
 | [`THREAT-MODEL.md`](THREAT-MODEL.md) | The adversarial model: what is defended, what is not, and the chat rail's exposure stated up front. Marks every control as *Shipped* or *Target*. |
 | [`CHAT-COMMANDS.md`](CHAT-COMMANDS.md) | The exhaustive chat command and reply reference — every intent, every phrasing, every reply string. |
 | [`KOTVA-ALIGNMENT.md`](KOTVA-ALIGNMENT.md) | Evidence-based audit of Aql against the KOTVA substrate spec: capability mapping, §26 node-mode obligations, offline-grant conformance, and the work list. It is also the canonical statement of the boundary: Aql's hub is **not** a KOTVA gateway — that role belongs to [Ephor](https://github.com/vul-os/ephor), which is where Aql's chat rail is moving. |

@@ -88,7 +88,19 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       src-tauri (also the only way to resolve .local reliably). Tracked as the
       offline-grant-app-client claim.
 - [ ] Bring access onto the internal device model, so it is one kind among seven rather
-      than a parallel stack.
+      than a parallel stack. DESIGNED: docs/ACCESS-ON-THE-ENGINE.md. Decisions: actuation
+      does NOT move (read-only driver; two actuation routes to a gate is strictly worse
+      than one), source of truth is the DB not the config file, ids are
+      `access:<access_point_id>`, the engine writes no audit row.
+- NOTE: the original deferral in devices/driver.go was correct and its premise has
+      EXPIRED. It said the fold would prove "a seam that has no other drivers yet"; the
+      seam now has four, and the generic ones carry a kind they were not written for.
+- [x] Step 1 of that plan is DONE and is the part worth having regardless: a test pinning
+      every access verb's tier above MaxActionTier. Today an automation cannot open a gate
+      for TWO reasons — access is not in the registry at all, AND the tier is above the
+      ceiling. The fold removes the first. That test is what pays for it, and it is
+      written BEFORE the fold on purpose: a compensating control added alongside the thing
+      it compensates for is one review away from being dropped as noise.
 - [ ] A DEDICATED robot driver. The kind is reachable today through the generic HTTP and
       MQTT drivers — kind robot, robot.job/robot.blade-job, one action per verb, with
       TierHazardousMotion intact (tested in devices/httpdev). What is missing is vendor
