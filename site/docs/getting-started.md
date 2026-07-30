@@ -46,15 +46,21 @@ detail.
    ./hub -data /var/lib/aql -listen 127.0.0.1:8080
    ```
 
-   > **Status.** The hub runs the access-control core now: auth, accounts, locations,
+   > **Status.** The hub runs the access-control core: auth, accounts, locations,
    > access points, controller pairing and the WebSocket device hub, the signed open
    > path, the admin console, rate limits and quotas, visitor grants, the tamper-evident
    > audit log, offline-grant issuance, and the WhatsApp / Slack / Telegram channels.
-   > **Not implemented:** analytics endpoints, Google OAuth and
-   > password reset (the console has screens for some of these that the hub does not
-   > serve), and the entire device engine. A Docker image builds from the `Dockerfile`
-   > in `gateway/`; the `ghcr.io/vul-os/aql-gateway` image is CI-built but published
-   > only by a manually-dispatched workflow.
+   > Since then it has also gained the device engine (off unless `-device-drivers`
+   > names one), the automations runtime, energy metering, the camera pipeline,
+   > analytics, password reset, 2FA and geofencing.
+   >
+   > **Genuinely not built:** Google OAuth. **Built but never run against real
+   > hardware:** every device driver. No camera has ever sent this hub a frame, and
+   > the GPIO relay has never driven a board.
+   >
+   > A Docker image builds from the `Dockerfile` in `hub/`; `ghcr.io/vul-os/aql-hub`
+   > is published by a manually-dispatched workflow, and the image is built and started
+   > on every CI run.
    >
    > The hub **refuses to bind a non-loopback address** unless you pass `-behind-proxy`
    > — it serves plain HTTP and has no TLS of its own. On a LAN-only install you need

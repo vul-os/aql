@@ -103,6 +103,21 @@ const RETIRED: Retired[] = [
     truth: 'hub/internal/store/geofence.go is enforced inside LogAccess. It is a convenience, not a security control.',
   },
   {
+    // getting-started.md's Status block carried these for months — on the first
+    // page a new user reads, which is the worst place for them. Each names a
+    // subsystem that shipped.
+    phrase: /not implemented:[^.\n]*\banalytics\b|\bthe entire device engine\b/i,
+    truth:
+      'The device engine ships with five drivers (off by default), and analytics and ' +
+      'password reset both have routes. Google OAuth is the one that is genuinely absent.',
+  },
+  {
+    phrase: /aql-gateway|Dockerfile`?\s*\n?\s*>?\s*in `gateway\//i,
+    truth:
+      'The backend was renamed to the hub. The Dockerfile is hub/Dockerfile and the ' +
+      'image is ghcr.io/vul-os/aql-hub.',
+  },
+  {
     phrase: /Fragmenter has no production caller/i,
     truth: 'recording.WriteClip calls it.',
   },
@@ -201,6 +216,8 @@ describe('retired claims do not come back', () => {
       'there is no retention worker',
       'no `camera:view` permission',
       'there is no geofencing code in the Go hub',
+      'Not implemented: analytics endpoints, Google OAuth',
+      'the ghcr.io/vul-os/aql-gateway image',
       'Fragmenter has no production caller',
       'cameras give you discovery and readings but no video',
       'DEV["Device engine<br/>(NOT BUILT)<br/>camera"]',

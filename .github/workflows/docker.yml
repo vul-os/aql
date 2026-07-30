@@ -1,7 +1,13 @@
 name: Docker
 
-# Builds and publishes the gateway container image to GHCR:
-#   ghcr.io/<owner>/aql-hub  (docs reference ghcr.io/vul-os/aql-gateway)
+# Builds and publishes the hub container image to GHCR:
+#   ghcr.io/<owner>/aql-hub
+#
+# This workflow is MANUAL (workflow_dispatch). That is why the image build broke
+# and stayed broken for three days when hub/go.mod gained a `replace … => ../jcs`
+# the build context could not see: nothing built it automatically, so there was
+# no run to go red. ci.yml now builds and starts the image on every run; this
+# one still owns publishing and the multi-arch build.
 #
 # Note: the image's own runtime environment variables are still named AQL_*
 # (see hub/Dockerfile). That is deliberate — they are a deployment contract
