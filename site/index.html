@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Aql — one hub owns everything</title>
-<meta name="description" content="Aql is an open-source command centre for the physical world: cameras, lighting, robots, climate, energy, sensors and access control under one hub you run yourself. No cloud broker, no account, no telemetry. Access control is the first module that runs end to end today.">
+<meta name="description" content="Aql runs the place you are responsible for — gates, lights, meters, sensors and climate on one hub, on a box you own. No account, nothing to pay, nothing phoning home. Gates and doors work end to end today; everything else is labelled for exactly how far it goes.">
 <meta name="author" content="Aql">
 <meta name="application-name" content="Aql">
 <meta name="color-scheme" content="light dark">
@@ -510,7 +510,7 @@ code{font-family:var(--font-mono);font-size:.88em}
 .section-warm .illo{background:var(--paper-cool)}
 .illo>svg{display:block;width:100%;height:auto}
 .illo-wide>svg{min-width:920px}
-.illo-mid>svg{min-width:640px}
+.illo-mid>svg{min-width:440px}
 .il-ground{fill:none;stroke:var(--ink-faint);stroke-opacity:.35;stroke-width:1.2}
 .il-s{fill:none;stroke:var(--ink-soft);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:.78}
 .il-s-faint{fill:none;stroke:var(--ink-faint);stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;opacity:.55}
@@ -540,7 +540,7 @@ code{font-family:var(--font-mono);font-size:.88em}
 .il-key .k-soon i{border-top-style:dashed}
 /* the dark band gets its own ink, or the drawing disappears into it */
 .selfhost .illo{background:rgba(250,250,248,.045);border-color:var(--band-edge)}
-.selfhost .illo .il-s,.selfhost .illo .il-s-faint,.selfhost .illo .il-wire,.selfhost .illo .il-wire-off,.selfhost .illo .il-ic{stroke:var(--band-text)}
+.selfhost .illo .il-s,.selfhost .illo .il-s-faint,.selfhost .illo .il-wire,.selfhost .illo .il-wire-off,.selfhost .illo .il-ic,.selfhost .illo .il-ground,.selfhost .illo .il-panel-off{stroke:var(--band-text)}
 .selfhost .illo .il-panel,.selfhost .illo .il-node{fill:transparent;stroke:var(--band-text);stroke-opacity:.4}
 .selfhost .illo .il-lbl,.selfhost .illo .il-note,.selfhost .illo .il-tag{fill:var(--band-text)}
 .selfhost .illo .il-live,.selfhost .illo .il-wire-live{stroke:var(--terracotta-soft)}
@@ -554,10 +554,14 @@ code{font-family:var(--font-mono);font-size:.88em}
    <img> carries its intrinsic width/height so the box is reserved before the
    file decodes and nothing is ever scaled off its own aspect ratio. */
 .shot{display:block;border-radius:16px;overflow:hidden;border:1px solid var(--paper-edge);background:var(--paper-cool);box-shadow:var(--shadow-paper)}
-.shot img{display:block;width:100%;height:auto}
-.shot-d{display:none}
-:root[data-theme='dark'] .shot-l{display:none}
-:root[data-theme='dark'] .shot-d{display:block}
+.shot img,.phone-shot img{display:block;width:100%;height:auto}
+/* Specificity matters here and it bit once already: `.shot img` (0,1,1) beats a
+   bare `.shot-d` (0,1,0), so the "hidden" variant kept its display:block and both
+   themes rendered, stacked, at double height. The hiding rules have to match the
+   showing rule's weight or they lose silently. */
+.shot img.shot-d,.phone-shot img.shot-d{display:none}
+:root[data-theme='dark'] .shot img.shot-l,:root[data-theme='dark'] .phone-shot img.shot-l{display:none}
+:root[data-theme='dark'] .shot img.shot-d,:root[data-theme='dark'] .phone-shot img.shot-d{display:block}
 .shot-cap{margin-top:11px;font-size:13px;line-height:1.6;color:var(--ink-faint)}
 .shot-cap b{color:var(--ink);font-weight:600}
 .shot-lead{display:grid;gap:22px}
@@ -567,9 +571,12 @@ code{font-family:var(--font-mono);font-size:.88em}
 /* Phone captures are 1170x2532. They get a phone-shaped box and nothing wider,
    ever — a 2.16:1-tall image stretched into a desktop slot is the one mistake
    that makes a real screenshot look fake. */
-.phone-shot{max-width:238px;margin:0 auto;border-radius:32px;background:var(--band);padding:5px;box-shadow:var(--shadow-deep)}
-.phone-shot .ps-screen{border-radius:27px;overflow:hidden;background:var(--paper-cool);border:1px solid var(--paper-edge)}
-.phone-shot img{display:block;width:100%;height:auto}
+/* Explicit width, not just max-width: inside the flex column in #offline the
+   `margin:0 auto` cancels the default stretch, so the frame fell back to its
+   content width — which is zero until a lazy image decodes. It collapsed to 12px
+   in whichever theme happened not to be showing. */
+.phone-shot{width:238px;max-width:100%;margin:0 auto;border-radius:32px;background:var(--band);padding:5px;box-shadow:var(--shadow-deep)}
+.phone-shot .ps-screen{display:block;border-radius:27px;overflow:hidden;background:var(--paper-cool);border:1px solid var(--paper-edge)}
 .phone-cap{margin:13px auto 0;max-width:19rem;text-align:center;font-size:12.5px;line-height:1.6;color:var(--ink-faint)}
 .phone-cap b{color:var(--ink);font-weight:600}
 .phone-row{display:grid;gap:34px;justify-items:center}
@@ -827,74 +834,205 @@ code{font-family:var(--font-mono);font-size:.88em}
         gate last night. This is the other shape — one box you own, one screen, one log.
         It already speaks to a great deal of what you have: anything on Zigbee or Z-Wave
         through a bridge you may already run, meters and inverters over Modbus, ONVIF
-        cameras, and anything with a web hook. What varies by kind
-        is how far the path goes — a meter is read end to end, a camera now records, plays back
-        and streams a recent view, a robot has no driver at all. Not one of them has met the
-        real thing yet: every driver here is tested against stand-ins, never a device on a
-        wall. The
-        <a href="#status" style="color:var(--terracotta)">ledger</a> spells that out line by line.
+        cameras, and anything with a web hook. How far each kind gets differs, and the
+        picture below is drawn to say which is which — with one caveat that applies to
+        every line on it: <b style="color:var(--ink);font-weight:600">nothing here has ever
+        been wired to a real device</b>. Every driver is tested against stand-ins, never
+        against a meter, a relay or a camera on a wall. The
+        <a href="#status" style="color:var(--terracotta)">ledger</a> spells the rest out line by line.
       </p>
+    </div>
+
+    <!-- Fig. 02 — the property. The stroke carries the honesty vocabulary: solid is a
+         path that is built, dashed is a path that isn't, so a reader who never opens
+         the ledger is still told. Same drawing language as the hero constellation —
+         thin strokes, palette colours, nothing photographic. Authored on a 900-unit
+         viewBox against a 920px min-width, so the smallest label (12 units) never
+         renders below 12px even where the container scrolls. -->
+    <div class="illo illo-wide reveal" style="margin-bottom:28px">
+      <svg viewBox="0 0 900 400" role="img" aria-labelledby="propT propD">
+        <title id="propT">One hub in the middle of a property</title>
+        <desc id="propD">A house with the Aql hub drawn inside it, wired outward to a driveway gate, lighting, sensors, a thermostat, an energy meter, a camera and a robot mower, with a second building alongside. The gate is drawn in terracotta as the one path that runs end to end today. The camera and the mower are drawn with dashed lines because those paths are not finished.</desc>
+
+        <path class="il-ground" d="M30 330 H870"/>
+
+        <!-- the house, with the hub cut away inside it -->
+        <g>
+          <path class="il-s" fill="var(--paper-cool)" d="M296 216 L400 148 L504 216 Z"/>
+          <path class="il-s" fill="var(--paper-cool)" d="M306 216 V330 H494 V216"/>
+          <rect class="il-s" fill="none" x="326" y="240" width="36" height="28" rx="3"/>
+          <path class="il-s-faint" d="M344 240 V268 M326 254 H362"/>
+          <path class="il-s" fill="none" d="M442 330 V278 a15 15 0 0 1 30 0 V330"/>
+          <path class="il-s-faint" d="M322 210 L356 188 L400 188 L366 210 Z"/>
+          <path class="il-s-faint" d="M340 199 L384 199"/>
+        </g>
+
+        <!-- the second building: a workshop, a plant room, a shop floor -->
+        <g>
+          <path class="il-s" fill="var(--paper-cool)" d="M584 256 L676 214 L768 256 Z"/>
+          <path class="il-s" fill="var(--paper-cool)" d="M596 256 V330 H756 V256"/>
+          <path class="il-s" fill="none" d="M652 330 V286 h48 v44"/>
+        </g>
+
+        <!-- the driveway gate — the one path that is real all the way to the motor -->
+        <g>
+          <path class="il-s-faint" d="M30 330 V294 H80 V330"/>
+          <path class="il-live" d="M96 330 V268 M200 330 V268"/>
+          <g class="il-live">
+            <rect x="104" y="282" width="70" height="48" rx="4" fill="var(--signal-wash)"/>
+            <path d="M121 282 V330 M138 282 V330 M155 282 V330"/>
+          </g>
+          <path class="il-live" d="M180 306 h14 m-6 -5 l6 5 -6 5"/>
+        </g>
+
+        <!-- the mower: drawn dashed, because there is nothing behind it yet -->
+        <g>
+          <rect class="il-panel-off" x="506" y="292" width="68" height="38" rx="12"/>
+          <g class="il-ic" transform="translate(540 309) scale(1.35)" opacity=".45">
+            <rect x="-8.5" y="-4" width="17" height="8.5" rx="2.6"/>
+            <circle cx="-4.2" cy="7.2" r="2.1"/><circle cx="4.2" cy="7.2" r="2.1"/>
+            <path d="M-3.4 -4 v-3.4 M3.4 -4 v-3.4"/>
+          </g>
+        </g>
+
+        <!-- what the hub reaches -->
+        <g>
+          <path class="il-wire-live" d="M400 282 L200 300"/>
+          <path class="il-wire" d="M400 282 L140 130"/>
+          <path class="il-wire" d="M400 282 L280 86"/>
+          <path class="il-wire" d="M400 282 L450 66"/>
+          <path class="il-wire" d="M400 282 L790 160"/>
+          <path class="il-wire-off" d="M400 282 L620 110"/>
+          <path class="il-wire-off" d="M400 282 L540 309"/>
+        </g>
+
+        <!-- the kinds -->
+        <g>
+          <circle class="il-node" cx="140" cy="130" r="24"/>
+          <g class="il-ic" transform="translate(140 130) scale(1.5)">
+            <circle cx="0" cy="5" r="1.7"/>
+            <path d="M-3.6 1.4a5.2 5.2 0 0 1 7.2 0"/>
+            <path d="M-6.8 -1.8a9.6 9.6 0 0 1 13.6 0"/>
+          </g>
+          <text class="il-lbl" x="140" y="174" text-anchor="middle">Sensors</text>
+
+          <circle class="il-node" cx="280" cy="86" r="24"/>
+          <g class="il-ic" transform="translate(280 86) scale(1.5)">
+            <path d="M-2.6 2.6V-6.4a2.6 2.6 0 0 1 5.2 0v9a4.4 4.4 0 1 1-5.2 0Z"/>
+            <path d="M0 -1.4v5"/>
+          </g>
+          <text class="il-lbl" x="280" y="130" text-anchor="middle">Heating &amp; cooling</text>
+
+          <circle class="il-node" cx="450" cy="66" r="24"/>
+          <g class="il-ic" transform="translate(450 66) scale(1.5)">
+            <path d="M-4.6 2.6a5.6 5.6 0 1 1 9.2 0 c-1 1.3-1.4 2.2-1.5 3.5h-6.2c-.1-1.3-.5-2.2-1.5-3.5Z"/>
+            <path d="M-2.6 8.8h5.2"/>
+          </g>
+          <text class="il-lbl" x="450" y="110" text-anchor="middle">Lighting</text>
+
+          <circle class="il-node-off" cx="620" cy="110" r="24"/>
+          <g class="il-ic" transform="translate(620 110) scale(1.5)" opacity=".45">
+            <rect x="-9" y="-5.5" width="18" height="12" rx="2.5"/>
+            <circle cx="0" cy="0.5" r="3.2"/>
+            <path d="M-4.6 -5.5 l1.5 -2.6 h6.2 l1.5 2.6"/>
+          </g>
+          <text class="il-lbl" x="620" y="154" text-anchor="middle" opacity=".6">Cameras</text>
+          <text class="il-note" x="620" y="173" text-anchor="middle">built, never met a camera</text>
+
+          <circle class="il-node" cx="790" cy="160" r="24"/>
+          <g class="il-ic" transform="translate(790 160) scale(1.5)">
+            <path d="M-8.4 4.2a8.4 8.4 0 0 1 16.8 0"/>
+            <path d="M0 4.2 L4.8 -1.4"/>
+            <circle cx="0" cy="4.2" r="1.3"/>
+          </g>
+          <text class="il-lbl" x="790" y="204" text-anchor="middle">Power &amp; solar</text>
+        </g>
+
+        <!-- the hub itself -->
+        <g>
+          <rect x="368" y="250" width="64" height="64" rx="16" fill="var(--band)"/>
+          <g transform="translate(400 282) scale(.62) translate(-32 -32)" fill="none">
+            <path d="M14 50 V32 a18 18 0 0 1 36 0 V50 H40 V32 a8 8 0 0 0 -16 0 V50 Z"
+                  stroke="var(--band-text)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="32" cy="42" r="3.6" fill="var(--terracotta)"/>
+          </g>
+          <path class="il-s-faint" d="M400 314 V344"/>
+        </g>
+
+        <!-- the ground labels -->
+        <text class="il-lbl-live" x="150" y="362" text-anchor="middle">Driveway gate</text>
+        <text class="il-tag-live" x="150" y="382" text-anchor="middle">OPENS TODAY</text>
+        <text class="il-lbl" x="400" y="364" text-anchor="middle">Your hub</text>
+        <text class="il-note" x="400" y="383" text-anchor="middle">the box you own</text>
+        <text class="il-lbl" x="540" y="362" text-anchor="middle" opacity=".55">Robot mower</text>
+        <text class="il-tag" x="540" y="382" text-anchor="middle">NOT BUILT YET</text>
+      </svg>
+      <ul class="il-key">
+        <li class="k-built"><i aria-hidden="true"></i><span style="color:var(--ink-faint)">real all the way to the motor</span></li>
+        <li><i aria-hidden="true"></i>built, but never wired to a real device</li>
+        <li class="k-soon"><i aria-hidden="true"></i>not built yet</li>
+      </ul>
     </div>
 
     <div class="dev-grid">
       <div class="dev reveal">
         <span class="d-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.3 3.4a1 1 0 0 0-.85.47L7.2 5.9H4.6A2.6 2.6 0 0 0 2 8.5v9A2.6 2.6 0 0 0 4.6 20h14.8A2.6 2.6 0 0 0 22 17.5v-9a2.6 2.6 0 0 0-2.6-2.6h-2.6l-1.25-2.03a1 1 0 0 0-.85-.47Zm2.7 5.3a4.4 4.4 0 1 1 0 8.8 4.4 4.4 0 0 1 0-8.8Zm0 2a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8Z"/></svg></span>
-        <h3>Cameras <span class="tag tag-partial">driver ships &middot; no video</span></h3>
-        <p>The ONVIF driver finds cameras by WS-Discovery, authenticates, and asks one for the
-        RTSP address of a chosen profile — then verifies the stream is really flowing and
-        counts what it loses. Decoding a frame is the part that isn't written: live view and
-        recording need a real camera in front of them, and a retention policy for footage that
-        doesn't exist yet would be the wrong order.</p>
+        <h3>Cameras <span class="tag tag-partial">built &middot; never met a camera</span></h3>
+        <p>Aql finds the cameras on your network by itself, and the machinery for turning a
+        stream into clips on disk — with a retention window and a separate permission for who
+        may watch — is written and tested. The piece that fetches video off the camera is built too — the hub opens the stream, keeps the frames, and writes them to disk. What has never happened is any of it running against a real camera: every test uses a stand-in.</p>
         <div class="d-proto">onvif &middot; rtsp</div>
       </div>
 
       <div class="dev reveal">
         <span class="d-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 0-4.2 12.6c.7.53 1.1 1.2 1.2 2.02l.1.88h5.8l.1-.88c.1-.82.5-1.49 1.2-2.02A7 7 0 0 0 12 2Z"/><path d="M9.4 19.1h5.2a1 1 0 0 1 0 2H9.4a1 1 0 0 1 0-2Z"/></svg></span>
-        <h3>Lighting <span class="tag tag-partial">via mqtt today</span></h3>
-        <p>On, off and dim work now through the MQTT driver — including anything a
-        <code>zigbee2mqtt</code> bridge republishes — behind the same device model as
-        everything else, so an automation can't tell a fixture from a fleet. What's missing is
-        a dedicated driver: scenes and groups are still whatever your bridge exposes.</p>
+        <h3>Lighting <span class="tag tag-partial">on, off, dim</span></h3>
+        <p>On, off and dim, reached through the bridge most smart lighting already sits behind
+        — so Zigbee and Z-Wave fittings you already own need no new radio and no new hub from
+        us. Lights land in the same list as everything else, which is why a rule can treat the
+        porch light and the gate the same way. Scenes and groups are still whatever your
+        bridge offers; Aql has none of its own.</p>
         <div class="d-proto">matter &middot; zigbee &middot; mqtt</div>
       </div>
 
       <div class="dev reveal">
         <span class="d-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 2.6a1 1 0 0 1 1 1V6h5V3.6a1 1 0 1 1 2 0V6h.9A3.1 3.1 0 0 1 20.5 9.1v5.3a3.1 3.1 0 0 1-3.1 3.1H6.6a3.1 3.1 0 0 1-3.1-3.1V9.1A3.1 3.1 0 0 1 6.6 6h.9V3.6a1 1 0 0 1 1-1ZM9 10a1.4 1.4 0 1 0 0 2.8A1.4 1.4 0 0 0 9 10Zm6 0a1.4 1.4 0 1 0 0 2.8A1.4 1.4 0 0 0 15 10Z"/><circle cx="7.8" cy="19.9" r="2.1"/><circle cx="16.2" cy="19.9" r="2.1"/></svg></span>
         <h3>Robots <span class="tag tag-planned">planned</span></h3>
-        <p>Mowers, security patrol and cleaning bots as first-class fleet members with status,
-        tasking and run history — the part a consumer smart-home hub never reaches for, and
-        the reason this project exists.</p>
+        <p>Mowers, patrol and cleaning machines listed beside the gate and the meter, with
+        where they are, what you've asked them to do and what they did last week. It's the
+        thing a smart-home hub never reaches for, and the reason this project exists — and
+        it is the one kind with nothing built behind it at all.</p>
         <div class="d-proto">zana native &middot; generic http</div>
       </div>
 
       <div class="dev reveal">
         <span class="d-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.8a3.6 3.6 0 0 0-3.6 3.6v7.7a5.8 5.8 0 1 0 7.2 0V5.4A3.6 3.6 0 0 0 12 1.8Zm0 5.4a1 1 0 0 1 1 1v7.05a2.2 2.2 0 1 1-2 0V8.2a1 1 0 0 1 1-1Z"/></svg></span>
-        <h3>Climate <span class="tag tag-partial">via mqtt &middot; modbus</span></h3>
-        <p>Setpoints are a capability the engine already carries, reachable over MQTT or
-        Modbus, and they answer to the same rules engine as the lights and the gate rather
-        than to four vendor apps. Humidity and ventilation are read today; scheduling them is
-        the automations runtime, which is running.</p>
+        <h3>Climate <span class="tag tag-partial">set &middot; read &middot; schedule</span></h3>
+        <p>Set a temperature and have it answer to the same schedule and the same rules as
+        your lights and your gate, instead of to a fourth vendor app with its own login.
+        Humidity and ventilation read back today. What has never happened is a real heat pump
+        or extractor on the other end of it.</p>
         <div class="d-proto">matter &middot; mqtt &middot; modbus</div>
       </div>
 
       <div class="dev reveal">
         <span class="d-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.3 1.9a.9.9 0 0 1 .77 1.32L11.4 9h4.9a.9.9 0 0 1 .7 1.47l-8.2 10.1a.9.9 0 0 1-1.57-.8L8.9 13.4H4.3a.9.9 0 0 1-.72-1.44l8.3-11a.9.9 0 0 1 .72-.36Z"/></svg></span>
-        <h3>Energy <span class="tag tag-shipped">runs end to end</span></h3>
-        <p>Meter ingestion, hourly and daily rollups, and a source mix of solar, grid and
-        battery — measured off real readings, never estimated. Every bucket carries how much
-        of it was actually observed, so an hour nobody measured reports nothing rather than
-        zero. Raw samples are pruned on a retention window; the counter endpoints a bill is
-        argued from are kept.</p>
+        <h3>Energy <span class="tag tag-shipped">whole software path</span></h3>
+        <p>What the site drew, hour by hour and day by day, split between solar, grid and
+        battery. An hour nobody measured says so instead of quietly reporting zero — the
+        difference between a number you can take to a landlord and one you can't. Old raw
+        readings age out; the totals you'd argue a bill from are kept. Untried on a physical
+        meter.</p>
         <div class="d-proto">modbus &middot; inverter apis</div>
       </div>
 
       <div class="dev reveal">
         <span class="d-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="3.1"/><path d="M7.4 4.9a1 1 0 0 1 1.16 1.63 6.8 6.8 0 0 0 0 10.94A1 1 0 0 1 7.4 19.1a8.8 8.8 0 0 1 0-14.2Zm9.2 0a8.8 8.8 0 0 1 0 14.2 1 1 0 0 1-1.16-1.63 6.8 6.8 0 0 0 0-10.94A1 1 0 0 1 16.6 4.9Z"/><path d="M4.2 1.7A1 1 0 0 1 5.4 3.3a11.6 11.6 0 0 0 0 17.4 1 1 0 0 1-1.2 1.6 13.6 13.6 0 0 1 0-20.6Zm15.6 0a13.6 13.6 0 0 1 0 20.6 1 1 0 0 1-1.2-1.6 11.6 11.6 0 0 0 0-17.4 1 1 0 0 1 1.2-1.6Z" opacity=".45"/></svg></span>
         <h3>Sensors <span class="tag tag-partial">read today</span></h3>
-        <p>Motion, contact, temperature, humidity, water level, tamper — the inputs an
-        automations runtime needs before it is worth having, and that runtime is running.
-        Reads work now over MQTT and Modbus; the Modbus side is read-only by construction,
-        refusing at config time any capability that could actuate.</p>
+        <p>Movement, doors left open, temperature, damp, water level, a tampered box. These
+        are what make an automation worth setting up at all, and reading them works over the
+        protocols most sensors already speak. Industrial sensors are wired read-only on
+        purpose: the hub refuses at setup to give a sensor any way to switch something.</p>
         <div class="d-proto">matter &middot; mqtt &middot; zigbee &middot; http</div>
       </div>
 
@@ -902,10 +1040,11 @@ code{font-family:var(--font-mono);font-size:.88em}
         <span class="d-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.2a6.6 6.6 0 0 0-6.6 6.6v1.6H4.9A1.9 1.9 0 0 0 3 12.3v7.6a1.9 1.9 0 0 0 1.9 1.9h14.2a1.9 1.9 0 0 0 1.9-1.9v-7.6a1.9 1.9 0 0 0-1.9-1.9h-.5V8.8A6.6 6.6 0 0 0 12 2.2Zm0 2a4.6 4.6 0 0 1 4.6 4.6v1.6H7.4V8.8A4.6 4.6 0 0 1 12 4.2Zm0 9.1a2 2 0 0 1 .9 3.79V19a.9.9 0 0 1-1.8 0v-1.91A2 2 0 0 1 12 13.3Z"/></svg></span>
         <div class="d-body">
           <h3>Access <span class="tag tag-shipped">runs end to end</span></h3>
-          <p>Gates, doors and barriers — the seventh kind, and the first one that is real all
-          the way down: a paired controller pulses the relay on an Ed25519-signed command,
-          verified against a key it pinned itself. It is the proof the rest of the hub is
-          built against, not the whole of what the hub is for.</p>
+          <p>Gates, doors and barriers — the one kind that is finished. Someone texts, or taps
+          once in the app; your hub checks who they are and what you've allowed, then sends
+          the small box at the gate an instruction sealed with a key that box learned from
+          your hub and nothing else. Wrong sender, expired request, someone replaying last
+          night's message — the gate refuses all three without asking anyone.</p>
           <div class="d-proto">controller agent &middot; conformance-tested</div>
         </div>
         <a class="dev-go" href="#access">
@@ -917,39 +1056,105 @@ code{font-family:var(--font-mono);font-size:.88em}
   </div>
 </section>
 
+<!-- ————————————————— what it looks like —————————————————
+     Real captures of the console, both themes, swapped on the same data-theme
+     attribute the toggle writes. Nothing here is a mock-up or a render; the
+     caption says what the data behind them is, because the honest answer is
+     "sample data" and pretending otherwise is the oldest trick on a landing. -->
+<section class="section" id="console" style="padding-top:0">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div>
+        <span class="eyebrow kicker">The console</span>
+        <h2 class="display-tight">One screen for<br><em>the whole place</em>.</h2>
+      </div>
+      <p class="lede">
+        The hub comes with this. Open it in a browser on your own network, or install the
+        desktop app. Nobody in the household needs an account with anyone, and there is no
+        second app to buy.
+      </p>
+    </div>
+
+    <div class="shot-lead">
+      <div class="reveal">
+        <span class="shot">
+          <img class="shot-l" src="screenshots/portal-dashboard.png" width="2880" height="1800" loading="lazy" decoding="async" alt="The Aql console overview: a greeting, tiles counting opens today, devices and power draw, then a row of gates and doors each with an Open button, and a fleet list below.">
+          <img class="shot-d" src="screenshots/dark/portal-dashboard.png" width="2880" height="1800" loading="lazy" decoding="async" alt="" aria-hidden="true">
+        </span>
+        <p class="shot-cap"><b>Everything on one page.</b> Opens today, what's drawing power,
+        which gates are online — and the gates themselves, one tap each.</p>
+      </div>
+      <div class="reveal">
+        <div class="phone-shot">
+          <span class="ps-screen">
+            <img class="shot-l" src="screenshots/app-open.png" width="1170" height="2532" loading="lazy" decoding="async" alt="The Aql app on a phone, showing a selected gate called Main gate and a large button reading I want to open this.">
+            <img class="shot-d" src="screenshots/dark/app-open.png" width="1170" height="2532" loading="lazy" decoding="async" alt="" aria-hidden="true">
+          </span>
+        </div>
+        <p class="phone-cap"><b>And on a phone.</b> Pick the gate, press the button. The same
+        console, sized for a hand at a car window.</p>
+      </div>
+    </div>
+
+    <div class="shot-pair">
+      <div class="reveal">
+        <span class="shot">
+          <img class="shot-l" src="screenshots/portal-devices.png" width="2880" height="1800" loading="lazy" decoding="async" alt="The Devices page: one filterable list of gates, doors, controllers, meters and lights, with a detail panel for the selected gate.">
+          <img class="shot-d" src="screenshots/dark/portal-devices.png" width="2880" height="1800" loading="lazy" decoding="async" alt="" aria-hidden="true">
+        </span>
+        <p class="shot-cap"><b>One list, not six apps.</b> Gates, doors, controllers, meters
+        and lights in the same place, each row saying plainly where it came from.</p>
+      </div>
+      <div class="reveal">
+        <span class="shot">
+          <img class="shot-l" src="screenshots/portal-energy.png" width="2880" height="1800" loading="lazy" decoding="async" alt="The Energy page: live meter readings, a consumption chart in twelve-hour buckets, and tiles showing measured kilowatt-hours, an estimated total, and how many periods were actually measured.">
+          <img class="shot-d" src="screenshots/dark/portal-energy.png" width="2880" height="1800" loading="lazy" decoding="async" alt="" aria-hidden="true">
+        </span>
+        <p class="shot-cap"><b>What you actually used.</b> The measured figure and the
+        estimated one are shown apart, and the page tells you how many hours it really saw.</p>
+      </div>
+    </div>
+
+    <p class="ledger-note" style="margin-top:22px">
+      These are photographs of the real console, taken from the running app — but the estate,
+      the gates and the meter readings behind them are sample data. There is no Aql service to
+      log into and no live site to show you; the whole point is that the only instance is
+      yours.
+    </p>
+  </div>
+</section>
+
 <!-- ————————————————— chat demo ————————————————— -->
 <section class="section section-warm" id="chat">
   <div class="wrap">
     <div class="chat-grid">
       <div class="chat-copy reveal">
-        <span class="eyebrow kicker">Chat as an input surface</span>
+        <span class="eyebrow kicker">Nobody installs anything</span>
         <h2 class="display">Text a channel.<br><em>Reach the hub.</em></h2>
         <p style="margin-top:22px;max-width:29rem;color:var(--ink-faint);line-height:1.7">
-          Chat isn't the product — it's the input surface across the whole hub with the lowest
-          possible friction. Nobody installs anything: someone messages a channel they already
-          have open, the hub resolves who they are, runs your rules, and acts. The hub behind
-          it drives gates, meters, lights and climate; the console reaches all of them today.
+          The hard part of running a gate was never the gate. It's the gardener, the delivery,
+          the aunt staying a fortnight — and none of them are going to install your app or
+          learn a code. So they don't. They message the channel you already use, and the hub
+          works out who they are, checks what you've allowed, and opens it.
         </p>
         <p style="margin-top:16px;max-width:29rem;color:var(--ink-faint);line-height:1.7">
-          <b style="color:var(--ink)">Through chat specifically, the verbs are open and close.</b>
-          Ask it to turn on a light and it says so plainly and points at the console, rather
-          than showing you a gate menu and letting you think it understood. Widening that
-          vocabulary is the next piece of work, and it is deliberately gated on the safety
-          ladder below — every verb carries a tier, and an unattended surface is not handed
-          one it hasn't earned.
+          <b style="color:var(--ink)">From a chat, it will open and close things — and nothing else, yet.</b>
+          Ask it to turn on a light and it tells you plainly that it can't, and points at the
+          console, rather than showing you a gate menu and letting you believe it understood.
+          Widening that is deliberately slow: every action carries a safety rating, and a
+          surface nobody is watching doesn't get handed one it hasn't earned.
         </p>
         <p style="margin-top:16px;max-width:29rem;color:var(--ink-faint);line-height:1.7;font-size:14px">
-          The channel rails themselves are moving out of Aql and into
+          Which chat apps carry the messages is moving out of Aql into
           <a href="https://github.com/vul-os/ephor" rel="noopener" style="color:var(--terracotta)">Ephor</a>,
-          a separate, swappable component you run or point at. That move is in progress —
-          Aql's side of it is fixed either way: the hub authorises and signs, and it is the
-          only thing that decides.
+          a separate piece you run or point at. That move is under way. Either way the accounts
+          stay yours, and the hub stays the only thing that decides anything.
         </p>
         <ul class="tick-list">
-          <li><span>The hub is the only authority — a channel is a transport, never a permission.</span></li>
-          <li><span>A sender resolves to a membership before anything physical is considered.</span></li>
-          <li><span>Rate limits and quotas are checked before anything physical moves.</span></li>
-          <li><span>Every action <em>and</em> every denial lands in an append-only audit log, in the same second.</span></li>
+          <li><span>A message is a request, never a permission. Your hub is the only thing that can say yes.</span></li>
+          <li><span>The sender is matched to a person you added, before anything is allowed to move.</span></li>
+          <li><span>Your limits — a cooldown, a cap per day — are checked first, not after.</span></li>
+          <li><span>Every open <em>and</em> every refusal is written down, with the name, in the same second.</span></li>
         </ul>
       </div>
 
@@ -981,8 +1186,9 @@ code{font-family:var(--font-mono);font-size:.88em}
           </div>
         </div>
         <p style="margin-top:16px;font-size:12.5px;line-height:1.7;color:var(--ink-faint);max-width:34rem">
-          A scripted conversation, not a live hub — but the shape is the real one:
-          resolve the sender, disambiguate the access point, sign, reply with the audit id.
+          A scripted conversation, not a live hub — but the shape is the real one: work out
+          who is asking, ask which gate they meant, seal the order, and reply with the line
+          it wrote in the log.
         </p>
       </div>
     </div>
@@ -1019,111 +1225,107 @@ code{font-family:var(--font-mono);font-size:.88em}
         <h2 class="display-tight">Access control,<br><em>end to end</em>.</h2>
       </div>
       <p class="lede">
-        One of the seven kinds is finished: gates, doors and barriers, from the intent all the
-        way to the relay. It earns the space below by being real — a paired controller, signed
-        commands, an audit chain and an offline path, all conformance-tested. Between the
-        intent and the motor sit your rules, and an Ed25519 signature nothing on the network
-        can forge: only the signature, the expiry and the nonce decide.
+        One of the seven kinds is finished: gates, doors and barriers, from someone asking to
+        the motor turning. Between the two sit your rules and a sealed instruction nothing
+        else on the network can produce — which is what lets a hub give orders to a box at the
+        end of a driveway without trusting a single thing in between.
       </p>
     </div>
 
-    <div class="how-illo reveal" aria-hidden="true">
-      <!-- The signed-command path, drawn as a spec sheet rather than a scene.
-           Each stage names the artifact it produces, because the artifacts are
-           the argument: an intent is just a request until something signs it,
-           and the signature is what the relay checks. The offline lane below is
-           the same drawing with the hub removed, which is the whole point of
-           it. -->
-      <svg viewBox="0 0 760 378" preserveAspectRatio="xMidYMid meet" font-family="Inter">
+    <!-- The open path, drawn for the person paying for it rather than the person
+         implementing it. The artifacts still carry the argument — an ask is only an
+         ask until something seals it, and the seal is what the gate checks — but the
+         cryptographic nouns belong in the docs, not here. The lower lane is the same
+         drawing with the hub removed, which is the entire point of it. -->
+    <div class="how-illo reveal">
+      <svg viewBox="0 0 900 402" role="img" aria-labelledby="openT openD">
+        <title id="openT">What happens between asking and the gate moving</title>
+        <desc id="openD">Two lanes. In the upper lane someone asks to open, the hub checks who they are, whether they are allowed this gate now, and whether they have used up the day's opens, then seals an instruction that is good for sixty seconds and usable once; the box at the gate checks the seal and the barrier lifts. In the lower lane the hub cannot be reached, so a pass already held on the phone is presented to the gate directly over Wi-Fi or Bluetooth, and the gate performs exactly the same check.</desc>
 
-        <!-- ============ online lane ============ -->
-        <text x="24" y="30" font-size="10" letter-spacing="1.6" fill="var(--ink)" opacity=".55">ONLINE PATH</text>
-        <line x1="24" y1="40" x2="736" y2="40" stroke="var(--ink)" stroke-width="1" opacity=".12"/>
+        <!-- ============ when everything is up ============ -->
+        <text class="il-tag" x="24" y="26">WHEN EVERYTHING IS UP</text>
+        <path class="il-ground" d="M24 38 H876"/>
 
-        <!-- 1. intent -->
-        <g transform="translate(24 60)">
-          <rect width="150" height="96" rx="14" fill="var(--paper-cool)" stroke="var(--ink)" stroke-width="1.4" opacity=".95"/>
-          <text x="14" y="26" font-size="10" letter-spacing="1.2" fill="var(--terracotta)">01 &middot; INTENT</text>
-          <text x="14" y="50" font-size="14" fill="var(--ink)" font-weight="600">&ldquo;open&rdquo;</text>
-          <text x="14" y="70" font-size="11" fill="var(--ink)" opacity=".62">chat &middot; console &middot; api</text>
-          <text x="14" y="86" font-size="10" fill="var(--ink)" opacity=".45">no authority of its own</text>
+        <g>
+          <rect class="il-panel" x="24" y="60" width="178" height="100" rx="14"/>
+          <text class="il-tag-live" x="42" y="86">01 &middot; SOMEONE ASKS</text>
+          <text class="il-lbl" x="42" y="115" font-size="19">&ldquo;open&rdquo;</text>
+          <text class="il-note" x="42" y="137">a text, or one tap</text>
+          <text class="il-note" x="42" y="153">in the app</text>
         </g>
-        <path d="M182 108 H214" stroke="var(--ink)" stroke-width="1.4" opacity=".5"/>
-        <path d="M208 103 l7 5 -7 5Z" fill="var(--ink)" opacity=".5"/>
+        <path class="il-wire" d="M212 110 H238"/>
+        <path class="il-wire" d="M232 105 l7 5 -7 5" fill="none"/>
 
-        <!-- 2. the hub -->
-        <g transform="translate(222 52)">
-          <rect width="196" height="112" rx="14" fill="var(--band)"/>
-          <text x="16" y="26" font-size="10" letter-spacing="1.2" fill="var(--gold)">02 &middot; THE HUB DECIDES</text>
-          <text x="16" y="50" font-size="12.5" fill="var(--band-text)">membership &middot; rules</text>
-          <text x="16" y="70" font-size="12.5" fill="var(--band-text)">limits &middot; quotas &middot; windows</text>
-          <line x1="16" y1="82" x2="180" y2="82" stroke="var(--band-text)" stroke-width="1" opacity=".25"/>
-          <text x="16" y="99" font-size="11" fill="var(--gold)">then, and only then, it signs</text>
+        <g>
+          <rect x="248" y="44" width="250" height="132" rx="14" fill="var(--band)"/>
+          <text x="266" y="72" font-family="var(--font-mono)" font-size="12" letter-spacing="1.1" fill="var(--gold)">02 &middot; YOUR HUB DECIDES</text>
+          <text x="266" y="98" font-size="13" fill="var(--band-text)">is this someone you added?</text>
+          <text x="266" y="120" font-size="13" fill="var(--band-text)">allowed this gate, right now?</text>
+          <text x="266" y="142" font-size="13" fill="var(--band-text)">any opens left for today?</text>
+          <path d="M266 154 H480" stroke="var(--band-text)" stroke-width="1" opacity=".25"/>
+          <text x="266" y="170" font-size="12.5" fill="var(--gold)">only then does it seal an order</text>
         </g>
-        <path d="M426 108 H458" stroke="var(--ink)" stroke-width="1.4" opacity=".5"/>
-        <path d="M452 103 l7 5 -7 5Z" fill="var(--ink)" opacity=".5"/>
+        <path class="il-wire" d="M508 110 H534"/>
+        <path class="il-wire" d="M528 105 l7 5 -7 5" fill="none"/>
 
-        <!-- 3. the envelope: the artifact that actually travels -->
-        <g transform="translate(466 60)">
-          <rect width="150" height="96" rx="14" fill="var(--paper-cool)" stroke="var(--terracotta)" stroke-width="1.6"/>
-          <text x="14" y="26" font-size="10" letter-spacing="1.2" fill="var(--terracotta)">03 &middot; ENVELOPE</text>
-          <text x="14" y="48" font-size="11" font-family="ui-monospace,monospace" fill="var(--ink)">ed25519 sig</text>
-          <text x="14" y="66" font-size="11" font-family="ui-monospace,monospace" fill="var(--ink)">nonce &middot; exp</text>
-          <text x="14" y="86" font-size="10" fill="var(--ink)" opacity=".45">replay-proof, short-lived</text>
+        <g>
+          <rect class="il-panel-live" x="544" y="60" width="178" height="100" rx="14"/>
+          <text class="il-tag-live" x="562" y="84">03 &middot; A SEALED ORDER</text>
+          <text class="il-note" x="562" y="108">good for 60 seconds</text>
+          <text class="il-note" x="562" y="126">usable exactly once</text>
+          <g class="il-live" transform="translate(699 141)">
+            <rect x="-17" y="-11" width="34" height="23" rx="3" fill="none"/>
+            <path d="M-17 -8.5 L0 3 L17 -8.5"/>
+            <circle cx="0" cy="8" r="4.2" fill="var(--signal-wash)"/>
+          </g>
         </g>
-        <path d="M624 108 H656" stroke="var(--ink)" stroke-width="1.4" opacity=".5"/>
-        <path d="M650 103 l7 5 -7 5Z" fill="var(--ink)" opacity=".5"/>
+        <path class="il-wire" d="M732 110 H758"/>
+        <path class="il-wire" d="M752 105 l7 5 -7 5" fill="none"/>
 
-        <!-- 4. controller + relay -->
-        <g transform="translate(664 60)">
-          <rect width="72" height="96" rx="14" fill="var(--paper-cool)" stroke="var(--ink)" stroke-width="1.4"/>
-          <text x="12" y="26" font-size="10" letter-spacing="1.2" fill="var(--terracotta)">04</text>
-          <text x="12" y="46" font-size="11" fill="var(--ink)" font-weight="600">verify</text>
-          <text x="12" y="64" font-size="11" fill="var(--ink)" font-weight="600">pulse</text>
-          <circle cx="24" cy="80" r="4.5" fill="var(--signal)"/>
-          <text x="34" y="84" font-size="9" fill="var(--ink)" opacity=".65">relay</text>
-        </g>
-
-        <!-- what the controller refuses to trust -->
-        <g transform="translate(222 176)">
-          <text x="0" y="12" font-size="10.5" fill="var(--ink)" opacity=".62">
-            The controller trusts the key it pinned at pairing — not the network, not the sender.
-          </text>
-          <text x="0" y="30" font-size="10.5" fill="var(--ink)" opacity=".62">
-            Every decision, allowed or denied, lands in a hash-chained audit log in the same second.
-          </text>
+        <g>
+          <rect class="il-panel" x="768" y="60" width="108" height="100" rx="14"/>
+          <text class="il-tag-live" x="786" y="86">04</text>
+          <g transform="translate(822 118) scale(1.2)">
+            <path class="il-s-faint" d="M-22 16 H24"/>
+            <path class="il-live" d="M-18 18 V-10"/>
+            <path class="il-live" d="M-18 0 L23 -15"/>
+            <circle class="il-live" cx="-18" cy="0" r="3.2" fill="var(--signal-wash)"/>
+          </g>
+          <text class="il-note" x="822" y="152" text-anchor="middle">it opens</text>
         </g>
 
-        <!-- ============ offline lane ============ -->
-        <line x1="24" y1="228" x2="736" y2="228" stroke="var(--ink)" stroke-width="1" opacity=".12"/>
-        <text x="24" y="252" font-size="10" letter-spacing="1.6" fill="var(--ink)" opacity=".55">OFFLINE PATH &middot; NO HUB REACHABLE</text>
+        <text class="il-note" x="24" y="206">The box at the gate obeys nothing that isn&rsquo;t sealed by your hub &mdash; not the network, not the sender, not us.</text>
+        <text class="il-note" x="24" y="226">Every open and every refusal is written down the same second, in a record that cannot be quietly edited.</text>
 
-        <g transform="translate(24 266)">
-          <rect width="150" height="72" rx="14" fill="var(--paper-cool)" stroke="var(--ink)" stroke-width="1.4"/>
-          <text x="14" y="24" font-size="10" letter-spacing="1.2" fill="var(--gold)">GRANT ON PHONE</text>
-          <text x="14" y="44" font-size="11" fill="var(--ink)">signed in advance</text>
-          <text x="14" y="61" font-size="10" fill="var(--ink)" opacity=".45">bounded by its own exp</text>
+        <!-- ============ when the hub cannot be reached ============ -->
+        <path class="il-ground" d="M24 252 H876"/>
+        <text class="il-tag" x="24" y="278">WHEN THE HUB CAN&rsquo;T BE REACHED</text>
+
+        <g>
+          <rect class="il-panel" x="24" y="294" width="178" height="72" rx="14"/>
+          <text class="il-tag-live" x="42" y="318">YOUR PHONE&rsquo;S PASS</text>
+          <text class="il-note" x="42" y="338">sealed in advance,</text>
+          <text class="il-note" x="42" y="356">with its own expiry</text>
         </g>
-        <path d="M182 302 H214" stroke="var(--ink)" stroke-width="1.4" stroke-dasharray="4 4" opacity=".5"/>
-        <path d="M208 297 l7 5 -7 5Z" fill="var(--ink)" opacity=".5"/>
+        <path class="il-wire-off" d="M212 330 H238"/>
+        <path class="il-wire" d="M232 325 l7 5 -7 5" fill="none"/>
 
-        <g transform="translate(222 266)">
-          <rect width="196" height="72" rx="14" fill="var(--paper-cool)" stroke="var(--ink)" stroke-width="1.4" stroke-dasharray="5 4"/>
-          <text x="16" y="24" font-size="10" letter-spacing="1.2" fill="var(--ink)" opacity=".5">THE HUB IS NOT HERE</text>
-          <text x="16" y="46" font-size="11" fill="var(--ink)" opacity=".7">lan or bluetooth, direct</text>
-          <text x="16" y="63" font-size="10" fill="var(--ink)" opacity=".45">nothing to ask, nothing to wait for</text>
+        <g>
+          <rect class="il-panel-off" x="248" y="294" width="250" height="72" rx="14"/>
+          <text class="il-tag" x="266" y="318">YOUR HUB ISN&rsquo;T HERE</text>
+          <text class="il-note" x="266" y="338">your phone talks to the gate itself,</text>
+          <text class="il-note" x="266" y="356">over your own Wi-Fi or Bluetooth</text>
         </g>
-        <path d="M426 302 H656" stroke="var(--ink)" stroke-width="1.4" stroke-dasharray="4 4" opacity=".5"/>
-        <path d="M650 297 l7 5 -7 5Z" fill="var(--ink)" opacity=".5"/>
+        <path class="il-wire-off" d="M508 330 H758"/>
+        <path class="il-wire" d="M752 325 l7 5 -7 5" fill="none"/>
 
-        <g transform="translate(664 266)">
-          <rect width="72" height="72" rx="14" fill="var(--paper-cool)" stroke="var(--terracotta)" stroke-width="1.6"/>
-          <text x="12" y="24" font-size="10" letter-spacing="1.2" fill="var(--terracotta)">SAME</text>
-          <text x="12" y="42" font-size="11" fill="var(--ink)" font-weight="600">verify</text>
-          <text x="12" y="59" font-size="11" fill="var(--ink)" font-weight="600">pulse</text>
+        <g>
+          <rect class="il-panel-live" x="768" y="294" width="108" height="72" rx="14"/>
+          <text class="il-lbl" x="822" y="324" text-anchor="middle">Same check.</text>
+          <text class="il-note" x="822" y="348" text-anchor="middle">Same gate.</text>
         </g>
 
-        <text x="222" y="358" font-size="10.5" fill="var(--ink)" opacity=".62">The controller checks the same signature against the same pinned key.</text>
+        <text class="il-note" x="24" y="392">The gate checks the same seal against the same key. It never needed the internet to do that.</text>
       </svg>
     </div>
 
@@ -1131,29 +1333,50 @@ code{font-family:var(--font-mono);font-size:.88em}
       <li class="reveal">
         <div class="step-top"><span class="n">01</span><span class="dot"></span><span class="line"></span></div>
         <h3>An intent arrives</h3>
-        <p>Someone texts <code>open</code>, or taps it in the console. However it arrives, the
-        transport authenticates itself first and the hub trusts none of it on its own — an
-        intent is a request, and it is about to be judged.</p>
+        <p>A resident texts <code>open</code>, or taps it in the console. However it arrives,
+        it is a request and nothing more — on its own it cannot move a thing.</p>
       </li>
       <li class="reveal">
         <div class="step-top"><span class="n">02</span><span class="dot"></span><span class="line"></span></div>
         <h3>Your rules decide</h3>
-        <p>The hub resolves the sender to a membership, then checks the access point, the
-        open cooldown, the hourly cap and any per-location quota. The verdict — either way —
-        is appended to the audit log. Geofencing and recurring time windows are designed,
-        not shipped.</p>
+        <p>Is this someone you added? Are they allowed this gate, at this hour, from
+        somewhere near it? Have they used up the cooldown or today's opens? Yes or no, the
+        answer goes into the log with their name on it — the refusals as carefully as the
+        opens.</p>
       </li>
       <li class="reveal">
         <div class="step-top"><span class="n">03</span><span class="dot"></span></div>
-        <h3>A signed command goes out</h3>
-        <p>An Ed25519-signed envelope — nonce, issued-at, expiry no more than 60 seconds
-        wide — reaches the controller, which dialled <em>out</em> to the hub, so no inbound
-        port is ever open at the gate. It verifies against the pinned key, fail-closed, and
-        pulses the relay.</p>
+        <h3>The gate gets a sealed order</h3>
+        <p>Not an instruction anyone on the network could have sent: a sealed one, good for
+        under a minute and usable once. The box at the gate checks the seal against a key it
+        learned from your hub, refuses if anything is off, and clicks the relay. It dialled
+        out to reach your hub, so there is no open port at the gate for anyone to go looking
+        for.</p>
       </li>
     </ol>
   </div>
-</section>
+
+      <!-- The one finished feature had no screenshot, while the two shots that
+           show it sat unused. A buyer reading "access control, end to end"
+           should be able to see it. Same pattern as the console section:
+           theme-paired, real pixel dimensions so the ratio holds, lazy. -->
+      <div class="shot-pair" style="margin-top:34px">
+        <div class="reveal">
+          <span class="shot">
+            <img class="shot-l" src="screenshots/portal-locations.png" width="2880" height="1800" loading="lazy" decoding="async" alt="The Access points page: each gate, door and barrier on a location, with the controller paired to it and when it was last seen.">
+            <img class="shot-d" src="screenshots/dark/portal-locations.png" width="2880" height="1800" loading="lazy" decoding="async" alt="" aria-hidden="true">
+          </span>
+          <p class="shot-cap"><b>Every opening, and what drives it.</b> A gate is an access point with a controller paired to it — so the page that lists your gates is also the page that tells you which one has stopped answering.</p>
+        </div>
+        <div class="reveal">
+          <span class="shot">
+            <img class="shot-l" src="screenshots/portal-access-rules.png" width="2880" height="1800" loading="lazy" decoding="async" alt="The Access rules page: geofence rules with a radius and what happens when a request carries no location, alongside weekly time windows.">
+            <img class="shot-d" src="screenshots/dark/portal-access-rules.png" width="2880" height="1800" loading="lazy" decoding="async" alt="" aria-hidden="true">
+          </span>
+          <p class="shot-cap"><b>Rules you can read back.</b> Where someone has to be standing, and when they may come in. Both are checked on your hub, on the way through, not on the phone that asked.</p>
+        </div>
+      </div>
+    </section>
 
 <!-- ————————————————— emergency / offline ————————————————— -->
 <section class="section section-warm" id="offline">
@@ -1164,11 +1387,77 @@ code{font-family:var(--font-mono);font-size:.88em}
         <h2 class="display-tight">The gate still<br><em>opens</em>.</h2>
       </div>
       <p class="lede">
-        A hub that answers only when the line is up isn't yours. Aql pre-issues a
-        short-lived, signed grant of your rights; near the door, the app proves it to the
-        controller directly, over LAN or Bluetooth. No connectivity, no hub, no third party
-        in the loop.
+        A cut fibre, load-shedding, a router that has had enough — a hub that only answers
+        when the line is up isn't really yours. So your phone carries a dated pass, sealed by
+        your hub while everything was fine. At the gate it proves that pass to the gate
+        itself, over your own Wi-Fi or Bluetooth. No internet, no hub, nobody in the middle.
       </p>
+    </div>
+
+    <!-- Fig. 04 — the outage, in three moments. The middle panel is the whole
+         argument: the hub is drawn dashed and the line to it is broken, because
+         what makes this work is that nothing needs to reach it. -->
+    <div class="illo illo-wide reveal" style="margin-bottom:30px">
+      <svg viewBox="0 0 900 220" role="img" aria-labelledby="outT outD">
+        <title id="outT">What happens to the gate when the internet drops</title>
+        <desc id="outD">Three moments. First, while everything works, the hub seals a dated pass and puts it on the phone. Second, the line goes down and the hub cannot be reached at all. Third, at the gate, the phone presents the pass to the gate directly over Wi-Fi or Bluetooth and the barrier lifts, with nobody asked in between.</desc>
+
+        <path class="il-ground" d="M300 24 V196 M600 24 V196"/>
+
+        <!-- 1 · earlier, while it worked -->
+        <text class="il-tag" x="24" y="30">1 &middot; EARLIER, WHILE IT WORKED</text>
+        <g>
+          <rect x="44" y="62" width="54" height="54" rx="14" fill="var(--band)"/>
+          <g transform="translate(71 89) scale(.52) translate(-32 -32)" fill="none">
+            <path d="M14 50 V32 a18 18 0 0 1 36 0 V50 H40 V32 a8 8 0 0 0 -16 0 V50 Z"
+                  stroke="var(--band-text)" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+          <path class="il-wire-live" d="M110 89 H184"/>
+          <path class="il-wire-live" d="M178 84 l7 5 -7 5" fill="none"/>
+          <rect class="il-panel" x="196" y="56" width="46" height="66" rx="9"/>
+          <rect class="il-live" x="204" y="74" width="30" height="21" rx="4" fill="var(--signal-wash)"/>
+          <path class="il-live" d="M210 82 h18 M210 88 h11"/>
+        </g>
+        <text class="il-note" x="24" y="160">your hub seals a dated pass</text>
+        <text class="il-note" x="24" y="178">and puts it on the phone</text>
+
+        <!-- 2 · then the line goes -->
+        <text class="il-tag" x="324" y="30">2 &middot; THEN THE LINE GOES</text>
+        <g>
+          <rect class="il-panel-off" x="340" y="62" width="54" height="54" rx="14"/>
+          <g transform="translate(367 89) scale(.52) translate(-32 -32)" fill="none" opacity=".38">
+            <path d="M14 50 V32 a18 18 0 0 1 36 0 V50 H40 V32 a8 8 0 0 0 -16 0 V50 Z"
+                  stroke="var(--ink)" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+          <path class="il-wire-off" d="M406 89 H462"/>
+          <path class="il-s" d="M472 76 l18 26 M490 76 l-18 26"/>
+          <path class="il-wire-off" d="M500 89 H520"/>
+          <rect class="il-panel" x="532" y="56" width="46" height="66" rx="9"/>
+          <rect class="il-live" x="540" y="74" width="30" height="21" rx="4" fill="var(--signal-wash)"/>
+          <path class="il-live" d="M546 82 h18 M546 88 h11"/>
+        </g>
+        <text class="il-note" x="324" y="160">the fibre, the power, the router &mdash;</text>
+        <text class="il-note" x="324" y="178">something is down, and the hub is gone</text>
+
+        <!-- 3 · at the gate -->
+        <text class="il-tag" x="624" y="30">3 &middot; AT THE GATE</text>
+        <g>
+          <rect class="il-panel" x="632" y="56" width="46" height="66" rx="9"/>
+          <rect class="il-live" x="640" y="74" width="30" height="21" rx="4" fill="var(--signal-wash)"/>
+          <path class="il-live" d="M646 82 h18 M646 88 h11"/>
+          <text class="il-tag-live" x="752" y="68" text-anchor="middle">WI&#8209;FI &middot; BLUETOOTH</text>
+          <path class="il-wire-live" d="M690 89 H784"/>
+          <path class="il-wire-live" d="M778 84 l7 5 -7 5" fill="none"/>
+          <g transform="translate(828 94)">
+            <path class="il-s-faint" d="M-22 24 H26"/>
+            <path class="il-live" d="M-18 28 V-4"/>
+            <path class="il-live" d="M-18 6 L25 -11"/>
+            <circle class="il-live" cx="-18" cy="6" r="3.4" fill="var(--signal-wash)"/>
+          </g>
+        </g>
+        <text class="il-note" x="624" y="160">the gate checks the pass itself</text>
+        <text class="il-note" x="624" y="178">and opens. nobody was asked.</text>
+      </svg>
     </div>
 
     <div class="off-grid">
@@ -1176,48 +1465,58 @@ code{font-family:var(--font-mono);font-size:.88em}
         <ol>
           <li>
             <span class="s-n">1</span>
-            <div><b>Earlier, online</b>
-            <span>The hub signs a grant: which access points, until when, bound to the app's
-            own keypair. Default TTL is seven days, refreshed on every online launch — so a
-            revocation converges within the TTL, and instantly on the normal path.</span></div>
+            <div><b>Set it up before you need it</b>
+            <span>While the hub is reachable, it seals a pass naming which gates this person
+            may open and until when, tied to that phone and no other. It lasts a week and is
+            renewed every time the app opens online — so revoking someone still takes effect
+            immediately on the normal path, and within the week on this one.</span></div>
           </li>
           <li>
             <span class="s-n">2</span>
-            <div><b>At the door, offline</b>
-            <span>The app finds the controller itself — mDNS on the same LAN, or BLE GATT when
-            there is no network at all — and asks to open.</span></div>
+            <div><b>At the gate, with nothing working</b>
+            <span>The app finds the gate itself — on the same Wi-Fi, or over Bluetooth when
+            there is no network at all — and asks it to open.</span></div>
           </li>
           <li>
             <span class="s-n">3</span>
-            <div><b>Challenge</b>
-            <span>The controller replies with a 128-bit random nonce, valid for 30 seconds and
-            usable exactly once.</span></div>
+            <div><b>The gate asks a question back</b>
+            <span>A different one every time, good for thirty seconds and answerable once.
+            Which is why holding the pass is not enough on its own.</span></div>
           </li>
           <li>
             <span class="s-n">4</span>
-            <div><b>Proof</b>
-            <span>The app signs the grant together with that nonce using its own key. A
-            recorded exchange is worthless afterwards; possession of the grant alone is
-            worthless too.</span></div>
+            <div><b>The phone answers it</b>
+            <span>Signed with the phone's own key. Anyone who recorded last night's exchange
+            and plays it back at the gate gets nothing.</span></div>
           </li>
           <li>
             <span class="s-n">5</span>
-            <div><b>Verify, then open</b>
-            <span>The controller checks the grant's signature against its pinned hub key, then
-            expiry, rights, and the nonce signature — fail-closed, in that order — and pulses
-            the relay. The audit event is queued locally and uploaded when the line comes back.</span></div>
+            <div><b>Check, then open</b>
+            <span>The gate checks the seal, the expiry, what the pass actually allows, and the
+            answer — in that order, refusing at the first thing that is wrong — and opens.
+            The event is kept locally and sent up when the line comes back, so the log is
+            complete either way.</span></div>
           </li>
         </ol>
       </div>
 
       <div class="reveal off-side">
+        <div class="phone-shot" style="margin-bottom:20px">
+          <span class="ps-screen">
+            <img class="shot-l" src="screenshots/app-emergency.png" width="1170" height="2532" loading="lazy" decoding="async" alt="The Emergency access screen in the Aql app, headed Set this up before you need it, warning that a plain browser tab cannot present a pass at the gate, and offering to fetch one now.">
+            <img class="shot-d" src="screenshots/dark/app-emergency.png" width="1170" height="2532" loading="lazy" decoding="async" alt="" aria-hidden="true">
+          </span>
+        </div>
+        <p class="phone-cap" style="margin-bottom:22px"><b>The screen that does it.</b> It also
+        tells you, on the spot, what this particular build of the app cannot do — which is the
+        only kind of warning worth having about an outage.</p>
         <div class="status-card" style="margin-top:0">
           <h4>Status — honestly</h4>
           <ul>
-            <li><i class="i-yes"></i><span><b style="font-weight:600;color:var(--ink)">Real and conformance-tested.</b> The grant wire format, the hub's issuance endpoint, and the controller's verification are all built and checked against the fixtures in <code>proto/vectors/</code>.</span></li>
-            <li><i class="i-yes"></i><span><b style="font-weight:600;color:var(--ink)">LAN works today.</b> The reference controller advertises itself over mDNS and serves the grant exchange over LAN.</span></li>
-            <li><i class="i-part"></i><span><b style="font-weight:600;color:var(--ink)">BLE is half-done.</b> The framing codec and the open&rarr;challenge&rarr;proof&rarr;result session are implemented and unit-tested at ATT MTUs 23, 185 and 512; the radio itself still needs validation on real hardware.</span></li>
-            <li><i class="i-no"></i><span><b style="font-weight:600;color:var(--ink)">The app doesn't do it yet.</b> Requesting, storing and presenting a grant is <em>not built</em> — so this path does not run end to end for a real person today. Both ends of it are ready and waiting for the app.</span></li>
+            <li><i class="i-yes"></i><span><b style="font-weight:600;color:var(--ink)">The pass itself is real.</b> Its format, your hub issuing it, and the gate checking it are built — and checked against fixed test vectors both sides have to agree with independently.</span></li>
+            <li><i class="i-yes"></i><span><b style="font-weight:600;color:var(--ink)">Your phone can hold one.</b> Asking for a pass and keeping it works. Presenting it at the gate works from the desktop app, and from a browser on your own network when the console is served over plain http.</span></li>
+            <li><i class="i-part"></i><span><b style="font-weight:600;color:var(--ink)">Bluetooth is half-done.</b> The exchange is written and tested; the radio has never run on real hardware. A browser tab can't speak Bluetooth or find a gate by name either — that part needs the app.</span></li>
+            <li><i class="i-part"></i><span><b style="font-weight:600;color:var(--ink)">No real gate, yet.</b> Nothing in this repository has been wired to an actual relay or barrier. Everything above it is tested; that last inch is not.</span></li>
           </ul>
         </div>
         <p class="off-note" style="font-size:13px;line-height:1.75;color:var(--ink-faint)">
@@ -1239,43 +1538,77 @@ code{font-family:var(--font-mono);font-size:.88em}
         <span class="eyebrow kicker">You own the box</span>
         <h2 class="display-tight">No broker.<br><em>No account.</em></h2>
         <p class="lede">
-          One Go binary and one SQLite file, on hardware you can point at: a VPS, a Pi behind
-          the couch, a box in the plant room. There is no Aql service to sign up for, nothing
-          phones home, and nothing in the binary charges anyone anything. The only private
-          thing about your hub is its own config.
+          One program and one file, on hardware you can put a hand on: a small VPS, a
+          Raspberry Pi behind the couch, a box in the plant room. There is no Aql service to
+          sign up for, no price list, and nothing that phones home. If this project vanished
+          tomorrow, your gate would go on opening exactly as it does today.
         </p>
+
+        <!-- Fig. 05 — the same request, twice. The upper row is what the buyer is
+             used to; the lower row is what changes. Nothing technical about it — the
+             only claim being made is about who is standing in the middle. -->
+        <div class="illo illo-mid reveal" style="margin-top:26px">
+          <svg viewBox="0 0 440 224" role="img" aria-labelledby="pathT pathD">
+            <title id="pathT">Where a request to open your gate actually goes</title>
+            <desc id="pathD">Two rows. The usual way runs from you, through somebody else's cloud service, to your gate — their servers, their account, their outage, their price list. With Aql it runs from you, through your own hub in your own building, to your gate, with nobody else in between.</desc>
+
+            <text class="il-tag" x="0" y="20">THE USUAL WAY</text>
+            <rect class="il-panel" x="0" y="34" width="76" height="40" rx="12"/>
+            <text class="il-lbl" x="38" y="60" text-anchor="middle">You</text>
+            <path class="il-wire" d="M82 54 H100 m-6 -5 l6 5 -6 5"/>
+            <rect class="il-panel-off" x="112" y="34" width="150" height="40" rx="12"/>
+            <text class="il-lbl" x="187" y="60" text-anchor="middle" opacity=".6">someone&rsquo;s cloud</text>
+            <path class="il-wire" d="M268 54 H286 m-6 -5 l6 5 -6 5"/>
+            <rect class="il-panel" x="298" y="34" width="94" height="40" rx="12"/>
+            <text class="il-lbl" x="345" y="60" text-anchor="middle">Your gate</text>
+            <text class="il-note" x="0" y="96">their servers &middot; their account &middot; their outage &middot; their price list</text>
+
+            <text class="il-tag-live" x="0" y="134">WITH AQL</text>
+            <rect class="il-panel" x="0" y="148" width="76" height="40" rx="12"/>
+            <text class="il-lbl" x="38" y="174" text-anchor="middle">You</text>
+            <path class="il-wire-live" d="M82 168 H100 m-6 -5 l6 5 -6 5"/>
+            <rect class="il-live" x="112" y="148" width="150" height="40" rx="12" fill="none"/>
+            <text class="il-lbl-live" x="187" y="174" text-anchor="middle">your hub</text>
+            <path class="il-wire-live" d="M268 168 H286 m-6 -5 l6 5 -6 5"/>
+            <rect class="il-panel" x="298" y="148" width="94" height="40" rx="12"/>
+            <text class="il-lbl" x="345" y="174" text-anchor="middle">Your gate</text>
+            <text class="il-note" x="0" y="210">your building &middot; your keys &middot; nobody else in the middle</text>
+          </svg>
+        </div>
         <ul class="selfhost-points">
           <li>
             <span class="pt-ic" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 8.7 8.7 0 0 1-4-.9L3 20l1.2-5.2a8 8 0 0 1-.7-3.3A8.4 8.4 0 0 1 12 3.2a8.4 8.4 0 0 1 9 8.3Z"/></svg></span>
             <div><b>Bring your own channel</b>
-            <span>Chat is a component you point the hub at, not a service we run — and the
-            rails are moving to <a href="https://github.com/vul-os/ephor" rel="noopener" style="color:var(--terracotta-soft)">Ephor</a>
-            while this lands. Whichever side carries them, the accounts and credentials are
-            yours: your workspace, your bot token, your business number. Nobody bills you
-            through us, because there is no us in the path.</span></div>
+            <span>If you want chat, it runs on your own workspace, your own bot, your own
+            business number — billed by whoever provides it, at their price, never through
+            us. The rails themselves are moving to <a href="https://github.com/vul-os/ephor" rel="noopener" style="color:var(--terracotta-soft)">Ephor</a>,
+            a separate piece you can swap out or leave off entirely.</span></div>
           </li>
           <li>
             <span class="pt-ic" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13.5V3.5M8.5 7 12 3.5 15.5 7"/><path d="M5 12v6a2.5 2.5 0 0 0 2.5 2.5h9A2.5 2.5 0 0 0 19 18v-6"/></svg></span>
-            <div><b>No public URL? Still a full install</b>
-            <span>Controllers dial <em>out</em> to the hub unconditionally, so a Pi on the LAN
-            with no inbound port is a complete access installation — CGNAT and a closed
-            router are non-issues. What needs a URL is reaching the console from outside, and
-            whichever chat rails you run that receive webhooks rather than dialling out.</span></div>
+            <div><b>No fixed address? Still a full install</b>
+            <span>The box at the gate always dials <em>out</em> to your hub, never the other
+            way round — so a Pi on the house network with nothing forwarded is a complete
+            installation. A landlord's router, a carrier that won't give you a real address,
+            a firewall nobody will open: none of them stop the gate working. What needs a
+            public address is reaching the console from outside.</span></div>
           </li>
           <li>
             <span class="pt-ic" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
-            <div><b>TLS is yours, on purpose</b>
-            <span>The binary ships zero TLS and zero ACME code, and refuses to bind a
-            non-loopback address unless you tell it TLS is terminated upstream. Put a reverse
-            proxy or any tunnel you already trust in front — Caddy, nginx, cloudflared,
-            Tailscale Funnel. Less rope, fewer ways to serve a login page in cleartext.</span></div>
+            <div><b>Encryption is yours, on purpose</b>
+            <span>The hub carries no certificate machinery of its own, and flatly refuses to
+            answer anything but your own machine until you tell it something in front is
+            handling that. Put whatever you already trust there — Caddy, nginx, cloudflared,
+            Tailscale. Fewer moving parts, and one less way to serve a login page in the
+            clear by accident.</span></div>
           </li>
           <li>
             <span class="pt-ic" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.4 2.4 4.6-5"/></svg></span>
             <div><b>Nothing to pay, nothing to report</b>
-            <span>No billing code, no tiers, no licence server, no analytics beacon, no
-            account with us — because there is no "us" in the runtime path. Your costs are
-            your box and your own channel credentials.</span></div>
+            <span>No billing code, no tiers, no licence check, no analytics beacon and no
+            account with us — there is no &ldquo;us&rdquo; anywhere in the running path. Your
+            costs are the box itself and, if you want chat, your own account with whoever
+            carries the messages.</span></div>
           </li>
         </ul>
         <span class="mit-badge"><i aria-hidden="true"></i>MIT or Apache-2.0 &middot; every line</span>
@@ -1316,12 +1649,10 @@ caddy reverse-proxy --to 127.0.0.1:8080
       </div>
         <p class="lede">
         Aql is early, and early projects that oversell are how people end up with a gate that
-        doesn't open. So here is the ledger: what is built and tested, and what is still only
-        a design. Access control runs end to end, the device engine is running underneath
-        four drivers, and what varies is how far each kind's path goes — a meter is read end
-        to end, a camera is discovered but never decoded, a robot has no driver at all. That
-        is the shape of the project right now. Nothing anywhere on this page is called real
-        unless it appears in the left column.
+        won't open. So here is the ledger — built and tested on the left, still only a design
+        on the right. Read the right column before you decide. Two things are true of both:
+        every claim on this page is checked against the code in CI, and not one line of it
+        has ever been wired to a real device.
       </p>
     </div>
 
@@ -1349,7 +1680,7 @@ caddy reverse-proxy --to 127.0.0.1:8080
       <div class="ledger-col reveal">
         <h3>Not built yet <span class="tag tag-planned">planned</span></h3>
         <ul>
-          <li><i class="i-no"></i><span><b>The camera pipeline.</b> The ONVIF driver discovers cameras and resolves an RTSP address; nothing decodes a frame. No live view, no recording, no camera-driven alerting. Depacketization is the line — a fake written from the same RFC would agree with the code under test, so it waits for a real camera.</span></li>
+          <li><i class="i-no"></i><span><b>Watching a camera.</b> Aql finds cameras and works out where their video lives, and the machinery for turning a stream into clips on disk — retention, a separate permission to watch — is written and tested. Fetching the video off the camera is built as well, and so is a recent live view. What is missing is a real camera: a fake written from the same spec as the code only agrees with itself, so nothing here counts as proof until it meets hardware.</span></li>
           <li><i class="i-no"></i><span><b>Robot tasking.</b> The one kind of the seven with no path at all: no driver, and nothing underneath the status in the design.</span></li>
           <li><i class="i-no"></i><span><b>Matter, and native Zigbee or Z-Wave radios.</b> Matter needs a certified device and a stack. The radios are reached through a bridge instead, and the hub is not getting one — though discovery only reads <code>zigbee2mqtt</code>&rsquo;s announcement format, so a Z-Wave fleet is configured by topic rather than listed for you.</span></li>
           <li><i class="i-no"></i><span><b>Anything past open and close, from chat.</b> The hub drives meters, lights and climate; chat does not. Ask it to turn on a light and it says so and points at the console. Widening that vocabulary is gated on the tier ladder, not on parsing.</span></li>
@@ -1379,8 +1710,8 @@ caddy reverse-proxy --to 127.0.0.1:8080
         <p style="margin-top:22px;max-width:32rem;color:var(--ink-faint);line-height:1.7">
           <a href="https://github.com/vul-os/zana" rel="noopener" style="color:var(--terracotta)">Zana</a>
           is the open-hardware companion project: designs for the machines a hub like this is
-          worth having — robot mowers, sensor nodes, security and cleaning bots. Open designs,
-          so the thing in your garden isn't a black box either.
+          worth having — robot mowers, sensor nodes, security and cleaning machines. Published
+          designs, so the thing driving around your garden isn't a black box either.
         </p>
         <p style="margin-top:18px;max-width:32rem;color:var(--ink-faint);line-height:1.7;font-size:14.5px">
           The two are deliberately not welded together. Aql is meant to control
@@ -1430,92 +1761,108 @@ caddy reverse-proxy --to 127.0.0.1:8080
 
     <div class="faq reveal">
       <details>
-        <summary>Isn't this just Home Assistant?<span class="plus">+</span></summary>
+        <summary>Isn&rsquo;t this just Home Assistant?<span class="plus">+</span></summary>
         <p class="a">Same instinct — your devices, your box, nothing in the middle — and Home
         Assistant is a mature project with hundreds of integrations working <em>today</em>,
-        which Aql very much is not. The difference in intent is the reach: the reach of a
-        smart-home hub pushed wider, so autonomous robots and business fleets are first-class
-        citizens rather than consumer gadgets, and every actuation is a signed envelope a
-        device verifies against a key it pinned itself — which is what lets a hub command
-        hardware across a network it doesn't trust. If you want a full smart home working this
-        weekend, use Home Assistant. If that wider reach and the signed-command model are what
-        you're after, this is that project, early.</p>
+        which Aql very much is not. Two things are different here. The reach: a mower, a
+        patrol robot, a barrier at a business are meant to be first-class, not consumer
+        gadgets bolted on. And the way it gives orders: every instruction is sealed, and the
+        box at the far end checks the seal against a key it learned from your hub, which is
+        what makes it safe to command a gate across a network you don't control. If you want
+        a full smart home working this weekend, use Home Assistant. If those two things are
+        what you're after, this is that project, early.</p>
       </details>
       <details>
         <summary>What actually works today?<span class="plus">+</span></summary>
-        <p class="a">One of the seven device kinds, end to end: access — gates, doors and
-        barriers. A chat message or a click in the console resolves to a member, passes your
-        rate limits and quotas, and becomes an Ed25519-signed command that a paired controller
-        verifies against a pinned key and acts on, with every verdict audited. The engine
-        behind the other six kinds — the drivers, the automations runtime, energy, cameras,
-        robot tasking — is designed and unbuilt. The <a href="#status">ledger above</a> is
-        the complete list, both columns.</p>
+        <p class="a">Gates, doors and barriers, from someone asking to the motor turning —
+        with your rules, your limits and a complete record either way. Underneath that, the
+        engine the other kinds run on is live: lights switch and dim, sensors and meters read,
+        setpoints set, and automations run on a schedule against all of it. What isn't there
+        is watching a camera and anything to do with robots. And the caveat that matters most:
+        no part of this has ever been connected to a real gate, meter, relay or camera. The
+        <a href="#status">ledger above</a> is the complete list, both columns.</p>
       </details>
       <details>
-        <summary>So when do the other six kinds work?<span class="plus">+</span></summary>
-        <p class="a">There are no dates, because none of it is scheduled — this is an
-        open-source project being built in the open, not a product with a release plan. What
-        the shape does tell you: access control was finished first because it is the case
-        where getting it wrong is worst, and the pieces it forced into existence — one device
-        model, a pairing ceremony, signed commands, an append-only audit chain, a controller
-        that trusts nothing — are the same pieces every other kind needs. The device engine is
-        the next phase, and the honest state of it is: not started.
-        <a href="https://github.com/vul-os/aql/blob/main/ROADMAP.md" rel="noopener">The roadmap</a>
-        is phase-by-phase and says so.</p>
+        <summary>What do I actually need to buy?<span class="plus">+</span></summary>
+        <p class="a">For the gate: a small computer at the gate — a Raspberry Pi-class board
+        is plenty — wired to your gate motor's push-button input, on Wi-Fi or a cheap data
+        SIM. And somewhere to run the hub: the same kind of box in the house, or a small
+        server you rent. That's it. No Aql hardware exists, nothing needs to be bought from
+        us, and nothing is licensed.</p>
+      </details>
+      <details>
+        <summary>What does it cost?<span class="plus">+</span></summary>
+        <p class="a">Nothing, to us. There is no price list, no tier, no licence check and no
+        billing code anywhere in the software — it's open source under MIT or Apache-2.0 and
+        you can read every line. What you pay for is the hardware you chose and, if you want
+        people to reach it by chat, your own account with whoever carries those messages,
+        billed by them at their price.</p>
       </details>
       <details>
         <summary>Do I need an account, or a cloud?<span class="plus">+</span></summary>
-        <p class="a">Neither. There is no Aql service to sign up for and no broker between you
-        and your hardware. You run the binary; it keeps its state in one SQLite file on your
-        disk and generates its own signing key on first boot. Nothing phones home, and there
-        is no billing code in the binary at all. The one outside dependency is optional and
-        yours: if you want chat as an input surface, the workspace, the bot token or the
-        business number behind it is your own account with that provider, billed by them,
-        never by us.</p>
+        <p class="a">Neither. There is no Aql service to sign up for and nothing sitting
+        between you and your own hardware. You run the program; it keeps everything in one
+        file on your own disk and makes its own keys the first time it starts. Nothing phones
+        home. If this project disappeared, your hub would carry on working.</p>
       </details>
       <details>
         <summary>What happens when the internet is down?<span class="plus">+</span></summary>
-        <p class="a">The design answer is a pre-issued signed grant that the app proves to the
-        controller over LAN or Bluetooth — no connectivity, no hub, no third party. The honest
-        answer today: both ends of that exchange are built and conformance-tested, LAN/mDNS
-        works, the BLE session is implemented and unit-tested but its radio still needs
-        hardware validation — and the <em>app</em> does not yet request or present a grant, so
-        the path doesn't run end to end for a real person. Separately, none of this ever sits
-        in series with your gate: the local button and any code-required fail-safe egress keep
-        working on their own. <a href="docs.html#/emergency-access">Full status</a>.</p>
+        <p class="a">Your phone carries a dated pass, sealed by your hub while things were
+        working. At the gate it presents that pass to the gate directly, over your own Wi-Fi
+        or over Bluetooth — no internet, no hub, nobody in the middle. Honestly, today: the
+        pass and both ends of the exchange are built and tested, holding one works, and
+        presenting it works from the desktop app and from a browser on your own network. The
+        Bluetooth radio has never run on real hardware. And separately from all of it, Aql
+        never sits <em>in series</em> with your gate: the button on the wall and any legally
+        required escape route keep working on their own.
+        <a href="docs.html#/emergency-access">Full status</a>.</p>
       </details>
       <details>
         <summary>Does everyone need to install an app?<span class="plus">+</span></summary>
-        <p class="a">No — that's the whole point of chat as an input surface. People message
-        the hub from an app they already have open. The only installs are the controller at
-        the door, the hub on your box, and optionally the desktop app for administration.</p>
+        <p class="a">No — that's the point of letting people reach it by chat. A visitor, a
+        gardener or a delivery driver messages from something already on their phone. The
+        only things anyone installs are the small box at the gate, the hub on your own
+        machine, and optionally the desktop app if you'd rather administer it that way.</p>
       </details>
       <details>
-        <summary>What hardware does the access path work with?<span class="plus">+</span></summary>
-        <p class="a">Any gate, door or barrier with a dry-contact relay input, which is most
-        of them, driven by a Pi-class board running the reference controller agent on Wi-Fi
-        or a 4G SIM. It only ever dials out, so CGNAT and closed ports are a non-issue. The
-        two surfaces that still want real hardware in front of them are the GPIO relay
-        driver and the BLE radio — everything above them is tested.</p>
+        <summary>Will it work with my gate?<span class="plus">+</span></summary>
+        <p class="a">If your gate, door or barrier has a push-button or dry-contact input —
+        and most do — then in principle yes: the box at the gate closes that contact for you,
+        exactly as the button on the wall does. In practice, take that as a design, not a
+        promise: nothing in this project has been wired to a real gate motor yet. The code
+        that drives the relay is written and its low-level layout is checked at build time on
+        the boards it targets, but the last inch between software and a moving gate is still
+        unproven.</p>
       </details>
       <details>
-        <summary>Is it secure enough for a real site?<span class="plus">+</span></summary>
-        <p class="a">The core is built to be: Ed25519-signed commands with a nonce and an
-        expiry no wider than 60 seconds, verified fail-closed in a fixed order against a key
-        the controller pinned at pairing — so a hostile network, a hijacked DNS record or a
-        malicious tunnel can't forge an open. Every inbound transport authenticates before it
-        is read, tenancy is scoped in the database layer, the audit log is hash-chained and
-        append-only, and the binary refuses to bind a public interface in cleartext. It is
-        also young code
-        that has not been externally audited; read the
-        <a href="docs.html#/security">security chapter</a> and decide for yourself.</p>
+        <summary>Is it safe enough for a real site?<span class="plus">+</span></summary>
+        <p class="a">It was designed for the case where the network is hostile. Every
+        instruction is sealed, expires in under a minute, works once, and is checked by the
+        gate against a key it learned from your hub — so a tampered network, a hijacked
+        domain name or a malicious tunnel can't make your gate move. Everything that talks to
+        the hub proves who it is before it is read, the record of what happened is chained so
+        it can't be quietly rewritten, and the hub refuses to answer the outside world in the
+        clear. It is also young code that no outside party has audited, and it has never met
+        real hardware. Read the <a href="docs.html#/security">security chapter</a> and decide
+        for yourself.</p>
       </details>
       <details>
-        <summary>What's Zana?<span class="plus">+</span></summary>
+        <summary>So when do cameras and robots work?<span class="plus">+</span></summary>
+        <p class="a">There are no dates, because none of it is scheduled — this is built in
+        the open, not shipped to a plan. What the shape tells you: gates were finished first
+        because that is where getting it wrong is worst, and the pieces that forced into
+        existence — one list of devices, a pairing ceremony, sealed instructions, a record
+        nobody can edit — are the same pieces every other kind needs, and they now exist.
+        <a href="https://github.com/vul-os/aql/blob/main/ROADMAP.md" rel="noopener">The roadmap</a>
+        goes phase by phase.</p>
+      </details>
+      <details>
+        <summary>What&rsquo;s Zana?<span class="plus">+</span></summary>
         <p class="a">The open-hardware half of the same idea — designs for robot mowers,
-        sensor nodes and security or cleaning bots. Aql controls any hardware; Zana devices
-        are the ones designed against Aql first. First-class support is a roadmap item, not
-        code in the binary today. <a href="https://github.com/vul-os/zana" rel="noopener">github.com/vul-os/zana</a>.</p>
+        sensor nodes and security or cleaning machines. Aql is meant to control anyone's
+        hardware; Zana devices are simply the ones designed against it first. Support for them
+        is a roadmap item, not code in the binary today.
+        <a href="https://github.com/vul-os/zana" rel="noopener">github.com/vul-os/zana</a>.</p>
       </details>
     </div>
   </div>
