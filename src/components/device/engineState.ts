@@ -35,6 +35,7 @@ import {
   type EngineReading,
 } from '@/lib/api';
 import type { DeviceState } from '@/lib/deviceKinds';
+import { suppressEngineRow } from '@/lib/deviceKinds';
 
 // ── the engine's four possible answers ──────────────────────────────────────
 
@@ -60,6 +61,30 @@ export type EngineFleet =
   | { status: 'error'; devices: []; message: string };
 
 /**
+ * Whether the console should treat an engine device as its own to show.
+ *
+ * False for access points, which the hub already reports through the
+ * access-point API with more detail — operation counts, last-op time, and a link
+ * to the screen where opening lives. The engine reports them too, correctly, and
+ * `GET /v1/engine/devices` still returns them: this is a CONSOLE decision, not a
+ * claim that the engine should not know about gates.
+ *
+ * # Why this is at the fetch and not at each screen
+ *
+ * Because it was at each screen for one commit, and that was already wrong in
+ * two of the three places. Devices.tsx filtered. Overview.tsx did not, and
+ * counted every gate twice in the headline fleet total. RuleEditor.tsx did not,
+ * and would have offered gates in an automation's device picker — the last place
+ * a gate should appear. Three consumers, one filter remembered.
+ *
+ * A screen that genuinely wants access devices from the engine should call the
+ * API directly and say why, which is a visible act rather than a forgotten one.
+ */
+export function consoleShowsEngineDevice(d: { kind: string }): boolean {
+  return !suppressEngineRow(kindLabel(d.kind));
+}
+
+/**
  * Fetch the engine fleet, narrowing every outcome. Never throws: an absent
  * engine and a broken one both have to be *rendered*, and a screen that has to
  * try/catch to tell them apart usually ends up rendering neither.
@@ -71,7 +96,7 @@ export async function engineFleet(): Promise<EngineFleet> {
       return { status: 'error', devices: [], message: 'The hub sent an answer this console could not read.' };
     }
     if (!res.engine) return { status: 'absent', devices: [] };
-    return { status: 'live', devices: res.devices };
+    return { status: 'live', devices: res.devices.filter(consoleShowsEngineDevice) };
   } catch (err) {
     if (isUnavailable(err)) return { status: 'unsupported', devices: [] };
     if (err instanceof ApiError && err.code === 'not_engine_authority') {

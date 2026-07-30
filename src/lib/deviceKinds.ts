@@ -23,7 +23,7 @@
  * known down, which is the opposite of what an operator needs to see.
  * See availabilityState() in src/components/device/engineState.ts.
  */
-export type DeviceState = "live" | "warn" | "alert" | "off" | "unknown";
+export type DeviceState = 'live' | 'warn' | 'alert' | 'off' | 'unknown';
 
 /**
  * The kind that does not go through the device engine.
@@ -37,35 +37,35 @@ export type DeviceState = "live" | "warn" | "alert" | "off" | "unknown";
  * deliberately not one of ENGINE_KINDS: this list is about what the engine
  * drives, not what it can show.
  */
-export const REAL_KIND = "Access";
+export const REAL_KIND = 'Access';
 
 /**
  * The six kinds the device engine serves, in display order.
  *
  * "Serves" is not "has a driver of its own". Robot has no dedicated driver — it
- * is reachable through the generic HTTP and MQTT ones — and Camera's records
- * and plays back but has never met real hardware. The per-kind truth lives in
+ * is reachable through the generic HTTP and MQTT ones — and Camera's records and
+ * plays back but has never met real hardware. The per-kind truth lives in
  * site/docs/devices.md and is not restated here, because a status that has to be
  * updated in two places gets updated in one.
  *
- * This comment asserted both of those absences for days after each stopped
- * being true, because the guard that catches exactly that walked only .md and
- * .html. It walks the console's copy now too.
+ * This comment asserted both of those absences for days after each stopped being
+ * true, because the guard that catches exactly that walked only .md and .html.
+ * It walks the console's copy now too.
  */
 export const ENGINE_KINDS: readonly string[] = [
-  "Camera",
-  "Lighting",
-  "Robot",
-  "Climate",
-  "Energy",
-  "Sensor",
+  'Camera',
+  'Lighting',
+  'Robot',
+  'Climate',
+  'Energy',
+  'Sensor',
 ];
 
 /** All seven, engine kinds first and access last. */
 export const DEVICE_KINDS: readonly string[] = [...ENGINE_KINDS, REAL_KIND];
 
 /**
- * Engine device kinds the console must NOT draw a row for.
+ * Engine device kinds the console must NOT draw its own row for.
  *
  * Access only, and for one reason: the hub already contributes a richer row for
  * every access point, sourced from the access-point API rather than the engine.
@@ -73,12 +73,12 @@ export const DEVICE_KINDS: readonly string[] = [...ENGINE_KINDS, REAL_KIND];
  * screen where opening actually lives. The engine's row for the same gate
  * carries availability and nothing else.
  *
- * Both would otherwise be rendered, because the list is a concatenation, and a
- * gate would appear twice the moment an operator turns on `-device-drivers=access`.
- * docs/ACCESS-ON-THE-ENGINE.md §5 asked whether the console should merge the
- * screens and leaned toward "link, do not duplicate". The console had already
- * done that — this is the part that keeps it true once the engine can also see
- * a gate.
+ * Without this a gate appears twice the moment an operator turns on
+ * `-device-drivers=access`, because the device list is a concatenation of hub
+ * rows and engine rows. docs/ACCESS-ON-THE-ENGINE.md §5 asked whether the
+ * console should merge the screens and leaned toward "link, do not duplicate".
+ * The console had already done that; this keeps it true now the engine can also
+ * see a gate.
  *
  * This suppresses a ROW, not the device. `GET /v1/engine/devices` still returns
  * access points, which is where the unified fleet is genuinely useful: an API
@@ -89,8 +89,8 @@ export const ENGINE_ROW_SUPPRESSED: readonly string[] = [REAL_KIND];
 /**
  * Whether the console should skip an engine device with this kind label.
  *
- * Takes the display label (`kindLabel`'s output), not the wire kind, because
- * that is what the row already carries by the time this is asked.
+ * Takes the display label (`kindLabel`'s output) rather than the wire kind,
+ * because that is what a row already carries by the time this is asked.
  */
 export function suppressEngineRow(kindLabel: string): boolean {
   return ENGINE_ROW_SUPPRESSED.includes(kindLabel);

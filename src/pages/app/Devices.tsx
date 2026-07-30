@@ -26,33 +26,24 @@
 // problem: mDNS is unauthenticated by construction, so a browse result is an
 // address to check, never a device to trust. See ControllerDiscoveryCard.
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type FormEvent,
-} from "react";
-import { Link } from "react-router-dom";
-import { PageHeader } from "./AppLayout";
-import { Card } from "@/components/ui/Card";
-import {
-  ClaimableDevices,
-  ReleaseDeviceButton,
-} from "@/components/device/ClaimableDevices";
-import { ControllerConfig } from "@/components/device/ControllerConfig";
-import { ClockFreshness } from "@/components/device/ClockFreshness";
-import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
-import { DevicePairing } from "@/components/illustrations/DevicePairing";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
+import { PageHeader } from './AppLayout';
+import { Card } from '@/components/ui/Card';
+import { ClaimableDevices, ReleaseDeviceButton } from '@/components/device/ClaimableDevices';
+import { ControllerConfig } from '@/components/device/ControllerConfig';
+import { ClockFreshness } from '@/components/device/ClockFreshness';
+import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
+import { DevicePairing } from '@/components/illustrations/DevicePairing';
 import {
   EngineChip,
   InertNote,
   LiveChip,
   StateDot,
   StateLabel,
-} from "@/components/device/StatusMarks";
-import { DriverHealth } from "@/components/device/DriverHealth";
+} from '@/components/device/StatusMarks';
+import { DriverHealth } from '@/components/device/DriverHealth';
 import {
   availabilityLabel,
   availabilityState,
@@ -67,9 +58,9 @@ import {
   summaryLine,
   type EngineControl,
   type EngineFleet,
-} from "@/components/device/engineState";
-import { useAuth } from "@/lib/auth";
-import { cn } from "@/lib/cn";
+} from '@/components/device/engineState';
+import { useAuth } from '@/lib/auth';
+import { cn } from '@/lib/cn';
 import {
   ApiError,
   api,
@@ -81,10 +72,9 @@ import {
   type EngineDevice,
   type EngineReading,
   type LocationRow,
-} from "@/lib/api";
-import type { DeviceState } from "@/lib/deviceKinds";
-import { suppressEngineRow } from "@/lib/deviceKinds";
-import { fromUnix } from "@/lib/time";
+} from '@/lib/api';
+import type { DeviceState } from '@/lib/deviceKinds';
+import { fromUnix } from '@/lib/time';
 
 /**
  * What to print beside a controller.
@@ -93,25 +83,21 @@ import { fromUnix } from "@/lib/time";
  * controller that had been unplugged for months. The only field that knows
  * whether a command could be delivered right now is `connected`.
  */
-export function controllerLabel(d: {
-  status: string;
-  connected?: boolean;
-  last_seen_at: number | null;
-}): string {
-  if (d.status === "unpaired") return "awaiting pair";
+export function controllerLabel(d: { status: string; connected?: boolean; last_seen_at: number | null }): string {
+  if (d.status === 'unpaired') return 'awaiting pair';
   if (d.connected === undefined) {
     // An older hub that does not report liveness. Say that, rather than
     // picking one of the two answers.
-    return "paired — this hub does not report whether it is connected";
+    return 'paired — this hub does not report whether it is connected';
   }
-  if (d.connected) return "connected";
+  if (d.connected) return 'connected';
   const seen = relativeTime(d.last_seen_at);
-  return seen ? `not connected — last seen ${seen}` : "not connected";
+  return seen ? `not connected — last seen ${seen}` : 'not connected';
 }
 
 function relativeTime(sec: number | null): string {
   const d = fromUnix(sec);
-  if (!d) return "—";
+  if (!d) return '—';
   const ms = Date.now() - d.getTime();
   if (ms < 0) {
     const s = Math.abs(ms) / 1000;
@@ -119,7 +105,7 @@ function relativeTime(sec: number | null): string {
     if (s < 3600) return `in ${Math.round(s / 60)} min`;
     return `in ${Math.round(s / 3600)} h`;
   }
-  if (ms < 60_000) return "just now";
+  if (ms < 60_000) return 'just now';
   if (ms < 60 * 60_000) return `${Math.round(ms / 60_000)} min ago`;
   if (ms < 24 * 60 * 60_000) return `${Math.round(ms / (60 * 60_000))} h ago`;
   return d.toLocaleDateString();
@@ -128,40 +114,13 @@ function relativeTime(sec: number | null): string {
 // ── the one row shape the table renders ──────────────────────────────────────
 
 type Row =
-  | {
-      source: "gateway";
-      kind: "Access";
-      id: string;
-      name: string;
-      zone: string;
-      state: DeviceState;
-      read: string;
-      ap: AccessPointDetail;
-    }
-  | {
-      source: "gateway";
-      kind: "Controller";
-      id: string;
-      name: string;
-      zone: string;
-      state: DeviceState;
-      read: string;
-      device: DeviceRow;
-    }
-  | {
-      source: "engine";
-      kind: string;
-      id: string;
-      name: string;
-      zone: string;
-      state: DeviceState;
-      read: string;
-      engine: EngineDevice;
-    };
+  | { source: 'gateway'; kind: 'Access'; id: string; name: string; zone: string; state: DeviceState; read: string; ap: AccessPointDetail }
+  | { source: 'gateway'; kind: 'Controller'; id: string; name: string; zone: string; state: DeviceState; read: string; device: DeviceRow }
+  | { source: 'engine'; kind: string; id: string; name: string; zone: string; state: DeviceState; read: string; engine: EngineDevice };
 
 /** The chip that says where a row came from. Every row carries exactly one. */
-function SourceChip({ source }: { source: Row["source"] }) {
-  if (source === "gateway") return <LiveChip />;
+function SourceChip({ source }: { source: Row['source'] }) {
+  if (source === 'gateway') return <LiveChip />;
   return <EngineChip />;
 }
 
@@ -182,13 +141,10 @@ function SourceChip({ source }: { source: Row["source"] }) {
  * `unknown`, never `live` — guessing live is the one wrong direction to guess
  * in, and it is exactly the guess that produced this bug.
  */
-export function controllerState(
-  status: string,
-  connected?: boolean,
-): DeviceState {
-  if (status === "unpaired") return "warn";
-  if (connected === undefined) return "unknown";
-  return connected ? "live" : "alert";
+export function controllerState(status: string, connected?: boolean): DeviceState {
+  if (status === 'unpaired') return 'warn';
+  if (connected === undefined) return 'unknown';
+  return connected ? 'live' : 'alert';
 }
 
 export default function DevicesPage() {
@@ -200,7 +156,7 @@ export default function DevicesPage() {
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [showClaim, setShowClaim] = useState<DeviceCreateResponse | null>(null);
-  const [kindFilter, setKindFilter] = useState<string>("All");
+  const [kindFilter, setKindFilter] = useState<string>('All');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -217,9 +173,7 @@ export default function DevicesPage() {
       const [d, l, ap] = await Promise.all([
         api.devicesList({ account_id: currentAccount.id }),
         api.locationsList(currentAccount.id),
-        api
-          .accessPoints(currentAccount.id)
-          .catch(() => ({ access_points: [] })),
+        api.accessPoints(currentAccount.id).catch(() => ({ access_points: [] })),
       ]);
       setControllers(d.devices);
       setLocations(l.locations);
@@ -227,7 +181,7 @@ export default function DevicesPage() {
       setError(null);
     } catch (err) {
       setControllers([]);
-      setError(err instanceof Error ? err.message : "Failed to load devices.");
+      setError(err instanceof Error ? err.message : 'Failed to load devices.');
     }
   }, [currentAccount]);
 
@@ -242,20 +196,18 @@ export default function DevicesPage() {
 
   const rows: Row[] = useMemo(() => {
     const apRows: Row[] = accessPoints.map((ap) => ({
-      source: "gateway",
-      kind: "Access",
+      source: 'gateway',
+      kind: 'Access',
       id: ap.id,
       name: ap.name,
       zone: locationName(ap.location_id),
-      state: ap.device_id ? "live" : "warn",
-      read: ap.meter.last_op_at
-        ? `last op ${relativeTime(ap.meter.last_op_at)}`
-        : "no ops yet",
+      state: ap.device_id ? 'live' : 'warn',
+      read: ap.meter.last_op_at ? `last op ${relativeTime(ap.meter.last_op_at)}` : 'no ops yet',
       ap,
     }));
     const ctlRows: Row[] = (controllers ?? []).map((d) => ({
-      source: "gateway",
-      kind: "Controller",
+      source: 'gateway',
+      kind: 'Controller',
       id: d.id,
       name: d.label ?? `Controller ${d.id.slice(0, 8)}`,
       zone: locationName(d.location_id),
@@ -266,34 +218,27 @@ export default function DevicesPage() {
     // Engine devices are real, chipped "Engine" beside the hub's own rows,
     // using the same kind labels so the kind filters put a hub row and an
     // engine row of the same kind under the same button.
-    const engineRows: Row[] = (engine?.devices ?? [])
-      // The hub already contributes a richer row for every access point — op
-      // counts, last-op time, and a link to the screen where opening lives — so
-      // an engine row for the same gate would be the second of two places
-      // showing one thing. See suppressEngineRow.
-      .filter((d) => !suppressEngineRow(kindLabel(d.kind)))
-      .map((d) => ({
-        source: "engine",
-        kind: kindLabel(d.kind),
-        id: d.key,
-        name: d.name,
-        zone: d.zone || "—",
-        state: availabilityState(d.availability),
-        read: summaryLine(d),
-        engine: d,
-      }));
+    // Access points are filtered out upstream by engineFleet — see
+    // consoleShowsEngineDevice for why that lives at the fetch rather than here.
+    // Without it a gate appears twice: once as an apRow and once as an engine row.
+    const engineRows: Row[] = (engine?.devices ?? []).map((d) => ({
+      source: 'engine',
+      kind: kindLabel(d.kind),
+      id: d.key,
+      name: d.name,
+      zone: d.zone || '—',
+      state: availabilityState(d.availability),
+      read: summaryLine(d),
+      engine: d,
+    }));
     return [...apRows, ...ctlRows, ...engineRows];
   }, [accessPoints, controllers, engine, locationName]);
 
-  const kinds = useMemo(
-    () => ["All", ...new Set(rows.map((r) => r.kind))],
-    [rows],
-  );
-  const visible =
-    kindFilter === "All" ? rows : rows.filter((r) => r.kind === kindFilter);
+  const kinds = useMemo(() => ['All', ...new Set(rows.map((r) => r.kind))], [rows]);
+  const visible = kindFilter === 'All' ? rows : rows.filter((r) => r.kind === kindFilter);
   const selected = rows.find((r) => r.id === selectedId) ?? visible[0] ?? null;
-  const hubCount = rows.filter((r) => r.source === "gateway").length;
-  const engineCount = rows.filter((r) => r.source === "engine").length;
+  const hubCount = rows.filter((r) => r.source === 'gateway').length;
+  const engineCount = rows.filter((r) => r.source === 'engine').length;
   const notice = engine ? engineNotice(engine) : null;
 
   return (
@@ -303,11 +248,7 @@ export default function DevicesPage() {
         title="Devices"
         description="Everything Aql knows about, in one list — access, cameras, lighting, robots, climate, energy and sensors, plus the controllers that drive your gates. Each row says where it comes from."
         actions={
-          <Button
-            variant="ink"
-            disabled={locations.length === 0}
-            onClick={() => setCreating(true)}
-          >
+          <Button variant="ink" disabled={locations.length === 0} onClick={() => setCreating(true)}>
             Pair new device
           </Button>
         }
@@ -348,10 +289,10 @@ export default function DevicesPage() {
             onClick={() => setKindFilter(k)}
             aria-pressed={kindFilter === k}
             className={cn(
-              "h-8 px-3.5 rounded-full text-xs transition-colors border",
+              'h-8 px-3.5 rounded-full text-xs transition-colors border',
               kindFilter === k
-                ? "bg-ink text-paper border-ink"
-                : "border-ink/15 text-ink/65 hover:border-ink/35 hover:text-ink",
+                ? 'bg-ink text-paper border-ink'
+                : 'border-ink/15 text-ink/65 hover:border-ink/35 hover:text-ink',
             )}
           >
             {k}
@@ -369,25 +310,17 @@ export default function DevicesPage() {
       {notice && (
         <Card
           className={cn(
-            "mb-5 py-4",
-            engine?.status === "error"
-              ? "border-terracotta/40"
-              : "border-ink/10",
+            'mb-5 py-4',
+            engine?.status === 'error' ? 'border-terracotta/40' : 'border-ink/10',
           )}
         >
           <div className="flex items-start gap-3">
             <span className="mt-1.5 shrink-0">
-              <StateDot
-                state={engine?.status === "error" ? "alert" : "unknown"}
-              />
+              <StateDot state={engine?.status === 'error' ? 'alert' : 'unknown'} />
             </span>
             <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-ink/55">
-                Device engine
-              </p>
-              <p className="mt-1 text-sm text-ink/70 leading-relaxed">
-                {notice}
-              </p>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-ink/55">Device engine</p>
+              <p className="mt-1 text-sm text-ink/70 leading-relaxed">{notice}</p>
             </div>
           </div>
         </Card>
@@ -401,9 +334,9 @@ export default function DevicesPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <caption className="sr-only">
-                  Every device Aql can see. Rows marked &ldquo;Hub&rdquo; are
-                  real hardware on your hub; rows marked &ldquo;Engine&rdquo;
-                  are real devices reported by your hub&rsquo;s device engine.
+                  Every device Aql can see. Rows marked &ldquo;Hub&rdquo; are real hardware on
+                  your hub; rows marked &ldquo;Engine&rdquo; are real devices reported by your
+                  hub&rsquo;s device engine.
                 </caption>
                 <thead className="bg-paper-warm/50">
                   <tr>
@@ -411,13 +344,13 @@ export default function DevicesPage() {
                         column of its own: a trailing column is the first thing
                         a narrow viewport scrolls out of sight, and this is the
                         one thing on the row that must never be missed. */}
-                    {["Device", "Kind", "Where", "Reading"].map((c, i) => (
+                    {['Device', 'Kind', 'Where', 'Reading'].map((c, i) => (
                       <th
                         key={c}
                         scope="col"
                         className={cn(
-                          "px-5 sm:px-6 py-3.5 text-[10px] uppercase tracking-[0.18em] text-ink/55 font-normal",
-                          i === 3 ? "text-right" : "text-left",
+                          'px-5 sm:px-6 py-3.5 text-[10px] uppercase tracking-[0.18em] text-ink/55 font-normal',
+                          i === 3 ? 'text-right' : 'text-left',
                         )}
                       >
                         {c}
@@ -433,11 +366,9 @@ export default function DevicesPage() {
                         key={`${r.source}-${r.id}`}
                         onClick={() => setSelectedId(r.id)}
                         className={cn(
-                          "border-t border-ink/8 cursor-pointer transition-colors",
-                          active
-                            ? "bg-paper-warm/70"
-                            : "hover:bg-paper-warm/30",
-                          r.state === "off" && "text-ink/50",
+                          'border-t border-ink/8 cursor-pointer transition-colors',
+                          active ? 'bg-paper-warm/70' : 'hover:bg-paper-warm/30',
+                          r.state === 'off' && 'text-ink/50',
                         )}
                       >
                         <td className="px-5 sm:px-6 py-3.5">
@@ -449,26 +380,21 @@ export default function DevicesPage() {
                               className="inline-flex items-center gap-2.5 text-left rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink"
                             >
                               <StateDot state={r.state} />
-                              <span className={cn(active && "font-medium")}>
-                                {r.name}
-                              </span>
+                              <span className={cn(active && 'font-medium')}>{r.name}</span>
                             </button>
                             <SourceChip source={r.source} />
                           </div>
-                          {r.source === "gateway" &&
-                            r.kind === "Controller" && (
-                              <p className="text-[10px] text-ink/40 mt-0.5 font-mono">
-                                {r.device.id.slice(0, 8)}
-                              </p>
-                            )}
+                          {r.source === 'gateway' && r.kind === 'Controller' && (
+                            <p className="text-[10px] text-ink/40 mt-0.5 font-mono">
+                              {r.device.id.slice(0, 8)}
+                            </p>
+                          )}
                         </td>
                         <td className="px-5 sm:px-6 py-3.5 text-[11px] uppercase tracking-[0.16em] text-ink/50">
                           {r.kind}
                         </td>
                         <td className="px-5 sm:px-6 py-3.5 text-xs text-ink/55">
-                          <span className="block max-w-[10rem] truncate">
-                            {r.zone}
-                          </span>
+                          <span className="block max-w-[10rem] truncate">{r.zone}</span>
                         </td>
                         <td className="px-5 sm:px-6 py-3.5 text-right font-mono text-xs text-ink/70 whitespace-nowrap">
                           {r.read}
@@ -480,7 +406,7 @@ export default function DevicesPage() {
                     <tr className="border-t border-ink/8">
                       <td colSpan={4} className="px-6 py-8 text-ink/55 text-sm">
                         {locations.length === 0
-                          ? "Create a location first, then you can pair a device to it."
+                          ? 'Create a location first, then you can pair a device to it.'
                           : `Nothing of kind “${kindFilter}” yet.`}
                       </td>
                     </tr>
@@ -500,20 +426,15 @@ export default function DevicesPage() {
             />
           )}
 
-          {currentAccount && (
-            <ControllerDiscoveryCard accountId={currentAccount.id} />
-          )}
+          {currentAccount && <ControllerDiscoveryCard accountId={currentAccount.id} />}
 
           <Card tone="cream">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-ink/55">
-              Pair a new one
-            </p>
+            <p className="text-[11px] uppercase tracking-[0.22em] text-ink/55">Pair a new one</p>
             <h3 className="font-display text-2xl mt-2">It takes 60 seconds</h3>
             <p className="text-ink/65 text-sm mt-3 leading-relaxed">
-              Create the device here, copy the claim token, then enter it on the
-              controller within an hour to complete pairing. This is the real
-              path — the controller verifies every command against its pinned
-              key afterwards.
+              Create the device here, copy the claim token, then enter it on the controller within
+              an hour to complete pairing. This is the real path — the controller verifies every
+              command against its pinned key afterwards.
             </p>
             <DevicePairing className="w-full mt-4" />
           </Card>
@@ -532,9 +453,7 @@ export default function DevicesPage() {
         />
       )}
 
-      {showClaim && (
-        <ClaimTokenModal info={showClaim} onClose={() => setShowClaim(null)} />
-      )}
+      {showClaim && <ClaimTokenModal info={showClaim} onClose={() => setShowClaim(null)} />}
     </>
   );
 }
@@ -556,9 +475,7 @@ function DetailPanel({
   return (
     <Card className="p-0 overflow-hidden">
       <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-ink/8">
-        <span className="text-[10px] uppercase tracking-[0.18em] text-ink/55">
-          Device
-        </span>
+        <span className="text-[10px] uppercase tracking-[0.18em] text-ink/55">Device</span>
         <div className="flex items-center gap-2">
           <StateLabel state={row.state} />
           <SourceChip source={row.source} />
@@ -571,23 +488,19 @@ function DetailPanel({
           {row.kind} · {row.zone}
         </p>
 
-        {row.source === "gateway" && row.kind === "Access" && (
-          <AccessDetail row={row} />
-        )}
-        {row.source === "gateway" && row.kind === "Controller" && (
+        {row.source === 'gateway' && row.kind === 'Access' && <AccessDetail row={row} />}
+        {row.source === 'gateway' && row.kind === 'Controller' && (
           <>
             <ControllerDetail row={row} onPairedRefresh={onPairedRefresh} />
             {/* Only for a controller that has actually paired: an unpaired one
                 has no session to deliver a signed command over, and offering
                 the form would queue changes for a device that may never
                 arrive. */}
-            {row.device.status !== "unpaired" && (
-              <ControllerConfig deviceId={row.device.id} />
-            )}
+            {row.device.status !== 'unpaired' && <ControllerConfig deviceId={row.device.id} />}
           </>
         )}
-        {row.source === "engine" && <EngineDetail key={row.id} row={row} />}
-        {row.source === "engine" && accountId && (
+        {row.source === 'engine' && <EngineDetail key={row.id} row={row} />}
+        {row.source === 'engine' && accountId && (
           <ReleaseDeviceButton
             accountId={accountId}
             deviceKey={row.engine.key}
@@ -610,18 +523,13 @@ function Rows({
   return (
     <dl className="mt-5 rounded-2xl border border-ink/8 divide-y divide-ink/8 overflow-hidden">
       {items.map((row) => (
-        <div
-          key={row.k}
-          className="flex items-center justify-between gap-4 px-4 py-3"
-        >
-          <dt className="text-[10px] uppercase tracking-[0.18em] text-ink/50 shrink-0">
-            {row.k}
-          </dt>
+        <div key={row.k} className="flex items-center justify-between gap-4 px-4 py-3">
+          <dt className="text-[10px] uppercase tracking-[0.18em] text-ink/50 shrink-0">{row.k}</dt>
           <dd
             className={cn(
-              "text-sm text-ink/70 text-right min-w-0",
-              row.wrap ? "leading-snug" : "truncate",
-              row.mono && "font-mono text-xs",
+              'text-sm text-ink/70 text-right min-w-0',
+              row.wrap ? 'leading-snug' : 'truncate',
+              row.mono && 'font-mono text-xs',
             )}
           >
             {row.v}
@@ -632,26 +540,18 @@ function Rows({
   );
 }
 
-function AccessDetail({ row }: { row: Extract<Row, { kind: "Access" }> }) {
+function AccessDetail({ row }: { row: Extract<Row, { kind: 'Access' }> }) {
   const { ap } = row;
   return (
     <>
       <Rows
         items={[
-          { k: "Type", v: ap.kind },
+          { k: 'Type', v: ap.kind },
+          { k: 'Total opens', v: ap.meter.total_opens.toLocaleString(), mono: true },
+          { k: 'Movement', v: `${Math.round(ap.meter.movement_m)} m`, mono: true },
           {
-            k: "Total opens",
-            v: ap.meter.total_opens.toLocaleString(),
-            mono: true,
-          },
-          {
-            k: "Movement",
-            v: `${Math.round(ap.meter.movement_m)} m`,
-            mono: true,
-          },
-          {
-            k: "Controller",
-            v: ap.device_id ? ap.device_id.slice(0, 8) : "none paired",
+            k: 'Controller',
+            v: ap.device_id ? ap.device_id.slice(0, 8) : 'none paired',
             mono: true,
           },
         ]}
@@ -665,8 +565,8 @@ function AccessDetail({ row }: { row: Extract<Row, { kind: "Access" }> }) {
         </Link>
       </div>
       <InertNote className="mt-3">
-        Opening, closing, maintenance and the audit trail all live on the
-        access-point page — this one is real hardware on your hub.
+        Opening, closing, maintenance and the audit trail all live on the access-point page — this
+        one is real hardware on your hub.
       </InertNote>
     </>
   );
@@ -676,7 +576,7 @@ function ControllerDetail({
   row,
   onPairedRefresh,
 }: {
-  row: Extract<Row, { kind: "Controller" }>;
+  row: Extract<Row, { kind: 'Controller' }>;
   onPairedRefresh: () => void;
 }) {
   const { device } = row;
@@ -686,20 +586,17 @@ function ControllerDetail({
         items={[
           // Two separate facts, kept separate. Collapsing them is what let a
           // paired-but-dead controller read as "online".
-          {
-            k: "Pairing",
-            v: device.status === "unpaired" ? "not paired" : "paired",
-          },
-          { k: "Connection", v: controllerLabel(device) },
-          { k: "Last seen", v: relativeTime(device.last_seen_at), mono: true },
-          { k: "Paired", v: relativeTime(device.paired_at), mono: true },
-          { k: "Device ID", v: device.id, mono: true },
+          { k: 'Pairing', v: device.status === 'unpaired' ? 'not paired' : 'paired' },
+          { k: 'Connection', v: controllerLabel(device) },
+          { k: 'Last seen', v: relativeTime(device.last_seen_at), mono: true },
+          { k: 'Paired', v: relativeTime(device.paired_at), mono: true },
+          { k: 'Device ID', v: device.id, mono: true },
         ]}
       />
-      {device.status === "unpaired" && device.claim_expires_at && (
+      {device.status === 'unpaired' && device.claim_expires_at && (
         <p className="mt-3 text-xs text-gold">
-          Claim token expires {relativeTime(device.claim_expires_at)} — enter it
-          on the controller to finish pairing.
+          Claim token expires {relativeTime(device.claim_expires_at)} — enter it on the controller
+          to finish pairing.
         </p>
       )}
       <div className="mt-5">
@@ -732,29 +629,20 @@ function ControllerDetail({
  *     someone told an open failed will press the button again, and the gate
  *     may already be open.
  */
-function EngineDetail({ row }: { row: Extract<Row, { source: "engine" }> }) {
+function EngineDetail({ row }: { row: Extract<Row, { source: 'engine' }> }) {
   const d = row.engine;
   const controls = useMemo(() => controlsFor(d.capabilities), [d.capabilities]);
 
   const [readings, setReadings] = useState<EngineReading[] | null>(null);
-  const [readingsError, setReadingsError] = useState<{
-    message: string;
-    fault: boolean;
-  } | null>(null);
+  const [readingsError, setReadingsError] = useState<{ message: string; fault: boolean } | null>(null);
   const [args, setArgs] = useState<Record<string, number>>(() =>
-    Object.fromEntries(
-      controls.filter((c) => c.arg).map((c) => [c.verb, c.arg!.initial]),
-    ),
+    Object.fromEntries(controls.filter((c) => c.arg).map((c) => [c.verb, c.arg!.initial])),
   );
   const [busyVerb, setBusyVerb] = useState<string | null>(null);
-  const [awaitingConfirm, setAwaitingConfirm] = useState<{
-    control: EngineControl;
-    message: string;
-  } | null>(null);
-  const [outcome, setOutcome] = useState<{
-    kind: "ok" | "indeterminate" | "unreachable" | "refused" | "failed";
-    message: string;
-  } | null>(null);
+  const [awaitingConfirm, setAwaitingConfirm] = useState<{ control: EngineControl; message: string } | null>(null);
+  const [outcome, setOutcome] = useState<
+    { kind: 'ok' | 'indeterminate' | 'unreachable' | 'refused' | 'failed'; message: string } | null
+  >(null);
 
   const loadReadings = useCallback(async () => {
     setReadingsError(null);
@@ -777,24 +665,15 @@ function EngineDetail({ row }: { row: Extract<Row, { source: "engine" }> }) {
   async function send(control: EngineControl, confirm: boolean) {
     setBusyVerb(control.verb);
     setOutcome(null);
-    const argMap = control.arg
-      ? { [control.arg.name]: args[control.verb] ?? control.arg.initial }
-      : undefined;
+    const argMap = control.arg ? { [control.arg.name]: args[control.verb] ?? control.arg.initial } : undefined;
     try {
-      const res = await api.engineExecute(d.key, {
-        verb: control.verb,
-        args: argMap,
-        confirm,
-      });
+      const res = await api.engineExecute(d.key, { verb: control.verb, args: argMap, confirm });
       setAwaitingConfirm(null);
-      setOutcome({
-        kind: "ok",
-        message: executedMessage(control.label, res?.tier ?? ""),
-      });
+      setOutcome({ kind: 'ok', message: executedMessage(control.label, res?.tier ?? '') });
       void loadReadings();
     } catch (err) {
       const described = describeExecuteError(err, control.label);
-      if (described.kind === "confirm") {
+      if (described.kind === 'confirm') {
         // Not a failure — the hub is asking for a second deliberate act.
         setAwaitingConfirm({ control, message: described.message });
       } else {
@@ -809,17 +688,13 @@ function EngineDetail({ row }: { row: Extract<Row, { source: "engine" }> }) {
   return (
     <>
       <div className="mt-5 rounded-2xl border border-ink/8 bg-paper-warm/40 px-5 py-4">
-        <p className="text-[10px] uppercase tracking-[0.18em] text-ink/45">
-          Readings
-        </p>
-        {readings === null && !readingsError && (
-          <p className="mt-2 text-sm text-ink/55">Reading…</p>
-        )}
+        <p className="text-[10px] uppercase tracking-[0.18em] text-ink/45">Readings</p>
+        {readings === null && !readingsError && <p className="mt-2 text-sm text-ink/55">Reading…</p>}
         {readingsError && (
           <p
             className={cn(
-              "mt-2 text-sm",
-              readingsError.fault ? "text-terracotta-deep" : "text-ink/55",
+              'mt-2 text-sm',
+              readingsError.fault ? 'text-terracotta-deep' : 'text-ink/55',
             )}
           >
             {readingsError.message}
@@ -833,10 +708,7 @@ function EngineDetail({ row }: { row: Extract<Row, { source: "engine" }> }) {
         {readings !== null && readings.length > 0 && (
           <ul className="mt-2 space-y-1.5">
             {readings.map((r) => (
-              <li
-                key={`${r.metric}-${r.at}`}
-                className="flex items-baseline justify-between gap-4"
-              >
+              <li key={`${r.metric}-${r.at}`} className="flex items-baseline justify-between gap-4">
                 <span className="text-xs text-ink/55 truncate">{r.metric}</span>
                 <span className="font-mono text-sm text-ink/85 tabular-nums shrink-0">
                   {readingValue(r)}
@@ -849,15 +721,11 @@ function EngineDetail({ row }: { row: Extract<Row, { source: "engine" }> }) {
 
       <Rows
         items={[
-          { k: "Status", v: d.summary || "—" },
-          {
-            k: "Availability",
-            v: availabilityLabel(d.availability),
-            wrap: true,
-          },
-          { k: "Driver", v: d.driver, mono: true },
-          { k: "Last seen", v: relativeTime(d.last_seen), mono: true },
-          { k: "Key", v: d.key, mono: true },
+          { k: 'Status', v: d.summary || '—' },
+          { k: 'Availability', v: availabilityLabel(d.availability), wrap: true },
+          { k: 'Driver', v: d.driver, mono: true },
+          { k: 'Last seen', v: relativeTime(d.last_seen), mono: true },
+          { k: 'Key', v: d.key, mono: true },
         ]}
       />
 
@@ -878,10 +746,7 @@ function EngineDetail({ row }: { row: Extract<Row, { source: "engine" }> }) {
                       step={c.arg.step}
                       value={args[c.verb] ?? c.arg.initial}
                       onChange={(e) =>
-                        setArgs((prev) => ({
-                          ...prev,
-                          [c.verb]: Number(e.target.value),
-                        }))
+                        setArgs((prev) => ({ ...prev, [c.verb]: Number(e.target.value) }))
                       }
                       className="h-9 w-16 rounded-full bg-paper-cool border border-ink/15 px-3 text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-ink"
                     />
@@ -894,21 +759,15 @@ function EngineDetail({ row }: { row: Extract<Row, { source: "engine" }> }) {
                   onClick={() => void send(c, false)}
                   className="h-9 px-4 rounded-full text-sm border border-ink/15 text-ink/75 hover:border-ink/35 hover:text-ink transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {busyVerb === c.verb ? "Sending…" : c.label}
+                  {busyVerb === c.verb ? 'Sending…' : c.label}
                 </button>
               </span>
             ))}
           </div>
 
           {awaitingConfirm && (
-            <div
-              className="rounded-2xl border border-gold/40 bg-gold/10 px-4 py-3"
-              role="alertdialog"
-              aria-label="Confirm this action"
-            >
-              <p className="text-sm text-ink/80 leading-relaxed">
-                {awaitingConfirm.message}
-              </p>
+            <div className="rounded-2xl border border-gold/40 bg-gold/10 px-4 py-3" role="alertdialog" aria-label="Confirm this action">
+              <p className="text-sm text-ink/80 leading-relaxed">{awaitingConfirm.message}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -916,9 +775,7 @@ function EngineDetail({ row }: { row: Extract<Row, { source: "engine" }> }) {
                   onClick={() => void send(awaitingConfirm.control, true)}
                   className="h-9 px-4 rounded-full text-sm bg-ink text-paper hover:bg-ink/90 transition-colors disabled:opacity-50"
                 >
-                  {busyVerb
-                    ? "Sending…"
-                    : `Yes — ${awaitingConfirm.control.label}`}
+                  {busyVerb ? 'Sending…' : `Yes — ${awaitingConfirm.control.label}`}
                 </button>
                 <button
                   type="button"
@@ -935,12 +792,12 @@ function EngineDetail({ row }: { row: Extract<Row, { source: "engine" }> }) {
             <p
               role="status"
               className={cn(
-                "text-sm leading-relaxed",
-                outcome.kind === "ok"
-                  ? "text-moss"
-                  : outcome.kind === "indeterminate"
-                    ? "text-gold"
-                    : "text-terracotta-deep",
+                'text-sm leading-relaxed',
+                outcome.kind === 'ok'
+                  ? 'text-moss'
+                  : outcome.kind === 'indeterminate'
+                    ? 'text-gold'
+                    : 'text-terracotta-deep',
               )}
             >
               {outcome.message}
@@ -948,15 +805,14 @@ function EngineDetail({ row }: { row: Extract<Row, { source: "engine" }> }) {
           )}
 
           <InertNote>
-            These send real verbs to a real device. Your hub decides what each
-            one means and refuses anything the device doesn&rsquo;t offer — this
-            console never widens that.
+            These send real verbs to a real device. Your hub decides what each one means and
+            refuses anything the device doesn&rsquo;t offer — this console never widens that.
           </InertNote>
         </div>
       ) : (
         <InertNote className="mt-5">
-          This device reports readings only — it declares no verbs that can be
-          actuated, so there is nothing to press.
+          This device reports readings only — it declares no verbs that can be actuated, so there
+          is nothing to press.
         </InertNote>
       )}
     </>
@@ -977,100 +833,80 @@ function EngineDetail({ row }: { row: Extract<Row, { source: "engine" }> }) {
 // below and typing the claim token into the controller itself.
 
 type DiscoverState =
-  | { status: "idle" }
-  | { status: "scanning" }
-  | { status: "found"; controllers: DiscoveredController[]; note: string }
+  | { status: 'idle' }
+  | { status: 'scanning' }
+  | { status: 'found'; controllers: DiscoveredController[]; note: string }
   /** 503 discovery_unavailable: multicast couldn't be sent — a different fact
    *  from "no controllers answered", and the hub's `detail` says why. */
-  | { status: "unavailable"; detail: string }
+  | { status: 'unavailable'; detail: string }
   /** 403 — discovery is admin-only. Its own state, not a generic error: a
    *  member hitting this should be told why, not shown a broken page. */
-  | { status: "forbidden" }
-  | { status: "error"; message: string };
+  | { status: 'forbidden' }
+  | { status: 'error'; message: string };
 
 function ControllerDiscoveryCard({ accountId }: { accountId: string }) {
-  const [state, setState] = useState<DiscoverState>({ status: "idle" });
+  const [state, setState] = useState<DiscoverState>({ status: 'idle' });
 
   async function scan() {
-    setState({ status: "scanning" });
+    setState({ status: 'scanning' });
     try {
       const res = await api.discoverControllers(accountId);
-      setState({
-        status: "found",
-        controllers: res.controllers,
-        note: res.note,
-      });
+      setState({ status: 'found', controllers: res.controllers, note: res.note });
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
-        setState({ status: "forbidden" });
-      } else if (
-        err instanceof ApiError &&
-        err.status === 503 &&
-        err.code === "discovery_unavailable"
-      ) {
+        setState({ status: 'forbidden' });
+      } else if (err instanceof ApiError && err.status === 503 && err.code === 'discovery_unavailable') {
         setState({
-          status: "unavailable",
+          status: 'unavailable',
           detail: err.detail ?? "Multicast couldn't be sent on this hub.",
         });
       } else {
-        setState({
-          status: "error",
-          message: friendlyApiError(err, "Could not browse the network."),
-        });
+        setState({ status: 'error', message: friendlyApiError(err, 'Could not browse the network.') });
       }
     }
   }
 
   return (
     <Card tone="cream">
-      <p className="text-[11px] uppercase tracking-[0.22em] text-ink/55">
-        Find controllers
-      </p>
+      <p className="text-[11px] uppercase tracking-[0.22em] text-ink/55">Find controllers</p>
       <h3 className="font-display text-2xl mt-2">Scan the network</h3>
       <p className="text-ink/65 text-sm mt-3 leading-relaxed">
-        Browses the LAN for controllers advertising themselves over mDNS — a
-        couple of seconds of multicast traffic, nothing more, and nothing sent
-        automatically. mDNS has no authentication: anything on this network can
-        answer a browse, so what comes back is addresses to check, not devices
-        to trust. There is no one-click add here — pairing still means creating
-        a device below and typing its claim token into the controller itself.
+        Browses the LAN for controllers advertising themselves over mDNS — a couple of seconds of
+        multicast traffic, nothing more, and nothing sent automatically. mDNS has no
+        authentication: anything on this network can answer a browse, so what comes back is
+        addresses to check, not devices to trust. There is no one-click add here — pairing still
+        means creating a device below and typing its claim token into the controller itself.
       </p>
 
       <button
         type="button"
         onClick={() => void scan()}
-        disabled={state.status === "scanning"}
+        disabled={state.status === 'scanning'}
         className="mt-4 h-9 px-4 rounded-full text-sm border border-ink/15 text-ink/75 hover:border-ink/35 hover:text-ink transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {state.status === "scanning"
-          ? "Scanning…"
-          : "Scan the network for controllers"}
+        {state.status === 'scanning' ? 'Scanning…' : 'Scan the network for controllers'}
       </button>
 
-      {state.status === "forbidden" && (
+      {state.status === 'forbidden' && (
         <p className="mt-4 text-sm text-terracotta-deep leading-relaxed">
-          This account doesn&rsquo;t allow you to browse the network — discovery
-          is admin-only, because the result is a map of what&rsquo;s on it. Ask
-          an owner or admin to run it.
+          This account doesn&rsquo;t allow you to browse the network — discovery is admin-only,
+          because the result is a map of what&rsquo;s on it. Ask an owner or admin to run it.
         </p>
       )}
 
-      {state.status === "unavailable" && (
+      {state.status === 'unavailable' && (
         <p className="mt-4 text-sm text-terracotta-deep leading-relaxed">
-          Multicast couldn&rsquo;t be sent from this hub: {state.detail} That is
-          a different answer from &ldquo;no controllers are here&rdquo; — it
-          means this host or network can&rsquo;t carry the query, not that
-          nothing would have answered it.
+          Multicast couldn&rsquo;t be sent from this hub: {state.detail} That is a different
+          answer from &ldquo;no controllers are here&rdquo; — it means this host or network can&rsquo;t
+          carry the query, not that nothing would have answered it.
         </p>
       )}
 
-      {state.status === "error" && (
-        <p className="mt-4 text-sm text-terracotta-deep leading-relaxed">
-          {state.message}
-        </p>
+      {state.status === 'error' && (
+        <p className="mt-4 text-sm text-terracotta-deep leading-relaxed">{state.message}</p>
       )}
 
-      {state.status === "found" && (
+      {state.status === 'found' && (
         <div className="mt-4">
           {/* Said on every response, including a full one — this is the
               sentence that explains why there is no button beside a row that
@@ -1079,10 +915,9 @@ function ControllerDiscoveryCard({ accountId }: { accountId: string }) {
 
           {state.controllers.length === 0 ? (
             <p className="mt-3 text-sm text-ink/65">
-              Nothing answered. That can mean there are no controllers on this
-              network, or that one hasn&rsquo;t finished booting — mDNS is
-              best-effort, so a second scan sometimes finds what the first
-              missed.
+              Nothing answered. That can mean there are no controllers on this network, or that
+              one hasn&rsquo;t finished booting — mDNS is best-effort, so a second scan sometimes
+              finds what the first missed.
             </p>
           ) : (
             <ul className="mt-3 space-y-2">
@@ -1091,38 +926,31 @@ function ControllerDiscoveryCard({ accountId }: { accountId: string }) {
                 // record. An empty one is not a quieter version of normal — it
                 // is the one signal this list has that something answering
                 // isn't what it looks like.
-                const suspect = c.device_id === "";
+                const suspect = c.device_id === '';
                 return (
                   <li
                     key={`${c.instance}-${c.addr}`}
                     className={cn(
-                      "rounded-xl border px-3 py-2.5",
-                      suspect
-                        ? "border-terracotta/40 bg-terracotta/5"
-                        : "border-ink/10",
+                      'rounded-xl border px-3 py-2.5',
+                      suspect ? 'border-terracotta/40 bg-terracotta/5' : 'border-ink/10',
                     )}
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm font-medium truncate">
-                        {c.instance || "(unnamed)"}
-                      </span>
-                      <span className="font-mono text-xs text-ink/55 shrink-0">
-                        {c.addr}
-                      </span>
+                      <span className="text-sm font-medium truncate">{c.instance || '(unnamed)'}</span>
+                      <span className="font-mono text-xs text-ink/55 shrink-0">{c.addr}</span>
                     </div>
                     <p
                       className={cn(
-                        "mt-1 text-xs font-mono truncate",
-                        suspect ? "text-terracotta-deep" : "text-ink/55",
+                        'mt-1 text-xs font-mono truncate',
+                        suspect ? 'text-terracotta-deep' : 'text-ink/55',
                       )}
                     >
-                      {suspect ? "no device id advertised" : c.device_id}
+                      {suspect ? 'no device id advertised' : c.device_id}
                     </p>
                     {suspect && (
                       <p className="mt-1.5 text-xs text-terracotta-deep leading-relaxed">
-                        A real controller always advertises a device id. Treat
-                        this responder as unverified — do not assume it is one
-                        of yours.
+                        A real controller always advertises a device id. Treat this responder as
+                        unverified — do not assume it is one of yours.
                       </p>
                     )}
                   </li>
@@ -1147,8 +975,8 @@ function CreateDeviceModal({
   onClose: () => void;
   onCreated: (res: DeviceCreateResponse) => void;
 }) {
-  const [locationId, setLocationId] = useState(locations[0]?.id ?? "");
-  const [label, setLabel] = useState("");
+  const [locationId, setLocationId] = useState(locations[0]?.id ?? '');
+  const [label, setLabel] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -1156,7 +984,7 @@ function CreateDeviceModal({
     e.preventDefault();
     setErrorMsg(null);
     if (!locationId) {
-      setErrorMsg("Pick a location.");
+      setErrorMsg('Pick a location.');
       return;
     }
     setSubmitting(true);
@@ -1169,12 +997,12 @@ function CreateDeviceModal({
     } catch (err) {
       const msg =
         err instanceof ApiError
-          ? err.code === "not_account_admin"
-            ? "Only account admins can pair devices."
+          ? err.code === 'not_account_admin'
+            ? 'Only account admins can pair devices.'
             : (err.detail ?? err.code)
           : err instanceof Error
             ? err.message
-            : "Could not create device.";
+            : 'Could not create device.';
       setErrorMsg(msg);
       setSubmitting(false);
     }
@@ -1184,8 +1012,7 @@ function CreateDeviceModal({
     <Modal open onClose={onClose}>
       <h2 className="font-display text-2xl mb-1">Pair a new device</h2>
       <p className="text-sm text-ink/60 mb-5">
-        Pick the location it lives at and give it a label so it's easier to
-        recognise.
+        Pick the location it lives at and give it a label so it's easier to recognise.
       </p>
       <form onSubmit={onSubmit} className="space-y-4">
         <label className="block">
@@ -1203,9 +1030,7 @@ function CreateDeviceModal({
           </select>
         </label>
         <label className="block">
-          <span className="text-sm font-medium text-ink/85">
-            Label (optional)
-          </span>
+          <span className="text-sm font-medium text-ink/85">Label (optional)</span>
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
@@ -1223,7 +1048,7 @@ function CreateDeviceModal({
             Cancel
           </button>
           <Button type="submit" variant="ink" disabled={submitting}>
-            {submitting ? "Creating…" : "Create + get claim token"}
+            {submitting ? 'Creating…' : 'Create + get claim token'}
           </Button>
         </div>
       </form>
@@ -1231,29 +1056,19 @@ function CreateDeviceModal({
   );
 }
 
-function ClaimTokenModal({
-  info,
-  onClose,
-}: {
-  info: DeviceCreateResponse;
-  onClose: () => void;
-}) {
+function ClaimTokenModal({ info, onClose }: { info: DeviceCreateResponse; onClose: () => void }) {
   return (
     <Modal open onClose={onClose}>
       <h2 className="font-display text-2xl mb-1">Claim token</h2>
       <p className="text-sm text-ink/60 mb-4">
-        Enter this on the controller within the next hour to complete pairing.{" "}
-        <span className="text-ink/85 font-medium">
-          It won't be shown again.
-        </span>
+        Enter this on the controller within the next hour to complete pairing.{' '}
+        <span className="text-ink/85 font-medium">It won't be shown again.</span>
       </p>
       <div className="rounded-xl bg-ink text-paper p-4 font-mono text-sm break-all">
         {info.claim_token}
       </div>
       <div className="mt-3 flex items-center justify-between text-xs text-ink/55">
-        <span>
-          Expires {fromUnix(info.claim_expires_at)?.toLocaleString() ?? "—"}
-        </span>
+        <span>Expires {fromUnix(info.claim_expires_at)?.toLocaleString() ?? '—'}</span>
         <button
           type="button"
           onClick={() => navigator.clipboard.writeText(info.claim_token)}
