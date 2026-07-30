@@ -240,7 +240,7 @@ in `cmd/hub/main.go`'s header and nowhere an operator would look:
 | `AQL_DEVICE_REFRESH_INTERVAL` | `5m` | how often every driver is re-discovered — how quickly a device that came back on the network reappears, and how quickly one that went away stops being asserted as live |
 | `AQL_ENERGY_INTERVAL` | `60s` | meter polling interval |
 | `AQL_ENERGY_SAMPLE_RETENTION` | `30d` | how long raw meter samples are kept before pruning. Deltas and a per-channel anchor sample survive, so history stays correct; `0` keeps everything forever |
-| `AQL_ENERGY_TZ` | UTC | the IANA timezone (`Africa/Johannesburg`) the hour/day/month rollup buckets are anchored to. **Worth setting.** Left unset, a "day" of energy runs midnight-to-midnight UTC, so every daily and monthly total is split at the wrong hour for anybody not on UTC — and the numbers look plausible rather than wrong |
+| `AQL_ENERGY_TZ` | UTC | the IANA timezone (`Africa/Johannesburg`) the hour/day/month rollup buckets are anchored to. **Set this before you start metering.** Left unset, a "day" of energy runs midnight-to-midnight UTC, so every daily and monthly total splits at the wrong hour for anybody not on UTC — and the numbers look plausible rather than wrong. Changing it later does **not** fix the history: the timezone is part of each rollup's identity in the database, every query filters on the current one, and rollups are only recomputed when new samples arrive for a bucket. The old rows stay where they are, correct and invisible. The hub warns at startup if metering is running without this set |
 
 Every `AQL_*` variable above still accepts its old `LINTEL_*` name: if `AQL_DATA_DIR` is
 unset, the hub reads `LINTEL_DATA_DIR` instead and logs a `WARN` naming both, once, after

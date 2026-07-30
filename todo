@@ -112,6 +112,25 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       TierHazardousMotion intact (tested in devices/httpdev). What is missing is vendor
       integration: a mower own protocol, docking, scheduling. No robot has been driven.
 
+## energy rollups and the timezone trap
+- [x] The hub now WARNS at startup when metering runs with AQL_ENERGY_TZ unset, and
+      hub/README.md says what the default costs. Rollup buckets anchor to UTC by default,
+      so every daily and monthly total splits at UTC midnight — wrong for most of the
+      world, and wrong in the way nobody notices: right shape, right magnitudes, only the
+      boundaries off.
+- NOTE: the reason this needed more than a doc line is that the mistake HARDENS. `tz` is
+      part of energy_rollups' primary key, every read filters on the current zone, and
+      rollups are recomputed only from the dirty queue ingest marks — "reads never do this
+      work" is a deliberate design property, not an oversight. So switching zones after
+      months of running leaves the old buckets correct and permanently invisible.
+- [ ] OPEN, and the honest remainder: there is NO remedy for a hub already in that state.
+      Re-bucketing would mean re-marking historical hours dirty for the new tz, and
+      nothing does that — no command, no migration. It is only possible at all within
+      AQL_ENERGY_SAMPLE_RETENTION (default 30 days), because past that the raw samples the
+      rollups would be rebuilt from have been pruned. Beyond the window the history is
+      recoverable only in the zone it was written in.
+      The warning prevents the trap. It does not get anybody out of one.
+
 ## blocked on something outside this repo
 - [ ] Matter — needs a certified device and a stack.
 - [ ] Modbus RTU (serial). TCP ships; a TCP-to-RTU bridge covers the common case.

@@ -1134,6 +1134,27 @@ func (h *hub) wireEnergy(cfg config) {
 		return
 	}
 
+	// Rollup buckets are anchored to a timezone and the default is UTC, which
+	// is the wrong answer for most of the world and produces numbers that look
+	// entirely right. Said at startup, and only when metering is actually
+	// running, because this is the last moment it is cheap to fix.
+	//
+	// The "later does not re-bucket" half is the part that makes this worth a
+	// warning rather than a doc line. tz is part of energy_rollups' primary key,
+	// every read filters on the CURRENT zone, and rollups are recomputed only
+	// from the dirty queue that ingest marks — reads never do that work, by
+	// design. So switching zones after months of running leaves the old buckets
+	// in the table, correct and permanently invisible, with no backfill path.
+	if cfg.energyTZ == "" {
+		h.log.Warn("AQL_ENERGY_TZ is not set, so energy rollups anchor to UTC. "+
+			"Every daily and monthly total will split at UTC midnight rather than local "+
+			"midnight, which is wrong for anywhere that is not UTC and looks plausible. "+
+			"Set it now rather than later: the timezone is part of each rollup's identity, "+
+			"so changing it afterwards does not re-bucket what is already stored — the old "+
+			"rows stay in the database and stop appearing in any query",
+			"set", "AQL_ENERGY_TZ", "example", "Africa/Johannesburg")
+	}
+
 	est := h.energy
 	// Route each meter's samples to the account that CLAIMED it, falling back
 	// to -energy-account for meters nobody has claimed. Without this the
