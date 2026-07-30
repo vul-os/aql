@@ -49,9 +49,18 @@ type Expected = {
   timescale: number;
   durationSeconds: number;
   codec: string;
+  chainSamples: number;
+  chainDurationSeconds: number;
 };
 
-type Fixture = { init: string; frags: string[]; expected: Expected };
+type Fixture = {
+  init: string;
+  frags: string[];
+  /** The same writer driven from RTP packets through the Assembler. */
+  chainInit: string;
+  chainFrag: string;
+  expected: Expected;
+};
 
 /**
  * Build the fixture by running the Go writer.
@@ -75,7 +84,13 @@ function buildFixture(): Fixture {
     const expected = JSON.parse(readFileSync(path.join(dir, 'expected.json'), 'utf-8')) as Expected;
     const b64 = (name: string) => readFileSync(path.join(dir, name)).toString('base64');
     const frags = Array.from({ length: expected.fragments }, (_, i) => b64(`frag${i}.m4s`));
-    return { init: b64('init.mp4'), frags, expected };
+    return {
+      init: b64('init.mp4'),
+      frags,
+      chainInit: b64('chain-init.mp4'),
+      chainFrag: b64('chain0.m4s'),
+      expected,
+    };
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -117,6 +132,19 @@ const MSE_PROBE = async ({ init, frags, codec }: { init: string; frags: string[]
   } catch (e) {
     return { supported: true as const, accepted: false as const, reason: String(e) };
   }
+
+  // videoWidth is populated when the element reaches metadata, which happens
+  // after appendBuffer resolves rather than as part of it. Read immediately it is
+  // a race: it was 320 on every run here and would be 0 on a slower machine, and
+  // a dimension assertion that passes by timing is worse than none. So wait for
+  // the transition, bounded — a width that never arrives is itself the answer,
+  // and reported as zero rather than as a timeout, because "Chromium never
+  // configured a video track from this init segment" is the finding.
+  const deadline = Date.now() + 5000;
+  while (video.videoWidth === 0 && Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 25));
+  }
+
   const ranges: Array<[number, number]> = [];
   for (let i = 0; i < sb.buffered.length; i++) {
     ranges.push([sb.buffered.start(i), sb.buffered.end(i)]);
@@ -165,6 +193,54 @@ test.describe('the fMP4 writer against Chromium', () => {
     // 90000/90000 — so an equality assertion here would be testing float
     // formatting rather than the container.
     expect(end).toBeCloseTo(expected.durationSeconds, 3);
+  });
+
+  // The chain, checked from outside: RTP packets -> Depacketizer -> Assembler ->
+  // Fragmenter -> Chromium, with the parameter sets taken from the stream in-band
+  // rather than from a variable in the fixture.
+  //
+  // The test above proves the container is valid when handed correct access
+  // units. This one proves the pipeline produces correct ones, which is the claim
+  // nothing could check while the middle of it did not exist.
+  //
+  // Verified to fail, not assumed to: halving every duration the Assembler
+  // computes makes this report 0.167s against the 0.333s the packet timestamps
+  // imply. That only works because the expectation is derived from the fixture's
+  // INPUT — the first version summed the emitted durations, and the same tamper
+  // passed, because fixture and expectation moved together and Chromium
+  // confirmed a self-consistent lie.
+  //
+  // A start code left on a NAL fails earlier, during fixture generation, since
+  // Fragment refuses Annex-B input — so that defect never reaches here, which is
+  // the intended order.
+  test('access units assembled from RTP packets mux into something Chromium plays', async ({ page }) => {
+    const { chainInit, chainFrag, expected } = buildFixture();
+    await page.goto('about:blank');
+
+    const result = await page.evaluate(MSE_PROBE, {
+      init: chainInit,
+      frags: [chainFrag],
+      codec: expected.codec,
+    });
+    if (!result.supported) throw new Error(`this Chromium does not support ${result.mime}`);
+    expect(
+      result.accepted,
+      `Chromium refused the assembled chain: ${'reason' in result ? result.reason : ''}`,
+    ).toBe(true);
+    if (!result.accepted) return;
+
+    // The parameter sets travelled in-band, so agreement here means the
+    // Assembler captured the SPS correctly and the Fragmenter built avcC from it.
+    expect(result.videoWidth).toBe(expected.width);
+    expect(result.videoHeight).toBe(expected.height);
+
+    expect(result.ranges.length, `buffered ranges: ${JSON.stringify(result.ranges)}`).toBe(1);
+    const [start, end] = result.ranges[0];
+    expect(start).toBeCloseTo(0, 3);
+    // The durations here were computed by the Assembler from RTP timestamp
+    // deltas, not written by hand — so this range is those deltas, read back by
+    // a third party.
+    expect(end - start).toBeCloseTo(expected.chainDurationSeconds, 3);
   });
 
   // The check above is only worth having if it can fail. A corrupted box length

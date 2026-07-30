@@ -22,7 +22,9 @@ package camera
 // an H.264 decoder, a piece of software this repository has no reason to
 // reimplement and no CGO policy that would let it wrap one. Muxing them into
 // a file is a separate job again, with its own retention decisions
-// (docs/CAMERA-RETENTION.md), and is deliberately out of scope here.
+// (docs/CAMERA-RETENTION.md), and is deliberately out of scope here — it lives
+// in fmp4.go, with accessunit.go grouping this file's output into the pictures
+// a muxer needs.
 //
 // # Why a lost packet must destroy the whole NAL, not just a few bytes
 //
@@ -131,7 +133,7 @@ func (d *Depacketizer) Reset() { *d = Depacketizer{} }
 // caller that only logs a stream of transient per-packet errors will not
 // notice the pattern the way a running counter makes visible.
 func (d *Depacketizer) Push(pkt []byte) ([][]byte, error) {
-	seq, payload, err := parseRTPHeader(pkt)
+	hdr, payload, err := parseRTPHeader(pkt)
 	if err != nil {
 		// The RTP framing itself is unusable, so nothing about this packet's
 		// place in a sequence can be trusted either. Whatever FU-A run was in
@@ -153,7 +155,7 @@ func (d *Depacketizer) Push(pkt []byte) ([][]byte, error) {
 	naluType := payload[0] & 0x1F
 
 	if naluType == 28 {
-		return d.fuA(seq, payload)
+		return d.fuA(hdr.Seq, payload)
 	}
 
 	// Any packet type other than a continuing FU-A fragment ends whatever
@@ -379,36 +381,58 @@ const rtpFixedHeaderLen = 12
 // and is bounds-checked the same way: computed, checked against what is
 // actually left in the packet, and only then used to advance past bytes that
 // might not be there.
-func parseRTPHeader(pkt []byte) (seq uint16, payload []byte, err error) {
+// rtpHeader is the part of RFC 3550 §5.1 this package acts on.
+//
+// Timestamp and Marker exist for accessunit.go: all packets of one access unit
+// carry the same timestamp, which is how a frame boundary is recognised without
+// parsing a slice header. Returned as a struct rather than added to the return
+// list because a five-value signature invites callers to mix up two uint fields
+// that are both plausible in either position.
+type rtpHeader struct {
+	Seq uint16
+	// Timestamp is the sampling instant of the access unit this packet belongs
+	// to, in the media clock (90 kHz for H.264). Shared by every packet of one
+	// frame, and it wraps — a uint32 at 90 kHz wraps in about 13¼ hours, so
+	// deltas must be taken as signed differences rather than by subtraction.
+	Timestamp uint32
+	// Marker is set by a sender on the last packet of an access unit
+	// (RFC 6184 §5.1). Recorded but never used to close one — see accessunit.go
+	// for why.
+	Marker bool
+}
+
+func parseRTPHeader(pkt []byte) (hdr rtpHeader, payload []byte, err error) {
 	if len(pkt) < rtpFixedHeaderLen {
-		return 0, nil, fmt.Errorf(
+		return rtpHeader{}, nil, fmt.Errorf(
 			"camera: rtp/h264: %d-byte packet shorter than the 12-byte RTP header", len(pkt))
 	}
 	version := pkt[0] >> 6
 	if version != 2 {
-		return 0, nil, fmt.Errorf("camera: rtp/h264: RTP version %d, want 2", version)
+		return rtpHeader{}, nil, fmt.Errorf("camera: rtp/h264: RTP version %d, want 2", version)
 	}
 	padded := pkt[0]&0x20 != 0
 	extended := pkt[0]&0x10 != 0
 	csrcCount := int(pkt[0] & 0x0F)
-	seq = binary.BigEndian.Uint16(pkt[2:4])
+	hdr.Seq = binary.BigEndian.Uint16(pkt[2:4])
+	hdr.Timestamp = binary.BigEndian.Uint32(pkt[4:8])
+	hdr.Marker = pkt[1]&0x80 != 0
 
 	off := rtpFixedHeaderLen + 4*csrcCount
 	if off > len(pkt) {
-		return 0, nil, fmt.Errorf("camera: rtp/h264: CSRC count %d runs past the packet", csrcCount)
+		return rtpHeader{}, nil, fmt.Errorf("camera: rtp/h264: CSRC count %d runs past the packet", csrcCount)
 	}
 	if extended {
 		// RFC 3550 §5.3.1: a 2-byte profile-specific id this package does not
 		// interpret, then a 2-byte length in 32-bit WORDS (not bytes) that the
 		// extension data occupies.
 		if off+4 > len(pkt) {
-			return 0, nil, errors.New(
+			return rtpHeader{}, nil, errors.New(
 				"camera: rtp/h264: extension flag set with no room for the 4-byte extension header")
 		}
 		extWords := int(binary.BigEndian.Uint16(pkt[off+2 : off+4]))
 		off += 4 + 4*extWords
 		if off > len(pkt) {
-			return 0, nil, fmt.Errorf(
+			return rtpHeader{}, nil, fmt.Errorf(
 				"camera: rtp/h264: header extension declares %d word(s) past the packet", extWords)
 		}
 	}
@@ -416,18 +440,18 @@ func parseRTPHeader(pkt []byte) (seq uint16, payload []byte, err error) {
 	end := len(pkt)
 	if padded {
 		if off >= end {
-			return 0, nil, errors.New(
+			return rtpHeader{}, nil, errors.New(
 				"camera: rtp/h264: padding flag set with no payload byte to hold a pad count")
 		}
 		// RFC 3550 §5.1: the last byte of the packet, when P is set, is the
 		// count of padding bytes including itself.
 		padCount := int(pkt[end-1])
 		if padCount == 0 || off+padCount > end {
-			return 0, nil, fmt.Errorf(
+			return rtpHeader{}, nil, fmt.Errorf(
 				"camera: rtp/h264: padding count %d does not fit the %d-byte payload region",
 				padCount, end-off)
 		}
 		end -= padCount
 	}
-	return seq, pkt[off:end], nil
+	return hdr, pkt[off:end], nil
 }

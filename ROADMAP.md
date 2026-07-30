@@ -390,15 +390,25 @@ and none has met physical hardware.
       version-1 `trun`. Fragmented rather than plain MP4 because a plain MP4 truncated
       mid-write is not a shorter video, it is a file with no index — and a recorder is
       precisely the workload a full disk or a reboot kills mid-clip.
-      **This is the first piece of the camera pipeline checked by something outside this
-      repository.** `e2e-browser/fmp4.spec.ts` feeds the writer's real output to a Chromium
-      `MediaSource`: Chromium parses the boxes, pulls the SPS out of `avcC` with its own
-      parser, and reports back 320x240 and a single contiguous 1.000 s buffered range across
-      three fragments. A wrong `data_offset` — four bytes — makes it refuse the segments
-      outright, so the gate is load-bearing, and a deliberately corrupted `moov` length is
-      asserted to be refused so acceptance means something. Access-unit grouping stays the
-      caller's job: it needs slice headers, and a second under-tested bitstream parser hidden
-      behind a box writer would surface its mistakes as timing drift rather than as an error.
+      **Access-unit assembly now closes the chain** (`accessunit.go`). h264.go produced NAL
+      units and fmp4.go consumed access units, and nothing turned one into the other — the
+      path from a camera's packets to a file was broken in the middle. Grouping does not need
+      the slice-header parser that made it look expensive: RFC 3550 §5.1 requires every packet
+      of one picture to share an RTP timestamp, so the boundary costs four bytes of header.
+      The marker bit is deliberately *not* trusted to close a picture — real senders set it
+      early, late or never — and is cross-checked instead, so an unreliable camera shows up as
+      a number rather than as split frames. In-band parameter sets are captured and kept out
+      of the samples, which is what makes a camera that advertises no `sprop-parameter-sets`
+      usable at all.
+      **This is the first part of the camera pipeline checked by something outside this
+      repository.** `e2e-browser/fmp4.spec.ts` feeds real output to a Chromium `MediaSource`,
+      which parses the boxes, pulls the SPS out of `avcC` with its own parser, and reports
+      back 320x240 and contiguous buffered ranges — for the muxer alone, and for the whole
+      RTP→Depacketizer→Assembler→Fragmenter chain with the parameter sets taken in-band. Both
+      gates are verified to fail rather than assumed to: a four-byte `data_offset` error makes
+      Chromium refuse the segments, and halving every assembled duration is caught as a
+      0.167 s range against the 0.333 s the packet timestamps imply. A deliberately corrupted
+      `moov` length is asserted to be refused, so acceptance means something.
       What none of it proves is stated plainly: the vectors were written from the RFC and
       the standard, and no camera has been involved anywhere in this package. Chromium
       agreeing is a real independent check on the container and the parameter sets; it is not

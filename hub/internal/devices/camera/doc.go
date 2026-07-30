@@ -59,6 +59,26 @@
 // way compiles, passes tests built on its own assumptions, and fails the first
 // time it meets hardware.
 //
+// # That claim was half wrong about the writer, and the reason is worth keeping
+//
+// The argument above lumps two different things together. "Code written blind
+// passes tests built on its own assumptions" is exactly right, and it is an
+// argument about who checks the output, not about whether the output can be
+// produced without hardware. A container format has a second reader that is not
+// a camera: every player ever written.
+//
+// So fmp4.go and accessunit.go exist, and their output goes to Chromium's
+// demuxer (e2e-browser/fmp4.spec.ts) rather than only to tests written from the
+// same reading of the same standard this package's writer was. That closes the
+// circularity the paragraph above is really about — a misreading of ISO/IEC
+// 14496-12 now has to be one Chromium shares.
+//
+// What does NOT have a second reader is the RTSP media client: the bytes it
+// would exchange are only meaningful to the camera at the other end, and a fake
+// written from the RFC agrees with the client by construction. That half of the
+// blocker stands unchanged, and it is why VerifyMediaFlow still counts packets
+// rather than consuming them.
+//
 // The OTHER half of that blocker is gone. "A storage design this repository does
 // not have" was true for a long time and is not now: docs/CAMERA-RETENTION.md
 // settles where clips live, how long they last, who may watch, what a full disk
