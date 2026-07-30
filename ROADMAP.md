@@ -434,11 +434,19 @@ and none has met physical hardware.
       Chromium refuse the segments, and halving every assembled duration is caught as a
       0.167 s range against the 0.333 s the packet timestamps imply. A deliberately corrupted
       `moov` length is asserted to be refused, so acceptance means something.
+      **The chain is now joined end to end** (`ConsumeMedia`). `countInterleaved` had every
+      RTP packet in hand and threw it away after counting, so the four tested components of
+      this package — depacketizer, SPS parser, assembler, muxer — were reachable from no
+      camera. `ConsumeMedia` runs the same SETUP/PLAY as the probe and pushes each packet
+      through to the assembler, returning access units and the flow statistics side by side:
+      a stream that delivers a thousand packets and assembles no picture is a real
+      diagnosis, and distinct from one that delivers nothing.
       What none of it proves is stated plainly: the vectors were written from the RFC and
-      the standard, and no camera has been involved anywhere in this package. Chromium
+      the standard, and NO CAMERA HAS BEEN INVOLVED ANYWHERE IN THIS PACKAGE. Chromium
       agreeing is a real independent check on the container and the parameter sets; it is not
-      a real camera, and the sample payloads are not decodable pictures. An RTSP media client
-      and hardware validation remain. The retention worker, the `camera:view` permission and
+      a real camera, and the sample payloads are not decodable pictures. What remains is a
+      recording worker that writes clips under the retention policy, a viewer, and the thing
+      no amount of code closes: hardware. The retention worker, the `camera:view` permission and
       the viewer do not — but building a retention policy for footage that does not exist yet
       is the wrong order
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row

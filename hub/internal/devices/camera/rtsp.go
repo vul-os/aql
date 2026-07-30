@@ -16,16 +16,32 @@ package camera
 // works and it carries H.264 1920x1080", which is exactly the question someone
 // wiring up a camera has.
 //
-// What it still does not do is receive a frame. No SETUP, no PLAY, no RTP, no
-// decoding, no recording, no live view. The package doc explains why at length
-// and the reasoning has not changed: those need a real camera to develop against
-// and a storage design this repository does not have — where clips live, for how
-// long, who may see them, what happens when the disk fills, what a resident is
-// told when retention silently drops the evening they care about.
+// That paragraph described the whole file once, and stopped being true twice
+// over without being rewritten. It said "No SETUP, no PLAY, no RTP" while
+// ProbeMedia — four hundred lines below it — did all three, and it cited "a
+// storage design this repository does not have" after
+// docs/CAMERA-RETENTION.md settled exactly that. Both are corrected here rather
+// than left for a reader to discover by scrolling.
 //
-// The line moved by exactly one request, and it moved because a DESCRIBE is
-// testable against a server a test can stand up in-process. That is the same
-// standard every other driver here is held to.
+// What this file does today, in the order the functions appear:
+//
+//	Describe      DESCRIBE only. One request, no session held, so a probe never
+//	              takes a slot from whatever is actually watching.
+//	ProbeMedia    SETUP and PLAY on the first video track, then count RTP for a
+//	              window and TEAR DOWN. Answers "does anything actually come
+//	              out of this URL", which DESCRIBE cannot.
+//	ConsumeMedia  the same, with the packets kept: each one goes through the
+//	              Depacketizer and Assembler, and completed access units come
+//	              back. This is the join that turns the four tested components
+//	              of this package into a chain from socket to playable file.
+//
+// What is still absent, and is the honest remainder: no picture is decoded, no
+// clip is written to a disk, there is no live view, and NOTHING HERE HAS MET A
+// CAMERA. Every test above runs against an in-process RTSP server, so what they
+// establish is that this code agrees with the RFCs as this repository reads
+// them — the media probe's server writes its framing from RFC 2326 §10.12 and
+// RFC 3550 §5.1 independently, which is as close to a cross-check as is
+// available without hardware, and it is not hardware.
 //
 // # Why not just reuse net/http
 //
@@ -727,6 +743,49 @@ func (m MediaFlow) Summary() string {
 // description would throw away half of it.
 func ProbeMedia(ctx context.Context, rawURL string, cred Credential,
 	timeout, window time.Duration) (StreamInfo, MediaFlow, error) {
+	return probeMedia(ctx, rawURL, cred, timeout, window, nil)
+}
+
+// ConsumeMedia is ProbeMedia with the packets kept instead of discarded: every
+// RTP packet read off the interleaved connection is pushed through a
+// Depacketizer and an Assembler, and the completed access units are returned.
+//
+// This is the join the package was missing. h264.go turned packets into NAL
+// units, accessunit.go turned those into pictures and fmp4.go turned pictures
+// into a playable file, but nothing carried packets from the socket into the
+// first of them — countInterleaved had each packet in hand and threw it away
+// after counting.
+//
+// The MediaFlow is returned alongside, because the two answer different
+// questions and one does not imply the other: a stream can deliver a thousand
+// packets and no complete access unit (every one of them a fragment of a picture
+// whose remainder never arrived), and the difference between "nothing arrived"
+// and "everything arrived and none of it assembled" is the whole diagnosis.
+//
+// The Assembler is returned rather than kept, so a caller can read its
+// parameter sets — a camera that advertises no sprop-parameter-sets sends them
+// in-band, and SPS()/PPS() is where they land.
+func ConsumeMedia(ctx context.Context, rawURL string, cred Credential,
+	timeout, window time.Duration) (StreamInfo, MediaFlow, []AccessUnit, *Assembler, error) {
+	a := NewAssembler()
+	var units []AccessUnit
+	info, flow, err := probeMedia(ctx, rawURL, cred, timeout, window, func(pkt []byte) {
+		done, perr := a.Push(pkt)
+		if perr != nil {
+			// Per-packet errors are diagnostics, not failures — the same
+			// contract Depacketizer.Push has. A malformed packet in a stream is
+			// ordinary; Depacketizer().Dropped() is the durable record.
+			return
+		}
+		units = append(units, done...)
+	})
+	return info, flow, units, a, err
+}
+
+// probeMedia runs DESCRIBE, SETUP and PLAY, and reads for window. onRTP, when
+// non-nil, receives every RTP packet as it arrives.
+func probeMedia(ctx context.Context, rawURL string, cred Credential,
+	timeout, window time.Duration, onRTP func(pkt []byte)) (StreamInfo, MediaFlow, error) {
 	if timeout <= 0 {
 		timeout = DefaultRTSPTimeout
 	}
@@ -804,14 +863,15 @@ func ProbeMedia(ctx context.Context, rawURL string, cred Credential,
 			safeURL, resp.status, resp.reason)
 	}
 
-	flow := countInterleaved(conn, br, window)
+	flow := countInterleaved(conn, br, window, onRTP)
 	flow.Window = window
 	return info, flow, nil
 }
 
 // countInterleaved reads `$<channel><len16><data>` frames and counts the RTP
-// ones, without interpreting a single payload byte.
-func countInterleaved(conn net.Conn, br *bufio.Reader, window time.Duration) MediaFlow {
+// ones. It interprets no payload byte itself; onRTP, when non-nil, is handed
+// each packet so a caller can (ConsumeMedia does).
+func countInterleaved(conn net.Conn, br *bufio.Reader, window time.Duration, onRTP func(pkt []byte)) MediaFlow {
 	var flow MediaFlow
 	types := map[int]bool{}
 	ssrcs := map[uint32]bool{}
@@ -860,6 +920,14 @@ func countInterleaved(conn net.Conn, br *bufio.Reader, window time.Duration) Med
 		ssrc := binary.BigEndian.Uint32(payload[8:12])
 		ssrcs[ssrc] = true
 		seqs.observe(ssrc, binary.BigEndian.Uint16(payload[2:4]))
+		if onRTP != nil {
+			// After the counters, so a packet the consumer chokes on is still
+			// counted — the flow statistics describe what ARRIVED, and must not
+			// become a function of what could be decoded. `payload` is not
+			// retained here: it is freshly allocated per frame above, so the
+			// sink may keep it.
+			onRTP(payload)
+		}
 	}
 
 	for t := range types {

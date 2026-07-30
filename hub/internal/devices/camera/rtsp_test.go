@@ -2,6 +2,7 @@ package camera
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/md5"
 	"encoding/binary"
@@ -31,6 +32,12 @@ type fakeRTSP struct {
 	// the failure the media probe exists to catch.
 	rtpPackets int
 	rtpPayload byte
+	// rtpNAL, when set, is used as each packet's RTP payload instead of the
+	// 20 filler bytes — a single NAL unit packet (RFC 6184 §5.6, where the
+	// packet payload IS the NAL unit, nothing wrapped). Set by the
+	// consume-path test so the bytes leaving this server are something the
+	// depacketizer can actually read.
+	rtpNAL []byte
 	// rtpDropEvery makes the fake SKIP a sequence number every N packets
 	// without sending it — a stream that is flowing and lossy, which is what a
 	// camera on a weak link produces and what a packet counter alone reports
@@ -425,7 +432,7 @@ func TestSDPParsingIgnoresWhatItDoesNotKnow(t *testing.T) {
 // faithfully, and H.264 depacketization is not.
 func (f *fakeRTSP) serveMedia(c net.Conn, method, cseq string) {
 	f.mu.Lock()
-	n, pt := f.rtpPackets, f.rtpPayload
+	n, pt, nal := f.rtpPackets, f.rtpPayload, f.rtpNAL
 	dropEvery, startSeq := f.rtpDropEvery, f.rtpStartSeq
 	setupStatus, playStatus := f.setupStatus, f.playStatus
 	switch method {
@@ -465,7 +472,14 @@ func (f *fakeRTSP) serveMedia(c net.Conn, method, cseq string) {
 			if dropEvery > 0 && i%dropEvery == 0 && i != 0 {
 				continue
 			}
-			payload := make([]byte, 12+20)
+			body := 20
+			if len(nal) > 0 {
+				body = len(nal)
+			}
+			payload := make([]byte, 12+body)
+			if len(nal) > 0 {
+				copy(payload[12:], nal)
+			}
 			payload[0] = 0x80 // version 2
 			payload[1] = pt   // marker clear, payload type
 			binary.BigEndian.PutUint16(payload[2:4], seq)
@@ -690,5 +704,101 @@ func TestSequenceWrapThroughTheProbeIsNotLoss(t *testing.T) {
 	}
 	if flow.SourceRestarts != 0 {
 		t.Errorf("the wrap was read as %d source restart(s): %s", flow.SourceRestarts, flow.Summary())
+	}
+}
+
+// The join: RTSP socket -> Depacketizer -> Assembler -> access units.
+//
+// Every component in that chain was already tested on its own, and none of them
+// was reachable from a camera. countInterleaved had each RTP packet in hand and
+// discarded it after counting; the file comment above it said the package did
+// "No SETUP, no PLAY, no RTP" while four hundred lines below it did all three.
+// So this test is about PLUMBING, and says so rather than claiming more:
+//
+//	what it proves      packets read off a real interleaved RTSP connection
+//	                    reach the assembler, and access units come out with the
+//	                    timestamps the wire carried
+//	what it does not    that the depacketizer is right about RFC 6184 (h264_test
+//	                    covers that from literal bytes), or that any real camera
+//	                    frames things this way
+//
+// The payload is a single NAL unit packet, which under RFC 6184 §5.6 means the
+// packet payload simply IS the NAL unit — nothing this package packetized. A
+// fixture built by our own packetizer would prove the two agree with each other,
+// which is the trap h264.go's comment names.
+func TestConsumeMediaAssemblesAccessUnitsFromTheWire(t *testing.T) {
+	// nal_unit_type 1, a non-IDR slice, then arbitrary bytes. The assembler
+	// groups by RTP timestamp, and serveMedia advances it by 3000 per packet,
+	// so each packet is its own picture.
+	nal := []byte{0x41, 0x9a, 0x00, 0x11}
+	srv := newFakeRTSP(t)
+	srv.set(func(f *fakeRTSP) {
+		f.rtpPackets = 5
+		f.rtpNAL = nal
+	})
+
+	info, flow, units, a, err := ConsumeMedia(context.Background(), srv.url("/cam"),
+		Credential{}, 2*time.Second, 700*time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.VideoCodec() != "H264" {
+		t.Errorf("codec = %q, want H264", info.VideoCodec())
+	}
+	if flow.Packets != 5 {
+		t.Fatalf("flow.Packets = %d, want 5 — the counters must still work with a sink attached", flow.Packets)
+	}
+
+	// Five packets at five distinct timestamps close four pictures; the fifth
+	// stays open because nothing has said when it ends. That asymmetry is the
+	// assembler's contract, and seeing it here is what shows the timestamps
+	// survived the trip rather than being invented at this end.
+	if len(units) != 4 {
+		t.Fatalf("assembled %d access units from 5 packets, want 4 (the last stays open)", len(units))
+	}
+	for i, au := range units {
+		if au.Duration != 3000 {
+			t.Errorf("unit %d duration = %d, want 3000 — the gap serveMedia put between timestamps", i, au.Duration)
+		}
+		if len(au.NALUnits) != 1 {
+			t.Fatalf("unit %d holds %d NAL units, want 1", i, len(au.NALUnits))
+		}
+		if !bytes.Equal(au.NALUnits[0], nal) {
+			t.Errorf("unit %d NAL = % x, want % x — start code not stripped, or payload mangled", i, au.NALUnits[0], nal)
+		}
+		if au.IsSync {
+			t.Errorf("unit %d is marked a sync sample; type-1 slices are not IDR", i)
+		}
+	}
+	if a.Emitted() != 4 {
+		t.Errorf("assembler Emitted() = %d, want 4", a.Emitted())
+	}
+	if d := a.Depacketizer().Dropped(); d != 0 {
+		t.Errorf("depacketizer dropped %d NAL units from a clean stream", d)
+	}
+}
+
+// A stream that delivers packets and assembles nothing is a real diagnosis, and
+// distinct from one that delivers nothing. Both must be reportable, which is why
+// ConsumeMedia returns the flow alongside the units rather than instead of them.
+func TestConsumeMediaSeparatesPacketsArrivingFromPicturesAssembling(t *testing.T) {
+	// nal_unit_type 28 is FU-A, a fragment. Every packet is a continuation with
+	// no start bit, so the depacketizer correctly reconstructs nothing.
+	srv := newFakeRTSP(t)
+	srv.set(func(f *fakeRTSP) {
+		f.rtpPackets = 4
+		f.rtpNAL = []byte{0x7c, 0x01, 0xaa} // FU indicator, FU header S=0 E=0
+	})
+
+	_, flow, units, _, err := ConsumeMedia(context.Background(), srv.url("/cam"),
+		Credential{}, 2*time.Second, 700*time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if flow.Packets != 4 {
+		t.Errorf("flow.Packets = %d, want 4 — packets arrived", flow.Packets)
+	}
+	if len(units) != 0 {
+		t.Errorf("assembled %d access units from orphan fragments, want 0", len(units))
 	}
 }
