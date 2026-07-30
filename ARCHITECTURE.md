@@ -22,9 +22,9 @@ exist and which are design intent. The condensed operator-facing tour is
 
 | Layer | Status |
 | --- | --- |
-| Hub (`hub/`) — open path, console, API, device hub, audit | **Built.** 60 HTTP routes, 219 Go tests green across 8 packages |
+| Hub (`hub/`) — open path, console, API, device hub, audit | **Built.** 126 HTTP routes, 1,056 Go test functions green across 17 packages |
 | **Access module** — the first device kind wired end to end | **Built.** Signed commands, pinned-key controller, offline grants, tamper-evident audit |
-| Controller agent (`controller/`) — pairing, signed commands, grants, events | **Built.** 45 Go tests green. GPIO relay driver and BLE radio are **not** |
+| Controller agent (`controller/`) — pairing, signed commands, grants, events | **Built.** 130 Go test functions green. GPIO relay driver and BLE radio are **not** |
 | Wire contracts (`proto/`) | **Built.** 63 conformance vectors, 70 checks, consumed by both sides |
 | Cross-module harness (`e2e/`) | **Built.** Boots real binaries and drives the open path over the wire |
 | Web console + desktop shell (`src/`, `src-tauri/`) | **Built.** Admin surfaces, the device / energy / automations screens over the real engine, and an emergency-access screen that requests and stores an offline grant |
@@ -118,7 +118,7 @@ ports.
 aql/
 ├── hub/          # 🟢 the hub: Go, the whole product server (auth, open path, device hub, admin)
 │                 #    …plus channels/, the transitional chat adapters moving to Ephor (§3a)
-│   └── migrations/   # SQLite schema, clean folded baseline (19 migrations, 42 tables)
+│   └── migrations/   # SQLite schema, clean folded baseline (24 migrations, 48 tables)
 ├── controller/   # 🟢 reference gate device agent (own Go module); GPIO/BLE need real hardware
 ├── e2e/          # 🟢 cross-module suite, real hub + controller binaries over the wire
 ├── proto/        # 🟢 pairing · commands · grants · events contracts (+ vectors/ fixtures)

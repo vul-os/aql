@@ -51,14 +51,21 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 ## blocked on something outside this repo
 - [ ] Matter — needs a certified device and a stack.
 - [ ] Modbus RTU (serial). TCP ships; a TCP-to-RTU bridge covers the common case.
-- [ ] The camera pipeline: H.264 depacketization and an fMP4 writer. The ONVIF driver
-      discovers cameras, probes streams with RTSP, and reads RTP headers — packet counts
-      and sequence-number loss, so "flowing" and "intact" are separate answers — but has
-      never decoded a frame. Depacketization is the line: a fake written from the same
-      RFC would agree with the code under test, so it waits for a real camera.
-      `docs/CAMERA-RETENTION.md` is the design that has to exist first — it is design
-      only, and steps 3–5 in it (retention worker, `camera:view` permission, viewer) do
-      NOT need hardware.
+- [x] The camera pipeline. All five steps of `docs/CAMERA-RETENTION.md` §4 are code:
+      RTSP media (SETUP/PLAY/interleaved TCP), RFC 6184 depacketization, SPS parsing,
+      access-unit assembly, an fMP4 writer, a recorder with per-camera retention and a
+      free-space floor, an orphan sweep for files the index cannot see, a `camera:view`
+      grant per member per camera with an audit row for every view AND every refusal,
+      a clip list that renders its gaps, and MSE live view.
+      WHAT REMAINS IS HARDWARE, and it is not a small remainder. Nothing here has met a
+      camera: every test drives an in-process RTSP server, so a fake written from the
+      same RFC agreeing with the code under test is still the risk on the wire format.
+      Chromium ACCEPTS the container — a real independent check on the boxes, the avcC
+      and the SPS — and never decodes a picture, because the fixture payloads are not
+      decodable ones. And the retention arithmetic deletes real files under rules
+      nobody has exercised on real footage. Recording is also one RTSP session per
+      window rather than one held open: worse on a real camera, and honest about what
+      has been verified.
 - [ ] Ephor chat-rail migration steps 1–7 (docs/EPHOR-CHAT-SEAM.md) — needs a kotva retag
       and a crate that does not exist yet.
 - [ ] COORD-2 — filed to ephor/COORDINATION.md, awaiting a spec ruling. `LockIn` has two

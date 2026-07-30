@@ -70,8 +70,8 @@ last path is only three-quarters built; see [Emergency access](emergency-access.
 
 | Component | What it is | Status | Stack |
 | --- | --- | --- | --- |
-| **hub** (`hub/`) | The entire server: the open path, console, API, device hub, audit | **Shipped** — 60 routes, 219 tests green | Go · SQLite (`modernc.org/sqlite`, no CGO) · embedded console |
-| **controller** (`controller/`) | The unit wired to the gate relay; verifies signatures, drives the motor | **Shipped** — 45 tests green; GPIO relay and BLE radio still unvalidated | Go, std-lib first, own module |
+| **hub** (`hub/`) | The entire server: the open path, console, API, device hub, audit | **Shipped** — 126 routes, 1,056 test functions green | Go · SQLite (`modernc.org/sqlite`, no CGO) · embedded console |
+| **controller** (`controller/`) | The unit wired to the gate relay; verifies signatures, drives the motor | **Shipped** — 130 test functions green; GPIO relay and BLE radio still unvalidated | Go, std-lib first, own module |
 | **e2e** (`e2e/`) | Cross-module harness: boots the real hub + controller binaries and proves the open path over the wire | **Shipped** | Go, subprocess-driven |
 | **console / app** (`src/`, `src-tauri/`) | Web console embedded in the hub, plus a Tauri v2 desktop shell with a hub picker | **Shipped** (admin surfaces) | React 19 · Vite · Tauri v2 |
 | **proto** (`proto/`) | The versioned wire contracts + conformance vectors | **Shipped** — 63 vectors, 70 checks | Markdown + JSON fixtures |
