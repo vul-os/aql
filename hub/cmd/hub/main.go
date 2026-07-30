@@ -110,6 +110,7 @@ import (
 	"github.com/vul-os/aql/hub/internal/energy"
 	"github.com/vul-os/aql/hub/internal/httpapi"
 	"github.com/vul-os/aql/hub/internal/keys"
+	"github.com/vul-os/aql/hub/internal/recording"
 	"github.com/vul-os/aql/hub/internal/store"
 )
 
@@ -639,6 +640,48 @@ func buildHub(cfg config, log *slog.Logger) (*hub, error) {
 		name: "gateway-key-rotation",
 		run:  h.srv.RunKeyRotationSweep,
 	})
+
+	// Camera-clip retention. Constructed unconditionally and cheap when idle: it
+	// derives its work from the clip index, so a hub that has never recorded
+	// sweeps an empty set once an hour.
+	//
+	// Wired here rather than left for whatever eventually starts capturing,
+	// because a retention sweep with no caller is the failure mode the reclaim
+	// guard names — correct code, and storage that grows without limit until
+	// somebody goes looking. A camera dropped from the config still has footage
+	// on the disk, and this is what bounds it.
+	if rec, err := recording.New(h.store, recording.Config{
+		Root: filepath.Join(cfg.dataDir, "recordings"),
+		Log:  h.log,
+	}); err != nil {
+		h.log.Error("recording: retention worker not started", "err", err)
+	} else {
+		// The loop is written here rather than inside the package so the
+		// wiring is visible where someone reads to find out what runs on its
+		// own. It sweeps once at startup — a hub that was off for a week comes
+		// back with a week of expired footage — and hourly after that, which is
+		// frequent enough that clips leave within an hour of their deadline and
+		// rare enough to be invisible on a Pi.
+		h.workers = append(h.workers, worker{
+			name: "camera-clip-retention",
+			run: func(ctx context.Context) {
+				t := time.NewTicker(recording.RetentionInterval)
+				defer t.Stop()
+				for {
+					if n, err := rec.ExpireAll(ctx); err != nil {
+						h.log.Error("camera clip retention sweep failed", "err", err)
+					} else if n > 0 {
+						h.log.Info("camera clip retention", "expired", n)
+					}
+					select {
+					case <-ctx.Done():
+						return
+					case <-t.C:
+					}
+				}
+			},
+		})
+	}
 	return h, nil
 }
 

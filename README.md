@@ -91,17 +91,25 @@ theme one click away.
 |  |  |
 | :---: | :---: |
 | **Devices** — every kind in one list | **Energy** — measured, estimated and unmeasured kept apart |
-| <img src="site/screenshots/portal-devices.png" alt="Aql devices" /> | <img src="site/screenshots/portal-energy.png" alt="Aql energy" /> |
+| <img src="site/screenshots/portal-devices.png" alt="Aql devices — every device kind in one list, with live state" /> | <img src="site/screenshots/portal-energy.png" alt="Aql energy — usage over time, with unmeasured hours drawn as gaps" /> |
 | **Automations** — when → do, with the tier ceiling shown | **Access points** — gates, doors and barriers |
-| <img src="site/screenshots/portal-automations.png" alt="Aql automations" /> | <img src="site/screenshots/portal-locations.png" alt="Aql access points" /> |
-| **Analytics** — opens, denials and who | **Emergency access** — set up before you need it |
-| <img src="site/screenshots/portal-analytics.png" alt="Aql analytics" /> | <img src="site/screenshots/app-emergency.png" alt="Aql emergency access, mobile" /> |
+| <img src="site/screenshots/portal-automations.png" alt="Aql automations — trigger, condition and action rules with their tier ceiling" /> | <img src="site/screenshots/portal-locations.png" alt="Aql access points — the gates, doors and barriers on a location" /> |
+| **Analytics** — opens, denials and who | **Access rules** — geofences and time windows, checked on the hub |
+| <img src="site/screenshots/portal-analytics.png" alt="Aql analytics — opens and denials over time, and who they belong to" /> | <img src="site/screenshots/portal-access-rules.png" alt="Aql access rules — geofences and time windows, enforced on the hub itself" /> |
+
+**On a phone** — the console at phone width, which is where a gate gets opened:
+
+|  |  |
+| :---: | :---: |
+| **Open a gate** — one tap, after the safety checks | **Emergency access** — set up before you need it |
+| <img src="site/screenshots/app-open.png" alt="Opening a gate from a phone — pick a gate, run the safety checks, send the open command" width="260" /> | <img src="site/screenshots/app-emergency.png" alt="Emergency access on a phone — a signed grant stored on the device before the network goes down" width="260" /> |
 
 **Light & dark** — every screen ships both:
 
 |  |  |
 | :---: | :---: |
-| <img src="site/screenshots/dark/portal-dashboard.png" alt="Aql console, dark theme" /> | <img src="site/screenshots/dark/portal-devices.png" alt="Aql devices, dark theme" /> |
+| **Overview**, dark | **Devices**, dark |
+| <img src="site/screenshots/dark/portal-dashboard.png" alt="Aql overview, dark theme" /> | <img src="site/screenshots/dark/portal-devices.png" alt="Aql devices, dark theme" /> |
 
 > Regenerate with `npm run screenshotter` — it boots the app against fixtures and
 > captures every surface in light and dark. No hub or credentials needed.

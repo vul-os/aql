@@ -120,3 +120,28 @@ func (s *Store) scanClips(ctx context.Context, q string, args ...any) ([]Clip, e
 	}
 	return out, rows.Err()
 }
+
+// ClipOwners lists every (account, device) pair that still has a live clip.
+//
+// The retention sweep derives its work from here rather than from the device
+// registry, and that is deliberate: a camera removed from the engine's config
+// still has footage on the disk. Driving expiry from what is currently
+// configured would leave that footage unbounded forever — the exact shape of the
+// "reclaim path with no caller" failure, one level further in.
+func (s *Store) ClipOwners(ctx context.Context) ([][2]string, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT DISTINCT account_id, device_key FROM camera_clips WHERE deleted_at IS NULL`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out [][2]string
+	for rows.Next() {
+		var a, d string
+		if err := rows.Scan(&a, &d); err != nil {
+			return nil, err
+		}
+		out = append(out, [2]string{a, d})
+	}
+	return out, rows.Err()
+}

@@ -240,7 +240,7 @@ func TestExpiryUsesEachCamerasOwnRetention(t *testing.T) {
 		}
 	}
 
-	n, err := r.ExpireOnce(ctx, acct, []string{"short", "long"})
+	n, err := r.expireOnce(ctx, acct, []string{"short", "long"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -276,7 +276,7 @@ func TestAFileRemovedByHandIsRecordedAsMissingNotExpired(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := r.ExpireOnce(ctx, acct, []string{"cam"}); err != nil {
+	if _, err := r.expireOnce(ctx, acct, []string{"cam"}); err != nil {
 		t.Fatalf("a clip whose file a human removed must not be an error: %v", err)
 	}
 	clips := clipState(t, st, acct, "cam")
@@ -303,7 +303,7 @@ func TestAnExpiredClipStaysInTheIndex(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := r.ExpireOnce(ctx, acct, []string{"cam"}); err != nil {
+	if _, err := r.expireOnce(ctx, acct, []string{"cam"}); err != nil {
 		t.Fatal(err)
 	}
 

@@ -220,9 +220,14 @@ func (r *Recorder) WriteClip(ctx context.Context, accountID, deviceKey string,
 	})
 }
 
-// ExpireOnce removes clips past their camera's retention, for one account's
+// expireOnce removes clips past their camera's retention, for one account's
 // cameras, and returns how many it removed.
-func (r *Recorder) ExpireOnce(ctx context.Context, accountID string, deviceKeys []string) (int, error) {
+//
+// Unexported deliberately: ExpireAll is the entry point, and this is a step
+// inside it. An exported reclaim method whose only caller is the function above
+// it reads, to the repository's own reclaim guard and to a person, like a path
+// nothing runs.
+func (r *Recorder) expireOnce(ctx context.Context, accountID string, deviceKeys []string) (int, error) {
 	removed := 0
 	nowUnix := r.now().Unix()
 	for _, key := range deviceKeys {
@@ -342,4 +347,37 @@ func floorFor(total int64) int64 {
 		return proportional
 	}
 	return MinFreeFloorBytes
+}
+
+// RetentionInterval is how often the sweep runs.
+//
+// Hourly against a 72-hour default: frequent enough that footage leaves within
+// an hour of its deadline, rare enough to be invisible on a Pi. Expiry is not
+// urgent — a clip an hour past its window is not a breach — but it must be
+// RELIABLE, which is why this is a timer and not a hook on some other event.
+const RetentionInterval = time.Hour
+
+// ExpireAll sweeps every camera that still has a clip on disk.
+//
+// The work list comes from the clip index, not from the configured cameras: a
+// camera removed from the engine's config still has footage, and driving expiry
+// from the current configuration would strand it forever.
+func (r *Recorder) ExpireAll(ctx context.Context) (int, error) {
+	owners, err := r.store.ClipOwners(ctx)
+	if err != nil {
+		return 0, err
+	}
+	byAccount := map[string][]string{}
+	for _, o := range owners {
+		byAccount[o[0]] = append(byAccount[o[0]], o[1])
+	}
+	total := 0
+	for account, keys := range byAccount {
+		n, err := r.expireOnce(ctx, account, keys)
+		total += n
+		if err != nil {
+			return total, err
+		}
+	}
+	return total, nil
 }
