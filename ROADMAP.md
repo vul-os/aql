@@ -383,12 +383,29 @@ and none has met physical hardware.
       the RTSP probe, so `Describe` now reports the resolution the encoder is *actually*
       using — read from the stream's own parameter set in `sprop-parameter-sets` — beside
       the one an ONVIF profile claims. Those two disagree in practice.
+      **The fMP4 writer now exists** (`fmp4.go`) — ISO/IEC 14496-12 and -15, init segment
+      plus moof/mdat fragments, 64-bit `tfdt` (a 32-bit decode time wraps after ~13 h at
+      90 kHz, and a continuous recorder is what runs longer than that), `default-base-is-moof`
+      so a fragment is playable on its own, and signed composition offsets through a
+      version-1 `trun`. Fragmented rather than plain MP4 because a plain MP4 truncated
+      mid-write is not a shorter video, it is a file with no index — and a recorder is
+      precisely the workload a full disk or a reboot kills mid-clip.
+      **This is the first piece of the camera pipeline checked by something outside this
+      repository.** `e2e-browser/fmp4.spec.ts` feeds the writer's real output to a Chromium
+      `MediaSource`: Chromium parses the boxes, pulls the SPS out of `avcC` with its own
+      parser, and reports back 320x240 and a single contiguous 1.000 s buffered range across
+      three fragments. A wrong `data_offset` — four bytes — makes it refuse the segments
+      outright, so the gate is load-bearing, and a deliberately corrupted `moov` length is
+      asserted to be refused so acceptance means something. Access-unit grouping stays the
+      caller's job: it needs slice headers, and a second under-tested bitstream parser hidden
+      behind a box writer would surface its mistakes as timing drift rather than as an error.
       What none of it proves is stated plainly: the vectors were written from the RFC and
-      the standard, so they establish that this code agrees with our reading of both, not
-      that it agrees with a real camera. The fMP4 writer, and validation against actual
-      hardware, remain. The retention worker, the `camera:view` permission and the viewer do
-      not — but building a retention policy for footage that does not exist yet is the wrong
-      order
+      the standard, and no camera has been involved anywhere in this package. Chromium
+      agreeing is a real independent check on the container and the parameter sets; it is not
+      a real camera, and the sample payloads are not decodable pictures. An RTSP media client
+      and hardware validation remain. The retention worker, the `camera:view` permission and
+      the viewer do not — but building a retention policy for footage that does not exist yet
+      is the wrong order
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
 - [ ] Rate-limiting and scoping on movement commands, so a compromised client cannot drive
