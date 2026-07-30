@@ -181,6 +181,13 @@ asserts the two cannot drift. That test earns its place: when the prefix was
 drifted deliberately, the store's own tests still passed, because they use the
 same constant on both sides of the question.
 
+The WIRING has its own test too, against a real store rather than a fake owner
+function (`cmd/hub/automationswiring_test.go`). Every other test of this rule
+substitutes ownership, which proves the engine refuses what it is told to refuse
+and cannot prove the binary asks the right question — and the question is exactly
+what changed here. Verified by reverting the wiring to the old resolver and
+watching a rule name another account's gate with `err = <nil>`.
+
 ---
 
 ## 4. What this buys, stated plainly
