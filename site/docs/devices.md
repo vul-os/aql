@@ -25,7 +25,7 @@ automations runtime would fire on, and what a driver has to map its protocol ont
 
 | Kind | Examples | Status |
 | --- | --- | --- |
-| **Camera** | Gate camera, yard camera (ONVIF/RTSP) | Driver ships — discovery, status and readings. **No video**: no live view, no recording |
+| **Camera** | Gate camera, yard camera (ONVIF/RTSP) | Driver ships — discovery, status and readings. Video ships too: recording, retention, a per-camera view permission and MSE live view. **No camera has ever been involved** |
 | **Lighting** | Zigbee groups, individual fixtures | No dedicated driver. Drivable today through MQTT (zigbee2mqtt) or generic HTTP |
 | **Robot** | Robot mower, security patrol bot, cleaning bot | **No driver.** The one kind with no path at all |
 | **Climate** | Thermostats, HVAC | No dedicated driver. Drivable today through MQTT or generic HTTP |
@@ -179,7 +179,9 @@ Built: an ONVIF driver (`hub/internal/devices/camera/`) that discovers cameras v
 WS-Discovery, authenticates with WS-UsernameToken digest, and asks a camera for the RTSP
 address of a chosen encoder profile.
 
-There is also an RTSP client, and it does exactly one thing: **DESCRIBE**. Turn it on with
+There is also an RTSP client. Its cheapest mode does one thing — **DESCRIBE** — and the
+full one receives media; this section is about the probing, and [Recording and live
+view](#recording-and-live-view) below is about the media. Turn the probe on with
 `VerifyStream` and the driver follows the address it resolved — authenticating with digest,
 or basic where a camera offers nothing else — asks what the stream is, and reports the
 answer: `H264 video · digest auth`. It holds no session.
@@ -209,8 +211,11 @@ Both numbers are judgement calls rather than measurements, and they are written 
 such in `driver.go`. The counts (`media_lost`, `media_expected`) are reported whatever the
 verdict, so a health graph has a baseline on the good days too.
 
-None of this decodes anything. H.264 depacketization is where a fake written from the
-same RFC would simply agree with the code under test, so it waits for a real camera.
+None of this decodes anything, and that is a statement about the **probe**, not about the
+package: depacketization, SPS parsing, access-unit assembly and muxing all exist and are
+what the recording path below is made of. The probe deliberately does not use them,
+because counting packets is the question it is asking and holding a decode pipeline open
+for a health check is not free.
 
 That probe occupies an RTSP session, so it is opt-in and always tears down: cheap cameras
 support very few, and one held by a health check competes with whoever is watching.

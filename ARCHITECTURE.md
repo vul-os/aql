@@ -3,8 +3,14 @@
 > **An open-source command centre for the physical world.** One hub you run yourself,
 > meant to own everything physical around a home or a business — cameras, lighting,
 > robots, climate, energy, sensors and access — with chat and a console as input surfaces
-> onto it. Today exactly one of those seven device kinds is driven end to end: **access**
-> (gates, doors and barriers).
+> onto it. **Access** (gates, doors and barriers) is the kind built furthest, and it is the
+> only one taken all the way down to a device agent that verifies an Ed25519 signature
+> instead of trusting its network, with a versioned wire contract and conformance vectors
+> behind it. The other six share the engine, the capability catalogue and the console:
+> lighting, climate, energy and sensors are driven through MQTT, Modbus TCP or generic HTTP;
+> cameras record, retain and play back. Robots are the one kind with no path at all. What
+> none of the six has is a purpose-built agent of their own — they are driven through
+> third-party protocols, and no camera driver has ever met a camera.
 
 Aql has no cloud. It is just the **system**: a hub you run, devices at the edge that
 verify rather than trust, an app in your pocket — every line open source, nothing hosted
