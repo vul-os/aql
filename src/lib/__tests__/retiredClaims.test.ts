@@ -129,6 +129,16 @@ const RETIRED: Retired[] = [
       'from a camera" — because the hardware is what is missing, not the code.',
   },
   {
+    // Caught in site/docs/architecture.md's component table days after the
+    // pipeline shipped, in the same cell that named the drivers — which is why
+    // the driver LIST is guarded separately in docCounts: a stale cell tends to
+    // be stale in more than one way at once.
+    phrase: /no camera pipeline/i,
+    truth:
+      'RTSP media, depacketization, muxing, recording, retention and MSE live view all ' +
+      'ship. What is true is that no camera has been involved.',
+  },
+  {
     phrase: /phone half not built/i,
     truth:
       'src/pages/app/EmergencyAccess.tsx requests and stores a grant against a real hub. ' +
@@ -195,6 +205,7 @@ describe('retired claims do not come back', () => {
       'cameras give you discovery and readings but no video',
       'DEV["Device engine<br/>(NOT BUILT)<br/>camera"]',
       'and has never received a frame',
+      'No Matter, no robot driver, no camera pipeline',
       'emergency: LAN / BLE (phone half not built)',
     ];
     for (const [i, sample] of samples.entries()) {

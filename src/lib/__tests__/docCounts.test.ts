@@ -181,3 +181,38 @@ describe('every count the docs state matches the thing it counts', () => {
     expect(measured.routes).toBeGreaterThan(50);
   });
 });
+
+/**
+ * The driver names the docs advertise, against the names the binary accepts.
+ *
+ * Not a count, but the same failure: a list written once and true at the time.
+ * `access` landed as a fifth driver and three operator-facing documents went on
+ * naming four — including hub/README.md's flag table, which is where somebody
+ * actually looks to find out what they may pass.
+ *
+ * The binary's accept-list is `knownDeviceDrivers()` in cmd/hub/main.go, built
+ * from the deviceDriverX constants. Those constants are the source of truth for
+ * what -device-drivers takes; everything else is a restatement.
+ */
+describe('the drivers the docs advertise are the drivers the binary accepts', () => {
+  const drivers = (): string[] => {
+    const src = read('hub/cmd/hub/main.go');
+    const names = [...src.matchAll(/deviceDriver[A-Z]\w*\s*=\s*"([a-z]+)"/g)].map((m) => m[1]);
+    // Without this a regex that stopped matching would agree with any doc.
+    expect(names.length, 'no deviceDriver constants were parsed from main.go').toBeGreaterThan(3);
+    return names.sort();
+  };
+
+  it.each([
+    { file: 'hub/README.md', pattern: /comma-separated device drivers to construct \(([^)]+)\)/ },
+    { file: 'site/docs/architecture.md', pattern: /Registry behind a driver seam; ([^|]+)\|/ },
+  ])('$file names them all', ({ file, pattern }) => {
+    const text = read(file);
+    const m = pattern.exec(text);
+    expect(m, `${file} no longer contains a driver list matching ${pattern}`).not.toBeNull();
+    const listed = [...(m as RegExpExecArray)[1].matchAll(/`([a-z]+)`/g)].map((x) => x[1]).sort();
+    expect(listed, `${file} advertises a different set of drivers than the binary accepts`).toEqual(
+      drivers(),
+    );
+  });
+});

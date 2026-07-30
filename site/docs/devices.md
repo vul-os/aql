@@ -56,7 +56,12 @@ because it reads the database.
 
 **Configured devices**, through the engine, when a hub is started with `-device-drivers`
 and a `-device-config` file. Those devices report readings and accept the verbs their
-capability catalogue declares. A hub with no device config has no engine at all and says
+capability catalogue declares.
+
+The one exception is `-device-drivers=access`, which needs no config file: it reads the
+access points already in the database and surfaces them in the engine's fleet, status
+only. It actuates nothing — opening stays on the signed path — so turning it on changes
+what `GET /v1/engine/devices` reports and nothing else. A hub with no device config has no engine at all and says
 so — the console shows `engine: false` rather than an empty list, because "no engine" and
 "no devices" are different answers.
 

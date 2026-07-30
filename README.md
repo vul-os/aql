@@ -150,6 +150,10 @@ Drivers are selected by flag and configured from one JSON file:
 ./aql-hub -device-drivers mqtt,modbus,camera -device-config ./devices.json
 ```
 
+`access` is a driver too, and the only one needing no config file — it surfaces the gates
+you already have in the engine's device list, read-only. It opens nothing: that stays on
+the signed path.
+
 Already running `zigbee2mqtt`? The hub can read your device list off it instead
 of you transcribing it. `zwave-js-ui` devices work too, but discovery does not
 read them — it decodes zigbee2mqtt's announcement format only, so a Z-Wave

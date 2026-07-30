@@ -227,8 +227,8 @@ Config (flags override env):
 | `-public-url` | `AQL_PUBLIC_URL` | — | external base URL (webhooks, links) |
 | `-admin-claim-token` | `ADMIN_CLAIM_TOKEN` | — | one-shot admin claim; empty = claiming disabled |
 | `-behind-proxy` | `AQL_BEHIND_PROXY` | `false` | permit binding a non-loopback `-listen` address — only set this when TLS is terminated upstream by a reverse proxy; see **Deployment & TLS** below |
-| `-device-drivers` | `AQL_DEVICE_DRIVERS` | — | comma-separated device drivers to construct; empty disables the device engine entirely |
-| `-device-config` | `AQL_DEVICE_CONFIG` | — | path to the JSON device-driver config file; required when `-device-drivers` names anything |
+| `-device-drivers` | `AQL_DEVICE_DRIVERS` | — | comma-separated device drivers to construct (`access`, `camera`, `http`, `modbus`, `mqtt`); empty disables the device engine entirely |
+| `-device-config` | `AQL_DEVICE_CONFIG` | — | path to the JSON device-driver config file; required by every driver **except `access`**, which is built from the database rather than a file |
 | `-energy-account` | `AQL_ENERGY_ACCOUNT_ID` | — | account id the energy poller writes meter readings under; empty disables polling |
 | `-automations` | `AQL_AUTOMATIONS` | `false` | run the automation rule scheduler (tick interval: `AQL_AUTOMATIONS_INTERVAL`, default 30s) |
 
