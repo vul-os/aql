@@ -16,10 +16,28 @@ import (
 const keyFile = "gateway_ed25519.seed"
 
 // Keys is the gateway signing identity.
+//
+// It holds up to two keys. The second exists only while a key rotation is in
+// flight, and only so that controllers which have not yet been repaired onto the
+// new key can still be sent commands — see rotation.go for why that retention is
+// not optional.
 type Keys struct {
 	priv ed25519.PrivateKey
 	pub  ed25519.PublicKey
+
+	// dir is where the seeds live, needed to rotate. Empty for a Keys built in
+	// memory by a test, which then cannot rotate.
+	dir string
+
+	// prevPriv/prevPub are the retained pre-rotation key, nil when no rotation
+	// is in flight.
+	prevPriv ed25519.PrivateKey
+	prevPub  ed25519.PublicKey
 }
+
+// b64 is the encoding controllers pin and /v1/gateway/key serves: base64url,
+// unpadded.
+var b64 = base64.RawURLEncoding
 
 // Load reads the Ed25519 seed from dir, generating one at first boot
 // (0600, seed-only on disk — the public key is derived).
@@ -33,7 +51,11 @@ func Load(dir string) (*Keys, error) {
 			return nil, fmt.Errorf("corrupt gateway key file %s", path)
 		}
 		priv := ed25519.NewKeyFromSeed(seed)
-		return &Keys{priv: priv, pub: priv.Public().(ed25519.PublicKey)}, nil
+		k := &Keys{priv: priv, pub: priv.Public().(ed25519.PublicKey), dir: dir}
+		if k.prevPriv, k.prevPub, err = loadPrevious(dir, priv); err != nil {
+			return nil, err
+		}
+		return k, nil
 	case os.IsNotExist(err):
 		seed := make([]byte, ed25519.SeedSize)
 		if _, err := rand.Read(seed); err != nil {
@@ -43,7 +65,9 @@ func Load(dir string) (*Keys, error) {
 			return nil, fmt.Errorf("persist gateway key: %w", err)
 		}
 		priv := ed25519.NewKeyFromSeed(seed)
-		return &Keys{priv: priv, pub: priv.Public().(ed25519.PublicKey)}, nil
+		// First boot: there is nothing to have rotated away from, so no
+		// previous-key file is consulted.
+		return &Keys{priv: priv, pub: priv.Public().(ed25519.PublicKey), dir: dir}, nil
 	default:
 		return nil, err
 	}

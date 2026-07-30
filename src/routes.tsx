@@ -82,6 +82,7 @@ const routes: RouteObject[] = [
           { path: 'users', element: wrap(() => import('@/pages/app/admin/AdminUsers')), errorElement },
           { path: 'limits', element: wrap(() => import('@/pages/app/admin/AdminLimits')), errorElement },
           { path: 'audit', element: wrap(() => import('@/pages/app/admin/AdminAudit')), errorElement },
+          { path: 'gateway-key', element: wrap(() => import('@/pages/app/admin/AdminGatewayKey')), errorElement },
         ],
       },
     ],

@@ -349,6 +349,7 @@ func (s *Server) handleControllerUplink(ctx context.Context, deviceID string, pu
 		// need it: this one carries the acks of every CONNECTED controller, and
 		// ResolveAck returns early on the common case, so recording after it
 		// would capture only the late-ack minority.
+		s.noteRepairAck(ctx, deviceID, ack.Nonce)
 		if ok, err := s.store.RecordAckIfPing(ctx, deviceID, ack.Nonce); err != nil {
 			s.log.Error("record clock sync", "device_id", deviceID, "err", err)
 		} else if ok {
@@ -534,6 +535,7 @@ func (s *Server) handleControllerAck(w http.ResponseWriter, r *http.Request) {
 	// live socket is queued, so no pending waiter and no `recent` entry exists
 	// for it: both branches below drop that ack on the floor. The long-poll
 	// controllers this matters most for would otherwise never be recorded.
+	s.noteRepairAck(r.Context(), ack.DeviceID, ack.Nonce)
 	if ok, err := s.store.RecordAckIfPing(r.Context(), ack.DeviceID, ack.Nonce); err != nil {
 		s.log.Error("record clock sync", "device_id", ack.DeviceID, "err", err)
 	} else if ok {

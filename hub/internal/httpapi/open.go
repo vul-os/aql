@@ -119,7 +119,7 @@ func (s *Server) dispatchCommandWithPayload(ctx context.Context, command string,
 		return "no_device"
 	}
 	cause := map[string]any{"source": "gateway", "log_id": verdict.LogID}
-	env, err := s.keys.SignCommandWithPayload(command, verdict.AP.DeviceID, verdict.AP.ID, payload, 30*time.Second, cause)
+	env, err := s.signForDevice(ctx, command, verdict.AP.DeviceID, verdict.AP.ID, payload, 30*time.Second, cause)
 	if err != nil {
 		s.log.Error("sign command", "err", err)
 		if _, rerr := s.store.RecordDispatchOutcome(ctx, verdict.LogID, "undelivered"); rerr != nil {

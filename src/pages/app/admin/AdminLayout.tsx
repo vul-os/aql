@@ -23,6 +23,7 @@ const TABS = [
   { to: '/app/admin/users', label: 'Users' },
   { to: '/app/admin/limits', label: 'Limits' },
   { to: '/app/admin/audit', label: 'Audit' },
+  { to: '/app/admin/gateway-key', label: 'Signing key' },
 ];
 
 export default function AdminLayout() {

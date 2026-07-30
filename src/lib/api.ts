@@ -1253,6 +1253,81 @@ export const api = {
 
   adminAuditActions: (q: { limit?: number; offset?: number } = {}) =>
     apiFetch<AdminAuditActionsResponse>(`/admin/audit/actions${adminListQs(q)}`),
+
+  // Gateway signing-key rotation (hub/internal/httpapi/keyrotation.go).
+  //
+  // Four calls rather than one because the decision and the act are separate:
+  // preview says what a rotation would cost, and a confirmation dialogue that
+  // had to POST to find that out would already have done the thing.
+  gatewayKeyRotation: () => apiFetch<KeyRotationStatus>('/admin/gateway-key/rotation'),
+
+  gatewayKeyRotationPreview: () =>
+    apiFetch<KeyRotationPreview>('/admin/gateway-key/rotation/preview'),
+
+  gatewayKeyRotationStart: (reason: string) =>
+    apiFetch<KeyRotationStarted>('/admin/gateway-key/rotation', {
+      method: 'POST',
+      body: { reason },
+    }),
+
+  gatewayKeyRotationRetry: () =>
+    apiFetch<{ repairs_sent: number; completed: boolean }>('/admin/gateway-key/rotation/retry', {
+      method: 'POST',
+    }),
+};
+
+/**
+ * One controller's position in a rotation.
+ *
+ * `repaired` false with no `pending_since` is a controller nothing has been sent
+ * to yet; false WITH one is a repair in flight. They are different situations —
+ * the second means the controller has not answered — so the field is optional
+ * rather than defaulted to a timestamp that would imply a dispatch that never
+ * happened.
+ */
+export type KeyRotationController = {
+  device_id: string;
+  label: string;
+  repaired: boolean;
+  pending_since?: number;
+};
+
+/**
+ * `rotating` discriminates the union rather than the caller inspecting whether
+ * the other fields are present: a rotation with nothing done yet and no rotation
+ * at all are different states, and an object full of zeroes reads as the second.
+ */
+export type KeyRotationStatus =
+  | { rotating: false; current_pubkey: string }
+  | {
+      rotating: true;
+      rotation_id: string;
+      started_at: number;
+      reason: string;
+      previous_pubkey: string;
+      new_pubkey: string;
+      current_pubkey: string;
+      controllers: KeyRotationController[];
+      repaired: number;
+      remaining: number;
+    };
+
+export type KeyRotationPreview = {
+  controllers_to_repair: number;
+  /**
+   * An upper bound, not a live count — the hub keeps no record of which offline
+   * grants are still held, because a grant lives on a phone until it expires.
+   * Named `_max` so nobody renders it as exact.
+   */
+  offline_grants_invalidated_max: number;
+  current_pubkey: string;
+};
+
+export type KeyRotationStarted = {
+  rotation_id: string;
+  previous_pubkey: string;
+  new_pubkey: string;
+  repairs_sent: number;
 };
 
 function adminListQs(q: AdminListQuery): string {

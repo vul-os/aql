@@ -112,6 +112,17 @@ func (k *Keys) SignCommand(cmd, deviceID, accessPoint string, ttl time.Duration,
 // config, ping, repair) had no sender at all despite the controller
 // implementing and conformance-testing every one of them.
 func (k *Keys) SignCommandWithPayload(cmd, deviceID, accessPoint string, payload map[string]any, ttl time.Duration, cause map[string]any) (*Envelope, error) {
+	return signWith(k.priv, cmd, deviceID, accessPoint, payload, ttl, cause)
+}
+
+// signWith builds and signs an envelope with an explicit private key.
+//
+// Factored out rather than duplicated for the rotation path: an envelope signed
+// with the retained key must be byte-identical in every respect except the
+// signature, and two copies of this construction would drift the first time a
+// field was added to one of them. Which key signs is the ONLY thing
+// SignCommandForPin changes.
+func signWith(priv ed25519.PrivateKey, cmd, deviceID, accessPoint string, payload map[string]any, ttl time.Duration, cause map[string]any) (*Envelope, error) {
 	if ttl <= 0 || ttl > MaxCommandTTL {
 		ttl = MaxCommandTTL
 	}
@@ -130,7 +141,7 @@ func (k *Keys) SignCommandWithPayload(cmd, deviceID, accessPoint string, payload
 	if err != nil {
 		return nil, err
 	}
-	e.Sig = k.Sign(msg)
+	e.Sig = b64.EncodeToString(ed25519.Sign(priv, msg))
 	return e, nil
 }
 

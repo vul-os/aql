@@ -457,6 +457,14 @@ func (s *Server) Router() http.Handler {
 	// Which controllers can still be trusted to honour an offline grant
 	// (clocksync.go). Operational fleet data, account-admin only.
 	mux.Handle("GET /v1/accounts/{id}/controllers/clock-freshness", s.requireAuth(s.handleClockFreshness))
+
+	// Gateway signing-key rotation (keyrotation.go). Platform-admin only: it
+	// replaces the key EVERY controller on this hub verifies against, so it is
+	// not scoped to an account — there is one key and it is the hub's.
+	mux.Handle("GET /v1/admin/gateway-key/rotation", s.requireAdmin(s.handleKeyRotationStatus))
+	mux.Handle("GET /v1/admin/gateway-key/rotation/preview", s.requireAdmin(s.handleKeyRotationPreview))
+	mux.Handle("POST /v1/admin/gateway-key/rotation", s.requireAdmin(s.handleKeyRotationStart))
+	mux.Handle("POST /v1/admin/gateway-key/rotation/retry", s.requireAdmin(s.handleKeyRotationRetry))
 	mux.Handle("POST /v1/devices", s.requireAuth(s.handleDeviceCreate))
 	// proto/pairing.md's diagram specifies POST /pair/redeem — that's the path
 	// the controller builds from its --gateway URL. Serve it there (spec form)

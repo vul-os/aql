@@ -32,8 +32,8 @@ reference for how every other device kind should eventually work: a versioned wi
 contract, a device that verifies rather than trusts, and an audit trail you can check
 after the fact.
 
-**The hub** (`hub/`) — one Go binary, SQLite inside, **115 HTTP routes over 21
-migrations, and more than 870 tests green** across 16 packages:
+**The hub** (`hub/`) — one Go binary, SQLite inside, **119 HTTP routes over 22
+migrations, and more than 1,000 tests green** across 16 packages:
 
 - [x] Accounts, locations, access points, members with roles, invites
 - [x] An **instance-admin** operator seat above every account: one-shot claim
@@ -179,14 +179,27 @@ hub's issuance endpoint):
       before the grant is examined. The failure lands exactly inverted: flawless
       connectivity for a fortnight, then a hub outage, and every offline emergency grant
       denied at the gate. A six-hourly sweep of the whole PAIRED fleet fixes it — not the connected subset, which excluded the case that needed it most: a controller on the long-poll fallback never handshakes either, so it had no path to a fresh clock at all. A ping to a device with no live socket queues, and the long-poll handler drains it
-- [ ] **`repair` is the last one, and it is a programme rather than a feature.** It is the
-      recovery path for a leaked or rotated hub signing key. The hub needs two-key
-      retention and per-controller ack tracking — switching the signing key while one
-      controller is offline strands it until a factory reset — and the blast radius
-      reaches past controllers to every phone holding an offline grant, since those pin
-      the hub key too and the app already treats a change as a re-enrolment event.
+- [x] **`repair` — the last command with no sender — now has one.** The hub's signing key
+      was in practice permanent: a key believed compromised stayed authoritative until
+      somebody physically reset every controller. Rotation is a programme rather than a
+      switch and is built as one. Two keys are retained and each command is signed with
+      whichever key its TARGET controller pins, because rotation cannot be made atomic — a
+      precondition that every controller is online does not help the one that drops between
+      the check and its own repair, and if the hub has discarded that key nothing reaches
+      that controller again short of a factory reset. Repairs are nonce-correlated (an ack's
+      result is `ok` for every command kind, so an uncorrelated one would move a controller
+      on the strength of acking an unrelated lift), a five-minute sweep survives a hub
+      restart mid-rotation, and the previous private key is destroyed only when a
+      transactional check finds nothing still pinning it. Migration 0023; console at
+      **Admin → Signing key**.
+      The blast radius reaches every phone holding an offline grant, and that is deliberate
+      rather than unfinished: a grant is verified against the key a controller pins, so
+      grants signed with the old key stop working once that controller is repaired. If the
+      reason to rotate is that the old key is not trusted, that is the point. The console
+      states the count — an honest upper bound, since the hub keeps no record of which
+      grants are still held on a phone — **before** the rotation, not afterwards at a gate.
       (`lockdown`/`lift` are deliberately controller-local — `offline_grants.go` says so —
-      and are NOT part of this gap)
+      and were never part of this gap)
 - [ ] **A controller never reports its configuration back.** `cmd.ack` carries a result
       and a detail and nothing else, so the hub cannot show an operator what `pulse_ms`,
       `hold_max` or `sensor_debounce_ms` are currently set to — only send new ones. The

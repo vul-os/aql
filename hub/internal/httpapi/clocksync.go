@@ -110,7 +110,7 @@ func (s *Server) SyncControllerClocks(ctx context.Context) int {
 		// time, so it is the hub's own clock at the moment of sending — not a
 		// timestamp captured when this sweep began, which would drift by the
 		// length of the sweep across a large fleet.
-		env, err := s.keys.SignCommand("ping", deviceID, "", 30*time.Second,
+		env, err := s.signForDevice(ctx, "ping", deviceID, "", nil, 30*time.Second,
 			map[string]any{"source": "gateway", "reason": "clock_sync"})
 		if err != nil {
 			s.log.Error("sign clock-sync ping", "device_id", deviceID, "err", err)

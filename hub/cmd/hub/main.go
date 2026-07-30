@@ -630,6 +630,15 @@ func buildHub(cfg config, log *slog.Logger) (*hub, error) {
 		name: "controller-clock-sync",
 		run:  h.srv.RunClockSync,
 	})
+
+	// Also always on, and idle unless a key rotation is in flight. It has to
+	// survive a restart: a hub that rebooted mid-rotation would otherwise leave
+	// every unrepaired controller pinning a superseded key with nothing trying
+	// to move it, and the retained private key on disk indefinitely.
+	h.workers = append(h.workers, worker{
+		name: "gateway-key-rotation",
+		run:  h.srv.RunKeyRotationSweep,
+	})
 	return h, nil
 }
 

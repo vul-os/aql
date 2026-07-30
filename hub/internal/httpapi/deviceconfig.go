@@ -137,7 +137,7 @@ func (s *Server) handleDeviceConfig(w http.ResponseWriter, r *http.Request) {
 		payload[k] = v
 	}
 
-	env, err := s.keys.SignCommandWithPayload("config", deviceID, "", payload,
+	env, err := s.signForDevice(r.Context(), "config", deviceID, "", payload,
 		30*time.Second, map[string]any{"source": "gateway", "actor": c.Sub})
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "internal")
