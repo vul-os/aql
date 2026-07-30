@@ -55,6 +55,16 @@ type Retired = {
   phrase: RegExp;
   /** What is true instead — printed in the failure so the fix is obvious. */
   truth: string;
+  /**
+   * Restrict the check to files whose repo-relative path matches.
+   *
+   * Some of these phrases are retired for ONE subject and perfectly honest for
+   * another. "No code implements this" was false about the camera pipeline and
+   * would be true of a design written before its code — which is a thing this
+   * repository does on purpose. Without a scope this guard would punish a
+   * document for being honest.
+   */
+  only?: RegExp;
 };
 
 const RETIRED: Retired[] = [
@@ -81,7 +91,18 @@ const RETIRED: Retired[] = [
     truth: 'The probe describes; ConsumeMedia receives media. Say which one the sentence is about.',
   },
   {
-    phrase: /status: design only/i,
+    // Not anchored on "Status:". docs/README.md's index said "**Design only — no
+    // code implements it.**" and slipped past the anchored version for two more
+    // days, in the one file whose job is telling a reader which documents are
+    // worth opening.
+    //
+    // SCOPED, because "design only" is retired for the CAMERA docs and is an
+    // honest thing for a design written before its code — which this repository
+    // does deliberately. Without the scope this guard punishes a document for
+    // being accurate; verified by dropping a genuinely-unbuilt design doc in and
+    // watching the unscoped version flag it.
+    phrase: /design only|no code implements/i,
+    only: /CAMERA-RETENTION\.md|docs\/README\.md|devices\.md/,
     truth: 'docs/CAMERA-RETENTION.md is built. It is "built, and never run against a camera", which is a different claim.',
   },
   {
@@ -192,6 +213,54 @@ function docFiles(): string[] {
   return out.filter((p) => !p.endsWith('CHANGELOG.md') && !p.includes('__tests__'));
 }
 
+/**
+ * One flattened line per document, with a map back to source line numbers.
+ *
+ * Matching line by line was a hole. A claim that WRAPS is invisible to it, and
+ * these are prose files where wrapping is the norm — so any pattern here could
+ * be evaded by a paragraph reflow, accidentally. Found the honest way:
+ * replacement text I wrote said "never received a frame from a camera", the
+ * qualified form that is TRUE, and this guard flagged it because the line broke
+ * between "frame" and "from". The same break would have hidden a real one.
+ *
+ * scripts/check-feature-claims.mjs already does this, for the same reason, and
+ * explains it in a comment. This is that logic plus the offset-to-line map a
+ * failure report needs to stay actionable.
+ *
+ * Markers a wrapped phrase runs into are stripped: `//` in Go, `*` in a block
+ * comment, `>` in a markdown blockquote.
+ */
+function flatten(body: string): { text: string; lineAt: (offset: number) => number } {
+  const starts: number[] = [];
+  const parts: string[] = [];
+  let cursor = 0;
+  for (const raw of body.split('\n')) {
+    const stripped = raw
+      .replace(/^\s*(?:\/\/+|\*|>)+\s?/, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    starts.push(cursor);
+    parts.push(stripped);
+    cursor += stripped.length + 1;
+  }
+  return {
+    text: parts.join(' '),
+    lineAt: (offset: number) => {
+      let line = 0;
+      for (let i = 0; i < starts.length; i++) {
+        if (starts[i] <= offset) line = i;
+        else break;
+      }
+      return line + 1;
+    },
+  };
+}
+
+/** A readable slice around a match, for the failure message. */
+function excerpt(text: string, at: number): string {
+  return text.slice(Math.max(0, at - 20), at + 110).trim();
+}
+
 describe('retired claims do not come back', () => {
   const files = docFiles();
 
@@ -231,13 +300,20 @@ describe('retired claims do not come back', () => {
     expect(samples).toHaveLength(RETIRED.length);
   });
 
-  it.each(RETIRED)('$phrase', ({ phrase, truth }) => {
+  it.each(RETIRED)('$phrase', ({ phrase, truth, only }) => {
     const hits: string[] = [];
-    for (const file of files) {
-      const text = readFileSync(file, 'utf8');
-      text.split('\n').forEach((line, i) => {
-        if (phrase.test(line)) hits.push(`${path.relative(repo, file)}:${i + 1}: ${line.trim()}`);
-      });
+    const scoped = only ? files.filter((f) => only.test(path.relative(repo, f))) : files;
+    // A scope that matches nothing is a check that silently stopped running.
+    expect(scoped.length, `the 'only' scope ${only} matched no document`).toBeGreaterThan(0);
+    for (const file of scoped) {
+      const flat = flatten(readFileSync(file, 'utf8'));
+      phrase.lastIndex = 0;
+      const m = phrase.exec(flat.text);
+      if (m) {
+        hits.push(
+          `${path.relative(repo, file)}:${flat.lineAt(m.index)}: ${excerpt(flat.text, m.index)}`,
+        );
+      }
     }
     expect(
       hits,
