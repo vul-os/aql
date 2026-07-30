@@ -1,9 +1,34 @@
 # Camera recording: the design that has to exist before any of it is built
 
-**Status: design only. No code implements this.** The ONVIF driver
-(`hub/internal/devices/camera/`) discovers cameras, resolves stream addresses and
-probes them with an RTSP `DESCRIBE`. It has never received a frame, and nothing
-in this repository stores one.
+**Status: design only. No code implements this** — meaning the retention policy
+below: there is no retention worker, no clip store, no `camera:view` permission
+and no viewer.
+
+The package under it has moved on since that was written, and saying so matters
+because "no code implements this" reads as "the camera package does nothing yet".
+`hub/internal/devices/camera/` discovers cameras, resolves stream addresses,
+probes with RTSP `DESCRIBE` and reports the encoder's real cropped resolution from
+the stream's own sequence parameter set; it depacketizes RTP into H.264 NAL units,
+groups them into access units, and muxes them into a fragmented MP4 that a real
+Chromium `MediaSource` accepts and plays.
+
+What remains true, and is the reason this document is still design-only:
+**nothing has ever received a frame from a camera** — the media probe has only
+seen an in-process RTSP server — and **nothing in this repository stores one**.
+
+Stated bluntly because it is the shape this repository has been caught by
+repeatedly: `Fragmenter` has no production caller. Grep it and the only hit
+outside tests is its own definition. That is a component that is complete,
+tested, validated against a third-party demuxer, and reachable by nobody —
+normally a defect here, and normally the sign of a feature that does not work.
+
+It is deliberate this time, and the ordering is the reason: the consumer would be
+a recording worker, a recording worker writes footage to a disk, and writing
+footage to a disk without the policy below settled is how a product ends up
+retaining video it cannot justify keeping. The muxer exists first so the policy
+is written against something real rather than against a guess. When the worker
+lands, this note should be deleted along with the design-only status — and if the
+worker never lands, the muxer is dead weight and should be said to be.
 
 This document exists because "camera live view and recording" has sat on the
 roadmap as blocked on *hardware*, and that was only half true. The other half is

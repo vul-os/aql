@@ -115,7 +115,7 @@ for (const rec of all) {
 
 `src/lib/offline/service.ts:53-67` (`loadState`) calls it with the *current*
 hub's URL from `getApiBaseUrl()` (`src/lib/hub.ts:44-48`). And
-`gateway.ts:171-181` (`applyGatewayUrl`) reloads the page on a hub switch. So
+`hub.ts` (`applyGatewayUrl`) reloads the page on a hub switch. So
 today, switching hubs deletes the other hub's offline grant on the next load.
 **That is the bug that makes multi-hub not work — and it is a one-function fix.**
 
@@ -233,7 +233,7 @@ Justification for the home+office case:
   and account-scoped. Members, audit, grants, devices and settings all belong to
   one hub's tenancy; interleaving two hubs' admin views is precisely the kind of
   cross-tenant surface §6.5 exists to prevent. This is also already true in the
-  code: sessions are per hub and `gateway.ts:155-165` (`clearPerGatewayState`)
+  code: sessions are per hub and `hub.ts` (`clearPerGatewayState`)
   wipes `lintel.*` on a hub change, and `src/pages/app/Settings.tsx:60` already
   tells the user *"Switching hubs signs you out here — your account stays on its
   hub."*
@@ -377,12 +377,20 @@ What replaces it:
 - **App ← hub:** pinned per record by **PROPOSAL P-2**, refused on change by
   **P-3**, with the same discipline.
 
-**Rotation.** A hub that rotates its signing key must re-pair each controller via
-the `repair` path (already specified). For the app, a key change invalidates the
-record: the app refuses it, tells the user which hub, and requires an explicit
-re-enrolment — the app-side equivalent of a factory reset. It must never
-auto-heal, because auto-healing a key change is indistinguishable from accepting
-a hub takeover.
+**Rotation.** Both halves of this now SHIP, so this paragraph describes behaviour
+rather than intent.
+
+Hub side: `hub/internal/keys/rotation.go` retains two keys and signs each command
+with whichever key its target controller pins, moving controllers onto the new one
+by `repair` as each acknowledges. Two-key retention is not an optimisation — a
+precondition that every controller is online cannot make rotation atomic, and a
+controller that drops between the check and its own repair is stranded until
+someone factory-resets it physically.
+
+App side: a key change invalidates the record. `vault.ts` refuses it with
+`HubKeyChangedError`, the emergency-access screen names the hub and offers an
+explicit forget-and-re-enrol, and nothing auto-heals — because auto-healing a key
+change is indistinguishable from accepting a hub takeover.
 
 **A lost hub** (decommissioned, friend moved out): the user deletes the record.
 Its grants are already scoped to that hub's controllers and expire on their own
