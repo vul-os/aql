@@ -10,7 +10,11 @@ because "no code implements this" reads as "the camera package does nothing yet"
 probes with RTSP `DESCRIBE` and reports the encoder's real cropped resolution from
 the stream's own sequence parameter set; it depacketizes RTP into H.264 NAL units,
 groups them into access units, and muxes them into a fragmented MP4 that a real
-Chromium `MediaSource` accepts and plays.
+Chromium `MediaSource` accepts. It ACCEPTS rather than plays, and the difference
+is load-bearing: the fixture payloads are not decodable pictures, so Chromium's
+container parser validates the boxes, the `avcC` and the SPS, and its decoder
+never gets a real frame. Verified by a streaming test that gives the decoder time
+to try — it errors, and the appends after it are refused.
 
 What remains true, and is the reason this document is still design-only:
 **nothing has ever received a frame from a camera** — the media probe has only

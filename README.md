@@ -291,7 +291,9 @@ since this paragraph was first written: it depacketizes RTP into H.264 NAL units
 reads the encoder's real cropped resolution out of the sequence parameter set —
 1080p cameras encode 1088 lines and crop eight away — groups the units into
 pictures, and muxes them into a fragmented MP4 that a real Chromium `MediaSource`
-accepts and plays. What it still does not do is decode a picture, and no part of
+accepts — accepts, not plays: the container, the `avcC` and the SPS are validated
+by a parser nobody here wrote, and the decoder never receives a real picture. What
+it still does not do is decode a picture, and no part of
 it has ever met a camera; the missing piece for live view is an RTSP media client,
 which is the one component here with no second implementation to check it against.
 Recording is a data-retention policy with a UI attached, so the policy is written

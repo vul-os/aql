@@ -31,6 +31,8 @@
 // cannot see.
 
 import { execFileSync } from 'node:child_process';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -213,7 +215,7 @@ test.describe('the fMP4 writer against Chromium', () => {
   // A start code left on a NAL fails earlier, during fixture generation, since
   // Fragment refuses Annex-B input — so that defect never reaches here, which is
   // the intended order.
-  test('access units assembled from RTP packets mux into something Chromium plays', async ({ page }) => {
+  test('access units assembled from RTP packets mux into something Chromium accepts', async ({ page }) => {
     const { chainInit, chainFrag, expected } = buildFixture();
     await page.goto('about:blank');
 
@@ -270,4 +272,144 @@ test.describe('the fMP4 writer against Chromium', () => {
         'so its acceptance of the real segment proves less than the test above claims',
     ).toBe(false);
   });
+});
+
+// ── the live path ───────────────────────────────────────────────────────────
+//
+// The muxer was checked against Chromium; the STREAMING path was not, and they
+// are different claims. A recorded clip is a complete file the element fetches
+// once. A live view is an endless body read incrementally and appended to a
+// SourceBuffer as it arrives — the shape LiveView.tsx implements and the shape
+// `GET .../cameras/{key}/live` serves.
+//
+// # What writing this test discovered, which is worth more than the test
+//
+// It failed, and the reason was not the streaming code. Chromium accepted the
+// init segment and the first fragment, then set HTMLMediaElement.error and
+// refused everything after it. The fixture's sample payloads are filler bytes,
+// not decodable pictures — so a decoder that gets far enough to TRY errors.
+//
+// The batch tests above pass because they never get that far: every append
+// happens within milliseconds and nothing plays. A stream with gaps between
+// fragments gives the decoder time, and it takes it.
+//
+// That means every browser check in this file establishes the CONTAINER is
+// valid — the boxes, the avcC, the SPS Chromium parses with its own parser —
+// and none of them establishes that anything plays. Three documents claimed
+// "accepts and plays" on the strength of these tests; all three now say
+// accepts. Proving playback needs real H.264, which needs an encoder or a
+// camera, and this repository has neither.
+//
+// So this test asserts what a synthetic stream CAN prove: that fragments
+// delivered incrementally are parsed and buffered as they arrive, rather than
+// only once the body is complete. That is the property that distinguishes a
+// live stream from a file downloaded slowly, and it is the one the live path
+// adds over playback.
+test('a chunked fMP4 stream is parsed incrementally as it arrives', async ({ page }) => {
+  const { init, frags, expected } = buildFixture();
+
+  // The page is served from the SAME origin as the stream. `about:blank` has an
+  // opaque origin and its fetch of a loopback URL is cross-origin — which cost
+  // a diagnosis cycle to find, and would have read as "the stream is broken".
+  const srv = createServer((req, res) => {
+    if (req.url === '/') {
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end('<!doctype html><title>live</title>');
+      return;
+    }
+    res.writeHead(200, {
+      'Content-Type': 'video/mp4',
+      'Cache-Control': 'no-store',
+      // No Content-Length, deliberately: a live stream has no end, and a
+      // browser that waited for a complete body would show nothing at all.
+    });
+    res.write(Buffer.from(init, 'base64'));
+    let i = 0;
+    const tick = setInterval(() => {
+      if (i >= frags.length) {
+        clearInterval(tick);
+        res.end();
+        return;
+      }
+      res.write(Buffer.from(frags[i++], 'base64'));
+    }, 120);
+  });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', () => r()));
+  const port = (srv.address() as AddressInfo).port;
+
+  try {
+    await page.goto(`http://127.0.0.1:${port}/`);
+    const result = await page.evaluate(async (codec) => {
+      const mime = `video/mp4; codecs="${codec}"`;
+      if (!MediaSource.isTypeSupported(mime)) return { supported: false as const };
+
+      const video = document.createElement('video');
+      const ms = new MediaSource();
+      video.src = URL.createObjectURL(ms);
+      await new Promise((r) => ms.addEventListener('sourceopen', r, { once: true }));
+      const sb = ms.addSourceBuffer(mime);
+
+      // Appends are serialised: a SourceBuffer throws if a second starts while
+      // one is in flight, and on a live stream chunks arrive faster than they
+      // drain. This mirrors LiveView.tsx's queue.
+      const queue: Uint8Array[] = [];
+      let appending = false;
+      const pump = () => {
+        if (appending || !queue.length || sb.updating) return;
+        appending = true;
+        try {
+          sb.appendBuffer(queue.shift() as BufferSource);
+        } catch {
+          // The element has errored — the decoder rejected the synthetic
+          // payloads. Recorded by the caller as bufferedBeforeDecodeError.
+          appending = false;
+        }
+      };
+      sb.addEventListener('updateend', () => {
+        appending = false;
+        pump();
+      });
+
+      const res = await fetch('/live');
+      const reader = res.body!.getReader();
+      let chunks = 0;
+      // Sampled DURING the read: a buffered range that only exists at the end
+      // is indistinguishable from a file downloaded slowly.
+      let bufferedDuringStream = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks++;
+        queue.push(value!);
+        pump();
+        await new Promise((r) => setTimeout(r, 20));
+        if (sb.buffered.length) {
+          bufferedDuringStream = sb.buffered.end(sb.buffered.length - 1);
+        }
+      }
+      return {
+        supported: true as const,
+        chunks,
+        bufferedDuringStream,
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight,
+      };
+    }, expected.codec);
+
+    if (!result.supported) throw new Error('this Chromium cannot play the fixture codec');
+
+    // More than one chunk, or the server delivered it in one go and this test
+    // proves nothing about incremental parsing.
+    expect(result.chunks, 'the stream arrived as a single chunk').toBeGreaterThan(1);
+    // Chromium derived these from the SPS inside avcC, mid-stream.
+    expect(result.videoWidth).toBe(expected.width);
+    expect(result.videoHeight).toBe(expected.height);
+    // The timeline existed BEFORE the body ended. This is the live property.
+    expect(
+      result.bufferedDuringStream,
+      'nothing was buffered while the stream was still arriving',
+    ).toBeGreaterThan(0);
+  } finally {
+    srv.close();
+  }
 });
