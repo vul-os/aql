@@ -324,6 +324,76 @@ fails when one drifts. It's how the two paragraphs above stay true.
 
 ---
 
+## Under the hood
+
+Everything above is what Aql does. This is how, for anyone deciding whether to
+run it, extend it, or audit it. The [docs](site/docs/) go further; this is the
+shape in one screen.
+
+**One binary, one file.** The hub is a single Go binary with the web console
+embedded via `go:embed`, and its entire state is one SQLite file in the data
+directory — 24 migrations, 48 tables. Back it up by copying that file. The
+controller agent is a separate Go module with its own pinned key.
+
+**The device engine.** One internal device model, a driver-adapter seam, and a
+registry that namespaces every device as `driver:id`. A driver implements
+discover / read / execute; the engine owns everything else. Four ship:
+
+| Driver | Reaches | Ceiling |
+|---|---|---|
+| MQTT | anything on a broker, including Zigbee and Z-Wave through `zigbee2mqtt` / `zwave-js-ui` | whatever the bridge exposes |
+| Modbus TCP | meters, PLCs, inverters | **read-only by construction** — its config accepts only capabilities whose whole verb set is `TierRead` |
+| HTTP / webhook | anything with a URL | as configured |
+| ONVIF | cameras — discovery, stream resolution, RTSP probe, recording | no pan/tilt |
+
+Capabilities are a **closed catalogue**, not free text: a driver cannot widen the
+verb space by naming a capability nobody reviewed. Every verb carries a safety
+tier, and `MaxActionTier` is a compile-time ceiling on what an unattended
+automation may actuate — every access verb sits above it, so **no automation can
+open a gate**, structurally rather than by configuration.
+
+**The access path** is one choke point every open funnels through: membership,
+account-suspended and user-disabled (fail-closed), time windows, geofences,
+cooldown, per-member and per-account rate limits, per-member and per-location
+daily quotas. `close` is never denied — someone who got in must be able to get
+out. Commands are Ed25519-signed envelopes with a nonce and an expiry; the
+controller pins the hub's key at pairing and verifies in a fixed normative order
+before it moves a relay.
+
+**Signing-key rotation** retains two keys and signs each command with whichever
+key its target controller pins, moving controllers across one `repair` at a time.
+Rotation cannot be atomic — a controller that drops between a precondition check
+and its own repair would be stranded until someone factory-resets it physically —
+so the old key is destroyed only when a transactional check finds nothing still
+pinning it.
+
+**The audit trail** is a SHA-256 hash chain over `access_logs` and
+`admin_audit_log`, with append-only database triggers and an `aql-hub
+verify-audit` CLI that runs against a cold backup with no server. It is a
+*detection* control: it makes tampering evident, not impossible, and it cannot
+see an attacker who edits the database and recomputes every hash forward.
+
+**The camera pipeline** goes RTSP → H.264 depacketization → SPS parsing →
+access-unit assembly → fMP4 → disk, with per-camera retention, a `camera:view`
+permission that is deliberately *not* implied by owner or admin, and an audit row
+for every view and every refusal. Clips are self-contained fragmented MP4, so the
+console plays one in a `<video>` with no plugin and no transcode.
+
+**Ports and process.** The hub binds loopback by default and refuses a
+non-loopback address without `-behind-proxy` (resolution-aware, not a string
+match). Controllers dial *out* to the hub, so nothing needs an inbound port —
+which is why it works behind CGNAT. Background workers are all opt-in or idle
+when unconfigured: clock sync, key rotation, camera capture, clip retention,
+energy polling, the automations scheduler.
+
+**What checks the claims.** `npm run check:claims` diffs 59 documented features
+against the code and fails when one drifts; a route-parity test AST-extracts
+every registered route and fails if the console cannot reach it; conformance
+vectors in `proto/` are consumed by both implementations and by an independent
+verifier that trusts neither.
+
+---
+
 ## Contributing
 
 Pull requests welcome — drivers especially, and most of all from **anyone who has
