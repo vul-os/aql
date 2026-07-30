@@ -54,6 +54,17 @@ func main() {
 		bleDemo       = flag.Bool("ble-demo", false, "exercise the BLE framing codec + redemption core in-memory")
 	)
 	flag.Parse()
+
+	// Flags only. Go stops parsing at the first non-flag token, so a stray word
+	// would silently drop every flag after it — and here that means live mode
+	// with no hub, reported as "provide --hub" to somebody who just did.
+	if flag.NArg() > 0 {
+		fmt.Fprintf(os.Stderr, "controller-sim: unexpected argument %q\n", flag.Arg(0))
+		fmt.Fprintln(os.Stderr, "This binary takes flags only. Everything after a non-flag argument")
+		fmt.Fprintln(os.Stderr, "would have been ignored, including the flag you are missing.")
+		os.Exit(2)
+	}
+
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	slog.SetDefault(log)
 
@@ -89,6 +100,19 @@ func fatal(err error) {
 // ---- live mode ----
 
 func runLive(stateDir, gateway, claimToken, lanAddr string, insecure bool, log *slog.Logger) {
+	// Said at the top of live mode, every time, because this binary pairs with a
+	// REAL hub and answers REAL open commands with a mock relay.
+	//
+	// The reference controller prints the equivalent line when it falls back to
+	// the mock relay. This one is always on it, and until now said so only in a
+	// source comment and a --help line — so a deployment tested with the
+	// simulator would show every open succeeding, with no gate moving and
+	// nothing on screen to say which of the two you were looking at. That is the
+	// worst shape a test tool can have: it makes a broken installation look
+	// proven.
+	log.Warn("SIMULATOR: this is controller-sim, not the controller. The relay is a MOCK — " +
+		"opens will be acked and recorded as successful by the hub, and nothing physical " +
+		"will move. Do not use this to verify a real installation.")
 	mock := relay.NewMock(log)
 	a, err := agent.New(agent.Options{
 		StateDir: stateDir, GatewayURL: gateway, ClaimToken: claimToken,

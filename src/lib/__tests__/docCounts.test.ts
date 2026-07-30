@@ -269,30 +269,30 @@ describe('every environment setting the hub reads is written down', () => {
     // An exception for a variable nothing reads is a stale excuse, and it would
     // hide the day that name comes back meaning something else.
     //
-    // grep exits 1 when it matches nothing, which makes execFileSync THROW. The
-    // first version of this let that propagate, so a stale exception surfaced as
-    // `Error: Command failed: grep -rl …` rather than as the sentence below.
-    // That was found by tampering the exception list, and it is worth the four
-    // extra lines: a guard whose failure reads as broken infrastructure gets
-    // treated as broken infrastructure.
-    const readsIt = (name: string): boolean => {
-      try {
-        return execFileSync('grep', ['-rl', name, 'hub', 'controller'], {
-          cwd: repo,
-          encoding: 'utf8',
-        }).trim().length > 0;
-      } catch (err) {
-        // Exit 1 is "no match" and is the answer. Anything else — grep missing,
-        // a directory unreadable — is a broken check and must not read as a
-        // clean "nothing uses this".
-        const status = (err as { status?: number }).status;
-        if (status === 1) return false;
-        throw err;
+    // ONE in-process walk over the Go sources, not one `grep -r` per name.
+    // The previous version shelled out per entry and took 7.1s against vitest's
+    // 5s budget — a timeout, which reports "Test timed out" rather than naming
+    // the defect, and is the same shape already fixed once in naming.test.ts.
+    // It got there because an earlier edit of mine removed a fast path that had
+    // been short-circuiting before the grep ran.
+    const sources: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+        const p = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(p);
+        else if (p.endsWith('.go')) sources.push(readFileSync(p, 'utf8'));
       }
     };
+    walk(path.join(repo, 'hub'));
+    walk(path.join(repo, 'controller'));
+    // A walk that read nothing would excuse every entry.
+    expect(sources.length, 'no Go sources were read; this check is looking at nothing').toBeGreaterThan(100);
+    const haystack = sources.join('\n');
+
     for (const name of Object.keys(NOT_OPERATOR_FACING)) {
       expect(
-        readsIt(name),
+        haystack.includes(name),
         `${name} is excused from the operator docs, but nothing under hub/ or controller/ ` +
           `reads it. Either the variable was renamed and this entry is a leftover, or the ` +
           `exception was never true. Delete it — a stale excuse hides the day that name ` +
