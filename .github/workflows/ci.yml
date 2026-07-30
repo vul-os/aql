@@ -410,6 +410,45 @@ jobs:
   # full synthetic-origin failure matrix on every push, not only at release
   # time — release.yml is tag-triggered and, until this pass, could not even
   # start (its `needs:` named a job that does not exist).
+  image:
+    # Build the container image on every run. It is not pushed here — docker.yml
+    # does that, on manual dispatch only, which is exactly why this is needed:
+    # nothing built the image automatically, so it broke and stayed broken.
+    #
+    # It broke the day `replace github.com/vul-os/aql/jcs => ../jcs` was added to
+    # hub/go.mod. The workflow built with `context: hub`, so the sibling module
+    # was outside the build context and `go mod download` failed with
+    # "reading /jcs/go.mod: no such file or directory". The image is what the
+    # release notes tell people to pull, so it was advertised and unbuildable for
+    # three days with nothing to say so.
+    #
+    # One platform. The cross-platform build lives in docker.yml and needs QEMU;
+    # this is here to catch a build that cannot work at all, which is
+    # architecture-independent.
+    name: container image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Context is the repository root, matching docker.yml, because the
+      # Dockerfile needs both modules.
+      - name: docker build
+        run: docker build -f hub/Dockerfile -t aql-hub:ci .
+      # Building proves it compiles. Running proves the image is usable — a
+      # distroless image with a missing entrypoint or an unwritable /data builds
+      # perfectly and fails on first start.
+      - name: the image starts and serves
+        run: |
+          set -eux
+          docker run -d --name aqlci -p 18080:8080 aql-hub:ci
+          for i in $(seq 1 30); do
+            docker logs aqlci 2>&1 | grep -q "aql hub" && break
+            sleep 1
+          done
+          docker logs aqlci
+          curl -fsS -o /dev/null http://127.0.0.1:18080/
+          docker exec aqlci /healthprobe
+          docker rm -f aqlci
+
   verify-script:
     name: release verifier (lint + failure matrix)
     runs-on: ubuntu-latest

@@ -35,13 +35,30 @@
 
 FROM golang:1.25-alpine AS build
 
+# BUILD CONTEXT IS THE REPOSITORY ROOT, not hub/.
+#
+# hub/go.mod carries `replace github.com/vul-os/aql/jcs => ../jcs`, so the
+# sibling module has to be inside the context. It was not: the workflow built
+# with `context: hub`, and `go mod download` failed with
+#
+#	reading /jcs/go.mod: open /jcs/go.mod: no such file or directory
+#
+# for three days, from the commit that added the replace. The image is what the
+# release notes point people at, so it was advertised and unbuildable — nothing
+# else in CI builds it, which is why nothing said so.
 WORKDIR /src
 
-# Cache module downloads separately from source changes.
-COPY go.mod go.sum ./
+# Cache module downloads separately from source changes. Both modules' manifests
+# are needed before download, because the replace is resolved at that point.
+COPY hub/go.mod hub/go.sum ./hub/
+COPY jcs/go.mod ./jcs/
+WORKDIR /src/hub
 RUN go mod download
 
-COPY . .
+WORKDIR /src
+COPY jcs/ ./jcs/
+COPY hub/ ./hub/
+WORKDIR /src/hub
 
 ARG VERSION=dev
 RUN CGO_ENABLED=0 go build -trimpath \

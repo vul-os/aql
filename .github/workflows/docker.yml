@@ -70,7 +70,9 @@ jobs:
         if: steps.detect.outputs.present == 'true'
         uses: docker/build-push-action@v6
         with:
-          context: hub
+          # Repository root: hub/go.mod replaces jcs with ../jcs, so the
+          # sibling module must be inside the build context.
+          context: .
           file: hub/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
