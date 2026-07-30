@@ -268,21 +268,36 @@ describe('every environment setting the hub reads is written down', () => {
   it('keeps the exception list honest — every entry is actually read', () => {
     // An exception for a variable nothing reads is a stale excuse, and it would
     // hide the day that name comes back meaning something else.
-    const everywhere = ['hub/cmd/hub/main.go', 'hub/internal/recording/fmp4fixture.go']
-      .map((f) => {
-        try {
-          return read(f);
-        } catch {
-          return '';
-        }
-      })
-      .join('\n');
+    //
+    // grep exits 1 when it matches nothing, which makes execFileSync THROW. The
+    // first version of this let that propagate, so a stale exception surfaced as
+    // `Error: Command failed: grep -rl …` rather than as the sentence below.
+    // That was found by tampering the exception list, and it is worth the four
+    // extra lines: a guard whose failure reads as broken infrastructure gets
+    // treated as broken infrastructure.
+    const readsIt = (name: string): boolean => {
+      try {
+        return execFileSync('grep', ['-rl', name, 'hub', 'controller'], {
+          cwd: repo,
+          encoding: 'utf8',
+        }).trim().length > 0;
+      } catch (err) {
+        // Exit 1 is "no match" and is the answer. Anything else — grep missing,
+        // a directory unreadable — is a broken check and must not read as a
+        // clean "nothing uses this".
+        const status = (err as { status?: number }).status;
+        if (status === 1) return false;
+        throw err;
+      }
+    };
     for (const name of Object.keys(NOT_OPERATOR_FACING)) {
-      const readSomewhere = everywhere.includes(name) || execFileSync('grep', ['-rl', name, 'hub', 'controller'], {
-        cwd: repo,
-        encoding: 'utf8',
-      }).trim().length > 0;
-      expect(readSomewhere, `${name} is excused from the docs but nothing reads it`).toBe(true);
+      expect(
+        readsIt(name),
+        `${name} is excused from the operator docs, but nothing under hub/ or controller/ ` +
+          `reads it. Either the variable was renamed and this entry is a leftover, or the ` +
+          `exception was never true. Delete it — a stale excuse hides the day that name ` +
+          `comes back meaning something else.`,
+      ).toBe(true);
     }
   });
 });

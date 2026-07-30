@@ -125,6 +125,12 @@ describe('the key registry is the only place a name is written', () => {
     const srcRoot = path.resolve(here, '../..');
 
     const offenders: string[] = [];
+    // What the walk actually visited. Without this the check is vacuous in the
+    // most ordinary way: offenders is empty when nothing is wrong AND when
+    // nothing was read, and those look identical from the assertion below.
+    // Verified — pointing srcRoot at a directory with no .ts files left every
+    // test in this file green.
+    const scanned: string[] = [];
     const walk = (dir: string) => {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
         const full = path.join(dir, entry.name);
@@ -140,12 +146,26 @@ describe('the key registry is the only place a name is written', () => {
         if (entry.name === 'storageKeys.ts' || entry.name === 'vault.ts') continue;
         if (full.includes('__tests__')) continue;
         const src = readFileSync(full, 'utf-8');
+        scanned.push(path.relative(srcRoot, full));
         for (const m of src.matchAll(/['"`]lintel\.[a-zA-Z0-9_.-]+['"`]/g)) {
           offenders.push(`${path.relative(srcRoot, full)}: ${m[0]}`);
         }
       }
     };
     walk(srcRoot);
+
+    // A count, and a file that must be among them. The count alone would pass
+    // against any populated directory; naming a file this repository certainly
+    // has proves the walk reached THIS source tree.
+    expect(
+      scanned.length,
+      `the walk read ${scanned.length} source files, which is too few for src/ — ` +
+        `this check is not looking at what it claims to`,
+    ).toBeGreaterThan(50);
+    expect(
+      scanned.some((f) => f.endsWith('lib/api.ts')),
+      'the walk never reached src/lib/api.ts, so it is not walking this source tree',
+    ).toBe(true);
 
     expect(
       offenders,
