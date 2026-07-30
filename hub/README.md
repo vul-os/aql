@@ -255,6 +255,11 @@ aql-hub 2fa disable -user NAME -reason TEXT [-data DIR]
 aql-hub energy rebucket -account ID [-tz ZONE] [-dry-run]
 ```
 
+`verify-audit` refuses a directory with no `lintel.db` rather than creating one:
+pointed at a wrong path or an incomplete backup it would otherwise report
+`OK (0 rows)` for the chains it had just made, and write to a directory you asked
+it only to read.
+
 Anything else that is not a flag is refused with exit 2 and that list. It has to
 be: the hub takes no positional arguments, so a mistyped subcommand used to fall
 through and **start a server** — writing a fresh signing key and running

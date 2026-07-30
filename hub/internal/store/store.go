@@ -168,3 +168,12 @@ func NewID() string {
 // A row that exists but belongs to another account is indistinguishable from
 // one that does not exist — that is the tenancy contract.
 var ErrNotFound = sql.ErrNoRows
+
+// DatabaseFile is the SQLite file inside a data directory.
+//
+// Exported so a caller that must NOT create one can check first. Open creates
+// the database if it is absent, which is right for a hub starting up and wrong
+// for anything that was asked to inspect an existing directory: it turns
+// "there is nothing here" into a fresh, empty, internally-consistent database
+// that then passes every check made of it.
+func DatabaseFile(dir string) string { return filepath.Join(dir, "lintel.db") }
