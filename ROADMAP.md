@@ -375,11 +375,20 @@ and none has met physical hardware.
       emitting it half-formed, a continuation with no start bit is dropped rather than
       given a fabricated header, and every length read off the wire is bounds-checked
       (STAP-A's inner sizes are attacker-controlled). Two fuzz targets, ~590k execs clean.
-      What that does NOT prove is stated plainly: the vectors were written from the RFC,
-      so they establish that this code agrees with our reading of the spec, not that it
-      agrees with a real camera. The fMP4 writer, and validation against actual hardware,
-      remain. The retention worker, the `camera:view` permission and the viewer do not — but building a retention policy for footage that
-      does not exist yet is the wrong order
+      **Sequence-parameter-set parsing now exists too** (`sps.go`) — ITU-T H.264 §7.3.2.1.1
+      exp-Golomb, the high-profile scaling-list walk, and frame cropping, which is the field
+      that matters: 1080 is not a multiple of 16, so every 1080p camera encodes 1088 lines
+      and crops 8 away, and a muxer that writes the coded height produces a file with a band
+      of encoder padding along the bottom that no demuxer complains about. It is wired into
+      the RTSP probe, so `Describe` now reports the resolution the encoder is *actually*
+      using — read from the stream's own parameter set in `sprop-parameter-sets` — beside
+      the one an ONVIF profile claims. Those two disagree in practice.
+      What none of it proves is stated plainly: the vectors were written from the RFC and
+      the standard, so they establish that this code agrees with our reading of both, not
+      that it agrees with a real camera. The fMP4 writer, and validation against actual
+      hardware, remain. The retention worker, the `camera:view` permission and the viewer do
+      not — but building a retention policy for footage that does not exist yet is the wrong
+      order
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
 - [ ] Rate-limiting and scoping on movement commands, so a compromised client cannot drive

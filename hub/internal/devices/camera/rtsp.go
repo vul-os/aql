@@ -99,6 +99,23 @@ type MediaDescription struct {
 	// Control is the per-stream control URL a SETUP would use. Parsed and
 	// reported but not followed — see the file comment.
 	Control string
+	// Parameters is the sequence parameter set the camera advertised in
+	// sprop-parameter-sets, decoded. nil when the camera offered none — which
+	// is legal, since a camera may send parameter sets in-band instead.
+	//
+	// This is the difference between "the camera says it streams H264" and "the
+	// camera streams 1280x720 H264 at High profile". An ONVIF profile carries a
+	// configured resolution, and it is routinely not the one the encoder is
+	// actually using — a profile edited without restarting the encoder, or a
+	// second stream sharing a profile. The SPS is what the encoder is doing.
+	Parameters *SPS
+	// ParametersErr says why an advertised parameter set could not be read.
+	//
+	// Separate from Parameters being nil, because "the camera offered nothing"
+	// and "the camera offered something this code could not parse" call for
+	// different responses, and collapsing them into a nil would report a broken
+	// camera as a quiet one.
+	ParametersErr string
 }
 
 // Describe probes an RTSP URL and reports what the camera says it streams.
@@ -196,6 +213,96 @@ func Describe(ctx context.Context, rawURL string, cred Credential, timeout time.
 	return info, nil
 }
 
+// readSpropParameterSets pulls the SPS out of an fmtp attribute (RFC 6184 §8.1)
+// and decodes it.
+//
+// The line looks like:
+//
+//	a=fmtp:96 packetization-mode=1;sprop-parameter-sets=Z0IAKeKQFge2AtwEBAaQeJEV,aM48gA==
+//
+// sprop-parameter-sets is a comma-separated list of base64 parameter sets, in no
+// guaranteed order and with no type tag — the NAL header byte inside each one is
+// the only thing that says which is the SPS. So every element is decoded and
+// tried, rather than assuming the SPS comes first; cameras that send the PPS
+// first exist.
+//
+// Order-independence itself comes from ParseSPS, which refuses a NAL whose type
+// is not 7. The nal_unit_type check below is not what provides it — a tamper
+// removing that check left every ordering case passing. What the check is for is
+// the difference between a list that offers ONLY a PPS, which is legal and
+// unremarkable, and one that offers something broken: without it the PPS's
+// rejection lands in lastErr and a perfectly healthy camera is reported as
+// having advertised an unreadable parameter set.
+//
+// Nothing here fails the probe. A camera whose fmtp line is malformed still has
+// a working stream, and a DESCRIBE that refused because one attribute was odd
+// would be less useful than one that reports what it could read and says what it
+// could not.
+func (m *MediaDescription) readSpropParameterSets(fmtp string) {
+	// "96 packetization-mode=1;sprop-parameter-sets=..." — drop the payload
+	// type, which is already in PayloadType.
+	_, params, ok := strings.Cut(strings.TrimSpace(fmtp), " ")
+	if !ok {
+		return
+	}
+	var sprop string
+	for _, kv := range strings.Split(params, ";") {
+		k, v, ok := strings.Cut(kv, "=")
+		if !ok {
+			continue
+		}
+		// The value is base64 and may itself contain '=' padding, so the split
+		// above is on the FIRST '=' only and v keeps the rest.
+		if strings.EqualFold(strings.TrimSpace(k), "sprop-parameter-sets") {
+			sprop = strings.TrimSpace(v)
+			break
+		}
+	}
+	if sprop == "" {
+		return
+	}
+
+	var lastErr string
+	for _, enc := range strings.Split(sprop, ",") {
+		enc = strings.TrimSpace(enc)
+		if enc == "" {
+			continue
+		}
+		nal, err := base64.StdEncoding.DecodeString(enc)
+		if err != nil {
+			lastErr = "sprop-parameter-sets is not valid base64"
+			continue
+		}
+		if len(nal) == 0 || nal[0]&0x1f != nalTypeSPS {
+			continue // a PPS or something else; not an error
+		}
+		sps, err := ParseSPS(nal)
+		if err != nil {
+			lastErr = err.Error()
+			continue
+		}
+		m.Parameters = &sps
+		m.ParametersErr = ""
+		return
+	}
+	// Only reported when no parameter set parsed. A camera that offers a broken
+	// SPS and a good one is not broken.
+	if m.Parameters == nil {
+		m.ParametersErr = lastErr
+	}
+}
+
+// VideoResolution returns the first video stream's encoded dimensions, and
+// whether the camera advertised a parameter set to read them from.
+func (s StreamInfo) VideoResolution() (width, height int, known bool) {
+	for _, m := range s.Media {
+		if m.Kind == "video" && m.Parameters != nil {
+			return m.Parameters.Width, m.Parameters.Height, true
+		}
+	}
+	return 0, 0, false
+}
+
 // VideoCodec returns the first video stream's codec, or "".
 func (s StreamInfo) VideoCodec() string {
 	for _, m := range s.Media {
@@ -210,11 +317,20 @@ func (s StreamInfo) VideoCodec() string {
 func (s StreamInfo) Summary() string {
 	var parts []string
 	for _, m := range s.Media {
+		desc := m.Kind
 		if m.Codec != "" {
-			parts = append(parts, m.Codec+" "+m.Kind)
-		} else {
-			parts = append(parts, m.Kind)
+			desc = m.Codec + " " + m.Kind
 		}
+		// The resolution comes from the stream's own parameter set, so it is
+		// worth showing next to the codec: an operator comparing this against
+		// the resolution an ONVIF profile claims is the whole point of having
+		// probed. Silence when the camera advertised nothing — an absent
+		// parameter set is normal (they can arrive in-band) and rendering it as
+		// "0x0" would state a resolution nobody claimed.
+		if m.Parameters != nil {
+			desc += fmt.Sprintf(" %dx%d", m.Parameters.Width, m.Parameters.Height)
+		}
+		parts = append(parts, desc)
 	}
 	out := strings.Join(parts, " + ")
 	if s.AuthUsed != "" && s.AuthUsed != "none" {
@@ -460,6 +576,8 @@ func parseSDP(body string) []MediaDescription {
 				}
 			case strings.HasPrefix(value, "control:"):
 				cur.Control = strings.TrimSpace(strings.TrimPrefix(value, "control:"))
+			case strings.HasPrefix(value, "fmtp:"):
+				cur.readSpropParameterSets(strings.TrimPrefix(value, "fmtp:"))
 			}
 		}
 	}
