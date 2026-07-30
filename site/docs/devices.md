@@ -48,9 +48,11 @@ Two separate things, and the separation is worth knowing.
 **Access points** — a gate, door, barrier or "other" — through a paired controller that
 verifies an Ed25519-signed command. The only dispatchable commands are `open` and
 `close`. Access-point kinds are constrained to those four values by a database check
-constraint. This path does **not** go through the device engine; bringing it onto the
-same internal model, so `access` is one kind among seven rather than a parallel stack, is
-still ahead.
+constraint. Opening does **not** go through the device engine and deliberately never will
+— see [ACCESS-ON-THE-ENGINE.md](https://github.com/vul-os/aql/blob/main/docs/ACCESS-ON-THE-ENGINE.md)
+§3.1. Gates DO now appear in the engine's fleet, read-only, through the `access` driver:
+status only, every verb refused, and it is the one driver that needs no device config
+because it reads the database.
 
 **Configured devices**, through the engine, when a hub is started with `-device-drivers`
 and a `-device-config` file. Those devices report readings and accept the verbs their
@@ -110,8 +112,10 @@ catalogue, so a discovery pass proposes a *candidate* with an address attached a
 human decides what joins the fleet — the same rule the MQTT bridge scan and the mDNS
 browse follow, and for the same reason: anything on the LAN can answer.
 
-Bringing the existing access path onto the same internal model — so `access` is one kind
-among seven rather than a parallel stack — is still ahead.
+Access points now appear in the engine's device list through the read-only `access` driver,
+so the console can show a gate beside a lamp and a meter. ACTUATION stays on the signed
+path permanently: two routes to a gate is worse than one, whatever the second one's
+quality.
 
 **Where it lives: the Go hub.** It owns persistence, audit and the open path, and it runs
 on the always-on box. The Rust core in the Tauri shell was the alternative and is not it.

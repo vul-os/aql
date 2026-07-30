@@ -125,3 +125,45 @@ func (s *Store) CreateAccessPointFull(ctx context.Context, accountID, locationID
 	}
 	return s.AccessPointDetailByID(ctx, accountID, id)
 }
+
+// AllAccessPoints lists every access point on the hub, across all accounts,
+// with the account each belongs to.
+//
+// Cross-account on purpose, and this is the only query here that is. The device
+// engine's Discover has no account context — a driver reports the whole fleet
+// and the registry scopes it afterwards through device_ownership — so an
+// account-scoped lister could not serve it. Every OTHER path to an access point
+// is scoped in its query, and that must stay true: this one exists to be read by
+// a driver at startup and must not be reached from a request handler.
+func (s *Store) AllAccessPoints(ctx context.Context) ([]AccessPointRow, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT ap.id, l.account_id, ap.name, ap.kind, COALESCE(ap.device_id, ''), ap.status
+		   FROM access_points ap
+		   JOIN locations l ON l.id = ap.location_id
+		  ORDER BY l.account_id, ap.name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []AccessPointRow
+	for rows.Next() {
+		var r AccessPointRow
+		if err := rows.Scan(&r.ID, &r.AccountID, &r.Name, &r.Kind, &r.DeviceID, &r.Status); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+// AccessPointRow is one access point as the device engine sees it: enough to
+// name it and to find the controller that answers for it, and nothing about who
+// may open it. Authorisation is not this type's business.
+type AccessPointRow struct {
+	ID        string
+	AccountID string
+	Name      string
+	Kind      string
+	DeviceID  string // paired controller, "" if none
+	Status    string
+}

@@ -34,7 +34,7 @@ exist and which are design intent. The condensed operator-facing tour is
 
 | Layer | Status |
 | --- | --- |
-| Hub (`hub/`) — open path, console, API, device hub, audit | **Built.** 126 HTTP routes, 1,059 Go test functions green across 17 packages |
+| Hub (`hub/`) — open path, console, API, device hub, audit | **Built.** 126 HTTP routes, 1,068 Go test functions green across 18 packages |
 | **Access module** — the first device kind wired end to end | **Built.** Signed commands, pinned-key controller, offline grants, tamper-evident audit |
 | Controller agent (`controller/`) — pairing, signed commands, grants, events | **Built.** 130 Go test functions green. GPIO relay driver and BLE radio are **not** |
 | Wire contracts (`proto/`) | **Built.** 69 conformance vectors, 103 checks, consumed by both sides |
@@ -406,8 +406,10 @@ footage.
 **Access is the shape to copy, not the exception to it.** The access module already proves
 the parts that are hard to retrofit: a versioned wire contract with conformance vectors, a
 device that verifies a signature instead of trusting its network, and an audit row written
-in the same transaction as the decision. It still runs as a parallel stack; bringing it
-onto the same internal device model — so `access` is one kind among seven — is the part of
+in the same transaction as the decision. ACTUATION still runs as its own stack, deliberately
+and permanently (docs/ACCESS-ON-THE-ENGINE.md §3.1); what has changed is that gates now
+APPEAR in the engine's fleet, read-only, via the `access` driver. Moving the opening itself
+onto the device model — so `access` is one kind among seven in every sense — is the part of
 this phase that has not happened.
 
 **Where it lives: the Go hub.** It owns persistence, audit and the open path, and it runs

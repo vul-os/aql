@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,12 +42,24 @@ func TestEveryAdvertisedDriverCanBeConstructed(t *testing.T) {
 			"Field":"brightness"}]}]}}`,
 	}
 
+	// The hub the builder hangs off. Only the logger is read at construction:
+	// `access` captures closures over the store and the device hub and does not
+	// call either until Discover, which is what lets it be built here.
+	h := &hub{log: slog.New(slog.NewTextHandler(io.Discard, nil))}
+
 	for _, name := range knownDeviceDrivers() {
 		raw, ok := configs[name]
 		if !ok {
-			t.Errorf("driver %q is advertised by knownDeviceDrivers but this test has "+
-				"no config for it; add one so the name is proven to build something", name)
-			continue
+			if !needsDeviceConfig(name) {
+				// `access` is built from the database, so there is no config to
+				// write. Still built below, from a zero deviceFile, because
+				// "advertised but does not build" is the thing this test is for.
+				raw = "{}"
+			} else {
+				t.Errorf("driver %q is advertised by knownDeviceDrivers but this test has "+
+					"no config for it; add one so the name is proven to build something", name)
+				continue
+			}
 		}
 		path := filepath.Join(t.TempDir(), "devices.json")
 		if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
@@ -57,7 +70,7 @@ func TestEveryAdvertisedDriverCanBeConstructed(t *testing.T) {
 			t.Errorf("driver %q: config did not parse: %v", name, err)
 			continue
 		}
-		d, err := buildDeviceDriver(name, file)
+		d, err := h.buildDeviceDriver(name, file)
 		if err != nil {
 			t.Errorf("driver %q is advertised but does not build: %v", name, err)
 			continue

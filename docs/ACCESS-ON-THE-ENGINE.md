@@ -1,8 +1,18 @@
 # Access as a device kind: the design before the fold
 
-**Status: designed, not built.** No code implements this. `internal/devices` still
-declines to drive access points, and it is right to until the questions below are
-settled.
+**Status: §3's decisions are built; §5's questions are still open.**
+`hub/internal/devices/accessdev` is the read-only driver, wired behind
+`-device-drivers=access`. It is the only driver that needs no `-device-config`,
+because it reads the database.
+
+One decision changed in the building, for the better. §2.1 expected the fold to
+spend a layer of defence — after it, only the tier ceiling would stop an
+automation opening a gate. It does not: a device must declare at least one
+capability, and these declare `access.status`, whose only verb is `status` at
+`TierRead`. So the engine can route no actuating access verb to an access point
+at all, and a rule still cannot NAME one. The ceiling remains the guarantee for
+the day somebody declares `CapBarrier` here, which is why the test §6 asked for
+was still worth writing first.
 
 Six documents call this out as the outstanding architectural gap — ARCHITECTURE
 §8, ROADMAP, `site/docs/devices.md` twice, `src/lib/deviceKinds.ts`, and the todo.
@@ -56,23 +66,37 @@ if they were [routed through the registry], every access verb in the catalogue
 sits at TierPhysicalAccess, above MaxActionTier, so an automation could not fire
 one."*
 
-### 2.1 But defence in depth gets thinner, and that is the real cost
+### 2.1 Defence in depth: what this was expected to cost, and what it cost
 
-Today there are **two independent reasons** an automation cannot open a gate:
+Before the fold there were **two independent reasons** an automation could not
+open a gate:
 
-1. Access points are not in the registry at all, so no rule can even name one.
+1. Access points were not in the registry at all, so no rule could name one.
 2. The verb's tier is above the ceiling.
 
-After the fold, **only the second remains.** That is a genuine reduction, and it
-is the single most important consequence of this change. A tier assigned wrongly
-in a future edit to `capability.go` would, today, still be caught by (1); after
-the fold it would not be caught by anything.
+This section originally said the fold would spend (1) and leave only (2), and
+called that the single most important consequence of the change. **It did not,
+and the reason is worth keeping rather than editing away.**
 
-The compensating control is not a bigger comment. It is a test that pins every
-access verb's tier against the ceiling directly, so that lowering one fails the
-build rather than quietly widening what an unattended rule may do. That test is
-worth having *before* the fold and independently of it — it costs nothing now and
-it is the thing the fold spends.
+A device must declare at least one capability — `Device.Validate` rejects an
+empty list — so "surface the gate and declare nothing" was never available. The
+choice was therefore between declaring `CapBarrier`/`CapLock` and declaring
+something status-only. Declaring the real access capabilities would have put an
+open button in the console in front of a route that refuses, AND would have let a
+rule name `open` on a gate. So the driver declares `access.status`, whose only
+verb is `status` at `TierRead`.
+
+The result is that (1) substantially survives: the engine can route no actuating
+access verb to an access point, because no access device offers one. What the
+fold actually spent is narrower — a future edit that declared `CapBarrier` here
+would now have somewhere to declare it.
+
+(2) is therefore still the guarantee that matters for that day, and the test
+pinning every access verb's tier against the ceiling was still worth writing
+first. A compensating control introduced alongside the thing it compensates for
+is one review away from being dropped as noise; this one was written before the
+driver and outlived the argument that motivated it, which is the better outcome
+for a control of this kind.
 
 ---
 
@@ -149,11 +173,13 @@ fold to unify the *actuation* paths should read §3.1 and stop.
   while also having its own screen is two places showing one thing. Probably the
   device list should link out rather than duplicate controls, but that is a
   design question about the console and this is not that document.
-- **What does a gate's `status` reading contain?** Controller connectivity is
-  known; whether the barrier is physically open is not, on most installations,
-  because there is no sensor. Reporting `closed` when nobody knows would be an
-  invention. A reading that says "the controller is reachable" and nothing about
-  the barrier is honest and less useful than it sounds.
+- ~~**What does a gate's `status` reading contain?**~~ **Answered: nothing.**
+  `Read` returns no readings at all. Whether the barrier is physically open is
+  not known without a sensor most installations do not have, and the one fact
+  that IS known — whether the controller can be reached — is availability, which
+  the engine already carries on the device. Inventing a reading to look complete
+  is how a console ends up drawing a chart of a number nobody measured. A test
+  pins the emptiness so that filling it later is deliberate.
 - **Do access points get engine health semantics?** `AvailDegraded` means
   reachable-and-not-working. For a controller that is a genuinely useful state and
   it may already be better expressed by the existing pairing/heartbeat surface.
@@ -166,15 +192,14 @@ fold to unify the *actuation* paths should read §3.1 and stop.
 
 ## 6. The order of work
 
-1. **The tier-ceiling test** (§2.1). Independent of the fold, valuable now, and
-   it is what the fold spends. Do this first, and if nothing else is ever done,
-   this was still worth doing.
-2. The read-only driver: `Discover` and `Read` from the store, `Execute`
-   refusing.
-3. Wiring it into the registry behind the same `-device-drivers` switch as the
-   others, so a hub with no engine is unchanged.
-4. The console question in §5, which is a separate piece of work and may
-   reasonably be answered with "link, do not duplicate".
-
-Steps 2 and 3 are small. Step 1 is the one that matters, and step 4 is the one
-that will take the longest to agree.
+1. ~~**The tier-ceiling test** (§2.1).~~ **Done.** Independent of the fold and
+   valuable regardless, which is exactly how it turned out.
+2. ~~The read-only driver.~~ **Done** — `hub/internal/devices/accessdev`.
+   `Discover` maps access points onto devices, `Read` returns nothing, `Execute`
+   refuses every verb in the catalogue.
+3. ~~Wiring it behind `-device-drivers`.~~ **Done**, with one deviation: `access`
+   is the only driver that does NOT require `-device-config`, because it reads
+   the database. Requiring a JSON file to list devices the product already knows
+   about would be a file written to satisfy a check.
+4. **The console question in §5.** Still open, still the one that will take
+   longest to agree, and now the only thing between this design and finished.

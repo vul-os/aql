@@ -258,9 +258,14 @@ const CAP_CONTROLS: Record<string, EngineControl[]> = {
     { verb: 'arm', label: 'Arm' },
     { verb: 'disarm', label: 'Disarm' },
   ],
-  // energy.meter, sensor.read and camera.stream offer read/status only. A
-  // read-only device gets no buttons rather than disabled ones — there is
-  // nothing to enable later.
+  // energy.meter, sensor.read, camera.stream and access.status offer
+  // read/status only. A read-only device gets no buttons rather than disabled
+  // ones — there is nothing to enable later.
+  //
+  // access.status is the deliberate one: a gate appears in the fleet so the
+  // console can show it beside a lamp, but opening it stays on the signed
+  // Ed25519 path (docs/ACCESS-ON-THE-ENGINE.md §3.1). An Open button here would
+  // sit in front of a route that refuses by design.
 };
 
 /** Controls for a device, de-duplicated by verb, in capability order. */

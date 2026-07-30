@@ -105,8 +105,16 @@ const (
 type CapabilityID string
 
 const (
-	CapBarrier      CapabilityID = "access.barrier"
-	CapLock         CapabilityID = "access.lock"
+	CapBarrier CapabilityID = "access.barrier"
+	CapLock    CapabilityID = "access.lock"
+	// CapAccessStatus is an access point PRESENT in the engine but not
+	// actuable through it. Status only, deliberately: see accessdev's package
+	// doc and docs/ACCESS-ON-THE-ENGINE.md §3.1. Gates are opened by the
+	// signed Ed25519 path, and a device that declared CapBarrier here would
+	// put an open button in front of a route that refuses — and would let a
+	// rule NAME an actuating access verb, which nothing should be able to do
+	// by accident.
+	CapAccessStatus CapabilityID = "access.status"
 	CapSwitch       CapabilityID = "light.switch"
 	CapDimmable     CapabilityID = "light.dimmable"
 	CapSetpoint     CapabilityID = "climate.setpoint"
@@ -196,6 +204,7 @@ var catalogue = map[CapabilityID]Capability{
 	}},
 	CapMeter:        {ID: CapMeter, Verbs: []VerbSpec{{Verb: VerbRead, Tier: TierRead}}},
 	CapSensorReadCa: {ID: CapSensorReadCa, Verbs: []VerbSpec{{Verb: VerbRead, Tier: TierRead}}},
+	CapAccessStatus: {ID: CapAccessStatus, Verbs: []VerbSpec{{Verb: VerbStatus, Tier: TierRead}}},
 	// Streaming is not actuation, so this capability is status only: the
 	// recording and live-view pipeline is driven by the recorder, not by a verb
 	// somebody executes against a device.

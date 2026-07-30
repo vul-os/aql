@@ -42,23 +42,36 @@
 // checker's header for what that means this tool cannot catch.
 
 export const FEATURES = [
-  // ── access as a device kind. docs/ACCESS-ON-THE-ENGINE.md is the design and
-  // says "Status: designed, not built" in those words. This entry holds that
-  // line: the day an access driver lands, this check fails until the design
-  // doc, ARCHITECTURE §8, ROADMAP and site/docs/devices.md stop calling it
-  // outstanding — six documents currently do.
+  // ── access as a device kind. Designed in docs/ACCESS-ON-THE-ENGINE.md and
+  // then built, one iteration apart. This entry was 'planned' for exactly that
+  // gap and it did its job: the driver landed and the check went red until the
+  // six documents calling the fold outstanding were corrected.
+  //
+  // The label is precise about WHAT shipped, because the interesting half is
+  // what did not: the driver is READ-ONLY and Execute refuses every verb. Any
+  // future edit that lets the engine actuate a gate is a different claim and
+  // must not inherit this one.
   {
     id: 'access-on-the-engine',
-    label: 'Access points driven through the device engine as a seventh kind (design only — actuation stays on the signed Ed25519 path)',
-    docStatus: 'planned',
+    label: 'Access points surfaced in the device engine as a seventh kind, READ-ONLY — status-only capability, Execute refuses every verb, actuation stays on the signed Ed25519 path',
+    docStatus: 'shipped',
     docRefs: [
       'docs/ACCESS-ON-THE-ENGINE.md — the design, and why actuation deliberately does not move',
-      'ARCHITECTURE.md §8 — "still runs as a parallel stack"',
+      // Quoted so the guard bites on the half that matters. If a future change
+      // routes actuation through the engine, this sentence has to go, and the
+      // build breaks until somebody decides that deliberately.
+      'ARCHITECTURE.md §8 — "ACTUATION still runs as its own stack, deliberately"',
       'site/docs/devices.md — the seven-kinds table',
     ],
-    evidence: [[
-      { root: 'hub/internal/devices', pattern: 'func NewAccessDriver|package accessdev' },
-    ]],
+    evidence: [
+      [{ root: 'hub/internal/devices', pattern: 'func NewAccessDriver|package accessdev' }],
+      [{ file: 'hub/cmd/hub/main.go', pattern: 'deviceDriverAccess' }],
+      [{ root: 'hub/internal/devices/accessdev', pattern: 'ErrUseSignedPath' }],
+    ],
+    // Both halves, because the read-only half is the load-bearing one: the
+    // driver must exist AND be constructible from the binary AND still refuse.
+    // Evidence on the package alone would pass for a driver that had quietly
+    // grown an actuation path.
   },
   // ── planned / not implemented — the nine (ten, by plain count) 2026-07-20
   // overclaims, now correctly marked in the docs. This check's job is to

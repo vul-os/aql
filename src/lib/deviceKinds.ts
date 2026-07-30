@@ -31,8 +31,11 @@ export type DeviceState = 'live' | 'warn' | 'alert' | 'off' | 'unknown';
  * Access is the most complete kind in the product and the only one with its
  * own stack: a versioned wire contract, a controller that verifies an Ed25519
  * signature against a key it pinned itself, and an audit row written in the
- * same transaction as the decision. Bringing it onto the internal device model
- * is still ahead — until then it is deliberately not one of ENGINE_KINDS.
+ * same transaction as the decision. Gates now APPEAR in the engine's fleet
+ * through the read-only `access` driver, but OPENING one stays on that stack
+ * permanently (docs/ACCESS-ON-THE-ENGINE.md §3.1), which is why access is still
+ * deliberately not one of ENGINE_KINDS: this list is about what the engine
+ * drives, not what it can show.
  */
 export const REAL_KIND = 'Access';
 

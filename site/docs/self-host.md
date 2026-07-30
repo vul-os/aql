@@ -28,7 +28,7 @@ bills you directly).
 > WebSocket device hub, the signed open path, the admin console, rate limits and quotas,
 > visitor grants, the tamper-evident audit log, offline-grant issuance, and texting
 > `open` works today over WhatsApp, Slack or Telegram — 126 HTTP routes registered in
-> `hub/internal/httpapi/server.go`, and over a thousand Go test functions across 17
+> `hub/internal/httpapi/server.go`, and over a thousand Go test functions across 18
 > packages, all green. **Building from source is the reliable path today** — see the
 > commands below.
 >

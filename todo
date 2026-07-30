@@ -87,8 +87,12 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 - [ ] Present over BLE from a browser — genuinely impossible; needs native code in
       src-tauri (also the only way to resolve .local reliably). Tracked as the
       offline-grant-app-client claim.
-- [ ] Bring access onto the internal device model, so it is one kind among seven rather
-      than a parallel stack. DESIGNED: docs/ACCESS-ON-THE-ENGINE.md. Decisions: actuation
+- [x] Access now APPEARS in the device engine: hub/internal/devices/accessdev, wired as
+      `-device-drivers=access`, the only driver needing no -device-config because it reads
+      the DB. Status-only capability, Execute refuses every verb in the catalogue.
+      STILL OPEN is the console question (§5): a gate in the device list AND on its own
+      screen is two places showing one thing. Probably link, do not duplicate.
+      DESIGNED: docs/ACCESS-ON-THE-ENGINE.md. Decisions: actuation
       does NOT move (read-only driver; two actuation routes to a gate is strictly worse
       than one), source of truth is the DB not the config file, ids are
       `access:<access_point_id>`, the engine writes no audit row.

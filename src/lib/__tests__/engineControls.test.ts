@@ -110,10 +110,15 @@ function consoleControls(): Map<string, Set<string>> {
  * camera.stream offer read/status only. A read-only device gets no buttons
  * rather than disabled ones — there is nothing to enable later."
  *
+ * `access.status` is the fourth and the most deliberate of them: a gate appears
+ * in the fleet read-only ON PURPOSE, because opening one stays on the signed
+ * Ed25519 path (docs/ACCESS-ON-THE-ENGINE.md §3.1). A button here would be a
+ * button in front of a route that refuses.
+ *
  * Listed here so that a NEW read-only capability is a deliberate addition to
  * this array rather than a silent omission from the table.
  */
-const READ_ONLY = new Set(['energy.meter', 'sensor.read', 'camera.stream']);
+const READ_ONLY = new Set(['energy.meter', 'sensor.read', 'camera.stream', 'access.status']);
 
 describe('the console offers a control for every capability the engine has', () => {
   it('leaves no catalogue capability without either buttons or a read-only entry', () => {

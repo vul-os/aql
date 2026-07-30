@@ -33,7 +33,7 @@ contract, a device that verifies rather than trusts, and an audit trail you can 
 after the fact.
 
 **The hub** (`hub/`) — one Go binary, SQLite inside, **126 HTTP routes over 24
-migrations, and more than 1,000 tests green** across 17 packages:
+migrations, and more than 1,000 tests green** across 18 packages:
 
 - [x] Accounts, locations, access points, members with roles, invites
 - [x] An **instance-admin** operator seat above every account: one-shot claim
@@ -320,8 +320,9 @@ and none has met physical hardware.
       the owning account nor that one exists
 - [ ] Bring the existing access module onto the same internal device model, so `access` is
       one kind among seven rather than a parallel stack. Designed in
-      [`docs/ACCESS-ON-THE-ENGINE.md`](docs/ACCESS-ON-THE-ENGINE.md) — actuation deliberately
-      does not move; the fold buys one fleet list and nothing more
+      [`docs/ACCESS-ON-THE-ENGINE.md`](docs/ACCESS-ON-THE-ENGINE.md) and now HALF DONE: the
+      read-only `access` driver surfaces gates in the engine's fleet (status only, every verb
+      refused). Actuation deliberately does not move — two routes to a gate is worse than one
 - [x] Extend the input surfaces' intent vocabulary past `open`/`close` — `hold` now
       reaches the gate from chat and the console. Adding a third verb to a fail-closed
       type is where its safety property breaks if it is going to: every `GateVerb` method

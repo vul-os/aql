@@ -103,6 +103,7 @@ import (
 	"github.com/vul-os/aql/hub/internal/automations"
 	"github.com/vul-os/aql/hub/internal/channels"
 	"github.com/vul-os/aql/hub/internal/devices"
+	"github.com/vul-os/aql/hub/internal/devices/accessdev"
 	"github.com/vul-os/aql/hub/internal/devices/camera"
 	"github.com/vul-os/aql/hub/internal/devices/httpdev"
 	"github.com/vul-os/aql/hub/internal/devices/modbus"
@@ -205,7 +206,7 @@ func main() {
 		behindProxy = flag.Bool("behind-proxy", envBoolOr("AQL_BEHIND_PROXY", false), "permit binding a non-loopback -listen address (this binary serves plain HTTP; only set this when TLS is terminated upstream by a reverse proxy)")
 
 		deviceDrivers = flag.String("device-drivers", envOr("AQL_DEVICE_DRIVERS", ""), "comma-separated device drivers to construct ("+strings.Join(knownDeviceDrivers(), ", ")+"); empty disables the device engine")
-		deviceConfig  = flag.String("device-config", envOr("AQL_DEVICE_CONFIG", ""), "path to the JSON device-driver configuration file (required when -device-drivers names anything)")
+		deviceConfig  = flag.String("device-config", envOr("AQL_DEVICE_CONFIG", ""), "path to the JSON device-driver configuration file (required for every driver except `access`, which reads the database)")
 		energyAccount = flag.String("energy-account", envOr("AQL_ENERGY_ACCOUNT_ID", ""), "account id the energy poller writes meter readings under; empty disables polling")
 		runAutomation = flag.Bool("automations", envBoolOr("AQL_AUTOMATIONS", false), "run the automation rule scheduler")
 	)
@@ -819,7 +820,15 @@ const (
 	deviceDriverCamera = "camera"
 	deviceDriverMQTT   = "mqtt"
 	deviceDriverModbus = "modbus"
+	// deviceDriverAccess is the only driver built from the DATABASE rather than
+	// the device config file, so it is also the only one usable with no
+	// -device-config at all. See docs/ACCESS-ON-THE-ENGINE.md §3.2.
+	deviceDriverAccess = "access"
 )
+
+// needsDeviceConfig reports whether a driver is built from the config file.
+// Everything except access is.
+func needsDeviceConfig(name string) bool { return name != deviceDriverAccess }
 
 // defaultDeviceRefresh is how often every driver is re-discovered. Five
 // minutes: discovery is how a camera that came back on the network reappears
@@ -828,7 +837,7 @@ const (
 const defaultDeviceRefresh = 5 * time.Minute
 
 func knownDeviceDrivers() []string {
-	return []string{deviceDriverCamera, deviceDriverHTTP, deviceDriverModbus, deviceDriverMQTT}
+	return []string{deviceDriverAccess, deviceDriverCamera, deviceDriverHTTP, deviceDriverModbus, deviceDriverMQTT}
 }
 
 // resolveDeviceDrivers turns the raw -device-drivers value into the set of
@@ -852,7 +861,7 @@ func resolveDeviceDrivers(raw string) (enabled, unknown []string) {
 			continue
 		}
 		switch name {
-		case deviceDriverHTTP, deviceDriverCamera, deviceDriverMQTT, deviceDriverModbus:
+		case deviceDriverHTTP, deviceDriverCamera, deviceDriverMQTT, deviceDriverModbus, deviceDriverAccess:
 			if !seen[name] {
 				seen[name] = true
 				enabled = append(enabled, name)
@@ -905,8 +914,39 @@ func loadDeviceFile(path string) (deviceFile, error) {
 // buildDeviceDriver constructs one named driver from the config file. The
 // driver packages validate everything themselves, at construction, which is
 // why this is as thin as it is.
-func buildDeviceDriver(name string, file deviceFile) (devices.Driver, error) {
+func (h *hub) buildDeviceDriver(name string, file deviceFile) (devices.Driver, error) {
 	switch name {
+	case deviceDriverAccess:
+		// Read-only: it surfaces gates in the fleet and refuses every verb.
+		// Opening one stays on the signed Ed25519 path — see the accessdev
+		// package doc and docs/ACCESS-ON-THE-ENGINE.md §3.1.
+		return accessdev.New(accessdev.Config{
+			List: func(ctx context.Context) ([]accessdev.AccessPoint, error) {
+				rows, err := h.store.AllAccessPoints(ctx)
+				if err != nil {
+					return nil, err
+				}
+				out := make([]accessdev.AccessPoint, 0, len(rows))
+				for _, r := range rows {
+					out = append(out, accessdev.AccessPoint{
+						ID: r.ID, AccountID: r.AccountID, Name: r.Name,
+						Kind: r.Kind, DeviceID: r.DeviceID, Status: r.Status,
+					})
+				}
+				return out, nil
+			},
+			// Read lazily: the device hub is built AFTER the engine is wired,
+			// so at boot there is genuinely nobody to ask, and the second
+			// return value is what says so instead of reporting every gate as
+			// offline.
+			Connected: func(controllerID string) (bool, bool) {
+				if h.srv == nil {
+					return false, false
+				}
+				return h.srv.Hub().Connected(controllerID), true
+			},
+			Log: h.log.With("driver", deviceDriverAccess),
+		})
 	case deviceDriverHTTP:
 		if file.HTTP == nil {
 			return nil, errors.New(`the device config has no "http" object`)
@@ -962,22 +1002,35 @@ func (h *hub) wireDevices(cfg config) {
 	if len(enabled) == 0 {
 		return
 	}
-	if cfg.deviceConfig == "" {
-		h.log.Error("device drivers were selected but -device-config is empty; "+
-			"the device engine stays off", "drivers", enabled)
-		return
+	// `access` reads the database, so a hub that wants only its gates in the
+	// fleet needs no config file. Requiring one to list devices the product
+	// already knows about would be a file written to satisfy a check.
+	wantsFile := false
+	for _, name := range enabled {
+		if needsDeviceConfig(name) {
+			wantsFile = true
+		}
 	}
-	file, err := loadDeviceFile(cfg.deviceConfig)
-	if err != nil {
-		h.log.Error("device config could not be read; the device engine stays off",
-			"path", cfg.deviceConfig, "err", err)
-		return
+	var file deviceFile
+	if wantsFile {
+		if cfg.deviceConfig == "" {
+			h.log.Error("device drivers were selected but -device-config is empty; "+
+				"the device engine stays off", "drivers", enabled)
+			return
+		}
+		var err error
+		file, err = loadDeviceFile(cfg.deviceConfig)
+		if err != nil {
+			h.log.Error("device config could not be read; the device engine stays off",
+				"path", cfg.deviceConfig, "err", err)
+			return
+		}
 	}
 
 	reg := devices.NewRegistry()
 	var registered []string
 	for _, name := range enabled {
-		drv, err := buildDeviceDriver(name, file)
+		drv, err := h.buildDeviceDriver(name, file)
 		if err != nil {
 			h.log.Error("device driver not started", "driver", name, "err", err)
 			continue
