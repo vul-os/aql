@@ -27,18 +27,18 @@ bills you directly).
 > core now: auth, accounts / locations / access points, controller pairing and the
 > WebSocket device hub, the signed open path, the admin console, rate limits and quotas,
 > visitor grants, the tamper-evident audit log, offline-grant issuance, and texting
-> `open` works today over WhatsApp, Slack or Telegram —
-> 60 HTTP routes, 219 Go tests, all green. **Building from source is the reliable
-> path today** — see the commands below.
+> `open` works today over WhatsApp, Slack or Telegram — 127 HTTP routes registered in
+> `hub/internal/httpapi/server.go`, and over a thousand Go test functions across 17
+> packages, all green. **Building from source is the reliable path today** — see the
+> commands below.
 >
-> Honest gaps: there are **no analytics endpoints** and **no Google OAuth** — the
-> console has screens for some of
-> these that the hub does not serve (they are enumerated as `KNOWN_UNAVAILABLE` in
-> `src/lib/__tests__/routeParity.test.ts`, so the drift is at least mechanically
-> tracked). The maintenance-logging UI on an access point posts to routes that do not
-> exist either; the hub returns fixed nulls for those fields. There is **no device
-> engine** — no drivers for lights, cameras, meters, mowers or sensors, and no
-> automations runtime; see [Devices](devices.md).
+> Honest gaps: there is **no Google OAuth** and no email identity at all — users are a
+> local username and password. A few console screens still call routes the hub does not
+> serve; they are enumerated as `KNOWN_UNAVAILABLE` in
+> `src/lib/__tests__/routeParity.test.ts`, so the drift is at least mechanically tracked.
+> The **device engine ships and is off by default** — four drivers (`http`, `modbus`,
+> `mqtt`, `camera`), an automations runtime and an energy poller, none of which
+> constructs itself; see [Devices](devices.md) and **The device engine** below.
 
 **From source** (works today):
 
