@@ -199,6 +199,16 @@ const NON_CONSOLE_ROUTES: Array<{ method: string; path: string; reason: string }
   { method: 'POST', path: '/api/pair/redeem', reason: 'controller firmware — pairing redemption' },
   { method: 'POST', path: '/pair/redeem', reason: 'controller firmware — unversioned pairing alias' },
   { method: 'GET', path: '/health', reason: 'process probes and load balancers, not a user surface' },
+  // The console DOES reach this — Footage.tsx puts it in a <video src> — but a
+  // media element carries no method for the AST extraction above to find, and
+  // api.cameraClipURL builds a URL rather than calling apiFetch. Listed here
+  // rather than in UNREACHABLE_TODAY, which would be false: it is reachable,
+  // it is simply not reachable through the mechanism this test can trace.
+  {
+    method: 'GET',
+    path: '/v1/accounts/{id}/cameras/{key}/clips/{clip}',
+    reason: 'console <video> element via api.cameraClipURL — a media element, not a fetch',
+  },
   { method: 'POST', path: '/webhooks/slack', reason: 'inbound provider callback (Slack)' },
   { method: 'POST', path: '/webhooks/slack/interactions', reason: 'inbound provider callback (Slack interactivity)' },
   { method: 'POST', path: '/webhooks/telegram', reason: 'inbound provider callback (Telegram)' },

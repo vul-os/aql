@@ -213,3 +213,25 @@ func (s *Store) ClipsByDevice(ctx context.Context, accountID, deviceKey string, 
 	}
 	return out, rows.Err()
 }
+
+// ClipByID fetches one clip, scoped to the account that owns it.
+//
+// Scoped in the query rather than checked afterwards: a lookup by id alone,
+// followed by a comparison, is one forgotten comparison away from serving
+// another account's footage. The device key is required too, so a clip id
+// cannot be used to read a camera the caller has no grant for.
+func (s *Store) ClipByID(ctx context.Context, accountID, deviceKey, clipID string) (Clip, error) {
+	var c Clip
+	err := s.db.QueryRowContext(ctx,
+		`SELECT id, account_id, device_key, started_at, duration_s, size_bytes, rel_path, reason,
+		        deleted_at, COALESCE(deleted_why, '')
+		   FROM camera_clips
+		  WHERE id = ? AND account_id = ? AND device_key = ?`,
+		clipID, accountID, deviceKey).
+		Scan(&c.ID, &c.AccountID, &c.DeviceKey, &c.StartedAt, &c.DurationS,
+			&c.SizeBytes, &c.RelPath, &c.Reason, &c.DeletedAt, &c.DeletedWhy)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Clip{}, ErrNotFound
+	}
+	return c, err
+}

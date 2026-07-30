@@ -593,9 +593,12 @@ func buildHub(cfg config, log *slog.Logger) (*hub, error) {
 	h.automations = h.newAutomationsEngine()
 
 	srv := httpapi.New(httpapi.Config{
-		Devices:     h.reg,
-		Energy:      h.energy,
-		Automations: h.automations,
+		// Same path the recorder writes to, so playback and retention cannot
+		// disagree about where footage lives.
+		RecordingsRoot: filepath.Join(cfg.dataDir, "recordings"),
+		Devices:        h.reg,
+		Energy:         h.energy,
+		Automations:    h.automations,
 		// True only when the scheduler will actually be started below.
 		AutomationsScheduler: cfg.automations && h.automations != nil,
 		Version:              Version,

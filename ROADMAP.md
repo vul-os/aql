@@ -464,8 +464,17 @@ and none has met physical hardware.
       `docs/CAMERA-RETENTION.md` §5 left per-camera-vs-per-account open; it is decided as per
       camera, because the objection was UI cost and that is a reason to ship a narrower UI, not
       to widen an authority over recordings of people's homes.
-      What remains for this line is playback of the bytes themselves, and the thing no amount of
-      code closes: hardware. Recording is one RTSP session per window rather than one held open, which is
+      **Playback works too**: each clip is a self-contained fragmented MP4, so the console plays
+      one in a plain `<video src>` — no plugin, no transcode, no Media Source plumbing, which is
+      the whole reason the muxer writes that container. The same per-camera grant gates it, the
+      same audit records it (once per playback, not once per range request — a `<video>` issues
+      many, and a log with forty rows for one watch is a log nobody reads), and an expired clip
+      answers 410 with the reason rather than 404, because "gone" and "never existed" are
+      different answers and this is the one place the difference is the entire point.
+      That completes `docs/CAMERA-RETENTION.md` §4's five steps in code. What is left is the
+      thing no amount of code closes: **hardware**. Nothing in this pipeline has met a camera,
+      and the retention arithmetic now deletes real files, so it wants review before it runs
+      anywhere that matters. Recording is one RTSP session per window rather than one held open, which is
       worse on a real camera and honest about what has been verified — a long-lived session
       means keepalives, mid-stream parameter-set changes and servers that drop connections,
       none of which can be developed against a fake without inventing the behaviour. The retention worker, the `camera:view` permission and

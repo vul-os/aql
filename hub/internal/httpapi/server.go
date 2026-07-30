@@ -41,7 +41,11 @@ type Config struct {
 	Env             string // reported by /health (backend APP_ENV parity)
 	PublicURL       string
 	AdminClaimToken string // empty = claim disabled (fail-closed)
-	JWTSecret       []byte
+	// RecordingsRoot is where camera clips live. Empty disables playback: a
+	// hub with no configured root must refuse to serve footage rather than
+	// resolve a relative path against whatever its working directory is.
+	RecordingsRoot string
+	JWTSecret      []byte
 	// AckTimeout bounds how long an open request waits for the device's
 	// cmd.ack before recording 'undelivered'. Zero = default 5 s.
 	AckTimeout time.Duration
@@ -466,6 +470,7 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("POST /v1/accounts/{id}/camera-view-grants", s.requireAuth(s.handleCameraViewGrant))
 	mux.Handle("DELETE /v1/accounts/{id}/camera-view-grants", s.requireAuth(s.handleCameraViewRevoke))
 	mux.Handle("GET /v1/accounts/{id}/cameras/{key}/clips", s.requireAuth(s.handleCameraClips))
+	mux.Handle("GET /v1/accounts/{id}/cameras/{key}/clips/{clip}", s.requireAuth(s.handleCameraClipPlay))
 	mux.Handle("GET /v1/accounts/{id}/camera-access-log", s.requireAuth(s.handleCameraAccessLog))
 
 	// Gateway signing-key rotation (keyrotation.go). Platform-admin only: it

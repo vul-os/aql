@@ -56,6 +56,7 @@ export default function Footage() {
   const [grants, setGrants] = useState<CameraViewGrant[] | null>(null);
   const [members, setMembers] = useState<AccountMemberRow[]>([]);
   const [grantErr, setGrantErr] = useState<string | null>(null);
+  const [playing, setPlaying] = useState<string | null>(null);
 
   const isAdmin = currentAccount?.role === 'owner' || currentAccount?.role === 'admin';
 
@@ -196,6 +197,21 @@ export default function Footage() {
                   onRetry={() => accountId && void loadClips(accountId, selected)}
                 />
               ) : (
+                <>
+                {playing && accountId && selected && (
+                  // A plain <video src>. Each clip is a self-contained
+                  // fragmented MP4, which is the entire reason the muxer writes
+                  // that container: no plugin, no transcode, no Media Source
+                  // plumbing. The element issues Range requests and the hub
+                  // answers them.
+                  <video
+                    key={playing}
+                    src={api.cameraClipURL(accountId, selected, playing)}
+                    controls
+                    autoPlay
+                    className="w-full rounded-lg bg-ink mb-3"
+                  />
+                )}
                 <ul className="divide-y divide-ink/10 text-sm">
                   {clips.items.map((c) => (
                     <li key={c.id} className="py-2 flex items-baseline justify-between gap-3">
@@ -213,13 +229,21 @@ export default function Footage() {
                           · {when(c.deleted_at)}
                         </span>
                       ) : (
-                        <span className="text-xs text-ink/55">
+                        <span className="text-xs text-ink/55 flex items-center gap-3">
                           {duration(c.duration_s)} · {size(c.size_bytes)}
+                          <button
+                            type="button"
+                            className="text-ink underline"
+                            onClick={() => setPlaying(c.id)}
+                          >
+                            Watch
+                          </button>
                         </span>
                       )}
                     </li>
                   ))}
                 </ul>
+                </>
               )
             )}
           </div>

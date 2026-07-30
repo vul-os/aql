@@ -16,7 +16,11 @@ package httpapi
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/vul-os/aql/hub/internal/store"
@@ -240,4 +244,115 @@ func (s *Server) handleCameraAccessLog(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"access": out})
+}
+
+// handleCameraClipPlay serves one clip's bytes.
+//
+// This is the watching that §2.5 is about — the listing above tells you footage
+// exists, this hands it over — so it is gated by the same per-camera grant and
+// written to the same hash-chained log.
+//
+// Each clip file is a self-contained fragmented MP4 (ftyp+moov+moof+mdat), which
+// is what the container choice was for: a browser plays it from a URL with no
+// plugin, no transcoding and no media-source plumbing. http.ServeContent does
+// the Range handling a <video> element requires.
+func (s *Server) handleCameraClipPlay(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if _, ok := s.memberRole(w, r, id); !ok {
+		return
+	}
+	c := claimsFrom(r)
+	if c == nil {
+		writeErr(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	deviceKey, clipID := r.PathValue("key"), r.PathValue("clip")
+
+	// No configured root, no playback. Resolving a stored relative path against
+	// an empty root would resolve it against the process's working directory,
+	// which is a way to serve a file that is not a clip.
+	if s.cfg.RecordingsRoot == "" {
+		writeErr(w, http.StatusNotFound, "recording_not_configured")
+		return
+	}
+
+	allowed, err := s.store.MayViewCamera(r.Context(), id, c.Sub, deviceKey, time.Now().Unix())
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	if !allowed {
+		if aerr := s.store.WriteAdminAudit(r.Context(), c.Sub, store.CameraViewAction, "camera", deviceKey, false,
+			map[string]any{"account_id": id, "clip": clipID, "reason": "no_camera_view_grant"}); aerr != nil {
+			s.log.Error("audit refused clip playback", "err", aerr)
+		}
+		writeErr(w, http.StatusForbidden, "camera_view_required")
+		return
+	}
+
+	clip, err := s.store.ClipByID(r.Context(), id, deviceKey, clipID)
+	if errors.Is(err, store.ErrNotFound) {
+		writeErr(w, http.StatusNotFound, "clip_not_found")
+		return
+	}
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	if clip.DeletedAt != nil {
+		// 410, not 404. §2.6: someone looking for the evening they cared about
+		// is told it was dropped and when — "gone" and "never existed" are
+		// different answers and this is the one place the difference is the
+		// whole point.
+		writeJSON(w, http.StatusGone, map[string]any{
+			"error": "clip_gone", "deleted_at": *clip.DeletedAt, "deleted_why": clip.DeletedWhy,
+		})
+		return
+	}
+
+	// rel_path comes from this hub's own database, but it is still joined and
+	// then re-checked against the root. A stored path is only as trustworthy as
+	// everything that has ever written to that column, and "it came from our
+	// database" is the assumption behind a long line of traversal bugs.
+	full := filepath.Join(s.cfg.RecordingsRoot, filepath.Clean("/"+clip.RelPath))
+	if !strings.HasPrefix(full, filepath.Clean(s.cfg.RecordingsRoot)+string(os.PathSeparator)) {
+		s.log.Error("clip path escapes the recordings root", "clip", clip.ID, "rel", clip.RelPath)
+		writeErr(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	f, err := os.Open(full)
+	if err != nil {
+		// The index says it exists and the disk disagrees. §2.1 makes that a
+		// SUPPORTED state — the layout is deliberately walkable so a human can
+		// delete their own footage — so it is 410 with the same shape as an
+		// expired clip rather than a 500.
+		writeJSON(w, http.StatusGone, map[string]any{
+			"error": "clip_gone", "deleted_why": store.ClipMissing,
+		})
+		return
+	}
+	defer f.Close()
+
+	// Audited once per playback, not once per range request. A <video> element
+	// issues many partial requests for one viewing, and a log with forty rows
+	// for one watch is a log nobody reads. The first request for a clip is the
+	// one without a Range header or with one starting at zero.
+	rng := r.Header.Get("Range")
+	if rng == "" || strings.HasPrefix(rng, "bytes=0-") {
+		if aerr := s.store.WriteAdminAudit(r.Context(), c.Sub, store.CameraViewAction, "camera", deviceKey, true,
+			map[string]any{
+				"account_id": id, "clip": clip.ID,
+				"from": clip.StartedAt, "to": clip.StartedAt + int64(clip.DurationS),
+			}); aerr != nil {
+			s.log.Error("audit clip playback; refusing to serve unrecorded access", "err", aerr)
+			writeErr(w, http.StatusInternalServerError, "internal")
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "video/mp4")
+	// Footage must not sit in a shared cache, and a browser re-asking is cheap
+	// next to a proxy holding somebody's hallway.
+	w.Header().Set("Cache-Control", "private, no-store")
+	http.ServeContent(w, r, clip.ID+".mp4", time.Unix(clip.StartedAt, 0), f)
 }

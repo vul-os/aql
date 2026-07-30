@@ -1294,6 +1294,24 @@ export const api = {
       { method: 'DELETE' },
     ),
 
+  /**
+   * The URL a `<video>` element plays a clip from.
+   *
+   * A URL rather than a fetch: each clip file is a self-contained fragmented
+   * MP4, so the element streams it directly with Range requests the hub
+   * answers. Auth rides on the session cookie the same way every other GET
+   * does — a fetch-and-blob would buffer whole clips into memory for nothing.
+   */
+  cameraClipURL: (accountId: string, deviceKey: string, clipId: string) =>
+    // The path is a separate literal from the base on purpose: routeCoverage
+    // finds clients by looking for quoted strings that START with `/`, and a
+    // template beginning with an interpolation hides the route from it. A
+    // reachable endpoint that reads as unreachable is worth avoiding for the
+    // sake of one `+`.
+    getApiBaseUrl() +
+    API_VERSION_PREFIX +
+    `/accounts/${accountId}/cameras/${encodeURIComponent(deviceKey)}/clips/${clipId}`,
+
   cameraClips: (accountId: string, deviceKey: string) =>
     apiFetch<{ clips: CameraClip[] }>(`/accounts/${accountId}/cameras/${encodeURIComponent(deviceKey)}/clips`),
 
