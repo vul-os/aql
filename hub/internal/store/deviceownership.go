@@ -11,6 +11,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 )
 
 var (
@@ -145,4 +146,57 @@ func (s *Store) DeviceOwnerAccount(ctx context.Context, deviceKey string) (strin
 		return "", ErrDeviceNotClaimed
 	}
 	return accountID, err
+}
+
+// AccessDeviceKeyPrefix is the device-key prefix the read-only access driver
+// produces: `access:<access_point_id>`.
+//
+// Duplicated from accessdev.DriverID rather than imported, because the store
+// must not depend on a driver — that is the wrong direction and it would make
+// every store test carry a device package. A test in cmd/hub asserts the two are
+// equal, so the duplication cannot drift silently.
+const AccessDeviceKeyPrefix = "access:"
+
+// AccountForDeviceKey answers which account a device belongs to, for BOTH kinds
+// of engine device.
+//
+// Ordinary engine devices are CLAIMED: an admin performs a deliberate act and a
+// device_ownership row records it, and until then the device belongs to nobody.
+// Access points are not, and never will be — a gate is already owned, through
+// its location's account, and claiming it would be a second answer to a question
+// that already has one.
+//
+// Without this distinction a gate reads as unclaimed everywhere, and the two
+// consumers of ownership disagree about what that means in the most unhelpful
+// possible way: the engine's HTTP scope denies an unclaimed device (so a member
+// could not see their own gate), while the automations engine PERMITS one (so a
+// rule could name another account's gate). Same state, opposite defaults, and
+// the access driver makes every gate hold it permanently.
+func (s *Store) AccountForDeviceKey(ctx context.Context, deviceKey string) (string, bool, error) {
+	if id, ok := strings.CutPrefix(deviceKey, AccessDeviceKeyPrefix); ok {
+		var accountID string
+		err := s.db.QueryRowContext(ctx,
+			`SELECT l.account_id
+			   FROM access_points ap
+			   JOIN locations l ON l.id = ap.location_id
+			  WHERE ap.id = ?`, id).Scan(&accountID)
+		if errors.Is(err, sql.ErrNoRows) {
+			// A key naming an access point that does not exist. Not claimed by
+			// anybody, and deliberately not an error: the caller decides what
+			// an unknown device means, and for a rule that is a refusal.
+			return "", false, nil
+		}
+		if err != nil {
+			return "", false, err
+		}
+		return accountID, true, nil
+	}
+	owner, err := s.DeviceOwnerAccount(ctx, deviceKey)
+	if errors.Is(err, ErrDeviceNotClaimed) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	return owner, true, nil
 }

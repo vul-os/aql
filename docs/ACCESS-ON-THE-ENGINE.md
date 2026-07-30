@@ -164,6 +164,23 @@ that never mentioned them, on a screen that hides those rows anyway. The scope
 now derives the keys from the caller's access points, still storing nothing, and
 `engineaccess_test.go` holds both halves: my gate yes, yours no.
 
+**And there were two consumers of ownership, not one.** The automations engine
+resolves it separately, through `DeviceOwner`, and it takes the OPPOSITE default:
+unclaimed is *permitted* there, deliberately, so that a hub which predates
+ownership keeps working. A gate being permanently unclaimed therefore meant a
+rule in one account could name another account's gate. Same state, opposite
+readings, one of them hiding your own gate from you and the other offering
+somebody else's.
+
+Both now go through `store.AccountForDeviceKey`, which answers for both kinds of
+device: claimed ones from `device_ownership`, gates from their location's
+account. Still nothing stored. The store spells the `access:` prefix as its own
+constant rather than importing the driver — a store that depends on a driver is
+the wrong direction — and a test in `cmd/hub`, the one package that imports both,
+asserts the two cannot drift. That test earns its place: when the prefix was
+drifted deliberately, the store's own tests still passed, because they use the
+same constant on both sides of the question.
+
 ---
 
 ## 4. What this buys, stated plainly

@@ -163,6 +163,17 @@ func TestEveryStoreMethodIsReachableFromProduction(t *testing.T) {
 	for _, f := range files {
 		set := map[string]bool{}
 		for name := range declFile {
+			// Call syntax only. A METHOD VALUE — `cfg.Owner = s.AccountForDeviceKey`,
+			// with no parentheses — is real production reachability and is
+			// invisible here. That is a known limitation and not worth the
+			// false positives that matching a bare `.Name` would bring: this
+			// file would then count every mention in a comment or a doc string
+			// as a caller, which is exactly the kind of "guard that agrees with
+			// anything" the rest of this repository keeps deleting.
+			//
+			// The convention that keeps it honest is to wire such a dependency
+			// as a closure that CALLS the method. It costs two lines and it
+			// keeps this check strict.
 			if strings.Contains(f.body, "."+name+"(") {
 				set[name] = true
 			}

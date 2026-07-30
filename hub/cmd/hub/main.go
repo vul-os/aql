@@ -1232,15 +1232,17 @@ func (h *hub) newAutomationsEngine() *automations.Engine {
 		// A rule may only drive devices its own account has claimed. Nil here
 		// would keep the pre-ownership behaviour, where a rule in one account
 		// could actuate another account's device.
+		//
+		// AccountForDeviceKey rather than DeviceOwnerAccount, because a gate is
+		// never CLAIMED — it is owned through its location's account — and
+		// "unclaimed is permitted" would otherwise let a rule in one account
+		// name another account's gate.
+		//
+		// Written as a closure rather than passed as the method value it could
+		// be, because the store's reachability guard matches `.Name(` and a
+		// method value is invisible to it. See that test's note.
 		DeviceOwner: func(ctx context.Context, deviceKey string) (string, bool, error) {
-			owner, err := h.store.DeviceOwnerAccount(ctx, deviceKey)
-			if errors.Is(err, store.ErrDeviceNotClaimed) {
-				return "", false, nil
-			}
-			if err != nil {
-				return "", false, err
-			}
-			return owner, true, nil
+			return h.store.AccountForDeviceKey(ctx, deviceKey)
 		},
 	})
 	if err != nil {

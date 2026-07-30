@@ -7,6 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/vul-os/aql/hub/internal/devices"
+	"github.com/vul-os/aql/hub/internal/devices/accessdev"
+	"github.com/vul-os/aql/hub/internal/store"
 )
 
 // A driver package can be complete, tested and still unreachable, because
@@ -107,5 +111,33 @@ func TestAdvertisedNamesAreExactlyTheAcceptedNames(t *testing.T) {
 	}
 	if _, unknown := resolveDeviceDrivers("definitely-not-a-driver"); len(unknown) != 1 {
 		t.Error("an unknown driver name was accepted")
+	}
+}
+
+// The access driver's id and the store's copy of its key prefix must agree.
+//
+// store.AccountForDeviceKey recognises a gate by the `access:` prefix, and it
+// spells that out as a constant rather than importing accessdev — the store must
+// not depend on a driver, which is the wrong direction and would drag a device
+// package into every store test. That duplication is fine as long as it cannot
+// drift, and this is what stops it.
+//
+// If it did drift, nothing would fail loudly. Gates would go back to reading as
+// unclaimed, which the engine's HTTP scope turns into "a member cannot see their
+// own gate" and the automations engine turns into "any account may name it" —
+// two silent, opposite failures from one renamed constant. This file is where
+// the assertion belongs because cmd/hub is the one place that imports both.
+func TestTheStoresAccessKeyPrefixMatchesTheDriverID(t *testing.T) {
+	want := accessdev.DriverID + ":"
+	if store.AccessDeviceKeyPrefix != want {
+		t.Fatalf("store.AccessDeviceKeyPrefix = %q but the access driver produces keys "+
+			"prefixed %q. Ownership lookups for every gate would silently stop resolving.",
+			store.AccessDeviceKeyPrefix, want)
+	}
+	// And that the prefix is actually what a key looks like, rather than two
+	// constants agreeing with each other about something neither does.
+	if got := devices.Key(accessdev.DriverID, "ap-1"); got != store.AccessDeviceKeyPrefix+"ap-1" {
+		t.Errorf("devices.Key produces %q, which does not start with the prefix the store "+
+			"matches on", got)
 	}
 }
