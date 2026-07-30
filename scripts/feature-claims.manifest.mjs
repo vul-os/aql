@@ -652,6 +652,27 @@ export const FEATURES = [
     ],
   },
   {
+    // Added after docs/CHAT-COMMANDS.md was found quoting `TextGateVerb` with
+    // two branches and the open-path guard as a two-command test, when both
+    // carry `hold` — the most permissive verb on the rail, since it leaves a
+    // gate standing open until the controller's hold_max. A security document
+    // whose job is bounding what a chat message can do to a gate was
+    // describing a narrower surface than the code had, and its own §2.2(d)
+    // note contradicted it two hundred lines later. Quoted spans, so a revert
+    // fails the build rather than waiting for the next audit.
+    id: 'chat-rail-carries-hold',
+    label: 'The chat rail can resolve `hold`, and the open-path choke point accepts open/hold/close',
+    docStatus: 'shipped',
+    docRefs: [
+      'docs/CHAT-COMMANDS.md § 1.1 — "is the one to notice"',
+      'docs/CHAT-COMMANDS.md § 1.3 — "the three the choke point accepts"',
+    ],
+    evidence: [
+      { file: 'hub/internal/channels/verb.go', pattern: 'return VerbHold, true' },
+      { file: 'hub/internal/store/openpath.go', pattern: 'func opensTheWay' },
+    ],
+  },
+  {
     // The safety rule under the whole tier ladder. Worth a claim because its
     // enforcement was procedural (a test) while its own doc comment said it was
     // structural ("the registry refuses to build") — now it actually is.

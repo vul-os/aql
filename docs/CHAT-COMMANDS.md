@@ -31,14 +31,31 @@
 
 ## 0. The problem
 
-The chat layer resolves exactly one verb. Free text is still decided by two
-substring tests, but they now sit behind a type rather than loose in a handler:
+The chat layer resolves one verb per message, from three: `close`, `hold` and
+`open`. Free text is decided by substring tests behind a type rather than loose
+in a handler.
+
+**`hold` is the one to notice.** It leaves a gate standing open until the
+controller's own `hold_max` expires — the most permissive thing a chat message
+can do here — and its patterns are matched BEFORE `open`, because the natural
+way to ask for it ("hold the gate open", "keep it open") contains the word
+"open". An earlier revision of this document quoted this function with only two
+branches and described the rail as carrying two verbs. It carried three.
 
 ```go
 func TextGateVerb(body string) (GateVerb, bool) {
 	switch {
 	case strings.Contains(body, "close"):
 		return VerbClose, true
+	// BEFORE "open", and that ordering is the whole point: the natural way to
+	// ask for this is "hold the gate open" or "keep it open", both of which
+	// contain "open". Checked after open, every hold in plain English would
+	// resolve to a pulse — the gate would swing shut in the face of whoever
+	// was told it would stay open.
+	case strings.Contains(body, "hold"), strings.Contains(body, "keep open"),
+		strings.Contains(body, "keep it open"), strings.Contains(body, "leave open"),
+		strings.Contains(body, "leave it open"), strings.Contains(body, "stay open"):
+		return VerbHold, true
 	case strings.Contains(body, "open"):
 		return VerbOpen, true
 	}
@@ -62,11 +79,24 @@ falls through to the help menu (`hub/internal/httpapi/channels_slack.go:139`,
 refuses anything outside the pair:
 
 ```go
-if args.Command != "open" && args.Command != "close" {
-    return nil, fmt.Errorf("bad command %q", args.Command)
+// `close` is deliberately NOT here: it is the safe direction and is never
+// denied, because someone who got in must be able to get out.
+func opensTheWay(command string) bool {
+	return command == "open" || command == "hold"
+}
+
+// ...
+if !opensTheWay(args.Command) && args.Command != "close" {
+	return nil, fmt.Errorf("bad command %q", args.Command)
 }
 ```
-— `hub/internal/store/openpath.go:243-245`
+— `hub/internal/store/openpath.go`
+
+The vocabulary is three, not two: `open`, `hold` and `close`. `hold` was added
+after this section was written and the quote above was not updated with it, so
+this document spent a while describing a narrower actuation surface than the
+one it exists to bound. §2.2(d)'s FIXED note has said "`open` / `close` /
+`hold`" the whole time — the two halves of the document disagreed.
 
 Aql's device model is heterogeneous by design: an ID, a kind, a zone, a state,
 and a set of commands/telemetry per device (`docs/ARCHITECTURE.md:96-127`),
@@ -193,7 +223,7 @@ Today's behaviour, unchanged, expressed in the new model:
 |---|---|
 | Target | `store.AvailableAP` — an access point plus its location (`hub/internal/store/channels.go:27-36`) |
 | Capability | `access.barrier` — an access point of kind gate/door/barrier/other (`hub/internal/httpapi/access.go:15`) |
-| Verb | `"open"` / `"close"`, the only two the choke point accepts (`openpath.go:243-245`) |
+| Verb | `"open"` / `"hold"` / `"close"` — the three the choke point accepts; `opensTheWay` gates the first two, `close` is never denied (`openpath.go`, `opensTheWay`) |
 | Args | none |
 | Tier | T3 (§3) |
 | Authorization | active visitor grant, else verified-member-by-phone (`hub/internal/httpapi/channels_open.go:50-94`), or profile membership on Slack/Telegram (`:114-128`) |

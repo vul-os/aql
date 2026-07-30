@@ -107,10 +107,16 @@ func (k *Keys) SignCommand(cmd, deviceID, accessPoint string, ttl time.Duration,
 // controller can trust a `config` that changes how long its relay fires, or a
 // `repair` that replaces the key it verifies everything else against.
 //
-// This existed as a gap rather than a decision: until now the hub could sign
-// only bare commands, so four of proto/commands.md's eight types (hold,
-// config, ping, repair) had no sender at all despite the controller
-// implementing and conformance-testing every one of them.
+// This existed as a gap rather than a decision: the hub could once sign only
+// bare commands, so four of proto/commands.md's eight types (hold, config,
+// ping, repair) had no sender at all despite the controller implementing and
+// conformance-testing every one of them.
+//
+// All four have one now — hold through the open path, config through
+// deviceconfig.go, ping through clocksync.go's sweep, repair through
+// keyrotation.go. The two without a hub sender are `lockdown` and `lift`, and
+// that is deliberate rather than outstanding: they are controller-local, as
+// offline_grants.go explains.
 func (k *Keys) SignCommandWithPayload(cmd, deviceID, accessPoint string, payload map[string]any, ttl time.Duration, cause map[string]any) (*Envelope, error) {
 	return signWith(k.priv, cmd, deviceID, accessPoint, payload, ttl, cause)
 }
