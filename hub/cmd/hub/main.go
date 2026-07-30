@@ -247,6 +247,25 @@ func main() {
 	)
 	flag.Parse()
 
+	// unknownCommand above catches a LEADING non-flag token. This catches a
+	// trailing one: `aql-hub -listen 127.0.0.1:8080 hub -data /srv/aql`, where a
+	// stray word makes -data positional too. Go stops parsing at the first
+	// non-flag argument, so everything after it is silently dropped and the hub
+	// starts with those defaults instead.
+	//
+	// A MISTYPED flag is not this case and needs no help — `-devce-drivers`
+	// fails in flag.Parse with "flag provided but not defined". Checked, because
+	// the first version of this comment claimed otherwise.
+	if flag.NArg() > 0 {
+		fmt.Fprintf(os.Stderr, "aql-hub: unexpected argument %q\n\n", flag.Arg(0))
+		fmt.Fprintln(os.Stderr, "The hub takes flags only. Go stops parsing flags at the first non-flag")
+		fmt.Fprintln(os.Stderr, "argument, so every flag after this one would have been ignored and the")
+		fmt.Fprintln(os.Stderr, "hub would have started with those defaults instead.")
+		fmt.Fprintln(os.Stderr, "\nUsage:")
+		flag.PrintDefaults()
+		os.Exit(2)
+	}
+
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
 	cfg := config{

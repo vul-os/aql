@@ -44,6 +44,30 @@ func main() {
 		relaySpec     = flag.String("relay", "", "GPIO relay, `<chip>:<line>[,active-low][,bias=pull-up|pull-down|disabled][,sensor=<line>[,sensor-active-low][,sensor-debounce=20ms]]` (requires a `-tags gpio` Linux build); empty uses the mock relay, which actuates nothing")
 	)
 	flag.Parse()
+
+	// Positional arguments are always a mistake here, and a silent one.
+	//
+	// Go's flag package STOPS parsing at the first non-flag token, so
+	// `controller pair -relay gpiochip0:17 -state /data` does not just ignore
+	// "pair" — it ignores every flag after it and starts with defaults. Verified
+	// by running it: the -state passed on that command line was dropped entirely.
+	//
+	// The default that gets restored is what makes this worth refusing rather
+	// than warning. An empty -relay means the MOCK relay, which acks every open
+	// as successful while nothing physically moves. A gate that reports itself
+	// opening and does not open is the single worst failure this binary has, and
+	// one stray token is enough to reach it.
+	if flag.NArg() > 0 {
+		fmt.Fprintf(os.Stderr, "aql-controller: unexpected argument %q\n\n", flag.Arg(0))
+		fmt.Fprintln(os.Stderr, "This binary takes flags only and has no subcommands. Go stops parsing")
+		fmt.Fprintln(os.Stderr, "flags at the first non-flag argument, so anything after it would have")
+		fmt.Fprintln(os.Stderr, "been silently ignored — including -relay, whose default is the mock")
+		fmt.Fprintln(os.Stderr, "relay that acks opens without moving anything.")
+		fmt.Fprintln(os.Stderr, "\nUsage:")
+		flag.PrintDefaults()
+		os.Exit(2)
+	}
+
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	slog.SetDefault(log)
 

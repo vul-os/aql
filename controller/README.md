@@ -87,6 +87,13 @@ relay. See `internal/relay/gpio.go`.
 
 ### The agent
 
+**Flags only — there are no subcommands, and a positional argument is refused
+with exit 2.** That refusal is not tidiness. Go stops parsing flags at the first
+non-flag token, so `aql-controller pair -relay gpiochip0:17 -state /data` would
+ignore not just `pair` but *every flag after it* and run on defaults — and the
+default `-relay` is the mock relay, which acks opens as successful while nothing
+physically moves.
+
 First run pairs with a single-use claim token (from the portal) and persists
 the result, pinning the gateway's public key:
 
