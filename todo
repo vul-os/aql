@@ -27,6 +27,23 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       `bleperiph/start_unsupported.go`, and that one is blocked upstream:
       tinygo.org/x/bluetooth v0.15.0 has no GATT server for darwin at all
       (gatts_other.go is a nine-line stub), so macOS is a BLE central only.
+- [x] CI now RUNS the tagged tests, not just cross-builds them. 43 test functions live
+      behind `-tags gpio` — config parsing, the state machine, the ioctl ABI layout, fd
+      handling — and no CI run had ever executed one of them. Cross-building proved they
+      compiled and nothing more. Verified on real Linux (docker, both as root and as an
+      ordinary user) before adding the step, because a CI step that fails on arrival is
+      worse than none.
+- NOTE: running them on Linux immediately found a test that FAILED AS ROOT and passed
+      otherwise: TestAFailedPersistRollsBackEveryField simulated a disk failure with
+      `chmod 0500`, which the kernel does not enforce against uid 0, so the persist it
+      expected to fail succeeded. Root is the default in a container, including this
+      repo's own docker build. Now replaces the state directory with a REGULAR FILE, so
+      the create fails ENOTDIR — enforced for everyone. It still catches the original
+      shared-pointer rollback bug; verified by reintroducing it.
+- LESSON: a permission-based failure simulation is a no-op for root. It fails loudly in
+      the direction we hit, but the dangerous direction is silent — a fail-closed test
+      whose refusal is simulated by chmod would PASS VACUOUSLY as root. This was the only
+      os.Chmod in any test in the repo; there are now none.
 - [ ] GPIO relay validation on real hardware — the driver exists behind `-tags gpio` and
       has never driven a chip, a relay board or a gate. Fail-safe spec: normally-open,
       line drops on exit/panic. The uAPI layout IS now verified on linux/arm64, arm and

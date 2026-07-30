@@ -269,10 +269,21 @@ func TestAFailedPersistRollsBackEveryField(t *testing.T) {
 
 	// Break persistence the way the disk does: the atomic tmp+rename cannot
 	// create its temp file.
-	if err := os.Chmod(dir, 0o500); err != nil {
+	//
+	// Done by replacing the state DIRECTORY with a regular file, so the create
+	// fails ENOTDIR, rather than by chmod'ing it unwritable. Both break the real
+	// persist path, which is what this test needs — the bug was in what the
+	// rollback snapshot shared, and a stubbed persist that copied the struct
+	// differently would have hidden it. But chmod is not enforced against root,
+	// and root is the default in a container: this test failed under `docker run`
+	// while passing for an ordinary user, reporting a rollback defect that did
+	// not exist. ENOTDIR is enforced by the kernel for everyone.
+	if err := os.RemoveAll(dir); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+	if err := os.WriteFile(dir, []byte("not a directory"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 
 	// 1. The pinned key, through the pointer — the field that was broken.
 	if err := st.ApplyRepair(enc(pubB)); err == nil {

@@ -298,6 +298,29 @@ jobs:
           for goos in linux windows darwin; do
             GOOS=$goos GOARCH=amd64 go build -tags gpio ./...
           done
+      # Cross-BUILDING the tags proved they compile. It never ran a line of
+      # them, and 43 test functions live behind `-tags gpio` — the config
+      # parser, the state machine, the ioctl ABI layout and the fd handling for
+      # the code that physically drives a gate. They were written, they pass,
+      # and until now no CI run had executed one.
+      #
+      # A test that never runs is worth what an unwritten one is worth, and this
+      # is the worst package in the repo to learn that in: a leaked line
+      # descriptor means the kernel never releases the GPIO, and the symptom is
+      # a gate held open by a process nobody can find.
+      #
+      # This runner is Linux, so `-tags gpio` here also runs the four
+      # `gpio && linux` tests that no other platform can compile. Everything in
+      # them that would touch a real chip is opt-in via AQL_GPIO_TEST_CHIP and
+      # skips without it, so no hardware is required — and an opt-in test that
+      # skips is exactly why running the suite is not the same as validating the
+      # driver against a real board, which is still outstanding.
+      - name: run the optional-backend tests
+        working-directory: controller
+        run: |
+          set -eux
+          go test -tags gpio ./...
+          go test -tags ble ./...
           # ARM is where a controller actually runs, and 32-bit ARM is where
           # the GPIO uAPI layout could plausibly differ: Go aligns uint64 to 4
           # bytes on arm and 386, not 8. gpio_abi_static.go asserts every
