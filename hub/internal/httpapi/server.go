@@ -32,6 +32,7 @@ import (
 	"github.com/vul-os/aql/hub/internal/hub"
 	"github.com/vul-os/aql/hub/internal/keys"
 	"github.com/vul-os/aql/hub/internal/portal"
+	"github.com/vul-os/aql/hub/internal/recording"
 	"github.com/vul-os/aql/hub/internal/store"
 )
 
@@ -45,7 +46,9 @@ type Config struct {
 	// hub with no configured root must refuse to serve footage rather than
 	// resolve a relative path against whatever its working directory is.
 	RecordingsRoot string
-	JWTSecret      []byte
+	// Live fans muxed fragments out to viewers. nil disables live view.
+	Live      *recording.Broadcaster
+	JWTSecret []byte
 	// AckTimeout bounds how long an open request waits for the device's
 	// cmd.ack before recording 'undelivered'. Zero = default 5 s.
 	AckTimeout time.Duration
@@ -471,6 +474,7 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("DELETE /v1/accounts/{id}/camera-view-grants", s.requireAuth(s.handleCameraViewRevoke))
 	mux.Handle("GET /v1/accounts/{id}/cameras/{key}/clips", s.requireAuth(s.handleCameraClips))
 	mux.Handle("GET /v1/accounts/{id}/cameras/{key}/clips/{clip}", s.requireAuth(s.handleCameraClipPlay))
+	mux.Handle("GET /v1/accounts/{id}/cameras/{key}/live", s.requireAuth(s.handleCameraLive))
 	mux.Handle("GET /v1/accounts/{id}/camera-access-log", s.requireAuth(s.handleCameraAccessLog))
 
 	// Gateway signing-key rotation (keyrotation.go). Platform-admin only: it

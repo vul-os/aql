@@ -209,6 +209,15 @@ const NON_CONSOLE_ROUTES: Array<{ method: string; path: string; reason: string }
     path: '/v1/accounts/{id}/cameras/{key}/clips/{clip}',
     reason: 'console <video> element via api.cameraClipURL — a media element, not a fetch',
   },
+  // Reached by LiveView.tsx, which fetches the stream and feeds it to a
+  // SourceBuffer. api.cameraLiveURL builds the URL; the fetch is in the
+  // component rather than in api.ts, because the response is an endless body
+  // read incrementally rather than a JSON payload apiFetch could return.
+  {
+    method: 'GET',
+    path: '/v1/accounts/{id}/cameras/{key}/live',
+    reason: 'console LiveView.tsx streams this into a MediaSource — an incremental read, not an apiFetch',
+  },
   { method: 'POST', path: '/webhooks/slack', reason: 'inbound provider callback (Slack)' },
   { method: 'POST', path: '/webhooks/slack/interactions', reason: 'inbound provider callback (Slack interactivity)' },
   { method: 'POST', path: '/webhooks/telegram', reason: 'inbound provider callback (Telegram)' },

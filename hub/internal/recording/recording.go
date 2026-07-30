@@ -91,6 +91,9 @@ type Config struct {
 	// Fetch receives media from a camera. Defaults to camera.ConsumeMedia; see
 	// capture.go for why the seam exists and what it does not excuse.
 	Fetch FetchFunc
+	// Live, when set, receives each muxed fragment for viewers. Optional: a hub
+	// with nobody watching pays nothing for it.
+	Live *Broadcaster
 }
 
 // Recorder writes clips and enforces retention.
@@ -204,7 +207,17 @@ func (r *Recorder) WriteClip(ctx context.Context, accountID, deviceKey string,
 	// Written to a temporary name and renamed, so a crash mid-write cannot leave
 	// a truncated file at a path the index will later claim is a playable clip.
 	tmp := full + ".part"
-	body := append(f.InitSegment(), frag...)
+	init := f.InitSegment()
+	body := append(append([]byte(nil), init...), frag...)
+
+	// Published from HERE rather than from a second muxer, so what a viewer
+	// sees and what lands on disk are the same bytes. Two muxers over one
+	// stream is two chances to disagree, and the disagreement would only show
+	// up as a picture that plays from a file and not from the live view.
+	if r.cfg.Live != nil {
+		r.cfg.Live.PublishInit(deviceKey, init)
+		r.cfg.Live.PublishFragment(deviceKey, frag)
+	}
 	if err := os.WriteFile(tmp, body, 0o600); err != nil {
 		return store.Clip{}, fmt.Errorf("recording: write clip: %w", err)
 	}

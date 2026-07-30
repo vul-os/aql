@@ -536,6 +536,9 @@ type hub struct {
 	// the registry because recording needs a resolved media address and a
 	// credential, and devices.Driver — correctly — has no notion of either.
 	camDrv *camera.Driver
+	// live fans camera fragments out to viewers. Always constructed; it costs
+	// nothing until somebody watches.
+	live *recording.Broadcaster
 	// workers are the process-lifetime background loops. Empty by default.
 	workers []worker
 
@@ -592,10 +595,15 @@ func buildHub(cfg config, log *slog.Logger) (*hub, error) {
 	h.energy = h.newEnergyStore(cfg)
 	h.automations = h.newAutomationsEngine()
 
+	// One broadcaster, shared: the recorder fills it and the server drains it.
+	// Two would mean live viewers watching a stream nothing publishes to.
+	h.live = recording.NewBroadcaster()
+
 	srv := httpapi.New(httpapi.Config{
 		// Same path the recorder writes to, so playback and retention cannot
 		// disagree about where footage lives.
 		RecordingsRoot: filepath.Join(cfg.dataDir, "recordings"),
+		Live:           h.live,
 		Devices:        h.reg,
 		Energy:         h.energy,
 		Automations:    h.automations,
@@ -660,6 +668,7 @@ func buildHub(cfg config, log *slog.Logger) (*hub, error) {
 	if rec, err := recording.New(h.store, recording.Config{
 		Root: filepath.Join(cfg.dataDir, "recordings"),
 		Log:  h.log,
+		Live: h.live,
 	}); err != nil {
 		h.log.Error("recording: retention worker not started", "err", err)
 	} else {

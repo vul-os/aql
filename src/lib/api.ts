@@ -1312,6 +1312,20 @@ export const api = {
     API_VERSION_PREFIX +
     `/accounts/${accountId}/cameras/${encodeURIComponent(deviceKey)}/clips/${clipId}`,
 
+  /**
+   * The URL a live view streams from.
+   *
+   * NOT low-latency: the hub captures a window at a time, so a viewer is about
+   * one window behind and the response says how far in `X-Aql-Live-Delay-Seconds`.
+   * Unlike a recorded clip this cannot go in a `<video src>` — the body is an
+   * init segment followed by fragments with no length and no end, which is what
+   * a Media Source SourceBuffer takes and what a plain element does not.
+   */
+  cameraLiveURL: (accountId: string, deviceKey: string) =>
+    getApiBaseUrl() +
+    API_VERSION_PREFIX +
+    `/accounts/${accountId}/cameras/${encodeURIComponent(deviceKey)}/live`,
+
   cameraClips: (accountId: string, deviceKey: string) =>
     apiFetch<{ clips: CameraClip[] }>(`/accounts/${accountId}/cameras/${encodeURIComponent(deviceKey)}/clips`),
 

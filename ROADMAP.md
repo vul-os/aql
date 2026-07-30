@@ -471,6 +471,14 @@ and none has met physical hardware.
       many, and a log with forty rows for one watch is a log nobody reads), and an expired clip
       answers 410 with the reason rather than 404, because "gone" and "never existed" are
       different answers and this is the one place the difference is the entire point.
+      **Live view exists too, and is honestly named.** The capture loop's fragments fan out to
+      watchers over MSE — one RTSP session however many people watch, because cheap cameras
+      support few and the second viewer would take a slot from the recording. It is NOT
+      low-latency: the hub captures a window at a time, so a viewer is about ten seconds behind,
+      and the response says so in a header the UI renders rather than leaving someone to
+      discover it by waving at a gate. A viewer that falls behind is dropped rather than allowed
+      to apply back-pressure into the capture loop — recording is the durable job and watching
+      the disposable one.
       That completes `docs/CAMERA-RETENTION.md` §4's five steps in code. What is left is the
       thing no amount of code closes: **hardware**. Nothing in this pipeline has met a camera,
       and the retention arithmetic now deletes real files, so it wants review before it runs

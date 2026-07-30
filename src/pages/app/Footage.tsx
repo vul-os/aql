@@ -27,6 +27,7 @@ import { PageHeader } from '@/pages/app/AppLayout';
 import { Card } from '@/components/ui/Card';
 import { ListStateCard, listLoading, loadList, type ListState } from '@/components/ui/ListState';
 import { useAuth } from '@/lib/auth';
+import { LiveView } from '@/components/camera/LiveView';
 
 function when(unix: number): string {
   return new Date(unix * 1000).toLocaleString();
@@ -57,6 +58,7 @@ export default function Footage() {
   const [members, setMembers] = useState<AccountMemberRow[]>([]);
   const [grantErr, setGrantErr] = useState<string | null>(null);
   const [playing, setPlaying] = useState<string | null>(null);
+  const [live, setLive] = useState(false);
 
   const isAdmin = currentAccount?.role === 'owner' || currentAccount?.role === 'admin';
 
@@ -172,9 +174,29 @@ export default function Footage() {
 
         <Card>
           <div className="p-4">
-            <h2 className="text-sm font-semibold mb-3">
-              {selected ? 'Clips' : 'Select a camera'}
-            </h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold">
+                {selected ? 'Clips' : 'Select a camera'}
+              </h2>
+              {selected && !denied && (
+                <button
+                  type="button"
+                  className="text-xs underline"
+                  onClick={() => {
+                    setLive((v) => !v);
+                    setPlaying(null);
+                  }}
+                >
+                  {live ? 'Stop live view' : 'Watch live'}
+                </button>
+              )}
+            </div>
+
+            {selected && live && accountId && !denied && (
+              <div className="mb-3">
+                <LiveView url={api.cameraLiveURL(accountId, selected)} />
+              </div>
+            )}
 
             {selected && denied && (
               // Stated as a permission fact, not as an error. On a fresh install

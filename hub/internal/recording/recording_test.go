@@ -1,6 +1,7 @@
 package recording
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"log/slog"
@@ -631,4 +632,154 @@ func TestCaptureDoesNotFetchFromAZeroRetentionCamera(t *testing.T) {
 	if fetched {
 		t.Error("a zero-retention camera's stream was opened; retain_hours 0 is live-view only")
 	}
+}
+
+// ── live fan-out ────────────────────────────────────────────────────────────
+
+// A viewer joining mid-stream has missed the init segment, and a SourceBuffer
+// rejects every fragment without one. So the broadcaster keeps the last one and
+// hands it over on subscribe — otherwise the picture starts only for people who
+// were already watching.
+func TestALateViewerStillGetsTheInitSegment(t *testing.T) {
+	b := NewBroadcaster()
+	b.PublishInit("cam", []byte("moov"))
+	b.PublishFragment("cam", []byte("frag-1"))
+
+	ch, stop := b.Subscribe("cam")
+	defer stop()
+
+	// A non-blocking read, deliberately. Subscribe delivers the stored init
+	// segment synchronously, so it is already buffered by the time this runs —
+	// and if it is NOT, this must say so rather than block. A test that hangs
+	// when the behaviour it guards is removed burns a CI timeout and reports
+	// "test timed out" instead of naming the defect.
+	select {
+	case seg := <-ch:
+		if !seg.Init || string(seg.Data) != "moov" {
+			t.Fatalf("first segment for a late viewer = %+v, want the init segment", seg)
+		}
+	default:
+		t.Fatal("a viewer joining mid-stream received no init segment; a SourceBuffer " +
+			"rejects every fragment without one, so the picture would start only for " +
+			"people who were already watching")
+	}
+}
+
+// A viewer that cannot keep up is dropped rather than allowed to block. The
+// alternative is back-pressure through the broadcaster into the capture loop —
+// a camera stops being RECORDED because somebody's tab is struggling.
+func TestASlowViewerIsDroppedRatherThanBlockingTheRecorder(t *testing.T) {
+	b := NewBroadcaster()
+	ch, stop := b.Subscribe("cam")
+	defer stop()
+
+	// Never read from ch. Publish past the buffer.
+	for i := 0; i < liveBufferedFragments+5; i++ {
+		b.PublishFragment("cam", []byte("frag"))
+	}
+
+	if b.Dropped() != 1 {
+		t.Fatalf("Dropped() = %d, want 1 — a viewer that fills its buffer must be cut loose", b.Dropped())
+	}
+	if b.Viewers("cam") != 0 {
+		t.Error("the dropped viewer is still attached")
+	}
+	// And the channel is closed, so the HTTP handler ranging over it returns
+	// rather than hanging on a subscriber nothing will ever send to.
+	drained := 0
+	for range ch {
+		drained++
+	}
+	if drained == 0 {
+		t.Error("the dropped viewer's channel yielded nothing and was expected to be closed after its buffered segments")
+	}
+}
+
+// Viewers of one camera must not receive another's fragments — the fan-out is
+// per camera, and a mix-up here shows somebody the wrong room.
+func TestFragmentsGoOnlyToTheirOwnCamerasViewers(t *testing.T) {
+	b := NewBroadcaster()
+	front, stopF := b.Subscribe("cam:front")
+	defer stopF()
+	hall, stopH := b.Subscribe("cam:hall")
+	defer stopH()
+
+	b.PublishFragment("cam:front", []byte("front-1"))
+
+	select {
+	case seg := <-front:
+		if string(seg.Data) != "front-1" {
+			t.Errorf("front viewer got %q", seg.Data)
+		}
+	default:
+		t.Fatal("the front camera's viewer received nothing")
+	}
+	select {
+	case seg := <-hall:
+		t.Fatalf("the hallway viewer received the front camera's fragment: %q", seg.Data)
+	default:
+	}
+}
+
+// Capture publishes the SAME bytes it writes, so a picture that plays from the
+// file plays from the live view.
+func TestCapturePublishesWhatItWrites(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+	acct := seedAccount(t, st)
+	sps, pps, units := testMedia(t)
+
+	b := NewBroadcaster()
+	r := testRecorder(t, st, nil, time.Now(), nil)
+	r.cfg.Live = b
+	r.cfg.Fetch = fakeFetch(units, primedAssembler(t, sps, pps), camera.MediaFlow{Packets: 9}, nil)
+
+	ch, stop := b.Subscribe("cam")
+	defer stop()
+
+	if err := r.CaptureOnce(ctx, Source{DeviceKey: "cam", AccountID: acct, StreamURL: "rtsp://x/1"}); err != nil {
+		t.Fatal(err)
+	}
+
+	var init, frag []byte
+	for i := 0; i < 2; i++ {
+		select {
+		case seg := <-ch:
+			if seg.Init {
+				init = seg.Data
+			} else {
+				frag = seg.Data
+			}
+		default:
+			t.Fatalf("expected an init segment and a fragment, got %d segments", i)
+		}
+	}
+	if len(init) == 0 || len(frag) == 0 {
+		t.Fatal("live view did not receive both an init segment and a fragment")
+	}
+
+	// The clip on disk is exactly those two concatenated.
+	clips := clipState(t, st, acct, "cam")
+	if len(clips) != 1 {
+		t.Fatalf("wrote %d clips", len(clips))
+	}
+	onDisk, err := os.ReadFile(filepath.Join(r.cfg.Root, clipRelPath(t, st, clips[0].ID)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(onDisk, append(append([]byte(nil), init...), frag...)) {
+		t.Error("the bytes published to live viewers differ from the bytes written to disk; " +
+			"two muxers over one stream is two chances to disagree")
+	}
+}
+
+// clipRelPath reads a clip's stored path directly.
+func clipRelPath(t *testing.T, st *store.Store, id string) string {
+	t.Helper()
+	var rel string
+	if err := st.DB().QueryRowContext(context.Background(),
+		`SELECT rel_path FROM camera_clips WHERE id = ?`, id).Scan(&rel); err != nil {
+		t.Fatal(err)
+	}
+	return rel
 }

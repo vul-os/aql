@@ -20,9 +20,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/vul-os/aql/hub/internal/recording"
 	"github.com/vul-os/aql/hub/internal/store"
 )
 
@@ -355,4 +357,90 @@ func (s *Server) handleCameraClipPlay(w http.ResponseWriter, r *http.Request) {
 	// next to a proxy holding somebody's hallway.
 	w.Header().Set("Cache-Control", "private, no-store")
 	http.ServeContent(w, r, clip.ID+".mp4", time.Unix(clip.StartedAt, 0), f)
+}
+
+// handleCameraLive streams a camera's fragments to a watching browser.
+//
+// The body is an init segment followed by fragments, exactly as a Media Source
+// SourceBuffer wants them, sent as they are produced. It is NOT low-latency: the
+// capture loop works a window at a time, so a viewer is about one window behind.
+// The response says so in a header rather than leaving someone to discover it
+// while watching a gate.
+//
+// Gated by the same per-camera grant as playback, and audited once when the
+// stream opens — a live view is one watching, however many fragments it takes.
+func (s *Server) handleCameraLive(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if _, ok := s.memberRole(w, r, id); !ok {
+		return
+	}
+	c := claimsFrom(r)
+	if c == nil {
+		writeErr(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	if s.cfg.Live == nil {
+		writeErr(w, http.StatusNotFound, "recording_not_configured")
+		return
+	}
+	deviceKey := r.PathValue("key")
+
+	allowed, err := s.store.MayViewCamera(r.Context(), id, c.Sub, deviceKey, time.Now().Unix())
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	if !allowed {
+		if aerr := s.store.WriteAdminAudit(r.Context(), c.Sub, store.CameraViewAction, "camera", deviceKey, false,
+			map[string]any{"account_id": id, "live": true, "reason": "no_camera_view_grant"}); aerr != nil {
+			s.log.Error("audit refused live view", "err", aerr)
+		}
+		writeErr(w, http.StatusForbidden, "camera_view_required")
+		return
+	}
+	if err := s.store.WriteAdminAudit(r.Context(), c.Sub, store.CameraViewAction, "camera", deviceKey, true,
+		map[string]any{"account_id": id, "live": true}); err != nil {
+		s.log.Error("audit live view; refusing to serve unrecorded access", "err", err)
+		writeErr(w, http.StatusInternalServerError, "internal")
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		// Without flushing, fragments sit in a buffer and the viewer sees
+		// nothing until the stream ends — which for a live view is never.
+		writeErr(w, http.StatusInternalServerError, "streaming_unsupported")
+		return
+	}
+
+	ch, stop := s.cfg.Live.Subscribe(deviceKey)
+	defer stop()
+
+	w.Header().Set("Content-Type", "video/mp4")
+	w.Header().Set("Cache-Control", "private, no-store")
+	// Stated in the response rather than only in the UI: anything consuming this
+	// stream should know how far behind it is, and a number is harder to
+	// misread than an adjective.
+	w.Header().Set("X-Aql-Live-Delay-Seconds", strconv.Itoa(int(recording.CaptureWindow.Seconds())))
+	w.WriteHeader(http.StatusOK)
+	flusher.Flush()
+
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case seg, open := <-ch:
+			if !open {
+				// Dropped for falling behind. Ending the response is the honest
+				// signal — the client reconnects and gets a fresh init segment
+				// and the current moment, which is what someone watching a
+				// camera wants anyway.
+				return
+			}
+			if _, err := w.Write(seg.Data); err != nil {
+				return
+			}
+			flusher.Flush()
+		}
+	}
 }
