@@ -12,6 +12,9 @@ import (
 
 // argon2id parameters (RFC 9106 low-memory profile; fine for a self-hosted
 // gateway on Pi-class hardware).
+//
+// These constants are the SHIPPED cost and are asserted by
+// TestArgonDefaultsAreTheRFCProfile. Nothing may lower them.
 const (
 	argonTime    = 3
 	argonMemory  = 64 * 1024 // KiB
@@ -20,15 +23,36 @@ const (
 	argonSaltLen = 16
 )
 
+// The cost actually used, defaulting to the constants above.
+//
+// Variables rather than constants for exactly one reason: this package's test
+// binary registers hundreds of users, and 64 MiB × 3 passes each pushed
+// `go test ./internal/httpapi` past Go's ten-minute per-package timeout — CI
+// runs a bare `go test ./...`, so the suite had stopped being able to finish at
+// all. TestMain lowers them for tests only; production reads the constants.
+//
+// A deliberately awkward seam. The alternative was raising the timeout, which
+// buys nothing and hides the growth, or trimming tests, which trades coverage
+// for seconds. Lowering a cost that exists to be slow is safe only because the
+// default is pinned by a test that reads the constants and not these vars.
+var (
+	argonTimeUsed    uint32 = argonTime
+	argonMemoryUsed  uint32 = argonMemory
+	argonThreadsUsed uint8  = argonThreads
+)
+
 // HashPassword derives an argon2id hash in the standard PHC string format.
 func HashPassword(password string) (string, error) {
 	salt := make([]byte, argonSaltLen)
 	if _, err := rand.Read(salt); err != nil {
 		return "", err
 	}
-	key := argon2.IDKey([]byte(password), salt, argonTime, argonMemory, argonThreads, argonKeyLen)
+	key := argon2.IDKey([]byte(password), salt, argonTimeUsed, argonMemoryUsed, argonThreadsUsed, argonKeyLen)
+	// The parameters are written into the hash, so VerifyPassword re-derives
+	// with whatever cost produced it — a hash made at test cost verifies at
+	// test cost, and a production hash keeps its own.
 	return fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s",
-		argon2.Version, argonMemory, argonTime, argonThreads,
+		argon2.Version, argonMemoryUsed, argonTimeUsed, argonThreadsUsed,
 		base64.RawStdEncoding.EncodeToString(salt),
 		base64.RawStdEncoding.EncodeToString(key)), nil
 }

@@ -345,6 +345,15 @@ func (s *Server) handleControllerUplink(ctx context.Context, deviceID string, pu
 		if err := jsonUnmarshal(msg, &ack); err != nil {
 			return
 		}
+		// The WS twin of the same recording in handleControllerAck. Both paths
+		// need it: this one carries the acks of every CONNECTED controller, and
+		// ResolveAck returns early on the common case, so recording after it
+		// would capture only the late-ack minority.
+		if ok, err := s.store.RecordAckIfPing(ctx, deviceID, ack.Nonce); err != nil {
+			s.log.Error("record clock sync", "device_id", deviceID, "err", err)
+		} else if ok {
+			s.log.Info("controller clock sync proved", "device_id", deviceID)
+		}
 		if s.hub.ResolveAck(ack) {
 			return
 		}
@@ -519,6 +528,17 @@ func (s *Server) handleControllerAck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = s.store.TouchDeviceSeen(r.Context(), ack.DeviceID)
+	// An ack for a ping this hub minted is the only proof it gets that the
+	// controller's clock advanced — and it must be recorded HERE, before the
+	// resolve/late-ack split below. A ping dispatched to a controller with no
+	// live socket is queued, so no pending waiter and no `recent` entry exists
+	// for it: both branches below drop that ack on the floor. The long-poll
+	// controllers this matters most for would otherwise never be recorded.
+	if ok, err := s.store.RecordAckIfPing(r.Context(), ack.DeviceID, ack.Nonce); err != nil {
+		s.log.Error("record clock sync", "device_id", ack.DeviceID, "err", err)
+	} else if ok {
+		s.log.Info("controller clock sync proved", "device_id", ack.DeviceID)
+	}
 	if !s.hub.ResolveAck(ack) {
 		s.handleLateAck(r.Context(), ack.DeviceID, ack)
 	}

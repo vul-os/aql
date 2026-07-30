@@ -454,6 +454,9 @@ func (s *Server) Router() http.Handler {
 	// Remote controller retuning (deviceconfig.go). The hub is the only place
 	// a bad value can be stopped: the controller stores whatever it is sent.
 	mux.Handle("PATCH /v1/devices/{id}/config", s.requireAuth(s.handleDeviceConfig))
+	// Which controllers can still be trusted to honour an offline grant
+	// (clocksync.go). Operational fleet data, account-admin only.
+	mux.Handle("GET /v1/accounts/{id}/controllers/clock-freshness", s.requireAuth(s.handleClockFreshness))
 	mux.Handle("POST /v1/devices", s.requireAuth(s.handleDeviceCreate))
 	// proto/pairing.md's diagram specifies POST /pair/redeem — that's the path
 	// the controller builds from its --gateway URL. Serve it there (spec form)

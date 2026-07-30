@@ -58,6 +58,21 @@ func (c *discordConn) Write(ctx context.Context, data []byte) error {
 func (c *discordConn) Close() { c.closeOnce.Do(func() { close(c.closed) }) }
 
 // nextFrame reads one client→server frame, decoded.
+// frameWait is how long to allow for a frame the code under test sends
+// immediately; serveWait bounds the serve() call that produces it.
+//
+// frameWait must stay well INSIDE serveWait. Otherwise a frame that is merely
+// slow to be scheduled fails on the context being cancelled — a different error
+// in a different place, pointing at the wrong thing.
+//
+// Both are generous because both wait on the SCHEDULER, not on work. See
+// TestDiscordAcknowledgedHeartbeatsKeepTheConnection for why one second was not
+// enough under `go test ./...`.
+const (
+	frameWait = 5 * time.Second
+	serveWait = 20 * time.Second
+)
+
 func nextFrame(t *testing.T, c *discordConn, within time.Duration) map[string]any {
 	t.Helper()
 	select {
@@ -89,7 +104,7 @@ func hello(intervalMS int) []byte {
 func TestDiscordIdentifiesThenHeartbeatsAtTheServersInterval(t *testing.T) {
 	conn := newDiscordConn()
 	d := &Discord{BotToken: "bot-token", FirstBeatFraction: 1}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), serveWait)
 	defer cancel()
 	var sess discordSession
 	done := make(chan error, 1)
@@ -97,7 +112,7 @@ func TestDiscordIdentifiesThenHeartbeatsAtTheServersInterval(t *testing.T) {
 
 	conn.toClient <- hello(40) // 40ms so the test does not sleep for real
 
-	id := nextFrame(t, conn, time.Second)
+	id := nextFrame(t, conn, frameWait)
 	if opOf(id) != discordOpIdentify {
 		t.Fatalf("first client frame was op %d, want IDENTIFY", opOf(id))
 	}
@@ -114,7 +129,7 @@ func TestDiscordIdentifiesThenHeartbeatsAtTheServersInterval(t *testing.T) {
 	// exactly what was missed.
 	conn.toClient <- []byte(`{"op":0,"s":7,"t":"READY","d":{"session_id":"sess-1","resume_gateway_url":"wss://resume.example"}}`)
 
-	hb := nextFrame(t, conn, time.Second)
+	hb := nextFrame(t, conn, frameWait)
 	if opOf(hb) != discordOpHeartbeat {
 		t.Fatalf("expected a heartbeat, got op %d", opOf(hb))
 	}
@@ -144,16 +159,25 @@ func TestDiscordIdentifiesThenHeartbeatsAtTheServersInterval(t *testing.T) {
 func TestDiscordAcknowledgedHeartbeatsKeepTheConnection(t *testing.T) {
 	conn := newDiscordConn()
 	d := &Discord{BotToken: "tok", FirstBeatFraction: 1}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), serveWait)
 	defer cancel()
 	var sess discordSession
 	done := make(chan error, 1)
 	go func() { done <- d.serve(ctx, conn, &sess) }()
 
 	conn.toClient <- hello(30)
-	nextFrame(t, conn, time.Second) // identify
+	// A generous budget on purpose. These waits are for a goroutine to be
+	// SCHEDULED, not for anything to compute, and one second of that is fine in
+	// isolation and tight when `go test ./...` is running every package at
+	// once — this test failed there while passing three times in a row alone.
+	//
+	// The property is unchanged: a heartbeat must be sent and acked. Allowing
+	// more wall-clock does not weaken it, whereas asserting scheduler latency
+	// as if it were behaviour makes the suite untrustworthy — and an
+	// intermittently red suite gets its failures blamed on the run.
+	nextFrame(t, conn, frameWait) // identify
 	for i := 0; i < 3; i++ {
-		hb := nextFrame(t, conn, time.Second)
+		hb := nextFrame(t, conn, frameWait)
 		if opOf(hb) != discordOpHeartbeat {
 			t.Fatalf("beat %d: op %d", i, opOf(hb))
 		}
@@ -171,15 +195,15 @@ func TestDiscordAcknowledgedHeartbeatsKeepTheConnection(t *testing.T) {
 func TestDiscordServerRequestedHeartbeat(t *testing.T) {
 	conn := newDiscordConn()
 	d := &Discord{BotToken: "tok", FirstBeatFraction: 1}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), serveWait)
 	defer cancel()
 	var sess discordSession
 	go d.serve(ctx, conn, &sess)
 
-	conn.toClient <- hello(60_000)  // a beat is a minute away
-	nextFrame(t, conn, time.Second) // identify
+	conn.toClient <- hello(60_000) // a beat is a minute away
+	nextFrame(t, conn, frameWait)  // identify
 	conn.toClient <- []byte(`{"op":1}`)
-	hb := nextFrame(t, conn, time.Second)
+	hb := nextFrame(t, conn, frameWait)
 	if opOf(hb) != discordOpHeartbeat {
 		t.Fatalf("server-requested beat unanswered, got op %d", opOf(hb))
 	}
@@ -196,12 +220,12 @@ func TestDiscordResumesAfterADrop(t *testing.T) {
 	sess := discordSession{id: "sess-9", resumeURL: "wss://resume.example", seq: 41, haveSeq: true}
 
 	conn := newDiscordConn()
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), serveWait)
 	defer cancel()
 	go d.serve(ctx, conn, &sess)
 
 	conn.toClient <- hello(60_000)
-	f := nextFrame(t, conn, time.Second)
+	f := nextFrame(t, conn, frameWait)
 	if opOf(f) != discordOpResume {
 		t.Fatalf("a live session must RESUME, got op %d", opOf(f))
 	}
@@ -233,11 +257,11 @@ func TestDiscordInvalidSessionClearsUnresumableState(t *testing.T) {
 		conn := newDiscordConn()
 		d := &Discord{BotToken: "tok", FirstBeatFraction: 1}
 		sess := discordSession{id: "sess-x", resumeURL: "wss://r", seq: 5, haveSeq: true}
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), serveWait)
 		done := make(chan error, 1)
 		go func() { done <- d.serve(ctx, conn, &sess) }()
 		conn.toClient <- hello(60_000)
-		nextFrame(t, conn, time.Second) // resume
+		nextFrame(t, conn, frameWait) // resume
 		conn.toClient <- []byte(tc.frame)
 		select {
 		case err := <-done:
@@ -265,19 +289,20 @@ func TestDiscordDispatchReachesHandler(t *testing.T) {
 		defer mu.Unlock()
 		seen = append(seen, evt+":"+string(data))
 	}}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), serveWait)
 	defer cancel()
 	var sess discordSession
 	go d.serve(ctx, conn, &sess)
 
 	conn.toClient <- hello(60_000)
-	nextFrame(t, conn, time.Second) // identify
+	nextFrame(t, conn, frameWait) // identify
 	conn.toClient <- []byte(`{"op":0,"s":1,"t":"READY","d":{"session_id":"s1"}}`)
 	conn.toClient <- []byte(`{"op":0,"s":2,"t":"TYPING_START","d":{"user_id":"u1"}}`)
 	conn.toClient <- []byte(`{"op":0,"s":3,"t":"MESSAGE_CREATE","d":{"id":"m1"}}`)
 	conn.toClient <- []byte(`{"op":0,"s":4,"t":"INTERACTION_CREATE","d":{"id":"i1"}}`)
 
-	deadline := time.Now().Add(2 * time.Second)
+	// Same reasoning as frameWait: this polls for a goroutine to have run.
+	deadline := time.Now().Add(frameWait)
 	for {
 		mu.Lock()
 		n := len(seen)
@@ -315,7 +340,7 @@ func TestDiscordFailsClosedOnMalformedFrames(t *testing.T) {
 		conn := newDiscordConn()
 		handled := 0
 		d := &Discord{BotToken: "tok", FirstBeatFraction: 1, Handle: func(context.Context, string, json.RawMessage) { handled++ }}
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), serveWait)
 		done := make(chan error, 1)
 		var sess discordSession
 		go func() { done <- d.serve(ctx, conn, &sess) }()
@@ -339,13 +364,13 @@ func TestDiscordFailsClosedOnMalformedFrames(t *testing.T) {
 	// Undecodable JSON on an established connection ends it too.
 	conn := newDiscordConn()
 	d := &Discord{BotToken: "tok", FirstBeatFraction: 1}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), serveWait)
 	defer cancel()
 	done := make(chan error, 1)
 	var sess discordSession
 	go func() { done <- d.serve(ctx, conn, &sess) }()
 	conn.toClient <- hello(60_000)
-	nextFrame(t, conn, time.Second)
+	nextFrame(t, conn, frameWait)
 	conn.toClient <- []byte(`{"op":`)
 	select {
 	case err := <-done:
@@ -362,13 +387,13 @@ func TestDiscordFailsClosedOnMalformedFrames(t *testing.T) {
 func TestDiscordUnknownOpcodesIgnored(t *testing.T) {
 	conn := newDiscordConn()
 	d := &Discord{BotToken: "tok", FirstBeatFraction: 1}
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), serveWait)
 	defer cancel()
 	done := make(chan error, 1)
 	var sess discordSession
 	go func() { done <- d.serve(ctx, conn, &sess) }()
 	conn.toClient <- hello(60_000)
-	nextFrame(t, conn, time.Second)
+	nextFrame(t, conn, frameWait)
 	conn.toClient <- []byte(`{"op":42,"d":{"whatever":true}}`)
 	select {
 	case err := <-done:
@@ -414,7 +439,7 @@ func TestDiscordRealWebSocket(t *testing.T) {
 			handled <- evt
 		},
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), serveWait)
 	defer cancel()
 	var sess discordSession
 	go d.connectOnce(ctx, &sess)
@@ -506,7 +531,7 @@ func TestDiscordRunStopsOnAFatalRejection(t *testing.T) {
 			return nil, websocket.CloseError{Code: 4004}
 		},
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), serveWait)
 	defer cancel()
 	done := make(chan struct{})
 	go func() { d.Run(ctx); close(done) }()

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 /**
  * One component, one name.
@@ -111,7 +111,74 @@ function walk(dir: string, match: RegExp, out: string[] = []): string[] {
   return out;
 }
 
+/**
+ * Lines of a file, read once per run.
+ *
+ * Three of the guards below each walk the whole repo and read every source file
+ * it contains, so the same few hundred files were being read and split three
+ * times over. On an unloaded machine that fits inside vitest's default 5s
+ * per-test budget; while the browser suite was running in parallel it did not,
+ * and the first guard failed at 6.8s having found nothing wrong.
+ *
+ * A guard that goes red because the machine is busy teaches the reader to
+ * re-run rather than to look, which is how a real failure gets waved through.
+ * The cache is most of the fix rather than a bigger timeout: the work was
+ * duplicated, not merely slow.
+ *
+ * Caching alone would only move the problem, though — whichever guard ran first
+ * would still pay for every read and still be measured against a budget sized
+ * for a test that does no I/O. So the reads happen in a beforeAll with a budget
+ * that says out loud what it is paying for. A guard that then exceeds 5s is
+ * doing something other than reading files, which is worth knowing.
+ */
+const lineCache = new Map<string, string[]>();
+
+/** The union of every extension the guards below scan for. */
+const SCANNED = /\.(ts|tsx|mjs|js|go|rs|json|ya?ml|toml|md)$|^Makefile$|^Dockerfile$/;
+
+function linesOf(file: string): string[] {
+  let lines = lineCache.get(file);
+  if (!lines) {
+    lines = readFileSync(file, 'utf-8').split('\n');
+    lineCache.set(file, lines);
+  }
+  return lines;
+}
+
 describe('the backend has one name', () => {
+  // 30s, not because reading a few hundred files takes 30s — it takes about
+  // one — but because this is the one step allowed to be slow, and a CI machine
+  // running the Go suite alongside it should not turn a naming guard red.
+  beforeAll(() => {
+    for (const file of walk(repo, SCANNED)) linesOf(file);
+  }, 30_000);
+
+  // walkAtLeast() floors the number of files each guard SEES. It says nothing
+  // about whether those files were successfully READ, which did not matter while
+  // every guard called readFileSync itself — a read either returned the file or
+  // threw. Routing them through a cache introduces a way for content to come
+  // back empty without anything throwing, and a tamper confirmed the cost:
+  // making linesOf() return [] leaves four of the five guards below green,
+  // because "no lines" and "no offenders" are the same observation.
+  //
+  // So floor the content too. Total lines across the tree, not per file — empty
+  // files are legitimate and a per-file floor would fail on one.
+  it('the scan actually read the files, so an empty cache cannot pass the guards', () => {
+    let lines = 0;
+    for (const cached of lineCache.values()) lines += cached.length;
+    expect(
+      lineCache.size,
+      'the cache is empty — beforeAll did not run or the walk root is wrong',
+    ).toBeGreaterThanOrEqual(200);
+    expect(
+      lines,
+      `the cache holds ${lineCache.size} files but only ${lines} lines. The guards ` +
+        `below scan cached content, and a guard that scans nothing reports no ` +
+        `offenders — verify linesOf() is really reading from disk.`,
+    ).toBeGreaterThanOrEqual(10_000);
+  });
+
+
   it('no source or config file refers to a gateway/ directory or cmd/gateway binary', () => {
     const offenders: string[] = [];
     // Extension-keyed walking missed the Makefile, which kept pointing at
@@ -131,8 +198,7 @@ describe('the backend has one name', () => {
       const rel = path.relative(repo, file);
       // This file names the thing it forbids.
       if (rel.endsWith('naming.test.ts')) continue;
-      const src = readFileSync(file, 'utf-8');
-      src.split('\n').forEach((line, i) => {
+      linesOf(file).forEach((line, i) => {
         if (!/gateway\/(internal|cmd)|cmd\/gateway|working-directory: gateway|context: gateway/.test(line)) return;
         if (isAllowed(line)) return;
         offenders.push(`${rel}:${i + 1}  ${line.trim().slice(0, 100)}`);
@@ -195,12 +261,10 @@ describe('the backend has one name', () => {
     for (const file of walkAtLeast(repo, /\.(ts|tsx|mjs|js|go|rs)$/, 200, 'the repo for backend/ citations')) {
       const rel = path.relative(repo, file);
       if (rel.endsWith('naming.test.ts')) continue; // names what it forbids
-      readFileSync(file, 'utf-8')
-        .split('\n')
-        .forEach((line, i) => {
-          if (!/\bbackend\/(src|dist|node_modules)/.test(line)) return;
-          offenders.push(`${rel}:${i + 1}  ${line.trim().slice(0, 100)}`);
-        });
+      linesOf(file).forEach((line, i) => {
+        if (!/\bbackend\/(src|dist|node_modules)/.test(line)) return;
+        offenders.push(`${rel}:${i + 1}  ${line.trim().slice(0, 100)}`);
+      });
     }
     expect(
       offenders,
@@ -223,8 +287,7 @@ describe('the backend has one name', () => {
       // other reader must go through lookupEnv.
       if (rel === 'hub/cmd/hub/env.go' || rel === 'hub/cmd/hub/env_test.go') continue;
       if (rel.endsWith('naming.test.ts')) continue;
-      const src = readFileSync(file, 'utf-8');
-      src.split('\n').forEach((line, i) => {
+      linesOf(file).forEach((line, i) => {
         if (!/LINTEL_/.test(line)) return;
         if (LEGACY_WIRE_NAMES.some((re) => re.test(line))) return;
         offenders.push(`${rel}:${i + 1}  ${line.trim().slice(0, 100)}`);
@@ -247,8 +310,8 @@ describe('the backend has one name', () => {
     // wrong fields, which made the guard pass on nothing.
     const found = new Set<string>();
     for (const file of walkAtLeast(path.join(repo, 'proto'), /\.(json|md)$/, 5, 'proto/')) {
-      for (const m of readFileSync(file, 'utf-8').matchAll(/gateway_[a-z_]+/g)) {
-        found.add(m[0]);
+      for (const line of linesOf(file)) {
+        for (const m of line.matchAll(/gateway_[a-z_]+/g)) found.add(m[0]);
       }
     }
     for (const wire of ['gateway_sync', 'gateway_pubkey', 'gateway_next', 'gateway_key', 'gateway_ed']) {

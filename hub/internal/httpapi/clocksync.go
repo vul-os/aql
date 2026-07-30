@@ -61,6 +61,7 @@ package httpapi
 
 import (
 	"context"
+	"net/http"
 	"sync"
 	"time"
 
@@ -119,6 +120,15 @@ func (s *Server) SyncControllerClocks(ctx context.Context) int {
 		sent++
 		mu.Unlock()
 
+		// Remember the nonce BEFORE dispatching. A connected controller can ack
+		// fast enough that the ack handler runs before this write would, and an
+		// ack whose nonce is not yet recorded is an ack that proves nothing —
+		// the sync would be silently lost for exactly the controllers that are
+		// healthiest.
+		if err := s.store.RecordPingDispatched(ctx, deviceID, env.Nonce); err != nil {
+			s.log.Error("record ping nonce", "device_id", deviceID, "err", err)
+		}
+
 		// CONCURRENTLY, and that is not an optimisation. Dispatch waits for an
 		// ack, so a sequential sweep costs clockSyncAckTimeout for every
 		// controller that does not answer — a fleet with a handful of silent
@@ -159,3 +169,62 @@ func (s *Server) RunClockSync(ctx context.Context) {
 		}
 	}
 }
+
+// GET /v1/accounts/{id}/controllers/clock-freshness
+//
+// Which of this account's controllers can still be trusted to honour an offline
+// grant, and which are drifting toward refusing every one of them.
+//
+// Account-admin only: it is fleet operational data, and it names every
+// controller the account has.
+//
+// # What each answer means
+//
+// `synced_at` is when a ping this hub minted was last PROVED processed by that
+// controller — see store/migrations/0022 for why nothing else is proof. `null`
+// means no ping has ever been acked by it, which is a real state and the one
+// most worth acting on: such a controller has not demonstrably synced since it
+// was paired.
+//
+// `stale_after` is the hub's copy of the controller's own limit. It is reported
+// rather than assumed so a client does not hard-code fourteen days — the number
+// lives in the controller module and the hub cannot import it.
+func (s *Server) handleClockFreshness(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if !s.requireAccountAdmin(w, r, id) {
+		return
+	}
+	rows, err := s.store.ClockFreshnessByAccount(r.Context(), id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	now := time.Now().Unix()
+	out := make([]map[string]any, 0, len(rows))
+	for _, f := range rows {
+		m := map[string]any{"device_id": f.DeviceID, "label": f.Label}
+		if f.SyncedAt == nil {
+			// Reported as its own thing rather than as an enormous age, because
+			// "never" and "very old" warrant different words to an operator.
+			m["synced_at"] = nil
+			m["proved"] = false
+		} else {
+			m["synced_at"] = *f.SyncedAt
+			m["proved"] = true
+			m["age_s"] = now - *f.SyncedAt
+		}
+		out = append(out, m)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"controllers": out,
+		// The controller refuses every offline grant past this age. Sent so the
+		// client does not restate a constant that lives in another module.
+		"stale_after_s": controllerStaleAfterSeconds,
+	})
+}
+
+// controllerStaleAfterSeconds mirrors the controller module's
+// wire.StaleClockLimitSeconds (14 days). The two modules cannot import each
+// other, so clocksync_test.go reads the controller's source and fails if they
+// drift — the same technique that keeps the ping interval honest.
+const controllerStaleAfterSeconds = 14 * 24 * 60 * 60

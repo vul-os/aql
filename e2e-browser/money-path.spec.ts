@@ -90,7 +90,11 @@ test('sign up, sign in, create a location + access point, attempt an open, read 
   expect(registerBody.tokens?.refresh_token).toEqual(expect.any(String));
   expect(registerBody.location?.name).toBe(LOCATION_NAME);
 
-  await expect(page.getByRole('heading', { name: "You're in." })).toBeVisible();
+  await expect(page.getByRole('heading', { name: "You're in." })).toBeVisible({
+    // argon2id (64 MiB, 3 passes) — see auth-flows.spec.ts for why this one
+    // assertion needs longer than the 5s default under parallel workers.
+    timeout: 20_000,
+  });
   await page.getByRole('button', { name: 'Go to dashboard', exact: true }).click();
   await expect(page).toHaveURL(`${gw.baseUrl}/app`);
 

@@ -32,6 +32,7 @@ import { PageHeader } from './AppLayout';
 import { Card } from '@/components/ui/Card';
 import { ClaimableDevices, ReleaseDeviceButton } from '@/components/device/ClaimableDevices';
 import { ControllerConfig } from '@/components/device/ControllerConfig';
+import { ClockFreshness } from '@/components/device/ClockFreshness';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { DevicePairing } from '@/components/illustrations/DevicePairing';
@@ -259,6 +260,11 @@ export default function DevicesPage() {
       {/* Renders nothing unless the engine reports devices nobody owns, which
           on a single-account hub is never — that hub sees its whole fleet
           without claiming anything. See ClaimableDevices. */}
+      {/* Renders nothing unless a controller is actually drifting toward
+          refusing offline grants — see ClockFreshness for why it must not be a
+          permanent fixture. */}
+      {currentAccount && <ClockFreshness accountId={currentAccount.id} />}
+
       {currentAccount && (
         <ClaimableDevices
           accountId={currentAccount.id}

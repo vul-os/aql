@@ -1107,6 +1107,26 @@ export const api = {
       { method: 'PATCH', body: { config } },
     ),
 
+  /**
+   * Which controllers can still be trusted to honour an offline grant.
+   *
+   * `synced_at` is when a ping this hub minted was last PROVED processed —
+   * `proved: false` means no ping has ever been acked, which is not the same as
+   * "very old". `stale_after_s` is the controller's own limit, sent by the hub
+   * so this client does not hard-code a constant that lives in another module.
+   */
+  controllerClockFreshness: (accountId: string) =>
+    apiFetch<{
+      controllers: Array<{
+        device_id: string;
+        label: string;
+        synced_at: number | null;
+        proved: boolean;
+        age_s?: number;
+      }>;
+      stale_after_s: number;
+    }>(`/accounts/${accountId}/controllers/clock-freshness`),
+
   // Device ownership (hub/internal/httpapi/deviceclaims.go).
   //
   // The engine cannot infer whose a device is — a driver discovers it from a

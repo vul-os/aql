@@ -258,3 +258,21 @@ func goConstSeconds(t *testing.T, relPath, name string) int64 {
 	}
 	return n
 }
+
+// The staleness limit the API reports must be the controller's real one.
+//
+// controllerStaleAfterSeconds is a hand-written mirror of a constant in another
+// Go module, which is the exact shape that made the original stale-clock bug
+// invisible — and the shape my own first test for it had, until it was fixed to
+// read the source. A client is told this number and decides what to warn on, so
+// a drift here makes every downstream warning wrong.
+func TestReportedStalenessLimitMatchesTheController(t *testing.T) {
+	real := goConstSeconds(t, "../../../controller/internal/wire/wire.go", "StaleClockLimitSeconds")
+	if controllerStaleAfterSeconds != real {
+		t.Fatalf(`the API reports a %d-second staleness limit; the controller enforces %d.
+
+This number is sent to clients so they do not hard-code it. If the controller's
+limit moved, this mirror must move with it — the two modules cannot import each
+other, so nothing but this test connects them.`, controllerStaleAfterSeconds, real)
+	}
+}

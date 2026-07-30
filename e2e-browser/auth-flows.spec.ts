@@ -38,7 +38,19 @@ async function connectAndSignUp(
   await page.getByRole('button', { name: 'Continue →', exact: true }).click(); // account-kind step
   await page.getByLabel('Location name').fill('Auth Flow House');
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
-  await expect(page.getByRole('heading', { name: "You're in." })).toBeVisible();
+  // A longer timeout than the 5s default, because this one assertion waits on
+  // argon2id: 64 MiB and three passes, single-threaded, per the RFC 9106
+  // low-memory profile in httpapi/password.go. That cost is the point of the
+  // hash, and with two Playwright workers two signups can be paying it at once
+  // while vite and a hub binary are also competing — which made this the only
+  // assertion in the suite that flaked under load.
+  //
+  // Not a weakened check: a broken signup fails this at any timeout. It is the
+  // difference between allowing for work that is deliberately slow and
+  // asserting that work is fast.
+  await expect(page.getByRole('heading', { name: "You're in." })).toBeVisible({
+    timeout: 20_000,
+  });
   await page.getByRole('button', { name: 'Go to dashboard', exact: true }).click();
   await expect(page).toHaveURL(`${gw.baseUrl}/app`);
 }

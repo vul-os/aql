@@ -23,7 +23,17 @@ export default defineConfig({
   // a red run is to blame the run rather than the code.
   workers: process.env.CI ? 2 : 2,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
-  timeout: 45_000,
+  // These tests drive a REAL hub binary, and signing up or in pays argon2id at
+  // the shipped cost: 64 MiB and three passes, single-threaded, per RFC 9106.
+  // money-path.spec.ts pays it twice (sign up, then sign in) inside one test,
+  // on top of real HTTP round trips and a location + access point.
+  //
+  // 45 seconds was not enough for that once the sign-up assertion was given an
+  // honest allowance of its own — the failure simply moved from the assertion to
+  // the test. Raising this is not hiding a slow test: a hung one still fails
+  // here, and the cost being waited on is a security control working as
+  // designed.
+  timeout: 150_000,
   use: {
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',

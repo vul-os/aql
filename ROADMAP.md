@@ -32,7 +32,7 @@ reference for how every other device kind should eventually work: a versioned wi
 contract, a device that verifies rather than trusts, and an audit trail you can check
 after the fact.
 
-**The hub** (`hub/`) — one Go binary, SQLite inside, **112 HTTP routes over 20
+**The hub** (`hub/`) — one Go binary, SQLite inside, **115 HTTP routes over 21
 migrations, and more than 870 tests green** across 16 packages:
 
 - [x] Accounts, locations, access points, members with roles, invites
@@ -158,13 +158,19 @@ hub's issuance endpoint):
       has never run on hardware on either. darwin returns `ErrUnsupported`: CoreBluetooth
       offers peripheral mode, that library does not bind it, and writing a CGO binding
       that cannot be tested here would be worse than the gap
-- [ ] **`last_seen_at` is not a clock-freshness signal, and nothing surfaces the real one.**
-      It is stamped on polls, uplink events and acks — only some of which sync a controller's
-      clock — so a long-poll controller reads as recently seen while its `LastGatewaySync`
-      ages out. An operator warning built on it would give false reassurance, which is worse
-      than no warning. The honest signal is the controller's own last sync, and the hub does
-      not receive it: `cmd.ack` carries a result and a detail and nothing else (see the
-      config-readback gap above). Both want the same widening of the ack
+- [x] **The hub now knows when each controller's clock was last PROVED fresh.** An acked
+      `ping` is the only proof it receives — processing one calls the controller's SyncClock,
+      so an ack whose nonce matches a ping the hub itself minted is evidence that that
+      controller's clock advanced. Recorded per device (migration 0022), on both the
+      WebSocket and long-poll ack paths, because a queued ping has no pending waiter and
+      both of the existing branches drop its ack. `last_seen_at` is explicitly NOT the
+      signal: it is stamped on every long-poll request, so a controller whose clock has not
+      moved in a month reads as seen a minute ago. Nor is the ack's `result` — a ping and a
+      config both ack "ok", so keying on it would count a relay retune as a clock sync
+- [ ] A console surface for the above. `GET /v1/accounts/{id}/controllers/clock-freshness`
+      serves it — every paired controller oldest-proof-first, never-synced first, with the
+      controller's own 14-day limit reported rather than hard-coded — and nothing renders it
+      yet, so an operator has to curl it
 - [x] **`ping` — and it was not the minor one.** A controller learns the hub's time at
       the WS handshake and on an accepted `ping`, and nowhere else. The hub had never sent
       a ping, and a healthy WS connection carries no read deadline, so a controller that
