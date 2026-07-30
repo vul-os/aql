@@ -20,7 +20,7 @@
 
 Aql has no cloud. It is just the **system**: a hub you run, devices at the edge that
 verify rather than trust, an app in your pocket — every line open source, nothing hosted
-by us. [vulos.org/products/aql](https://vulos.org/products/aql) is the project site (docs +
+by us. [vulos.org/projects/aql](https://vulos.org/projects/aql) is the project site (docs +
 downloads), not a service. There is **no billing system** — nothing in the binaries
 charges anyone anything — **no account** with us, and **no telemetry**.
 

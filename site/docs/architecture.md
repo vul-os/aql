@@ -14,7 +14,7 @@ goes. Everything below describes the hub as it exists.
 
 Aql has no central service that everything depends on, and no hosted service at all. It
 is a network of independent **hubs**: anyone can run one, and every hub is somebody's
-own. `vulos.org/products/aql` is the project site (landing, docs, downloads), not a
+own. `vulos.org/projects/aql` is the project site (landing, docs, downloads), not a
 service. Every line of code is open source (MIT OR Apache-2.0) and everything is free — there is
 no billing system, no account, and no telemetry.
 

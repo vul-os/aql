@@ -9,7 +9,7 @@ Think of it as the reach of Home Assistant pushed wider: not just consumer smart
 gadgets, but autonomous robots and business fleets, under one hub that owns everything.
 
 Aql has no cloud centre and no hosted service. It is a network of independent **hubs**;
-anyone can run one, and every hub is somebody's own. `vulos.org/products/aql` is the
+anyone can run one, and every hub is somebody's own. `vulos.org/projects/aql` is the
 project site — this landing, these docs, the downloads — not a service: there is nothing
 to sign up for, no account, no telemetry, and no billing code anywhere in the binaries.
 

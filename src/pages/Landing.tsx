@@ -7,7 +7,7 @@
 // binary.
 //
 // DELIBERATELY NOT A MARKETING PAGE. The public product page lives at
-// vulos.org/products/aql/ (this repo's `site/index.html`) and is the one
+// vulos.org/projects/aql/ (this repo's `site/index.html`) and is the one
 // place that argument gets made. This page is served by a hub someone
 // already installed and is pointing a browser at, so its whole job is:
 //   1. say what this thing is, in one breath and without overclaiming,
@@ -300,7 +300,7 @@ const OUTWARD: { label: string; note: string; to?: string; href?: string }[] = [
   {
     label: 'The product page',
     note: 'The long version, including the full built-vs-unbuilt ledger.',
-    href: 'https://vulos.org/products/aql/#status',
+    href: 'https://vulos.org/projects/aql/#status',
   },
   {
     label: 'Source — vul-os/aql',
