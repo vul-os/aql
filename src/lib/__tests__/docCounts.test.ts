@@ -130,12 +130,18 @@ const CLAIMS: Array<{ file: string; pattern: RegExp; key: string }> = [
   { file: 'ARCHITECTURE.md', pattern: /([\d,]+) Go test functions green across/, key: 'hubTests' },
   { file: 'ARCHITECTURE.md', pattern: /green across ([\d,]+) packages/, key: 'hubPackages' },
   { file: 'ARCHITECTURE.md', pattern: /\*\*Built\.\*\* ([\d,]+) Go test functions green\. GPIO/, key: 'controllerTests' },
+  { file: 'ARCHITECTURE.md', pattern: /\*\*Built\.\*\* ([\d,]+) conformance vectors/, key: 'vectors' },
+  { file: 'ARCHITECTURE.md', pattern: /conformance vectors, ([\d,]+) checks/, key: 'vectorChecks' },
+  { file: 'ARCHITECTURE.md', pattern: /Backed by \*\*([\d,]+) conformance vectors\*\*/, key: 'vectors' },
+  { file: 'ARCHITECTURE.md', pattern: /\*\*([\d,]+) checks\*\*, because multi-step/, key: 'vectorChecks' },
   { file: 'ARCHITECTURE.md', pattern: /baseline \((\d+) migrations/, key: 'migrations' },
   { file: 'ARCHITECTURE.md', pattern: /migrations, (\d+) tables\)/, key: 'tables' },
 
   { file: 'site/docs/architecture.md', pattern: /\*\*Shipped\*\* — ([\d,]+) routes/, key: 'routes' },
   { file: 'site/docs/architecture.md', pattern: /routes, ([\d,]+) test functions green/, key: 'hubTests' },
   { file: 'site/docs/architecture.md', pattern: /\*\*Shipped\*\* — ([\d,]+) test functions green; GPIO/, key: 'controllerTests' },
+  { file: 'site/docs/architecture.md', pattern: /\*\*Shipped\*\* — ([\d,]+) vectors/, key: 'vectors' },
+  { file: 'site/docs/architecture.md', pattern: /vectors, ([\d,]+) checks/, key: 'vectorChecks' },
 
   { file: 'site/docs/faq.md', pattern: /The hub is ([\d,]+) HTTP routes/, key: 'routes' },
   { file: 'site/docs/faq.md', pattern: /HTTP routes and ([\d,]+) Go test functions/, key: 'hubTests' },

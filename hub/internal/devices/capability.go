@@ -196,7 +196,9 @@ var catalogue = map[CapabilityID]Capability{
 	}},
 	CapMeter:        {ID: CapMeter, Verbs: []VerbSpec{{Verb: VerbRead, Tier: TierRead}}},
 	CapSensorReadCa: {ID: CapSensorReadCa, Verbs: []VerbSpec{{Verb: VerbRead, Tier: TierRead}}},
-	// Streaming is not actuation and no pipeline exists yet; status only.
+	// Streaming is not actuation, so this capability is status only: the
+	// recording and live-view pipeline is driven by the recorder, not by a verb
+	// somebody executes against a device.
 	CapCameraFeed: {ID: CapCameraFeed, Verbs: []VerbSpec{{Verb: VerbStatus, Tier: TierRead}}},
 }
 

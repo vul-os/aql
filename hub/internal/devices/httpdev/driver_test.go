@@ -705,3 +705,126 @@ func TestRegistryDrivesIt(t *testing.T) {
 		t.Fatalf("registry Close: %v", err)
 	}
 }
+
+// --- robot, the kind the docs called "no path at all".
+//
+// That claim was about a DEDICATED driver, and it hardened in the retelling into
+// "a robot cannot be driven", which is not true and is worth a test rather than a
+// correction that can rot. A mower with an HTTP API is configurable today: kind
+// robot, capability robot.blade-job, one action per verb. Nothing about this
+// driver is lighting-specific, and this proves it by exercising it rather than by
+// reading the code and asserting it looks generic.
+//
+// robot.blade-job is deliberately the one used. It is the capability the
+// TierHazardousMotion tier exists for — a mower's blades — so if the tier
+// machinery were coupled to access or lighting anywhere, this is where it shows.
+
+func mowerConfig(base string) DeviceConfig {
+	return DeviceConfig{
+		ID: "mower-1", Kind: devices.KindRobot, Name: "Lawn Mower", Zone: "Garden",
+		Capabilities:   []devices.CapabilityID{devices.CapBladeJob},
+		AllowPlaintext: true,
+		Actions: map[devices.Verb]Action{
+			devices.VerbStart:  {Method: http.MethodPost, URL: base + "/mower/start"},
+			devices.VerbStop:   {Method: http.MethodPost, URL: base + "/mower/stop", Idempotent: true},
+			devices.VerbPause:  {Method: http.MethodPost, URL: base + "/mower/pause", Idempotent: true},
+			devices.VerbResume: {Method: http.MethodPost, URL: base + "/mower/resume"},
+			devices.VerbDock:   {Method: http.MethodPost, URL: base + "/mower/dock", Idempotent: true},
+		},
+		Reads: []ReadSpec{{URL: base + "/mower", Metrics: []Metric{
+			{Metric: "battery", Path: "battery.percent"},
+		}}},
+	}
+}
+
+func TestARobotIsDrivableThroughTheGenericHTTPDriver(t *testing.T) {
+	var mu sync.Mutex
+	var paths []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		paths = append(paths, r.URL.Path)
+		mu.Unlock()
+		if r.URL.Path == "/mower" {
+			_, _ = io.WriteString(w, `{"battery":{"percent":62}}`)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	d := newDriver(t, mowerConfig(srv.URL))
+	ctx := context.Background()
+
+	// Every verb robot.blade-job declares, in an order a mower would actually see.
+	for _, v := range []devices.Verb{
+		devices.VerbStart, devices.VerbPause, devices.VerbResume,
+		devices.VerbStop, devices.VerbDock,
+	} {
+		if err := d.Execute(ctx, "mower-1", v, nil); err != nil {
+			t.Fatalf("Execute(%s): %v", v, err)
+		}
+	}
+
+	readings, err := d.Read(ctx, "mower-1")
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+
+	mu.Lock()
+	got := strings.Join(paths, " ")
+	mu.Unlock()
+	want := "/mower/start /mower/pause /mower/resume /mower/stop /mower/dock /mower"
+	if got != want {
+		t.Errorf("requests:\n got %s\nwant %s", got, want)
+	}
+	if len(readings) != 1 || readings[0].Metric != "battery" || readings[0].Value != 62 {
+		t.Errorf("readings = %+v, want one battery=62", readings)
+	}
+}
+
+// The hazardous tier is a property of the CAPABILITY, not of the driver, and it
+// has to survive being reached through a generic one. A mower's Start is
+// TierHazardousMotion; the same verb on a robot.job (a vacuum, no blades) is
+// merely consequential. If a driver could flatten that distinction, the ceiling
+// the automations runtime enforces would mean nothing for anything driven over
+// HTTP.
+func TestTheHazardousTierSurvivesAGenericDriver(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	vacuum := mowerConfig(srv.URL)
+	vacuum.ID = "vacuum-1"
+	vacuum.Capabilities = []devices.CapabilityID{devices.CapJob}
+
+	d := newDriver(t, mowerConfig(srv.URL), vacuum)
+
+	tier := func(id string, v devices.Verb) devices.Tier {
+		t.Helper()
+		devs, err := d.Discover(context.Background())
+		if err != nil {
+			t.Fatalf("Discover: %v", err)
+		}
+		for _, dev := range devs {
+			if dev.ID != id {
+				continue
+			}
+			spec, _, ok := dev.Supports(v)
+			if !ok {
+				t.Fatalf("%s does not support %s", id, v)
+			}
+			return spec.Tier
+		}
+		t.Fatalf("device %q not reported by the driver", id)
+		return 0
+	}
+
+	if got := tier("mower-1", devices.VerbStart); got != devices.TierHazardousMotion {
+		t.Errorf("mower start tier = %v, want TierHazardousMotion — the blades are the "+
+			"reason that tier exists, and a generic driver must not flatten it", got)
+	}
+	if got := tier("vacuum-1", devices.VerbStart); got != devices.TierConsequential {
+		t.Errorf("vacuum start tier = %v, want TierConsequential", got)
+	}
+}

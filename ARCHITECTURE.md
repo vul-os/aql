@@ -8,9 +8,9 @@
 > instead of trusting its network, with a versioned wire contract and conformance vectors
 > behind it. The other six share the engine, the capability catalogue and the console:
 > lighting, climate, energy and sensors are driven through MQTT, Modbus TCP or generic HTTP;
-> cameras record, retain and play back. Robots are the one kind with no path at all. What
-> none of the six has is a purpose-built agent of their own — they are driven through
-> third-party protocols, and no camera driver has ever met a camera.
+> cameras record, retain and play back. Robots are the one kind with no driver of their own,
+> though the generic ones reach them. What none of the six has is a purpose-built agent —
+> they are driven through third-party protocols, and no camera driver has met a camera.
 
 Aql has no cloud. It is just the **system**: a hub you run, devices at the edge that
 verify rather than trust, an app in your pocket — every line open source, nothing hosted
@@ -28,13 +28,13 @@ exist and which are design intent. The condensed operator-facing tour is
 
 | Layer | Status |
 | --- | --- |
-| Hub (`hub/`) — open path, console, API, device hub, audit | **Built.** 126 HTTP routes, 1,056 Go test functions green across 17 packages |
+| Hub (`hub/`) — open path, console, API, device hub, audit | **Built.** 126 HTTP routes, 1,058 Go test functions green across 17 packages |
 | **Access module** — the first device kind wired end to end | **Built.** Signed commands, pinned-key controller, offline grants, tamper-evident audit |
 | Controller agent (`controller/`) — pairing, signed commands, grants, events | **Built.** 130 Go test functions green. GPIO relay driver and BLE radio are **not** |
-| Wire contracts (`proto/`) | **Built.** 63 conformance vectors, 70 checks, consumed by both sides |
+| Wire contracts (`proto/`) | **Built.** 69 conformance vectors, 103 checks, consumed by both sides |
 | Cross-module harness (`e2e/`) | **Built.** Boots real binaries and drives the open path over the wire |
 | Web console + desktop shell (`src/`, `src-tauri/`) | **Built.** Admin surfaces, the device / energy / automations screens over the real engine, and an emergency-access screen that requests and stores an offline grant |
-| **Device engine** — drivers, discovery, telemetry, automations, energy | **Built, default off.** Registry behind a driver seam; `http`, `modbus` (TCP), `mqtt` and `camera` (ONVIF) drivers; automations and energy on top. No radio in the hub — Zigbee and Z-Wave arrive over a bridge. No Matter, no robot driver, and the camera driver receives no frames |
+| **Device engine** — drivers, discovery, telemetry, automations, energy | **Built, default off.** Registry behind a driver seam; `http`, `modbus` (TCP), `mqtt` and `camera` (ONVIF) drivers; automations and energy on top. No radio in the hub — Zigbee and Z-Wave arrive over a bridge. No Matter and no dedicated robot driver; the camera driver records and plays back but has never received a frame from real hardware |
 | **Phone-side offline grants** | **Half built.** The console requests and stores a grant (proven end to end against a real hub); *presenting* one still needs the LAN or BLE, which a browser tab cannot do |
 | Chat rail | **In transition.** Moving out of Aql into [Ephor](https://github.com/vul-os/ephor); the adapters in `hub/internal/channels/` are transitional (§3a) |
 | Google OAuth | **Not built** |
@@ -44,8 +44,11 @@ exist and which are design intent. The condensed operator-facing tour is
 Aql's device model has seven kinds — **camera, lighting, robot, climate, energy, sensor,
 access**. Five of them can be populated from real hardware today through the engine (§8),
 by whichever driver fits: MQTT, Modbus TCP, generic HTTP, or ONVIF for cameras. **Robot**
-is the one kind with no driver at all. **Camera** is real but partial — discovery and
-readings, no video.
+is the one kind with no DEDICATED driver — a mower or bot with an HTTP API or an MQTT topic
+is drivable today as kind `robot` with `robot.job`/`robot.blade-job` and one action per
+verb, and `TierHazardousMotion` survives that route (tested in `devices/httpdev`). What is
+missing is vendor integration — a mower's own protocol, docking, scheduling — and no robot
+has been driven. **Camera** records, retains and plays back, and has never met hardware.
 
 **Access** is the exception in the other direction: it is the most complete kind and the
 only one that does not go through the engine. It has a real wire contract, a real device
@@ -76,7 +79,7 @@ flowchart LR
         PORTAL["Web console<br/>(embedded React build)"]
         HUB["Device hub<br/>signed commands · Ed25519"]
         AUD[("Audit log<br/>hash-chained, append-only")]
-        DEV["Device engine<br/>(NOT BUILT)<br/>camera · lighting · robot<br/>climate · energy · sensor"]
+        DEV["Device engine<br/>(built, default off)<br/>camera · lighting · robot<br/>climate · energy · sensor"]
     end
 
     subgraph site ["At the edge — the access kind, today"]
@@ -95,7 +98,7 @@ flowchart LR
     RE --> AUD
     HUB -- "outbound wss ⇦ dial-out" --- C
     C -- relay closes --> G
-    APP -. "emergency: LAN / BLE<br/>(phone half not built)" .-> C
+    APP -. "emergency: LAN / BLE<br/>(requests + stores; presenting needs LAN/BLE)" .-> C
 ```
 
 Everything server-side is **one binary**. The hub owns state, decides, signs, and holds the
@@ -351,9 +354,9 @@ they are painful to retrofit:
    semantics
 4. **Controller events** — upstream: button pressed, gate held open, tamper
 
-Backed by **63 conformance vectors** across five fixture files, and a `verify.mjs`
+Backed by **69 conformance vectors** across six fixture files, and a `verify.mjs`
 self-checker that independently re-canonicalizes, re-signs and re-evaluates each one —
-**70 checks**, because multi-step transcripts contribute more than one. Both the hub and
+**103 checks**, because multi-step transcripts contribute more than one. Both the hub and
 the controller consume these fixtures in their own test suites. Binaries can churn; these
 can only be extended.
 
@@ -386,11 +389,13 @@ zigbee2mqtt bridge scan), and ONVIF cameras. An automations runtime
 **What is not built, stated as plainly as the rest.** No Matter. No radio in the hub —
 Zigbee and Z-Wave are reached through a `zigbee2mqtt` or `zwave-js-ui` bridge that owns
 the radio and republishes to MQTT, which is a deliberate choice rather than a gap. No
-robot driver, so one of the seven kinds has no path at all. No camera pipeline: the ONVIF
-driver discovers
-cameras, resolves stream addresses and probes them with RTSP, and has never received a
-frame. `docs/CAMERA-RETENTION.md` is the design that has to exist first, and it is design
-only.
+dedicated robot driver — the kind is reachable through the generic ones, but nothing
+speaks a mower's own protocol. No robot hardware has been driven. And the camera pipeline,
+which is built end to end — RTSP media, depacketization, muxing, recording, retention,
+`camera:view` and live view — has never received a frame from a camera: every test drives
+an in-process RTSP server, Chromium accepts the container without decoding a picture, and
+the retention arithmetic deletes real files under rules nobody has exercised on real
+footage.
 
 **Access is the shape to copy, not the exception to it.** The access module already proves
 the parts that are hard to retrofit: a versioned wire contract with conformance vectors, a

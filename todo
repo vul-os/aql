@@ -46,7 +46,10 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       offline-grant-app-client claim.
 - [ ] Bring access onto the internal device model, so it is one kind among seven rather
       than a parallel stack.
-- [ ] A robot driver — the one kind of the seven with no path at all.
+- [ ] A DEDICATED robot driver. The kind is reachable today through the generic HTTP and
+      MQTT drivers — kind robot, robot.job/robot.blade-job, one action per verb, with
+      TierHazardousMotion intact (tested in devices/httpdev). What is missing is vendor
+      integration: a mower own protocol, docking, scheduling. No robot has been driven.
 
 ## blocked on something outside this repo
 - [ ] Matter — needs a certified device and a stack.

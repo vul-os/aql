@@ -13,10 +13,11 @@ and code, so it says which is which on every line.
 > What is still absent is worth naming as plainly: **no Matter**, **no radio in the hub**
 > (Zigbee and Z-Wave are reached through a `zigbee2mqtt` or `zwave-js-ui` bridge over the
 > MQTT driver — deliberately, since a bridge already owns the radio and does it better),
-> **no robot driver at all**, and **no camera pipeline** — the ONVIF driver discovers
-> cameras and probes their streams but has never received a frame, and nothing here stores
-> one. See [Camera recording](https://github.com/vul-os/aql/blob/main/docs/CAMERA-RETENTION.md),
-> which is the design that has to exist before any of it is written.
+> **no robot driver of its own** (the generic HTTP and MQTT ones reach them), and a camera
+> pipeline that is complete in code and has never met a camera — it receives RTSP media,
+> depacketizes, muxes, records, retains and plays back, entirely against an in-process test
+> server. See [Camera recording](https://github.com/vul-os/aql/blob/main/docs/CAMERA-RETENTION.md),
+> which is the retention policy it implements, settled before any of it was written.
 
 ## The seven device kinds
 
@@ -27,7 +28,7 @@ automations runtime would fire on, and what a driver has to map its protocol ont
 | --- | --- | --- |
 | **Camera** | Gate camera, yard camera (ONVIF/RTSP) | Driver ships — discovery, status and readings. Video ships too: recording, retention, a per-camera view permission and MSE live view. **No camera has ever been involved** |
 | **Lighting** | Zigbee groups, individual fixtures | No dedicated driver. Drivable today through MQTT (zigbee2mqtt) or generic HTTP |
-| **Robot** | Robot mower, security patrol bot, cleaning bot | **No driver.** The one kind with no path at all |
+| **Robot** | Robot mower, security patrol bot, cleaning bot | **No dedicated driver.** Drivable through MQTT or generic HTTP — kind `robot`, capability `robot.job`/`robot.blade-job`, one action per verb — with the hazardous-motion tier intact. Nothing speaks a mower's own protocol |
 | **Climate** | Thermostats, HVAC | No dedicated driver. Drivable today through MQTT or generic HTTP |
 | **Energy** | Solar array, grid meter, battery | Readings through Modbus TCP, MQTT or HTTP; ingestion, rollups and source mix ship |
 | **Sensor** | Water tank level, contact and motion sensors | Readings through MQTT, Modbus TCP or HTTP |

@@ -15,8 +15,10 @@ detail.
 > opened from chat or the web console. Lights, meters, cameras and sensors work too, but
 > only once you configure the device engine — it is off until `-device-drivers` names a
 > driver, and the drivers that exist are MQTT, Modbus TCP, generic HTTP and ONVIF.
-> **Mowers and bots have no driver at all**, and cameras give you discovery and readings
-> but no video. See [Devices](devices.md) before you plan around them.
+> **Mowers and bots have no driver of their own** — they are drivable through the generic
+> HTTP or MQTT ones, but nothing speaks a mower's own protocol — and cameras record and
+> play back but have never met real hardware. See [Devices](devices.md) before you plan
+> around them.
 
 ## What you'll need
 

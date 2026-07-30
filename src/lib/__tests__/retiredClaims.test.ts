@@ -106,6 +106,34 @@ const RETIRED: Retired[] = [
     phrase: /Fragmenter has no production caller/i,
     truth: 'recording.WriteClip calls it.',
   },
+  // These four escaped the first pass of this file, which is the argument for
+  // the file: I retired the same claim in six places and still missed four more
+  // wordings of it in a document I had already edited twice.
+  {
+    phrase: /(?:cameras? (?:give[ns]? you )?[^.\n]{0,40})?\bno video\b/i,
+    truth: 'Recording, retention and MSE live view all ship. What is true is that no camera has been involved.',
+  },
+  {
+    phrase: /device engine.{0,20}\(NOT BUILT\)/i,
+    truth: 'The engine is built and default off. It has four drivers and the console executes verbs against it.',
+  },
+  {
+    // The lookahead is the whole point. "Never received a frame FROM A CAMERA"
+    // is true and is one of the most important sentences in these docs; the
+    // unqualified form claims the code never receives one, which is false. A
+    // pattern without the qualifier fired on three honest sentences the first
+    // time it ran, which is the failure this file's header warns about.
+    phrase: /never received a frame(?! from)/i,
+    truth:
+      'ConsumeMedia receives frames from an RTSP server. Qualify it — "never received a frame ' +
+      'from a camera" — because the hardware is what is missing, not the code.',
+  },
+  {
+    phrase: /phone half not built/i,
+    truth:
+      'src/pages/app/EmergencyAccess.tsx requests and stores a grant against a real hub. ' +
+      'PRESENTING one still needs LAN or BLE, which is the half that is missing.',
+  },
 ];
 
 /** Prose the project publishes or ships. Not code, and not tests. */
@@ -153,6 +181,10 @@ describe('retired claims do not come back', () => {
       'no `camera:view` permission',
       'there is no geofencing code in the Go hub',
       'Fragmenter has no production caller',
+      'cameras give you discovery and readings but no video',
+      'DEV["Device engine<br/>(NOT BUILT)<br/>camera"]',
+      'and has never received a frame',
+      'emergency: LAN / BLE (phone half not built)',
     ];
     for (const [i, sample] of samples.entries()) {
       expect(RETIRED[i].phrase.test(sample), `pattern ${i} no longer matches "${sample}"`).toBe(true);

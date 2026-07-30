@@ -10,7 +10,7 @@ Its device model has seven kinds: **camera, lighting, robot, climate, energy, se
 access**. One of them — access — is finished and running end to end. The engine behind the
 others is running too, with four drivers on it, and energy metering is read end to end —
 a camera now records, plays back and streams a recent view — though it decodes no picture
-and has never met real hardware — and a robot has no driver at all. How far each kind's path
+and has never met real hardware — and a robot has no driver of its own. How far each kind's path
 goes is the thing to check, not whether the engine exists.
 
 ### What can it actually do today?
@@ -26,7 +26,7 @@ way down to the metal:
 - An operator seat above every account, with runtime limit overrides and a cross-account
   audit view.
 
-The hub is 126 HTTP routes and 1,056 Go test functions; the controller agent is 130
+The hub is 126 HTTP routes and 1,058 Go test functions; the controller agent is 130
 more; the wire contracts have 69 conformance vectors (103 checks) that both sides are
 tested against.
 
