@@ -592,21 +592,36 @@ Ranked honestly:
 - **Squarely non-conformant, today, independent of any of the above:** ADAPT-9 (§2.4), and the
   missing §26.3/§26.6 disclosures (§2.2, §2.3).
 
-The biggest single honesty gap found is not a protocol gap at all: `docs/THREAT-MODEL.md` still
-describes a single-operator, no-cloud-broker product (`:19`, `:119-120`) while the folded gateway
-is multi-account and routes gate-open commands through Meta, Slack and Telegram.
+The biggest single honesty gap found was not a protocol gap at all: `docs/THREAT-MODEL.md`
+described a single-operator, no-cloud-broker product while the folded gateway is multi-account
+and routes gate-open commands through Meta, Slack and Telegram.
+
+**CLOSED (verified 2026-07-30).** That document now opens with §0 *"Read this first: the chat
+rail is not private"*, marked *"Shipped, and it is the single largest exposure in the system"*;
+§1 covers multi-tenancy and its scoping rather than placing it out of scope; and the
+no-cloud-broker claim is explicitly split into two — *"Aql has no cloud broker … But Aql does
+have an optional third-party input rail"* — which is the qualification this finding asked for.
+The line numbers cited by the original text now point at the fix rather than the defect, which
+is why they have been removed rather than updated: a stale citation into a document that has
+been rewritten is worse than none.
 
 ### 5.2 Work list, ordered by value ÷ cost
 
-1. **Declare the four §26 fields for each chat rail, in `proto/` and in the product UI.**
-   `[no spec change needed]` — §26.3 explicitly accepts documentation for a node-mode-only
-   adapter (`26-legacy-adapters.md:105-108`). Discharges ADAPT-2, ADAPT-11, and most of ADAPT-6's
-   disclosure duty at once. Copy the table from `crates/kotva-mail/src/adapters/mod.rs:205-275`
-   rather than re-deriving it from prose.
-2. **Update `docs/THREAT-MODEL.md` to match the folded product.** `[no spec change needed]` —
-   name the platforms as plaintext parties in the actuation path, drop or qualify "no cloud
-   broker" (`:19`), and remove multi-tenancy from "out of scope" (`:119-120`) now that
-   `account_members` and cross-tenant admin exist.
+1. ~~**Declare the four §26 fields for each chat rail.**~~ **DONE (2026-07-27).**
+   `hub/internal/channels/disclosure.go` declares all four for WhatsApp, Telegram, Slack and
+   Discord, per-direction where asymmetric, and `GET /v1/rails/disclosure` serves them
+   unauthenticated. In Go rather than markdown deliberately: a disclosure table is exactly the
+   prose that goes stale, and tests now fail if a rail is added without one, if an exposure
+   claims privacy the rail does not have, or if a rail declares it can cold-initiate.
+   Discharged ADAPT-2, ADAPT-11 and most of ADAPT-6.
+2. ~~**Update `docs/THREAT-MODEL.md` to match the folded product.**~~ **DONE** — see the
+   paragraph above §5.2 for what changed and how it was verified. A separate pass on
+   2026-07-30 also corrected the opposite error in that document, which is the more dangerous
+   direction: it listed the device engine, the automations runtime, energy metering and the
+   phone's half of the offline grant flow as unbuilt after all four had shipped. The document
+   warns against exactly that mistake in its own §8 — *"a worse error than the reverse: it
+   tells a reader not to look for a bypass in code that is live"* — and had committed it four
+   times.
 3. **Resolve the ADAPT-9 conflict on the WhatsApp bridge engine.** `[no spec change needed]` —
    either drop `BridgeWhatsAppSender` (`hub/internal/channels/send.go:256-271`), or keep it
    and declare the §26.8.2 non-conformance explicitly in (1). Do not leave it undeclared. This is

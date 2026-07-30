@@ -10,8 +10,11 @@ This is a *mixed* document, and the mix is the point:
 - **Sections marked "Shipped"** describe controls that exist in code today and can be
   read, tested and attacked.
 - **Sections marked "Target"** describe the intended posture for parts of Aql that are
-  not built (the device engine, automations, energy, the phone app's half of the offline
-  grant flow). They are design intent, not a security claim.
+  not built — today that is the credential vault (§6) and the parts named in §8. It is a
+  shorter list than it was: the device engine, the automations runtime, energy metering
+  and the phone's half of the offline grant flow have all since shipped, and §8 says what
+  each of them is and is not defended against. They are design intent, not a security
+  claim.
 
 ---
 
@@ -50,7 +53,8 @@ What the platform still **cannot** do:
 - **It cannot silently rewrite history.** Every open, denial and admin action is written
   to a hash-chained, append-only audit log on your hub.
 - **It cannot be in the path at all if you don't put it there.** The web console path and
-  the (partially built) offline LAN/BLE grant path involve no chat platform.
+  the offline LAN grant path — which runs end to end, though it has never met real
+  hardware — involve no chat platform. The BLE variant of that path is controller-only.
 
 **So the honest framing is:** Aql has no cloud *broker* — nothing of ours sits between
 you and your devices, there is no account with us, and no telemetry leaves the box. But
@@ -128,7 +132,7 @@ no third party at all:
 | **No cloud broker in the command path.** The hub signs commands itself; controllers dial out to *your* hub and verify against *your* pinned key. | Shipped |
 | **The box is the root of authority.** Nothing off-box can authorise an open. | Shipped |
 | **The audit log lives on your disk**, hash-chained and append-only, verifiable against a cold backup with no server running. | Shipped |
-| **Offline LAN/BLE grants** — a controller can verify a hub-signed grant with no internet, no hub reachable, and no platform involved. | Controller side and hub issuance shipped and conformance-tested; **the phone app's half does not exist**, so no resident can use this path today |
+| **Offline LAN grants** — a controller can verify a hub-signed grant with no internet, no hub reachable, and no platform involved. | Shipped end to end over LAN/mDNS: hub issuance, the controller's 11-step verification, and the phone's half — requesting, holding and presenting a grant, with the proof anchored on the controller's clock rather than the phone's. **No part of it has met real hardware**, and the BLE path is controller-only: no browser can reach a radio, and the app says so rather than implying otherwise |
 | **Keeps working offline.** Controllers keep verifying and actuating while the hub is unreachable; queued events reconcile later. | Shipped |
 
 ---
@@ -230,7 +234,7 @@ mode `0600`. Channel credentials live in the environment or an `.env`. A plain `
 of the data directory captures the database and both keys in one unencrypted archive —
 encrypt that archive at rest and restrict who can read it.
 
-**Target:** device credentials for the unbuilt device engine (camera passwords, RTSP/API
+**Target:** device credentials for the device engine (camera passwords, RTSP/API
 tokens, third-party hub keys) are intended to live in the **OS keychain**, scoped per
 device rather than as one shared blob, write-only from the UI's perspective, and never
 synced between boxes. None of that exists yet.
@@ -318,7 +322,12 @@ Stated plainly so nobody mistakes design intent for a control:
   Neither is reachable over the API: there is no endpoint to create a rule or read a
   meter. So an automation cannot be created, altered or triggered by a request — which
   removes a threat surface rather than defending one, and is not a shipped feature.
-- No phone-side offline-grant client — the emergency path does not run end to end.
+- **The phone-side offline-grant client does ship**, over LAN/mDNS: it requests, holds and
+  presents a grant, anchoring the proof on the controller's clock rather than the phone's.
+  It is stated here for the same reason geofencing is, two bullets down — an earlier
+  revision listed it as absent, and telling a reader an emergency path cannot be exercised
+  is exactly the error that stops them looking at it. What is still true: **it has never
+  met real hardware**, and there is no BLE half, because no browser can reach a radio.
 - **Geofencing and time-window rules do ship** and are enforced on the open path
   (`internal/httpapi/geofence.go`, `timewindows.go`). They are stated here rather than
   omitted because an earlier revision of this section listed them as not built, which is

@@ -97,6 +97,14 @@ export const FEATURES = [
       'README.md § Access control — offline emergency access',
       'site/docs/emergency-access.md',
       'site/docs/screenshots.md § Emergency access',
+      // The threat model was missing from this list, and went stale for it: it
+      // went on saying the phone half did not exist for days after it shipped,
+      // while README stayed correct because README was guarded and it was not.
+      // That is the more dangerous direction of drift — telling a reader an
+      // emergency path cannot be exercised stops them looking at it — and the
+      // document warns against exactly this in its own §8. The quote is what
+      // makes the guard bite: reverting the claim breaks the build.
+      'docs/THREAT-MODEL.md § 8 — "it requests, holds and presents a grant"',
     ],
     // Both halves: the library AND a routed screen that imports it. Evidence on
     // the library alone would have passed for weeks while no user could reach

@@ -81,6 +81,18 @@ not Rust code. This is cheap, but it is a hard dependency and it is invisible fr
 side. KOTVA-ALIGNMENT flagged the adapters table as copyable
 (`docs/KOTVA-ALIGNMENT.md:390-400`); the tag detail is new here.
 
+**Re-verified 2026-07-30, and all three §0 corrections still hold.** `core-v0.2.0` is still
+commit `a4a6ca5` with no `crates/kotva-mail/src/adapters/` entry; six adapter files exist on
+kotva HEAD; no newer `core-*` tag has been cut; `ephor/crates/gateway/Cargo.toml` still pins
+`core-v0.2.0`; `ephor/coordinator/CONTRACT.md` is still absent; `broker-conformance` still
+implements COORD-1..8 only; and there is still no `chat-adapter` crate in `ephor/crates/`.
+So steps 1 and 2 are both unstarted and step 1 remains the blocker.
+
+Worth re-checking rather than assuming, because nothing in this repository can verify a claim
+about a sibling one — `npm run check:claims` cannot see into kotva or ephor, so every
+cross-repo fact in this document is asserted on the day it was written and unguarded
+thereafter. Dating the re-verification is the only honest substitute for a test.
+
 ---
 
 ## 1. What Ephor gains

@@ -325,8 +325,8 @@ and none has met physical hardware.
 
 ## Phase 2 — Local persistence & secrets (partly real)
 
-- [x] SQLite for state, history and configuration — shipped with the hub (19 migrations,
-      42 tables), one file to back up, pure-Go driver so it cross-compiles to a Pi
+- [x] SQLite for state, history and configuration — shipped with the hub (22 migrations,
+      46 tables), one file to back up, pure-Go driver so it cross-compiles to a Pi
 - [ ] Extend that schema to device state, telemetry and history once Phase 1 exists
 - [ ] **OS-keychain-backed credential vault** for device and service secrets, scoped per
       device, so nothing sits in plaintext in the SQLite file or a config file. Not built:
