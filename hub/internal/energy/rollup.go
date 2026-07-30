@@ -570,3 +570,86 @@ func (s *Store) PruneSamples(ctx context.Context, accountID string, before time.
 	}
 	return res.RowsAffected()
 }
+
+// SampleSpan reports the first and last retained sample for an account.
+//
+// "Retained" is the operative word. Samples are pruned on a window
+// (PruneSamples, AQL_ENERGY_SAMPLE_RETENTION, 30 days by default), and rollups
+// can only ever be rebuilt from samples that still exist. So this is not "when
+// did this account start metering" — it is "how far back can anything be
+// recomputed", which is the question a rebuild has to ask before it promises
+// anything.
+//
+// ok is false when the account has no samples at all.
+func (s *Store) SampleSpan(ctx context.Context, accountID string) (first, last time.Time, ok bool, err error) {
+	var lo, hi sql.NullInt64
+	err = s.db.QueryRowContext(ctx,
+		`SELECT MIN(at), MAX(at) FROM energy_samples WHERE account_id = ?`, accountID).Scan(&lo, &hi)
+	if err != nil {
+		return time.Time{}, time.Time{}, false, err
+	}
+	if !lo.Valid || !hi.Valid {
+		return time.Time{}, time.Time{}, false, nil
+	}
+	return time.Unix(lo.Int64, 0), time.Unix(hi.Int64, 0), true, nil
+}
+
+// MarkRangeDirty queues every hour bucket in [from, to] for recomputation under
+// the store's CURRENT timezone, for every channel the account has.
+//
+// This is the missing half of a timezone change. Rollups carry their timezone in
+// their identity, reads filter on the current one, and the incremental engine
+// only ever recomputes what ingest marked — so after AQL_ENERGY_TZ changes, the
+// history exists under the old zone and no query will ever ask for it again.
+// Marking the range dirty makes the ordinary Rollup path rebuild it under the
+// new zone, from the samples.
+//
+// Additive and idempotent. It writes no rollup itself, destroys nothing, and the
+// buckets under the previous timezone are left exactly where they are — a rebuild
+// that deleted them would turn a recoverable mistake into an unrecoverable one if
+// the new zone were also wrong.
+func (s *Store) MarkRangeDirty(ctx context.Context, accountID string, from, to time.Time) (int, error) {
+	chans, err := s.Channels(ctx, accountID)
+	if err != nil {
+		return 0, err
+	}
+	if len(chans) == 0 {
+		return 0, nil
+	}
+	start := bucketStart(from, GrainHour, s.loc)
+	end := bucketStart(to, GrainHour, s.loc)
+	now := s.now().Unix()
+
+	// No transaction, deliberately. This package takes a narrow DB interface
+	// with no BeginTx — a constraint that exists so it cannot reach past the
+	// tables it owns — and widening it for convenience here would be the wrong
+	// trade. It does not need one: every insert is ON CONFLICT DO NOTHING, so an
+	// interrupted run leaves a prefix of the range marked and re-running finishes
+	// the job. A half-marked range is not a corrupt state, it is a smaller one.
+	marked := 0
+	for _, ch := range chans {
+		for t := start; !t.After(end); t = bucketStart(t.Add(90*time.Minute), GrainHour, s.loc) {
+			// Advancing by 90 minutes and re-truncating rather than adding an
+			// hour: a DST transition makes the next hour boundary 30, 45 or 60
+			// minutes away depending on the zone, and adding a fixed hour would
+			// skip or repeat a bucket at exactly the moment the arithmetic
+			// matters most.
+			res, err := s.db.ExecContext(ctx, `
+				INSERT INTO energy_rollup_dirty
+				    (account_id, device_key, metric, grain, tz, bucket_start, marked_at)
+				VALUES (?,?,?,?,?,?,?)
+				ON CONFLICT (account_id, device_key, metric, grain, tz, bucket_start) DO NOTHING`,
+				accountID, ch.DeviceKey, ch.Metric, string(GrainHour), s.TZ(), t.Unix(), now)
+			if err != nil {
+				return 0, err
+			}
+			if n, _ := res.RowsAffected(); n > 0 {
+				marked++
+			}
+			if ctx.Err() != nil {
+				return 0, ctx.Err()
+			}
+		}
+	}
+	return marked, nil
+}

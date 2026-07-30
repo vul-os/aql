@@ -123,13 +123,19 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       rollups are recomputed only from the dirty queue ingest marks — "reads never do this
       work" is a deliberate design property, not an oversight. So switching zones after
       months of running leaves the old buckets correct and permanently invisible.
-- [ ] OPEN, and the honest remainder: there is NO remedy for a hub already in that state.
-      Re-bucketing would mean re-marking historical hours dirty for the new tz, and
-      nothing does that — no command, no migration. It is only possible at all within
-      AQL_ENERGY_SAMPLE_RETENTION (default 30 days), because past that the raw samples the
-      rollups would be rebuilt from have been pruned. Beyond the window the history is
-      recoverable only in the zone it was written in.
-      The warning prevents the trap. It does not get anybody out of one.
+- [x] The remedy is BUILT: `aql-hub energy rebucket -account ID [-tz ZONE] [-dry-run]`.
+      Marks the retained span dirty under the current zone and drains the ordinary rollup
+      path, so the history is rebuilt from the raw samples. Additive and idempotent — it
+      queues work rather than writing rollups, leaves the previous zone's buckets exactly
+      where they are (deleting them would turn a recoverable mistake into an unrecoverable
+      one if the NEW zone were also wrong), and an interrupted run is finished by re-running.
+      Round-trip tested: ingest under UTC, switch to Africa/Johannesburg, watch the series
+      go empty, rebuild, watch it come back — with the UTC buckets still intact.
+- NOTE: it still cannot recover everything and the command says so BEFORE it starts, not
+      after. Rollups are rebuilt from samples; samples are pruned on
+      AQL_ENERGY_SAMPLE_RETENTION (30 days default). Older than the oldest surviving
+      sample is gone in every zone. A recovery tool that prints a success line over a
+      partial result is worse than one that refuses, because the operator stops looking.
 
 ## blocked on something outside this repo
 - [ ] Matter — needs a certified device and a stack.

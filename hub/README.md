@@ -247,6 +247,31 @@ unset, the hub reads `LINTEL_DATA_DIR` instead and logs a `WARN` naming both, on
 startup (`lookupEnv`/`warnLegacyEnv` in `cmd/hub/env.go`). The old names are deprecated —
 no removal date has been decided — so an install still typing `LINTEL_*` keeps working.
 
+### `aql-hub energy rebucket -account ID`
+
+The way back if you set `AQL_ENERGY_TZ` after metering had already been running.
+
+Rollups carry their timezone in their identity and every read filters on the one
+configured now, so changing it leaves the history in the database keyed to a zone
+nothing asks about — the console shows a hub that has metered for months as
+having no past. This marks the retained span for recomputation under the current
+zone and rebuilds it from the raw samples.
+
+```bash
+aql-hub energy rebucket -account <id> -dry-run   # report the span, change nothing
+aql-hub energy rebucket -account <id>
+```
+
+**It cannot recover everything, and it says which part.** Rollups are rebuilt from
+samples, and samples are pruned on `AQL_ENERGY_SAMPLE_RETENTION` (30 days by
+default). Anything older than the oldest surviving sample is unrecoverable in any
+zone. The command prints the span it can cover *before* it starts, so a long run
+does not bury the part you need to know.
+
+Safe to re-run: it queues work rather than writing rollups, it leaves the buckets
+under the previous zone untouched, and an interrupted run is finished by running
+it again.
+
 First-boot claim flow: register a user, then
 `POST /v1/admin/claim {"token": "<ADMIN_CLAIM_TOKEN>"}` with that user's
 bearer token. Exactly one caller can ever win; the mechanism burns forever.

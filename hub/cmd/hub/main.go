@@ -198,6 +198,18 @@ func main() {
 		os.Exit(runTwoFactorDisable(os.Args[3:]))
 	}
 
+	// `aql-hub energy rebucket -account ID [-tz ZONE] [-dry-run]` — rebuild
+	// energy rollups under the current timezone after AQL_ENERGY_TZ changed.
+	//
+	// Rollups carry their zone in their identity and reads filter on the
+	// current one, so changing it orphans the history: still in the database,
+	// keyed to a zone nothing asks about. See rebucket.go for what it can and
+	// cannot recover — the honest half is that anything older than the sample
+	// retention window is gone in every zone.
+	if len(os.Args) > 2 && os.Args[1] == "energy" && os.Args[2] == "rebucket" {
+		os.Exit(runEnergyRebucket(os.Args[3:]))
+	}
+
 	var (
 		dataDir     = flag.String("data", envOr("AQL_DATA_DIR", "./data"), "data directory")
 		listen      = flag.String("listen", envOr("AQL_LISTEN", ":8080"), "listen address")
