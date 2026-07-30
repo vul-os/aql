@@ -216,3 +216,73 @@ describe('the drivers the docs advertise are the drivers the binary accepts', ()
     );
   });
 });
+
+/**
+ * Every setting the hub reads from the environment, against the operator docs.
+ *
+ * The same failure as the driver list, one layer down. A setting with a `-flag`
+ * is hard to miss — it prints in `-help` and it is in the flag table. A setting
+ * that is environment-only is invisible unless somebody writes it down, and
+ * three of them were documented in cmd/hub/main.go's header comment and nowhere
+ * an operator would look.
+ *
+ * AQL_ENERGY_TZ is why this is worth a test rather than a one-time fix. It
+ * anchors the hour/day/month rollup buckets, and left unset a "day" of energy
+ * runs midnight-to-midnight UTC. For anyone not on UTC every daily and monthly
+ * total is split at the wrong hour — and the numbers look plausible, so nothing
+ * about the output says to go looking for a setting.
+ */
+describe('every environment setting the hub reads is written down', () => {
+  /**
+   * Variables deliberately not in the operator docs, each with the reason.
+   * An entry here is a claim that an operator has no business setting it.
+   */
+  const NOT_OPERATOR_FACING: Record<string, string> = {
+    AQL_ENV: 'A deployment marker the binary reports about itself ("self-hosted"). Nothing behaves differently.',
+    AQL_FMP4_FIXTURE_DIR: 'A test hook: where the fMP4 conformance fixtures are written. Read only by tests.',
+    AQL_GPIO_TEST_CHIP: 'A test hook: opt into touching a real GPIO chip, read-only. Skips without it.',
+  };
+
+  it('names every AQL_* variable read by the hub, or says why not', () => {
+    const src = read('hub/cmd/hub/main.go');
+    const readByCode = [
+      ...src.matchAll(/env(?:Duration|Bool|Int)?Or\(\s*"((?:AQL|VULOS)_[A-Z0-9_]+)"/g),
+    ].map((m) => m[1]);
+    // A regex that stopped matching would agree with any documentation.
+    expect(readByCode.length, 'no env lookups were parsed from main.go').toBeGreaterThan(5);
+
+    const docs = read('hub/README.md');
+    const undocumented = [...new Set(readByCode)]
+      .filter((v) => !docs.includes(v))
+      .filter((v) => !(v in NOT_OPERATOR_FACING));
+
+    expect(
+      undocumented,
+      'these settings are read from the environment and appear nowhere in hub/README.md. ' +
+        'An environment-only setting is invisible: it does not print in -help and it is not ' +
+        'in the flag table, so it exists only for whoever reads main.go. Document it, or add ' +
+        'it to NOT_OPERATOR_FACING with the reason it is not one.',
+    ).toEqual([]);
+  });
+
+  it('keeps the exception list honest — every entry is actually read', () => {
+    // An exception for a variable nothing reads is a stale excuse, and it would
+    // hide the day that name comes back meaning something else.
+    const everywhere = ['hub/cmd/hub/main.go', 'hub/internal/recording/fmp4fixture.go']
+      .map((f) => {
+        try {
+          return read(f);
+        } catch {
+          return '';
+        }
+      })
+      .join('\n');
+    for (const name of Object.keys(NOT_OPERATOR_FACING)) {
+      const readSomewhere = everywhere.includes(name) || execFileSync('grep', ['-rl', name, 'hub', 'controller'], {
+        cwd: repo,
+        encoding: 'utf8',
+      }).trim().length > 0;
+      expect(readSomewhere, `${name} is excused from the docs but nothing reads it`).toBe(true);
+    }
+  });
+});
