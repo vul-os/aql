@@ -179,7 +179,7 @@ data directory therefore carry the same weight as the key itself.
 `access_logs` and `admin_audit_log` are hash-chained — each row's hash covers its own
 content plus the previous row's hash — and database triggers reject direct `UPDATE` and
 `DELETE` against both. The chain is verifiable live (`GET /v1/admin/audit/verify`) and
-offline against a cold backup (`gateway verify-audit`), which is the more important form:
+offline against a cold backup (`aql-hub verify-audit`), which is the more important form:
 you can ask "was this tampered with?" of a copy sitting on a shelf.
 
 **Be precise about what that buys.** It does not stop an attacker who edits the SQLite

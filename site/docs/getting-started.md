@@ -40,8 +40,8 @@ detail.
 
    ```sh
    git clone https://github.com/vul-os/aql
-   cd aql/gateway && go build ./cmd/hub
-   ./gateway -data /var/lib/aql -listen 127.0.0.1:8080
+   cd aql/hub && go build ./cmd/hub
+   ./hub -data /var/lib/aql -listen 127.0.0.1:8080
    ```
 
    > **Status.** The hub runs the access-control core now: auth, accounts, locations,

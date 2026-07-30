@@ -433,10 +433,16 @@ function GeofenceRow({
           {rule.radius_m.toLocaleString()} m radius + {rule.slack_m.toLocaleString()} m forgiveness
           for ordinary GPS error)
         </p>
+        {/* Names the chat rails on BOTH branches, matching the create form.
+            The form warns at the moment of choosing; this is the rule list,
+            read later and often by someone else — and "why can nobody open
+            this gate from WhatsApp?" is answered here or nowhere. Saying only
+            "a request with no location is denied" left the reader to know
+            which requests those are. */}
         <p className={`text-xs mt-1 ${allows ? 'text-gold' : 'text-ink/50'}`}>
           {allows
-            ? 'A request with NO location at all is let through anyway — this fence does nothing against it.'
-            : 'A request with no location at all is denied (the default).'}
+            ? 'A request with NO location at all is let through anyway — this fence does nothing against it, including every chat-rail open (WhatsApp, Telegram, Slack, Discord), which never sends one.'
+            : 'A request with no location at all is denied. Chat-rail opens (WhatsApp, Telegram, Slack, Discord) never send a location, so all of them are refused here — as is a web open from a browser that declined the location prompt.'}
         </p>
         {err && <p className="text-xs text-terracotta-deep mt-2">{err}</p>}
       </div>

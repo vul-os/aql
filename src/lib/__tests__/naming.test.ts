@@ -301,6 +301,49 @@ describe('the backend has one name', () => {
     ).toEqual([]);
   });
 
+  // Markdown was outside every guard above, and a rename walked straight
+  // through the gap: `site/docs/getting-started.md` told a new user to run
+  //
+  //     cd aql/gateway && go build ./cmd/hub
+  //     ./gateway -data /var/lib/aql
+  //
+  // after the directory became `hub/` and the binary became `hub`. That is the
+  // FIRST command anyone runs, and it fails with "no such file or directory".
+  // Two more docs named `gateway verify-audit`, which is the command someone
+  // reaches for when they suspect the audit log has been tampered with.
+  //
+  // The guards above scan code for the old DIRECTORY. This one scans prose for
+  // the old BINARY, because a command in a document is executable by a human
+  // and nothing else was checking it.
+  it('no document tells a reader to run a binary this repo does not build', () => {
+    const offenders: string[] = [];
+    // `go build ./cmd/hub` produces `hub`; the subcommand form is `aql-hub`.
+    // Anything invoking `gateway` or `lintel` as a program is a stale rename.
+    const invocation = /(\.\/|`|^|\s)(gateway|lintel)(\s+(verify-audit|2fa|serve)|\s+-(data|listen|behind-proxy))/;
+    for (const file of walkAtLeast(repo, /\.md$/, 20, 'the repo for stale binary invocations')) {
+      const rel = path.relative(repo, file);
+      if (rel.endsWith('naming.test.ts')) continue;
+      // This file's own history is described in prose in these two.
+      if (rel === 'docs/KOTVA-ALIGNMENT.md' || rel === 'docs/EPHOR-CHAT-SEAM.md') continue;
+      // A changelog is an append-only record of what each release SAID. One of
+      // its entries is literally the rename announcement, listing the binary
+      // among the compat surface still carrying the old name — which was true
+      // when written. Correcting it would falsify the history it exists to
+      // preserve, so it is exempt rather than fixed.
+      if (rel === 'CHANGELOG.md') continue;
+      linesOf(file).forEach((line, i) => {
+        if (!invocation.test(line)) return;
+        offenders.push(`${rel}:${i + 1}  ${line.trim().slice(0, 100)}`);
+      });
+    }
+    expect(
+      offenders,
+      `these tell a reader to run a binary that is not built here — the hub binary ` +
+        `is \`hub\` (from \`go build ./cmd/hub\`) and its subcommand form is ` +
+        `\`aql-hub\`:\n${offenders.join('\n')}`,
+    ).toEqual([]);
+  });
+
   it('the wire identifiers are still present, so this test cannot pass by deleting them', () => {
     // The failure mode a naming rule invites: someone "fixes" the last
     // offenders by renaming a protocol field, the vectors break, and by then

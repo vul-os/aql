@@ -173,7 +173,7 @@ except a one-time hash-chain backfill and SQLite's own cascade nulling a foreign
 key when its target is deleted. Every row is also part of a **tamper-evident hash
 chain** — each row's hash covers its own content and the previous row's hash, so
 editing history without redoing that work downstream breaks the chain. `GET
-/admin/audit/verify` checks this live; the `gateway verify-audit` CLI subcommand
+/admin/audit/verify` checks this live; the `aql-hub verify-audit` CLI subcommand
 checks it against a cold backup, without booting the server at all. **This is a
 detection control, not a prevention control**: an attacker who edits the SQLite
 file directly and recomputes every hash after their edit leaves a chain that

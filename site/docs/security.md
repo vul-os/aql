@@ -120,7 +120,7 @@ triggers reject any direct `UPDATE` or `DELETE` against either table, with two
 narrow, schema-verified exceptions (a one-time hash backfill when a hub
 upgrades onto this scheme, and SQLite's own cascade nulling a foreign key when
 the location/account/device it points at is deleted — never the audit content
-itself). `GET /v1/admin/audit/verify` (admin-only) and the `gateway verify-audit`
+itself). `GET /v1/admin/audit/verify` (admin-only) and the `aql-hub verify-audit`
 CLI subcommand both walk the chain and report the first row that doesn't check
 out, if any — and the CLI form works **against a cold backup, without booting
 the server at all**, which is the point: you can ask "was this tampered with?"
