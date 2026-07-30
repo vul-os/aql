@@ -219,12 +219,6 @@ func (s *Server) handleClockFreshness(w http.ResponseWriter, r *http.Request) {
 		"controllers": out,
 		// The controller refuses every offline grant past this age. Sent so the
 		// client does not restate a constant that lives in another module.
-		"stale_after_s": controllerStaleAfterSeconds,
+		"stale_after_s": keys.StaleClockLimitSeconds,
 	})
 }
-
-// controllerStaleAfterSeconds mirrors the controller module's
-// wire.StaleClockLimitSeconds (14 days). The two modules cannot import each
-// other, so clocksync_test.go reads the controller's source and fails if they
-// drift — the same technique that keeps the ping interval honest.
-const controllerStaleAfterSeconds = 14 * 24 * 60 * 60

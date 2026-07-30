@@ -29,12 +29,35 @@ type Envelope struct {
 	Sig         string         `json:"sig,omitempty"`
 }
 
+// The hub's side of the four wire constants published by every vectors
+// document's `spec_constants` block. They live together in this one package
+// because they had been spread across three — keys held two, hub/internal/hub
+// restated the cnonce TTL as its own literal, and httpapi restated the stale
+// clock limit as `14 * 24 * 60 * 60`. Each restatement was a place the hub could
+// silently come to disagree with the controller that has to verify what it
+// mints, and a disagreement only surfaces as a door refusing a legitimate
+// command in the field.
+//
+// spec_constants_test.go checks all four against proto/vectors/. The controller
+// checks its own copy the same way; the two implementations agree because they
+// both agree with the vectors, not because anyone compared them.
+
 // MaxCommandTTL is proto/commands.md's `exp - iat ≤ 60`.
 const MaxCommandTTL = 60 * time.Second
 
 // ClockSkewSeconds is the ±90 s allowance applied to BOTH validity bounds:
 // iat − skew ≤ now ≤ exp + skew (proto/commands.md §Verification step 3).
 const ClockSkewSeconds = 90
+
+// CnonceTTLSeconds is pairing.md's 30 s grant.challenge / ws.challenge
+// validity.
+const CnonceTTLSeconds = 30
+
+// StaleClockLimitSeconds is 14 d — twice the default grant TTL. A controller
+// whose clock has not been confirmed for longer than this refuses offline
+// redemption outright, so the hub uses the same figure to decide when to warn
+// that one is at risk of doing so.
+const StaleClockLimitSeconds = 14 * 24 * 60 * 60
 
 // NewNonce returns base64url(128-bit random) per the envelope spec.
 func NewNonce() (string, error) {

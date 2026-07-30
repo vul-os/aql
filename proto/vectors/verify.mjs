@@ -27,9 +27,6 @@ import {
 } from './lib.mjs';
 
 const DIR = dirname(fileURLToPath(import.meta.url));
-const SKEW = 90;
-const MAX_CMD_WINDOW = 60;
-const STALE_CLOCK_LIMIT = 1209600;
 
 let checked = 0;
 let failures = 0;
@@ -39,6 +36,81 @@ const fail = (name, msg) => {
 };
 
 const load = (f) => JSON.parse(readFileSync(join(DIR, f), 'utf8'));
+
+/**
+ * The contract terms this verifier enforces, read from the documents it
+ * verifies.
+ *
+ * These were three literals — SKEW = 90, MAX_CMD_WINDOW = 60,
+ * STALE_CLOCK_LIMIT = 1209600 — restating what generate.mjs writes into every
+ * document's `spec_constants` block. Two independent copies of a number, where
+ * one of them belongs to the tool whose entire job is to be the independent
+ * check.
+ *
+ * The drift is only half self-catching. Change a limit in generate.mjs and
+ * regenerate, and the boundary vectors flip their expectation, so *some* case
+ * fails — but it fails as "expected accept, got expired" on a vector that is
+ * perfectly correct, pointing at the wrong thing entirely. Cases away from the
+ * boundary go on passing while the verifier enforces a contract nobody wrote.
+ *
+ * Reading the block instead makes the verifier enforce the document's own
+ * stated terms, and a missing or incomplete block is fatal rather than
+ * defaulted — a default would let the vectors stop publishing their terms while
+ * everything stayed green.
+ */
+const CONSTANTS = (() => {
+  const doc = load('commands.json');
+  const c = doc.spec_constants;
+  const required = ['skew_seconds', 'max_cmd_window_seconds', 'stale_clock_limit_seconds'];
+  if (!c || typeof c !== 'object') {
+    console.error('FAIL spec_constants: commands.json has no spec_constants block; the verifier has no contract to enforce');
+    process.exit(1);
+  }
+  const missing = required.filter((k) => !Number.isInteger(c[k]));
+  if (missing.length) {
+    console.error(`FAIL spec_constants: commands.json spec_constants is missing or non-integer for ${missing.join(', ')}`);
+    process.exit(1);
+  }
+  return c;
+})();
+
+const SKEW = CONSTANTS.skew_seconds;
+const MAX_CMD_WINDOW = CONSTANTS.max_cmd_window_seconds;
+const STALE_CLOCK_LIMIT = CONSTANTS.stale_clock_limit_seconds;
+
+// Every Ed25519 contract document repeats the block. If two disagree, "the
+// vectors say" is not a well-formed statement and this verifier is enforcing
+// whichever file it happened to read first, so refuse rather than pick.
+//
+// The set is derived rather than listed, so a document added later is checked
+// without anyone remembering to add it here. Two are legitimately exempt and
+// both would otherwise read as failures: keys.json is key material with no
+// contract terms, and webhooks.json is an HMAC profile to which none of skew,
+// command window, cnonce TTL or stale-clock apply — generate.mjs deliberately
+// gives it its own `profile` block instead of the shared header.
+{
+  const documents = ['pairing.json', 'commands.json', 'grants.json', 'events.json', 'acks.json'];
+  let compared = 0;
+  for (const f of documents) {
+    const c = load(f).spec_constants;
+    if (!c) {
+      fail('spec_constants', `${f} carries no spec_constants block, so it publishes no contract terms to check`);
+      continue;
+    }
+    compared++;
+    for (const [k, want] of Object.entries(CONSTANTS)) {
+      if (c[k] !== want) {
+        fail('spec_constants', `${f} says ${k}=${c[k]}, commands.json says ${want} — the documents contradict each other`);
+      }
+    }
+  }
+  // Without this the loop is silent when every document lacks the block, and
+  // silent again if `documents` loses its entries.
+  if (compared < documents.length) {
+    fail('spec_constants', `compared ${compared} of ${documents.length} contract documents`);
+  }
+  checked += compared;
+}
 
 // --- structural checks on any {signer, object, canonical} entry --------------
 

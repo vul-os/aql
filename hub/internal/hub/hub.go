@@ -20,8 +20,10 @@ import (
 	"github.com/vul-os/aql/hub/internal/keys"
 )
 
-// ChallengeTTL is pairing.md's 30 s cnonce validity.
-const ChallengeTTL = 30
+// ChallengeTTL is pairing.md's 30 s cnonce validity. Aliased rather than
+// restated: this package already imports keys for ClockSkewSeconds, and the one
+// declaration is checked against proto/vectors/.
+const ChallengeTTL = keys.CnonceTTLSeconds
 
 // LateAckWindow bounds how long after a dispatch a verified-but-late
 // cmd.ack may still reconcile the access_logs row (proto/commands.md "The

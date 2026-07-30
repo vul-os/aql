@@ -261,18 +261,25 @@ func goConstSeconds(t *testing.T, relPath, name string) int64 {
 
 // The staleness limit the API reports must be the controller's real one.
 //
-// controllerStaleAfterSeconds is a hand-written mirror of a constant in another
-// Go module, which is the exact shape that made the original stale-clock bug
-// invisible — and the shape my own first test for it had, until it was fixed to
-// read the source. A client is told this number and decides what to warn on, so
-// a drift here makes every downstream warning wrong.
+// This used to compare a local `controllerStaleAfterSeconds = 14 * 24 * 60 * 60`
+// against the controller's source — a hand-written mirror of a constant in
+// another Go module, which is the exact shape that made the original stale-clock
+// bug invisible. The mirror is gone: the route now serves
+// keys.StaleClockLimitSeconds, one hub-side declaration that
+// keys/spec_constants_test.go checks against proto/vectors/.
+//
+// The cross-module comparison stays, because agreeing with the vectors is not
+// quite the same claim as agreeing with the binary that enforces the limit. A
+// client is told this number and decides what to warn on, so a drift makes every
+// downstream warning wrong.
 func TestReportedStalenessLimitMatchesTheController(t *testing.T) {
 	real := goConstSeconds(t, "../../../controller/internal/wire/wire.go", "StaleClockLimitSeconds")
-	if controllerStaleAfterSeconds != real {
+	if keys.StaleClockLimitSeconds != real {
 		t.Fatalf(`the API reports a %d-second staleness limit; the controller enforces %d.
 
 This number is sent to clients so they do not hard-code it. If the controller's
-limit moved, this mirror must move with it — the two modules cannot import each
-other, so nothing but this test connects them.`, controllerStaleAfterSeconds, real)
+limit moved, keys.StaleClockLimitSeconds must move with it — the two modules
+cannot import each other, so nothing but this test connects them.`,
+			keys.StaleClockLimitSeconds, real)
 	}
 }
