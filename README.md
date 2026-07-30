@@ -285,24 +285,28 @@ and the BLE peripheral all build and are tested against fakes and loopback
 servers, and none has touched a real meter, relay board, radio or gate. Wiring one
 up is the first time anyone finds out whether it's right.
 
-**Some of it isn't built.** Matter, Modbus RTU, and camera live view and recording
-are open. The camera package has grown a good deal further than "probes a stream"
-since this paragraph was first written: it depacketizes RTP into H.264 NAL units,
-reads the encoder's real cropped resolution out of the sequence parameter set —
-1080p cameras encode 1088 lines and crop eight away — groups the units into
-pictures, and muxes them into a fragmented MP4 that a real Chromium `MediaSource`
-accepts — accepts, not plays: the container, the `avcC` and the SPS are validated
-by a parser nobody here wrote, and the decoder never receives a real picture. What
-it still does not do is decode a picture, and no part of
-it has ever met a camera; the missing piece for live view is an RTSP media client,
-which is the one component here with no second implementation to check it against.
-Recording is a data-retention policy with a UI attached, so the policy is written
-down first:
-[docs/CAMERA-RETENTION.md](docs/CAMERA-RETENTION.md) settles where clips live,
-how long they last, who may watch, and what a full disk does.
+**Some of it isn't built.** Matter, Modbus RTU, native Zigbee and Z-Wave radios,
+and robot control beyond a status row are open.
+
+**The camera pipeline is built, and has never met a camera.** Both halves of that
+sentence matter. It opens an RTSP stream and keeps the frames, depacketizes them
+into H.264 NAL units, reads the encoder's real cropped resolution out of the
+sequence parameter set — 1080p cameras encode 1088 lines and crop eight away, and a
+muxer that misses this writes a valid file with a band of padding down one edge —
+groups the units into pictures, muxes a fragmented MP4, writes clips under a
+retention policy, gates watching behind a per-camera permission, and plays a clip
+back in a browser `<video>` with a recent live view over Media Source Extensions.
+
+What it does *not* do is decode a picture — it moves frames into a container rather
+than interpreting them — and no part of it has ever run against real hardware. The
+container is checked by Chromium's MP4 parser, which **accepts** it; it does not
+play it, because the test payloads are not decodable pictures. The retention
+arithmetic deletes real files under rules nobody has exercised on real footage.
+[docs/CAMERA-RETENTION.md](docs/CAMERA-RETENTION.md) is the policy it implements —
+written before any of the code, on purpose.
 [ROADMAP.md](ROADMAP.md) tracks the rest line by line.
 
-`npm run check:claims` checks 58 feature claims in these docs against the code and
+`npm run check:claims` checks 59 feature claims in these docs against the code and
 fails when one drifts. It's how the two paragraphs above stay true.
 
 ---
