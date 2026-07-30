@@ -444,9 +444,19 @@ and none has met physical hardware.
       What none of it proves is stated plainly: the vectors were written from the RFC and
       the standard, and NO CAMERA HAS BEEN INVOLVED ANYWHERE IN THIS PACKAGE. Chromium
       agreeing is a real independent check on the container and the parameter sets; it is not
-      a real camera, and the sample payloads are not decodable pictures. What remains is a
-      recording worker that writes clips under the retention policy, a viewer, and the thing
-      no amount of code closes: hardware. The retention worker, the `camera:view` permission and
+      a real camera, and the sample payloads are not decodable pictures.
+      **The chain now runs by itself.** A capture worker enumerates the cameras whose stream
+      address has resolved, records a window from each, muxes it and writes a clip; an hourly
+      retention sweep expires them per `docs/CAMERA-RETENTION.md` (migration 0024). Until this
+      landed every piece of that — `ConsumeMedia`, `NewFragmenter`, `WriteClip` — was complete,
+      tested and called by nothing, which is the shape this repository has been bitten by
+      repeatedly. Cameras nobody has CLAIMED are not recorded: footage is written under an
+      account id and there is no correct directory for footage nobody owns.
+      What remains for this line is a viewer, and the thing no amount of code closes:
+      hardware. Recording is one RTSP session per window rather than one held open, which is
+      worse on a real camera and honest about what has been verified — a long-lived session
+      means keepalives, mid-stream parameter-set changes and servers that drop connections,
+      none of which can be developed against a fake without inventing the behaviour. The retention worker, the `camera:view` permission and
       the viewer do not — but building a retention policy for footage that does not exist yet
       is the wrong order
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row

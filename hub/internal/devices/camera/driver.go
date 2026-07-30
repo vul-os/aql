@@ -102,8 +102,9 @@ type Camera struct {
 	Availability   devices.Availability
 	LastSeen       time.Time
 	Detail         string
-	// StreamAddress is where a stream WOULD come from. Nothing in this
-	// repository opens it. Empty until it has been resolved.
+	// StreamAddress is where the stream comes from. Empty until it has been
+	// resolved. This view carries NO credential by design — StreamTargets is
+	// the one that does, for the caller that is about to open the stream.
 	StreamAddress string
 	Profile       Profile
 	ResolvedAt    time.Time
@@ -679,4 +680,39 @@ func shortID(id string) string {
 		return id
 	}
 	return id[:8]
+}
+
+// StreamTarget is a resolved camera's media address and the credential that
+// address needs.
+type StreamTarget struct {
+	// ID is the camera's driver-local id; the caller namespaces it.
+	ID  string
+	URL string
+	// Cred is the media-leg credential. Cameras routinely want a different
+	// account on the media leg than on the device service, which is why this
+	// comes from the driver's own resolution rather than from a caller's guess.
+	Cred Credential
+}
+
+// StreamTargets lists the cameras whose stream address has been resolved.
+//
+// Separate from Cameras() because that view is operator-facing and deliberately
+// carries no credential — "detail ... never carries a credential", as this file
+// says of the field beside it. This one does carry one, so it exists for a
+// caller inside the process that is about to open the stream, and for nothing
+// else. Cameras with no resolved address are omitted rather than returned with
+// an empty URL: there is nothing to open.
+func (d *Driver) StreamTargets() []StreamTarget {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	out := make([]StreamTarget, 0, len(d.cams))
+	for _, st := range d.cams {
+		if st.streamURI == "" {
+			continue
+		}
+		out = append(out, StreamTarget{
+			ID: st.id, URL: st.streamURI, Cred: credentialFor(d.creds, st.service),
+		})
+	}
+	return out
 }

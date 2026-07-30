@@ -480,3 +480,155 @@ func TestFloorIsTheLargerOfTenPercentAndTwoGigabytes(t *testing.T) {
 		t.Errorf("floor on a 1 TiB disk = %d, want %d (10%%)", got, want)
 	}
 }
+
+// ── the capture loop ────────────────────────────────────────────────────────
+//
+// What these cover is the decision-making above the socket: which windows
+// become clips, which are skipped, and what a skip is called. The socket half is
+// covered where it lives — camera's own tests drive ConsumeMedia against an
+// in-process RTSP server whose framing is written from RFC 2326 and RFC 3550
+// independently of the client.
+
+// fakeFetch returns a canned window.
+func fakeFetch(units []camera.AccessUnit, a *camera.Assembler, flow camera.MediaFlow, err error) FetchFunc {
+	return func(context.Context, string, camera.Credential, time.Duration, time.Duration) (
+		camera.StreamInfo, camera.MediaFlow, []camera.AccessUnit, *camera.Assembler, error) {
+		return camera.StreamInfo{}, flow, units, a, err
+	}
+}
+
+// An assembler that has seen the parameter sets, as one has after a stream that
+// carries them in-band.
+func primedAssembler(t *testing.T, sps, pps []byte) *camera.Assembler {
+	t.Helper()
+	a := camera.NewAssembler()
+	// Push the parameter sets through as single-NAL RTP packets: this is how a
+	// camera sends them when it advertises no sprop-parameter-sets, and it is
+	// the path that populates SPS()/PPS().
+	var seq uint16
+	for _, nal := range [][]byte{sps, pps} {
+		seq++
+		pkt := make([]byte, 12, 12+len(nal))
+		pkt[0] = 0x80
+		pkt[1] = 96
+		pkt[2], pkt[3] = byte(seq>>8), byte(seq)
+		pkt = append(pkt, nal...)
+		if _, err := a.Push(pkt); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(a.SPS()) == 0 || len(a.PPS()) == 0 {
+		t.Fatal("the primed assembler holds no parameter sets")
+	}
+	return a
+}
+
+func TestCaptureWritesAClipFromAWindow(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+	acct := seedAccount(t, st)
+	sps, pps, units := testMedia(t)
+	// A trailing unit with no duration, exactly as the assembler leaves the
+	// last picture of a window — its successor has not arrived to say when it
+	// ended.
+	units = append(units, camera.AccessUnit{
+		RTPTimestamp: 180000, Duration: 0,
+		NALUnits: [][]byte{{0x41, 0x09}},
+	})
+
+	r := testRecorder(t, st, nil, time.Now(), nil)
+	r.cfg.Fetch = fakeFetch(units, primedAssembler(t, sps, pps), camera.MediaFlow{Packets: 9}, nil)
+
+	if err := r.CaptureOnce(ctx, Source{DeviceKey: "cam", AccountID: acct, StreamURL: "rtsp://x/1"}); err != nil {
+		t.Fatal(err)
+	}
+	clips := clipState(t, st, acct, "cam")
+	if len(clips) != 1 {
+		t.Fatalf("wrote %d clips, want 1", len(clips))
+	}
+}
+
+// The final picture of a window has no duration, and Samples refuses a
+// zero-duration sample rather than inventing one. Capture must drop it rather
+// than guess a length — a guessed final-frame duration is indistinguishable
+// from a measured one once it is in the container.
+func TestCaptureDropsTheUnterminatedFinalPicture(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+	acct := seedAccount(t, st)
+	sps, pps, _ := testMedia(t)
+
+	only := []camera.AccessUnit{{RTPTimestamp: 0, Duration: 0, NALUnits: [][]byte{{0x65, 0x01}}, IsSync: true}}
+	r := testRecorder(t, st, nil, time.Now(), nil)
+	r.cfg.Fetch = fakeFetch(only, primedAssembler(t, sps, pps), camera.MediaFlow{Packets: 1}, nil)
+
+	if err := r.CaptureOnce(ctx, Source{DeviceKey: "cam", AccountID: acct, StreamURL: "rtsp://x/1"}); err != nil {
+		t.Fatalf("a window holding only an unterminated picture must be skipped, not fail: %v", err)
+	}
+	if n := len(clipState(t, st, acct, "cam")); n != 0 {
+		t.Errorf("wrote %d clips from a window with no terminated picture, want 0", n)
+	}
+}
+
+// Packets arriving and no picture assembling is a real diagnosis, not an error:
+// every packet a fragment whose remainder never came. It must not write a clip
+// and must not fail the pass.
+func TestCaptureSkipsAWindowThatAssembledNothing(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+	acct := seedAccount(t, st)
+	sps, pps, _ := testMedia(t)
+
+	r := testRecorder(t, st, nil, time.Now(), nil)
+	r.cfg.Fetch = fakeFetch(nil, primedAssembler(t, sps, pps), camera.MediaFlow{Packets: 400}, nil)
+
+	if err := r.CaptureOnce(ctx, Source{DeviceKey: "cam", AccountID: acct, StreamURL: "rtsp://x/1"}); err != nil {
+		t.Fatalf("a window that assembled nothing must not fail the pass: %v", err)
+	}
+	if n := len(clipState(t, st, acct, "cam")); n != 0 {
+		t.Errorf("wrote %d clips from a window that assembled no picture", n)
+	}
+}
+
+// A stream that has not yet sent its parameter sets cannot be muxed — avcC
+// needs them. Skipping the window is correct; failing is not, because the sets
+// arrive periodically and the next window will have them.
+func TestCaptureWaitsForParameterSets(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+	acct := seedAccount(t, st)
+	_, _, units := testMedia(t)
+
+	r := testRecorder(t, st, nil, time.Now(), nil)
+	// A bare assembler: pictures, but no SPS/PPS seen yet.
+	r.cfg.Fetch = fakeFetch(units, camera.NewAssembler(), camera.MediaFlow{Packets: 9}, nil)
+
+	if err := r.CaptureOnce(ctx, Source{DeviceKey: "cam", AccountID: acct, StreamURL: "rtsp://x/1"}); err != nil {
+		t.Fatalf("a window before the parameter sets arrive must be skipped, not fail: %v", err)
+	}
+	if n := len(clipState(t, st, acct, "cam")); n != 0 {
+		t.Errorf("wrote %d clips without parameter sets — the container would have no avcC", n)
+	}
+}
+
+// §2.2 again, at the capture layer: a live-view-only camera must not even open
+// a stream, let alone write a file.
+func TestCaptureDoesNotFetchFromAZeroRetentionCamera(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+	acct := seedAccount(t, st)
+	r := testRecorder(t, st, nil, time.Now(), map[string]int{"cam": 0})
+
+	fetched := false
+	r.cfg.Fetch = func(context.Context, string, camera.Credential, time.Duration, time.Duration) (
+		camera.StreamInfo, camera.MediaFlow, []camera.AccessUnit, *camera.Assembler, error) {
+		fetched = true
+		return camera.StreamInfo{}, camera.MediaFlow{}, nil, nil, nil
+	}
+	if err := r.CaptureOnce(ctx, Source{DeviceKey: "cam", AccountID: acct, StreamURL: "rtsp://x/1"}); err != nil {
+		t.Fatal(err)
+	}
+	if fetched {
+		t.Error("a zero-retention camera's stream was opened; retain_hours 0 is live-view only")
+	}
+}

@@ -532,6 +532,10 @@ type hub struct {
 	// reg is the device engine. nil unless -device-drivers named a driver
 	// this binary could build: no device config, no registry, no behaviour.
 	reg *devices.Registry
+	// camDrv is the camera driver, when one registered. Held separately from
+	// the registry because recording needs a resolved media address and a
+	// credential, and devices.Driver — correctly — has no notion of either.
+	camDrv *camera.Driver
 	// workers are the process-lifetime background loops. Empty by default.
 	workers []worker
 
@@ -662,6 +666,38 @@ func buildHub(cfg config, log *slog.Logger) (*hub, error) {
 		// back with a week of expired footage — and hourly after that, which is
 		// frequent enough that clips leave within an hour of their deadline and
 		// rare enough to be invisible on a Pi.
+		// Capture. Only when a camera driver registered AND a camera has a
+		// resolved stream address: with neither, this loop enumerates an empty
+		// set and sleeps.
+		if h.camDrv != nil {
+			h.workers = append(h.workers, worker{
+				name: "camera-capture",
+				run: func(ctx context.Context) {
+					rec.RunCapture(ctx, func(ctx context.Context) ([]recording.Source, error) {
+						var out []recording.Source
+						for _, t := range h.camDrv.StreamTargets() {
+							key := devices.Key(h.camDrv.ID(), t.ID)
+							// Footage is written under an account id, and there
+							// is no correct directory for footage nobody owns —
+							// so an unclaimed camera is not recorded. It is not
+							// an error: claiming is a deliberate act an admin
+							// performs, and until then the camera is visible and
+							// not recorded.
+							acct, err := h.store.DeviceOwnerAccount(ctx, key)
+							if err != nil {
+								continue
+							}
+							out = append(out, recording.Source{
+								DeviceKey: key, AccountID: acct,
+								StreamURL: t.URL, Cred: t.Cred,
+							})
+						}
+						return out, nil
+					})
+				},
+			})
+		}
+
 		h.workers = append(h.workers, worker{
 			name: "camera-clip-retention",
 			run: func(ctx context.Context) {
@@ -930,6 +966,12 @@ func (h *hub) wireDevices(cfg config) {
 				_ = c.Close()
 			}
 			continue
+		}
+		if cd, ok := drv.(*camera.Driver); ok {
+			// Kept so the capture worker can enumerate resolved streams. The
+			// registry stores drivers behind an interface that deliberately has
+			// no notion of a media address.
+			h.camDrv = cd
 		}
 		registered = append(registered, name)
 	}

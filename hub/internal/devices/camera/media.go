@@ -228,8 +228,9 @@ type streamURIReply struct {
 
 // streamURI asks where an RTP-over-RTSP stream for one profile would come from.
 //
-// This is the end of this package's road. The address is returned, validated,
-// and shown to an operator. Nothing in this repository opens it.
+// The address is returned, validated, and shown to an operator. It used to be
+// the end of this package's road; it is not any more — StreamTargets hands it,
+// with its credential, to the capture worker, which opens it.
 func (c *soapClient) streamURI(ctx context.Context, mediaAddr, token string, cred Credential, allowForeignHost bool) (string, error) {
 	if !validToken(token) {
 		return "", fmt.Errorf("camera: %s offered a profile token this package will not send back", redact(mediaAddr))

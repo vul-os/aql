@@ -88,6 +88,9 @@ type Config struct {
 	// Now and FreeSpace are injectable for tests. Both default when nil.
 	Now       Clock
 	FreeSpace FreeSpaceFunc
+	// Fetch receives media from a camera. Defaults to camera.ConsumeMedia; see
+	// capture.go for why the seam exists and what it does not excuse.
+	Fetch FetchFunc
 }
 
 // Recorder writes clips and enforces retention.
