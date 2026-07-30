@@ -27,7 +27,9 @@ import (
 	"github.com/vul-os/aql/hub/internal/store"
 )
 
-func energyHub(t *testing.T) (*hub, *bytes.Buffer, string) {
+// Returns the hub, its captured log, the account id, and the data directory —
+// the last so a subcommand test can point -data at the same store.
+func energyHub(t *testing.T) (*hub, *bytes.Buffer, string, string) {
 	t.Helper()
 	dir := t.TempDir()
 	st, err := store.Open(dir)
@@ -57,11 +59,11 @@ func energyHub(t *testing.T) (*hub, *bytes.Buffer, string) {
 		log: slog.New(slog.NewTextHandler(buf, &slog.HandlerOptions{Level: slog.LevelDebug})),
 	}
 	h.energy = h.newEnergyStore(config{})
-	return h, buf, acct.ID
+	return h, buf, acct.ID, dir
 }
 
 func TestAnUnsetRollupTimezoneIsSaidOutLoudWhenMeteringStarts(t *testing.T) {
-	h, logs, acct := energyHub(t)
+	h, logs, acct, _ := energyHub(t)
 	h.wireEnergy(config{energyAccount: acct, energyTZ: ""})
 
 	out := logs.String()
@@ -84,7 +86,7 @@ anywhere that is not UTC and looks entirely plausible. Logs were:
 }
 
 func TestASetTimezoneWarnsAboutNothing(t *testing.T) {
-	h, logs, acct := energyHub(t)
+	h, logs, acct, _ := energyHub(t)
 	h.wireEnergy(config{energyAccount: acct, energyTZ: "Africa/Johannesburg"})
 
 	if strings.Contains(logs.String(), "AQL_ENERGY_TZ is not set") {
@@ -97,7 +99,7 @@ func TestASetTimezoneWarnsAboutNothing(t *testing.T) {
 // not, and a startup warning about a subsystem nobody enabled is noise that
 // teaches people to ignore the log.
 func TestAHubThatIsNotMeteringIsNotWarned(t *testing.T) {
-	h, logs, _ := energyHub(t)
+	h, logs, _, _ := energyHub(t)
 	h.wireEnergy(config{energyAccount: "", energyTZ: ""})
 
 	if strings.Contains(logs.String(), "AQL_ENERGY_TZ") {

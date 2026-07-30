@@ -12,7 +12,11 @@ package main
 // history vanish, run the rebuild, watch it come back.
 
 import (
+	"bytes"
 	"context"
+	"io"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -72,7 +76,7 @@ func dayBuckets(t *testing.T, st *store.Store, acct string, loc *time.Location, 
 }
 
 func TestARollupRebuildRecoversHistoryAfterATimezoneChange(t *testing.T) {
-	h, _, acct := energyHub(t)
+	h, _, acct, _ := energyHub(t)
 	st := h.store
 	utc := time.UTC
 	jhb, err := time.LoadLocation("Africa/Johannesburg")
@@ -139,7 +143,7 @@ does not ask for.`)
 // makes it safe to re-run after an interruption, which is the only recovery this
 // command has — it deliberately takes no transaction.
 func TestRebuildingTwiceQueuesNothingTheSecondTime(t *testing.T) {
-	h, _, acct := energyHub(t)
+	h, _, acct, _ := energyHub(t)
 	jhb, err := time.LoadLocation("Africa/Johannesburg")
 	if err != nil {
 		t.Skip("no tzdata on this system")
@@ -170,7 +174,7 @@ func TestRebuildingTwiceQueuesNothingTheSecondTime(t *testing.T) {
 // to rebuild from, and saying "done" would tell an operator their history is
 // coming back when it is not.
 func TestAnAccountWithNoSamplesHasNothingToRebuild(t *testing.T) {
-	h, _, acct := energyHub(t)
+	h, _, acct, _ := energyHub(t)
 	es := energy.NewStore(h.store.DB(), energy.WithLocation(time.UTC))
 	_, _, ok, err := es.SampleSpan(context.Background(), acct)
 	if err != nil {
@@ -179,4 +183,108 @@ func TestAnAccountWithNoSamplesHasNothingToRebuild(t *testing.T) {
 	if ok {
 		t.Error("an account with no samples reported a recoverable span")
 	}
+}
+
+// captureOutput runs fn with stdout redirected and returns what it printed.
+func captureOutput(t *testing.T, fn func()) string {
+	t.Helper()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	orig := os.Stdout
+	os.Stdout = w
+	done := make(chan string, 1)
+	go func() {
+		var b bytes.Buffer
+		_, _ = io.Copy(&b, r)
+		done <- b.String()
+	}()
+	fn()
+	w.Close()
+	os.Stdout = orig
+	return <-done
+}
+
+// The COMMAND, not its parts.
+//
+// SampleSpan, MarkRangeDirty and Rollup are each tested above. The thing between
+// them — the function an operator actually runs, and the report it prints — was
+// not, which is the same "correct components, untested wiring" shape that has
+// already produced two defects in this repository this week.
+//
+// The report is most of this command's value. Its job is to say what CANNOT be
+// recovered, before doing work, so a long run does not bury it.
+func TestTheRebucketCommandSaysWhatItCannotRecoverBeforeItStarts(t *testing.T) {
+	h, _, acct, dataDir := energyHub(t)
+	if _, err := time.LoadLocation("Africa/Johannesburg"); err != nil {
+		t.Skip("no tzdata on this system")
+	}
+	seedMeter(t, h.store, acct, time.UTC, time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC), 6)
+
+	var code int
+	out := captureOutput(t, func() {
+		code = runEnergyRebucket([]string{
+			"-data", dataDir, "-account", acct, "-tz", "Africa/Johannesburg", "-dry-run",
+		})
+	})
+	if code != 0 {
+		t.Fatalf("dry run exited %d:\n%s", code, out)
+	}
+
+	// The limits, stated before the work rather than after it.
+	for _, phrase := range []string{
+		"Retained samples",
+		"cannot be",
+		"AQL_ENERGY_SAMPLE_RETENTION",
+		"dry-run: nothing was changed",
+	} {
+		if !strings.Contains(out, phrase) {
+			t.Errorf(`the report omits %q.
+
+A recovery tool that does not say which span it cannot reach reads as a full
+recovery, and the operator stops looking for the rest of their history.
+
+Printed:
+%s`, phrase, out)
+		}
+	}
+
+	// A dry run must not REBUILD anything, and the check has to be on the
+	// rollups rather than on the queue.
+	//
+	// Asserting PendingRollups == 0 was the first attempt and it was vacuous: a
+	// dry run that queued the whole range and then drained it also ends with an
+	// empty queue. Only the output state distinguishes them — under the target
+	// timezone there must still be nothing, because that is precisely what a
+	// real run would have created.
+	jhb, err := time.LoadLocation("Africa/Johannesburg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	from := time.Date(2026, 3, 9, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 3, 12, 0, 0, 0, 0, time.UTC)
+	if n := dayBuckets(t, h.store, acct, jhb, from, to); n != 0 {
+		t.Errorf("-dry-run rebuilt %d buckets under %s; it must change nothing", n, jhb)
+	}
+}
+
+func TestTheRebucketCommandRefusesAnAccountThatIsNotOnThisHub(t *testing.T) {
+	_, _, _, dataDir := energyHub(t)
+	out := captureOutput(t, func() {
+		if code := runEnergyRebucket([]string{"-data", dataDir, "-account", "no-such-account"}); code == 0 {
+			t.Error("rebuilding rollups for an account that does not exist reported success")
+		}
+	})
+	_ = out
+}
+
+func TestTheRebucketCommandRequiresAnAccount(t *testing.T) {
+	_, _, _, dataDir := energyHub(t)
+	captureOutput(t, func() {
+		if code := runEnergyRebucket([]string{"-data", dataDir}); code == 0 {
+			t.Error("rebucket with no -account reported success; it would have to guess whose " +
+				"history to rebuild")
+		}
+	})
 }
