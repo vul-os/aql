@@ -168,11 +168,11 @@ reporting opens that never happened.
 
 ```bash
 npm run dev                      # Vite console, live reload
-npm test                         # 199 frontend tests
+npm test                         # 374 frontend tests
 npm run check:claims             # every doc claim, checked against the code
 
 cd hub && go build ./... && go vet ./... && go test ./...
-node proto/vectors/verify.mjs    # 70 protocol vector checks
+node proto/vectors/verify.mjs    # 103 protocol vector checks
 ```
 
 ---
@@ -278,14 +278,21 @@ servers, and none has touched a real meter, relay board, radio or gate. Wiring o
 up is the first time anyone finds out whether it's right.
 
 **Some of it isn't built.** Matter, Modbus RTU, and camera live view and recording
-are open — the camera driver probes a stream, reports what it carries, and can
-count the packets coming out of it — and tell you whether they arrived intact, which is a different question a weak Wi-Fi link answers badly — but decodes none of them. Recording is a data-retention policy with a UI attached,
-so the policy is written down first:
+are open. The camera package has grown a good deal further than "probes a stream"
+since this paragraph was first written: it depacketizes RTP into H.264 NAL units,
+reads the encoder's real cropped resolution out of the sequence parameter set —
+1080p cameras encode 1088 lines and crop eight away — groups the units into
+pictures, and muxes them into a fragmented MP4 that a real Chromium `MediaSource`
+accepts and plays. What it still does not do is decode a picture, and no part of
+it has ever met a camera; the missing piece for live view is an RTSP media client,
+which is the one component here with no second implementation to check it against.
+Recording is a data-retention policy with a UI attached, so the policy is written
+down first:
 [docs/CAMERA-RETENTION.md](docs/CAMERA-RETENTION.md) settles where clips live,
 how long they last, who may watch, and what a full disk does.
 [ROADMAP.md](ROADMAP.md) tracks the rest line by line.
 
-`npm run check:claims` checks 36 feature claims in these docs against the code and
+`npm run check:claims` checks 58 feature claims in these docs against the code and
 fails when one drifts. It's how the two paragraphs above stay true.
 
 ---

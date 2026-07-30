@@ -673,6 +673,24 @@ export const FEATURES = [
     ],
   },
   {
+    // ROADMAP called the GPIO relay driver "a `-tags gpio` stub whose
+    // Pulse/Hold/Release all panic by design" for long enough that it was
+    // repeatedly cited as unbuilt work. There is no panic anywhere in the
+    // package: it is a complete Linux GPIO character-device (uAPI v2) driver.
+    // What is genuinely open is hardware validation, which the file's own
+    // header states. Guarded because "unbuilt" is the direction that stops
+    // people looking.
+    id: 'gpio-relay-driver-written',
+    label: 'The GPIO relay driver is implemented (uAPI v2 line handles, pulse state machine) — NOT that it has ever driven a real relay',
+    docStatus: 'shipped',
+    docRefs: ['ROADMAP.md — "STATUS: NOT VALIDATED ON HARDWARE"'],
+    evidence: [
+      { file: 'controller/internal/relay/gpio.go', pattern: 'func \\(g \\*GPIO\\) Pulse' },
+      { file: 'controller/internal/relay/gpio.go', pattern: 'STATUS: NOT VALIDATED ON HARDWARE' },
+      { file: 'controller/internal/relay/gpio_linux.go', pattern: 'func openLines' },
+    ],
+  },
+  {
     // The safety rule under the whole tier ladder. Worth a claim because its
     // enforcement was procedural (a test) while its own doc comment said it was
     // structural ("the registry refuses to build") — now it actually is.

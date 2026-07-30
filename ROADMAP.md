@@ -87,7 +87,7 @@ tests green**:
 
 **Contracts and harnesses:**
 
-- [x] `proto/` — pairing, commands, grants, events, acks and webhooks, with **98 checks**
+- [x] `proto/` — pairing, commands, grants, events, acks and webhooks, with **103 checks**
       consumed by the implementations and an independent `verify.mjs` that trusts none of
       them
 - [x] `e2e/` — boots the real hub and controller binaries and drives the open path over
@@ -149,9 +149,15 @@ hub's issuance endpoint):
 
 **Hardware the reference controller has never actually touched:**
 
-- [ ] **GPIO relay driver.** `controller/internal/relay/gpio.go` is a `-tags gpio` stub
-      whose `Pulse`/`Hold`/`Release` all panic by design; the default build logs instead of
-      actuating. No build has ever driven real hardware in this repo's tests
+- [ ] **GPIO relay driver — written, never validated on a kernel.** This line used to say
+      the driver was a stub whose `Pulse`/`Hold`/`Release` panicked. It is not and they do
+      not: `controller/internal/relay/` is a complete Linux GPIO character-device (uAPI v2)
+      implementation — chip open, line claim with EBUSY detection, polarity mapping, a pulse
+      timing/abort state machine, and a fail-safe tied to fd lifetime — across nine files
+      with tests, and it contains no `panic` at all. `GateClosed` reads a real
+      kernel-debounced input line. What is missing is exactly what `gpio.go`'s own header
+      says: **STATUS: NOT VALIDATED ON HARDWARE.** No build in this repo's tests has driven
+      a real relay, and that is the open item — not the code
 - [ ] **BLE radio validation.** The GATT peripheral glue builds for Linux (BlueZ) and
       Windows (WinRT) behind `-tags ble` — one portable file, since every call is the
       `tinygo.org/x/bluetooth` GATT-server API and the library carries both backings. It
@@ -167,10 +173,11 @@ hub's issuance endpoint):
       signal: it is stamped on every long-poll request, so a controller whose clock has not
       moved in a month reads as seen a minute ago. Nor is the ack's `result` — a ping and a
       config both ack "ok", so keying on it would count a relay retune as a clock sync
-- [ ] A console surface for the above. `GET /v1/accounts/{id}/controllers/clock-freshness`
+- [x] A console surface for the above. `GET /v1/accounts/{id}/controllers/clock-freshness`
       serves it — every paired controller oldest-proof-first, never-synced first, with the
-      controller's own 14-day limit reported rather than hard-coded — and nothing renders it
-      yet, so an operator has to curl it
+      controller's own 14-day limit reported rather than hard-coded — and
+      `components/device/ClockFreshness.tsx` renders it on the Devices screen, staying silent
+      unless a controller is actually at risk so it does not become furniture
 - [x] **`ping` — and it was not the minor one.** A controller learns the hub's time at
       the WS handshake and on an accepted `ping`, and nowhere else. The hub had never sent
       a ping, and a healthy WS connection carries no read deadline, so a controller that
@@ -206,7 +213,10 @@ hub's issuance endpoint):
       console says so plainly rather than leaving empty boxes to be read as "unset". Fixing
       it means widening the ack (or adding a report) in `proto/`, which is a wire-contract
       change across both modules and the conformance vectors
-- [ ] Controller position/tamper sensors return static values
+- [ ] Controller TAMPER sensing does not exist, and the MOCK relay's position sensor is a
+      constant. The GPIO build's `GateClosed` is real — it reads a kernel-debounced input line
+      claimed alongside the relay output. This line previously said "sensors return static
+      values", which was true of one of the two backends and neither of the two signals
 
 **Console screens ahead of their backend** (tracked mechanically by the route-parity test):
 
@@ -215,7 +225,9 @@ hub's issuance endpoint):
 - [x] **Outbound webhooks** — HMAC-signed, with the target re-validated against SSRF
       immediately before every delivery, because DNS belongs to whoever owns the name
 - [x] **Password reset** (forgot / reset / update)
-- [ ] Analytics and per-access-point maintenance
+- [x] Analytics and per-access-point maintenance — both backends ship (three analytics
+      routes over `httpapi/analytics.go`, two maintenance routes over `httpapi/maintenance.go`
+      and migration 0017), and the console's Analytics screen consumes them
 - [ ] Google OAuth
 - [x] **2FA (TOTP)** — opt-in per user, enrol-prove-activate so a half-enrolled secret
       never gates login, ±1 step of skew, replay refused by a monotonic last-step, and ten
@@ -289,10 +301,10 @@ and none has met physical hardware.
       the hub-wide gate deliberately: it reports driver state, not device state, and there
       is no honest way to show a member the half of an MQTT connection that carries their
       lamp
-- [ ] A console surface for claiming — the routes exist (`GET
-      /v1/accounts/{id}/devices/claimable`, `POST|DELETE .../devices/claims`) and the
-      Devices screen does not yet offer them, so on a multi-account hub claiming is
-      currently an API call
+- [x] A console surface for claiming — the routes exist (`GET
+      /v1/accounts/{id}/devices/claimable`, `POST|DELETE .../devices/claims`) and the Devices
+      screen offers them: `components/device/ClaimableDevices.tsx` lists unclaimed devices and
+      claims them, with a release control beside each claimed one
 - [x] **Automations check device ownership.** A rule named a device key and nothing
       verified it belonged to the rule's account — not at save, not at firing — so on a
       multi-account hub an admin of one account could write a rule that drove another

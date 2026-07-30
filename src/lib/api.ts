@@ -763,7 +763,10 @@ export const api = {
       body: { source: 'web', ...body },
     }),
 
-  // NOT IMPLEMENTED on the gateway (no /analytics route group ported yet).
+  // Served: GET /v1/analytics/{locations,accounts}/{id}/summary over
+  // httpapi/analytics.go. The comment here said "NOT IMPLEMENTED … no /analytics
+  // route group ported yet" long after the group landed, which is the direction
+  // that costs something — a caller reads it and writes a workaround.
   locationSummary: (id: string) =>
     apiFetch<LocationSummary>(`/analytics/locations/${id}/summary`),
 
@@ -1192,7 +1195,10 @@ export const api = {
       body: { source: 'web', ...body },
     }),
 
-  // NOT IMPLEMENTED on the gateway (no /analytics route group ported yet).
+  // Served: GET /v1/analytics/{locations,accounts}/{id}/summary over
+  // httpapi/analytics.go. The comment here said "NOT IMPLEMENTED … no /analytics
+  // route group ported yet" long after the group landed, which is the direction
+  // that costs something — a caller reads it and writes a workaround.
   accountSummary: (accountId: string) =>
     apiFetch<AccountSummary>(`/analytics/accounts/${accountId}/summary`),
   accountInsights: (accountId: string) =>
