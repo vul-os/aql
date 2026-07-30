@@ -1,0 +1,122 @@
+package store
+
+// The clip index for camera recording. See
+// migrations/0024_camera_clips.sql for why the bytes are not in here, and
+// docs/CAMERA-RETENTION.md for the policy these queries implement.
+
+import "context"
+
+// A note on what is deliberately NOT here yet: a clip LISTING, and a total of
+// live clip bytes. Both were written and then removed, because the store's
+// reachability guard was right about them — the only thing that would call
+// either is the viewer (docs/CAMERA-RETENTION.md §4 step 5), which does not
+// exist. §2.6 needs the listing to include deleted rows so a gap in a timeline
+// reads as a gap rather than as a camera that never recorded; that requirement
+// is recorded here so the next person does not have to rediscover it, but the
+// query belongs in the change that gives it a caller.
+
+// Clip is one recorded segment.
+type Clip struct {
+	ID         string
+	AccountID  string
+	DeviceKey  string
+	StartedAt  int64
+	DurationS  int
+	SizeBytes  int64
+	RelPath    string
+	Reason     string
+	DeletedAt  *int64
+	DeletedWhy string
+}
+
+// Clip deletion reasons. Kept apart because they mean opposite things to
+// someone auditing a gap in a timeline.
+const (
+	// ClipExpired: the retention worker removed it because it aged past the
+	// camera's retain_hours, or to recover free space. The policy working.
+	ClipExpired = "expired"
+	// ClipMissing: the file was gone when a sweep looked. NOT a fault —
+	// docs/CAMERA-RETENTION.md §2.1 deliberately makes the layout walkable so a
+	// human can delete a day by hand without this software's cooperation.
+	ClipMissing = "missing"
+)
+
+// RecordClip inserts the index row for a clip already written to disk.
+//
+// Called after the file is closed, never before. A row for a file that does not
+// exist yet would be a row the retention sweep can select, and the sweep deletes
+// what it selects.
+func (s *Store) RecordClip(ctx context.Context, c Clip) (Clip, error) {
+	if c.ID == "" {
+		c.ID = NewID()
+	}
+	if c.Reason == "" {
+		c.Reason = "continuous"
+	}
+	t := now()
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO camera_clips
+		   (id, account_id, device_key, started_at, duration_s, size_bytes, rel_path, reason, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		c.ID, c.AccountID, c.DeviceKey, c.StartedAt, c.DurationS, c.SizeBytes, c.RelPath, c.Reason, t)
+	return c, err
+}
+
+// ExpiredClips returns live clips older than the given cutoff for one camera.
+//
+// The cutoff is passed in rather than computed here: retention is a per-camera
+// duration, and the store has no business knowing which camera has which policy.
+func (s *Store) ExpiredClips(ctx context.Context, accountID, deviceKey string, olderThan int64, limit int) ([]Clip, error) {
+	return s.scanClips(ctx,
+		`SELECT id, account_id, device_key, started_at, duration_s, size_bytes, rel_path, reason
+		   FROM camera_clips
+		  WHERE deleted_at IS NULL AND account_id = ? AND device_key = ? AND started_at < ?
+		  ORDER BY started_at ASC LIMIT ?`,
+		accountID, deviceKey, olderThan, limit)
+}
+
+// OldestLiveClips returns the oldest live clips across EVERY camera.
+//
+// Across, deliberately (§2.3): when free space runs low the oldest footage goes
+// first regardless of which camera produced it. Evicting per camera would let a
+// busy camera preferentially consume a quiet one's history, and "the camera that
+// records most" and "the camera that matters most" are unrelated.
+func (s *Store) OldestLiveClips(ctx context.Context, limit int) ([]Clip, error) {
+	return s.scanClips(ctx,
+		`SELECT id, account_id, device_key, started_at, duration_s, size_bytes, rel_path, reason
+		   FROM camera_clips
+		  WHERE deleted_at IS NULL
+		  ORDER BY started_at ASC LIMIT ?`, limit)
+}
+
+// MarkClipDeleted records that a clip is no longer on disk.
+//
+// The row stays. A gap in a timeline has to be visible as a gap — §2.6 requires
+// that someone looking for the evening they cared about is told it was dropped
+// and when, rather than shown an empty list that reads identically to a camera
+// which never recorded at all.
+func (s *Store) MarkClipDeleted(ctx context.Context, id, why string) error {
+	_, err := s.db.ExecContext(ctx,
+		`UPDATE camera_clips SET deleted_at = ?, deleted_why = ?
+		  WHERE id = ? AND deleted_at IS NULL`,
+		now(), why, id)
+	return err
+}
+
+func (s *Store) scanClips(ctx context.Context, q string, args ...any) ([]Clip, error) {
+	rows, err := s.db.QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Clip
+	for rows.Next() {
+		var c Clip
+		if err := rows.Scan(&c.ID, &c.AccountID, &c.DeviceKey, &c.StartedAt, &c.DurationS,
+			&c.SizeBytes, &c.RelPath, &c.Reason); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
