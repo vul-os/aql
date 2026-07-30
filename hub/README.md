@@ -247,6 +247,21 @@ unset, the hub reads `LINTEL_DATA_DIR` instead and logs a `WARN` naming both, on
 startup (`lookupEnv`/`warnLegacyEnv` in `cmd/hub/env.go`). The old names are deprecated —
 no removal date has been decided — so an install still typing `LINTEL_*` keeps working.
 
+### Subcommands
+
+```
+aql-hub verify-audit [-data DIR]
+aql-hub 2fa disable -user NAME -reason TEXT [-data DIR]
+aql-hub energy rebucket -account ID [-tz ZONE] [-dry-run]
+```
+
+Anything else that is not a flag is refused with exit 2 and that list. It has to
+be: the hub takes no positional arguments, so a mistyped subcommand used to fall
+through and **start a server** — writing a fresh signing key and running
+migrations into whatever `-data` pointed at. `verify-audit` is meant to be run
+against a cold backup, which is exactly the directory you would least like that
+to happen to.
+
 ### `aql-hub energy rebucket -account ID`
 
 The way back if you set `AQL_ENERGY_TZ` after metering had already been running.

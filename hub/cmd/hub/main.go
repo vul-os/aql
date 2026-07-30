@@ -210,6 +210,29 @@ func main() {
 		os.Exit(runEnergyRebucket(os.Args[3:]))
 	}
 
+	// Anything else that looks like a subcommand is a mistake, and must not
+	// fall through to starting the server.
+	//
+	// It used to. `aql-hub 2fa disabel -user alice` — one transposed letter —
+	// matched no dispatch above, and flag.Parse ignores positional arguments,
+	// so the binary BOOTED A HUB: it generated a fresh Ed25519 signing key and
+	// a JWT secret, created the database, ran migrations and started the
+	// background workers. Against a fresh directory that is merely surprising.
+	// Against the directory an operator meant to inspect it is destructive, and
+	// that is not a hypothetical: verify-audit is documented as working on a
+	// cold backup, so a backup is exactly where these commands get pointed.
+	//
+	// The default -listen is non-loopback and refuses to start, which hid this
+	// — but the deployment the docs recommend binds loopback, and there it
+	// starts cleanly.
+	//
+	// The server itself takes no positional arguments, so a leading non-flag
+	// token has no other meaning.
+	if msg, unknown := unknownCommand(os.Args[1:]); unknown {
+		fmt.Fprint(os.Stderr, msg)
+		os.Exit(2)
+	}
+
 	var (
 		dataDir     = flag.String("data", envOr("AQL_DATA_DIR", "./data"), "data directory")
 		listen      = flag.String("listen", envOr("AQL_LISTEN", ":8080"), "listen address")
@@ -1334,4 +1357,36 @@ func loadOrCreateSecret(path string) ([]byte, error) {
 		return nil, err
 	}
 	return secret, nil
+}
+
+// knownCommands is every subcommand the dispatch above recognises, in the form
+// an operator types. Kept beside unknownCommand so the refusal can list them:
+// "unknown command" without the list is a dead end, and this binary's commands
+// are the kind somebody reaches for once a year.
+var knownCommands = []string{
+	"aql-hub verify-audit [-data DIR]",
+	"aql-hub 2fa disable -user NAME -reason TEXT [-data DIR]",
+	"aql-hub energy rebucket -account ID [-tz ZONE] [-dry-run]",
+}
+
+// unknownCommand reports whether args begin with something that looks like a
+// subcommand but matched no dispatch, and returns what to print if so.
+//
+// The server takes no positional arguments, so a leading non-flag token has no
+// other meaning and must not be ignored. Separated from main for one reason:
+// the behaviour that matters is that the binary does NOT start a hub, and a
+// test cannot observe an os.Exit — so the decision lives here where it can be
+// asserted directly.
+func unknownCommand(args []string) (string, bool) {
+	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
+		return "", false
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "aql-hub: unknown command %q\n\n", strings.Join(args, " "))
+	fmt.Fprintln(&b, "Known commands:")
+	for _, c := range knownCommands {
+		fmt.Fprintf(&b, "  %s\n", c)
+	}
+	fmt.Fprintln(&b, "\nTo start the hub, pass flags only: aql-hub [-listen ADDR] [-data DIR] …")
+	return b.String(), true
 }
