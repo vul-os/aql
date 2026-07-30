@@ -458,6 +458,16 @@ func (s *Server) Router() http.Handler {
 	// (clocksync.go). Operational fleet data, account-admin only.
 	mux.Handle("GET /v1/accounts/{id}/controllers/clock-freshness", s.requireAuth(s.handleClockFreshness))
 
+	// Camera footage (cameraview.go). `camera:view` is a per-member, per-camera
+	// grant and is NOT implied by owner or admin — docs/CAMERA-RETENTION.md §2.4.
+	// The access LOG is open to every member, not admins only, because the
+	// subjects of the footage have the strongest claim to it (§2.5).
+	mux.Handle("GET /v1/accounts/{id}/camera-view-grants", s.requireAuth(s.handleCameraViewGrants))
+	mux.Handle("POST /v1/accounts/{id}/camera-view-grants", s.requireAuth(s.handleCameraViewGrant))
+	mux.Handle("DELETE /v1/accounts/{id}/camera-view-grants", s.requireAuth(s.handleCameraViewRevoke))
+	mux.Handle("GET /v1/accounts/{id}/cameras/{key}/clips", s.requireAuth(s.handleCameraClips))
+	mux.Handle("GET /v1/accounts/{id}/camera-access-log", s.requireAuth(s.handleCameraAccessLog))
+
 	// Gateway signing-key rotation (keyrotation.go). Platform-admin only: it
 	// replaces the key EVERY controller on this hub verifies against, so it is
 	// not scoped to an account — there is one key and it is the hub's.

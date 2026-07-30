@@ -1276,6 +1276,32 @@ export const api = {
       body: { reason },
     }),
 
+  // Camera footage (hub/internal/httpapi/cameraview.go).
+  //
+  // `camera:view` is a per-member, per-camera grant and is NOT implied by owner
+  // or admin — docs/CAMERA-RETENTION.md §2.4. cameraClips 403s with
+  // `camera_view_required` for a member without one, INCLUDING an account owner,
+  // and that is the design rather than a bug to work around in the client.
+  cameraViewGrants: (accountId: string) =>
+    apiFetch<{ grants: CameraViewGrant[] }>(`/accounts/${accountId}/camera-view-grants`),
+
+  cameraViewGrant: (accountId: string, body: { user_id: string; device_key: string; starts_at?: number; ends_at?: number }) =>
+    apiFetch<{ granted: boolean }>(`/accounts/${accountId}/camera-view-grants`, { method: 'POST', body }),
+
+  cameraViewRevoke: (accountId: string, userId: string, deviceKey: string) =>
+    apiFetch<{ revoked: boolean }>(
+      `/accounts/${accountId}/camera-view-grants?user_id=${encodeURIComponent(userId)}&device_key=${encodeURIComponent(deviceKey)}`,
+      { method: 'DELETE' },
+    ),
+
+  cameraClips: (accountId: string, deviceKey: string) =>
+    apiFetch<{ clips: CameraClip[] }>(`/accounts/${accountId}/cameras/${encodeURIComponent(deviceKey)}/clips`),
+
+  // Readable by EVERY member, not admins only (§2.5): the subjects of the
+  // footage have the strongest claim to the record of who watched it.
+  cameraAccessLog: (accountId: string) =>
+    apiFetch<{ access: CameraAccessEntry[] }>(`/accounts/${accountId}/camera-access-log`),
+
   gatewayKeyRotationRetry: () =>
     apiFetch<{ repairs_sent: number; completed: boolean }>('/admin/gateway-key/rotation/retry', {
       method: 'POST',
@@ -1334,6 +1360,43 @@ export type KeyRotationStarted = {
   previous_pubkey: string;
   new_pubkey: string;
   repairs_sent: number;
+};
+
+/** One member's `camera:view` permission on one camera. */
+export type CameraViewGrant = {
+  user_id: string;
+  username: string;
+  device_key: string;
+  granted_by: string;
+  revoked: boolean;
+  /** Absent means no window bound on that side. */
+  starts_at?: number;
+  ends_at?: number;
+  revoked_at?: number;
+};
+
+/**
+ * One recorded clip. `deleted_at` present means the footage is GONE and the row
+ * is a gap marker — docs/CAMERA-RETENTION.md §2.6 requires a dropped evening to
+ * read as dropped rather than as a camera that never recorded.
+ */
+export type CameraClip = {
+  id: string;
+  started_at: number;
+  duration_s: number;
+  size_bytes: number;
+  reason: string;
+  deleted_at?: number;
+  /** 'expired' is the policy working; 'missing' is a human having removed it. */
+  deleted_why?: string;
+};
+
+export type CameraAccessEntry = {
+  at: number;
+  username: string;
+  device_key: string;
+  action: string;
+  detail: string;
 };
 
 function adminListQs(q: AdminListQuery): string {

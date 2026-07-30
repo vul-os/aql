@@ -452,8 +452,20 @@ and none has met physical hardware.
       tested and called by nothing, which is the shape this repository has been bitten by
       repeatedly. Cameras nobody has CLAIMED are not recorded: footage is written under an
       account id and there is no correct directory for footage nobody owns.
-      What remains for this line is a viewer, and the thing no amount of code closes:
-      hardware. Recording is one RTSP session per window rather than one held open, which is
+      **`camera:view` and the footage list now exist too** (migration 0025). The permission is
+      per member PER CAMERA and is deliberately NOT implied by owner or admin — the one place
+      this product's "admin can configure the thing" pattern is broken on purpose, because here
+      it would mean "admin can watch the other residents", and the owner of a shared house's hub
+      is usually just whoever set it up. A fresh install grants it to nobody. Every view and
+      every REFUSED attempt is written to the hash-chained audit log, and the access log is
+      readable by every member rather than admins only: the subjects of the footage must not be
+      the only people who cannot check who watched. Dropped clips stay in the list as gaps, so a
+      missing evening reads as dropped-and-when rather than as a camera that never recorded.
+      `docs/CAMERA-RETENTION.md` §5 left per-camera-vs-per-account open; it is decided as per
+      camera, because the objection was UI cost and that is a reason to ship a narrower UI, not
+      to widen an authority over recordings of people's homes.
+      What remains for this line is playback of the bytes themselves, and the thing no amount of
+      code closes: hardware. Recording is one RTSP session per window rather than one held open, which is
       worse on a real camera and honest about what has been verified — a long-lived session
       means keepalives, mid-stream parameter-set changes and servers that drop connections,
       none of which can be developed against a fake without inventing the behaviour. The retention worker, the `camera:view` permission and

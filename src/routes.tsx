@@ -59,6 +59,7 @@ const routes: RouteObject[] = [
       { index: true, element: wrap(() => import('@/pages/app/Overview')), errorElement },
       { path: 'devices', element: wrap(() => import('@/pages/app/Devices')), errorElement },
       { path: 'automations', element: wrap(() => import('@/pages/app/Automations')), errorElement },
+      { path: 'footage', element: wrap(() => import('@/pages/app/Footage')), errorElement },
       { path: 'energy', element: wrap(() => import('@/pages/app/Energy')), errorElement },
       // Access control — every one of these is gateway-backed and real.
       { path: 'open', element: wrap(() => import('@/pages/app/OpenGate')), errorElement },

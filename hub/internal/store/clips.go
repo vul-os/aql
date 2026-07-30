@@ -6,14 +6,9 @@ package store
 
 import "context"
 
-// A note on what is deliberately NOT here yet: a clip LISTING, and a total of
-// live clip bytes. Both were written and then removed, because the store's
-// reachability guard was right about them — the only thing that would call
-// either is the viewer (docs/CAMERA-RETENTION.md §4 step 5), which does not
-// exist. §2.6 needs the listing to include deleted rows so a gap in a timeline
-// reads as a gap rather than as a camera that never recorded; that requirement
-// is recorded here so the next person does not have to rediscover it, but the
-// query belongs in the change that gives it a caller.
+// The clip LISTING lives in cameraview.go, beside the permission that gates it —
+// it was removed from here when nothing called it, and came back with its
+// caller.
 
 // Clip is one recorded segment.
 type Clip struct {

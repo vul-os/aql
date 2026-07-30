@@ -20,6 +20,7 @@ export const APP_NAV_ITEMS: NavItem[] = [
   { to: '/app/devices', label: 'Devices' },
   { to: '/app/automations', label: 'Automations' },
   { to: '/app/energy', label: 'Energy' },
+  { to: '/app/footage', label: 'Footage' },
 ];
 
 /**
