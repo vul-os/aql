@@ -5,6 +5,17 @@ it actually drives is a gate/door/barrier controller, reached through a chat mes
 web console, or (partially) an offline grant. That combination — local authority plus
 physical actuation plus a third-party chat rail — is what this document models.
 
+**How much of this is machine-checked, and how much is prose.** Three claims here are
+guarded by `npm run check:claims`, which fails the build if the quoted sentence stops
+appearing — the offline-grant client, the automations HTTP surface, and the energy poller.
+Everything else is prose, verified when written and unguarded after. That distinction is
+worth stating because this document has drifted before, in both directions: it has
+described shipped subsystems as unbuilt (which tells a reviewer not to look for a bypass
+in live code — §8 says so about geofencing, and it happened again to the device engine,
+automations, energy and the phone-side grant client), and it once said automations had no
+HTTP surface while eight account-scoped routes shipped, one of which fires a rule
+synchronously. When a claim here matters to a decision you are making, read the code.
+
 This is a *mixed* document, and the mix is the point:
 
 - **Sections marked "Shipped"** describe controls that exist in code today and can be
@@ -317,11 +328,29 @@ Stated plainly so nobody mistakes design intent for a control:
   so first, and be recorded doing it. That is the same trust-on-first-use shape as
   controller pairing, and it is safe for the same reason: the first assertion is
   deliberate and audited, and every later one is refused.
-- **No HTTP surface for automations or energy.** Both runtimes exist, are tested, and run
-  as background workers when configured (`internal/automations/`, `internal/energy/`).
-  Neither is reachable over the API: there is no endpoint to create a rule or read a
-  meter. So an automation cannot be created, altered or triggered by a request — which
-  removes a threat surface rather than defending one, and is not a shipped feature.
+- **Automations and energy DO have an HTTP surface, and it is defended rather than
+  absent.** An earlier revision of this bullet said the opposite — *"there is no endpoint
+  to create a rule or read a meter … an automation cannot be created, altered or triggered
+  by a request"* — and every clause of that was false. Eight automation routes and three
+  energy routes ship, account-scoped: create, update, delete, enable/disable, list, run
+  history, and `POST /v1/accounts/{id}/automations/{ruleID}/run`, which fires a rule
+  **synchronously**. This is the error the geofencing bullet below warns about, in its
+  worst form: telling a reviewer there is no surface here stops them looking at an
+  actuation endpoint.
+
+  What is true is the defence, and it is layered:
+
+  - Every route is `requireAuth` **and** `requireAutomationsAdmin` — account membership
+    resolved server-side, then an admin-role check. A member cannot reach any of them.
+  - `MaxActionTier` (`internal/automations/automations.go:65`) is a compile-time ceiling on
+    what an unattended rule may actuate, checked on the save path and again immediately
+    before the driver call. Every access verb in the catalogue sits above it, so **no
+    automation can open a gate** — including via `/run`. That is structural, not a setting.
+  - A refused run is a 200 carrying a refusal, not an error, so a cooldown or an unmet
+    condition cannot be mistaken for the hub being unreachable.
+
+  What remains genuinely unproven is hardware: the only devices any rule has driven are the
+  mock driver's.
 - **The phone-side offline-grant client does ship**, over LAN/mDNS: it requests, holds and
   presents a grant, anchoring the proof on the controller's clock rather than the phone's.
   It is stated here for the same reason geofencing is, two bullets down — an earlier

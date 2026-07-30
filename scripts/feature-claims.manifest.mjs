@@ -333,6 +333,13 @@ export const FEATURES = [
       'ROADMAP.md Phase 3',
       'site/docs/devices.md § Automations — trigger/condition/action, MaxActionTier ceiling',
       'site/docs/architecture.md § What the open path actually is — the rule object exists but is kept OUT of the open path',
+      // Added after THREAT-MODEL.md was found claiming the exact opposite —
+      // "there is no endpoint to create a rule", when eight account-scoped
+      // routes ship including a synchronous /run. That is the dangerous
+      // direction of drift: it tells a reviewer there is no surface to examine
+      // where there is an actuation endpoint. Guarded by quote so it cannot
+      // silently revert.
+      'docs/THREAT-MODEL.md § 8 — "which fires a rule"',
     ],
     // Deliberately narrow. A loose /schedul|cron/ matches the controller's
     // scheduleRelease() relay timer, which is not an automations engine.
@@ -343,7 +350,14 @@ export const FEATURES = [
   },
   {
     id: 'energy-metering',
-    label: 'Energy-metering engine code exists (NOT that any meter is polled in a running hub — nothing constructs a poller in cmd/hub)',
+    // The caveat here used to read "nothing constructs a poller in cmd/hub".
+    // That stopped being true when wireEnergy landed: cmd/hub builds an
+    // energy.NewPoller and runs it as a worker. It is still OFF by default —
+    // -energy-account/AQL_ENERGY_ACCOUNT_ID must name an account that exists,
+    // and it refuses to start without a device driver — but "off unless
+    // configured" and "cannot happen" are different claims, and this manifest
+    // exists precisely to stop documents blurring them.
+    label: 'Energy-metering engine code exists, and cmd/hub wires a poller that is off unless -energy-account is set (NOT that any physical meter has been read)',
     docStatus: 'shipped',
     docRefs: [
 "README.md § Energy metering that won\'t flatter you",
