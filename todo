@@ -51,6 +51,20 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       `go test -race -tags gpio|ble ./...`, and the controller job's `go test (optional
       backends)` — the latter byte-for-byte what was added, directly below a comment
       explaining that this exact gap had already been closed. The step has been reverted.
+- [x] The suites have now RUN on arm64 Linux, which is what a Pi is and what the release
+      workflow ships as `linux/arm64 (Pi)`. Every CI job is ubuntu-latest/amd64, so the
+      arm64 binaries were cross-compiled and never executed. Done in docker on an Apple
+      Silicon host (native aarch64, not emulated), as ROOT, which is a second axis CI
+      never covers either: hub 17/17 packages, exit 0; controller full suite plus
+      `-tags gpio` under `-race`, clean; the GPIO kernel-ABI struct sizes and field
+      offsets pass; e2e ok. No defect found — this is a confirmation, not a fix.
+- NOTE: an arm64 CI job was considered and REJECTED, because the repo already solves this
+      better than a runtime job would. gpio_abi_static.go asserts every kernel struct size
+      and field offset as a CONSTANT EXPRESSION, so the existing cross-compile checks the
+      layout on arm64, arm AND 386 — including 32-bit arm, where Go aligns uint64 to 4
+      bytes rather than 8 and a struct correct on amd64 can genuinely differ. A runtime
+      job would cost an emulator or a runner and cover fewer architectures. The comment in
+      that file already named the gap I thought I had found.
 - ROOT CAUSE, worth more than the incident: the search that "found no CI reference" was
       piped through `head -10`. It had 34 matches and every ci.yml line sat at rank 27+.
       A truncated search does not report absence, it reports the first N — and it looks
