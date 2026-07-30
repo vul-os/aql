@@ -226,10 +226,76 @@ leg than on the device service, and without the probe an operator finds that out
 rather than here. A camera whose ONVIF answers but whose stream does not reports as
 **degraded** — it is reachable and it is not working, and both extremes lose that.
 
-**Live view and recording are still not built.** Anything that touches a pixel needs a real
-camera to develop against and a storage design this repo does not have: where clips live,
-for how long, who may see them, what happens when the disk fills, and what a resident is
-told when retention silently drops the evening they care about.
+### Recording and live view
+
+Both are built now, and the sentence that used to sit here — that they needed "a storage
+design this repo does not have" — was answered first, on purpose:
+[docs/CAMERA-RETENTION.md](https://github.com/vul-os/aql/blob/main/docs/CAMERA-RETENTION.md)
+settles where clips live, how long they last, who may watch, and what a full disk does.
+Recording is a data-retention policy with a UI attached, so the policy went first.
+
+The path from a camera to a file, in order:
+
+| Stage | What it does |
+|---|---|
+| `ConsumeMedia` | the SETUP/PLAY above, with the packets **kept** rather than counted |
+| `h264.go` | RFC 6184 depacketization — single-NAL, STAP-A, FU-A → NAL units |
+| `sps.go` | parses the sequence parameter set for the encoder's real size |
+| `accessunit.go` | groups NAL units into pictures |
+| `fmp4.go` | muxes pictures into a fragmented MP4 |
+| `recording/` | writes clips, expires them, streams live viewers |
+
+**Frame cropping is why the SPS is parsed at all.** 1080 is not a multiple of 16, so every
+1080p camera encodes 1088 lines and crops 8 away. A muxer that writes the coded height
+produces a file with a band of encoder padding along the bottom — and every box in it is
+structurally valid, so nothing complains. The probe reports the cropped size, which is also
+how you spot an ONVIF profile claiming one resolution while the encoder does another.
+
+**Pictures are grouped by RTP timestamp**, not by parsing slice headers: RFC 3550 §5.1
+requires every packet of one picture to share a timestamp, so the boundary costs four bytes
+of header instead of a second bitstream parser. The marker bit is recorded and
+cross-checked but never trusted to end a picture — real cameras set it early, late or never,
+and a count of the disagreements is exposed so an unreliable one shows up as a number
+rather than as split frames.
+
+**Retention.** Clips live on the filesystem, never in SQLite — a database holding video
+cannot be backed up or vacuumed by ordinary means, and a corrupt page would take the access
+audit trail down with the footage. The layout is date-partitioned
+(`<account>/<device>/<YYYY-MM-DD>/…`) so expiry is a directory walk and **so a human can
+delete a day by hand without this software's cooperation**. Each camera has its own
+`retain_hours`, default 72, and `0` means live-view-only — nothing is written at all.
+
+Free space is a **floor**, not a cap: 10% of the filesystem or 2 GB, whichever is larger.
+Below it, expired clips go oldest-first *across all cameras*, so a busy camera cannot evict
+a quiet one's history. If that still does not clear the floor, **recording stops and says
+so** — it will not delete unexpired footage to keep going, because that would make
+`retain_hours` a lie under exactly the conditions where someone later goes looking.
+
+**Who may watch is a permission, not a role.** `camera:view` is granted per member per
+camera and is deliberately **not** implied by `owner` or `admin`. Everywhere else in this
+product admin means "can configure the thing"; here it would mean "can watch the other
+residents", and the owner of a shared house's hub is usually just whoever set it up. A fresh
+install grants it to nobody. Grants can carry a time window, because an investigation is
+usually bounded and the permission should be too.
+
+Every view **and every refusal** is written to the hash-chained audit log, and that log is
+readable by *every member* of the account rather than admins only — the subjects of footage
+must not be the only people who cannot check who watched. A listing is not served if its
+audit row cannot be written.
+
+**Playback and live view.** Each clip is a self-contained fragmented MP4, so the console
+plays one in a plain `<video>` with no plugin and no transcoding. A clip dropped by
+retention answers **410 Gone with the reason**, not 404 — "gone" and "never existed" are
+different answers, and someone looking for the evening they cared about is owed the first.
+Live view fans the same fragments out over Media Source Extensions; it is **about ten
+seconds behind**, because the hub captures a window at a time, and the response says so in
+a header rather than leaving you to discover it by waving at a gate.
+
+**What none of this establishes.** No part of this pipeline has met a camera. Every test
+runs against fakes and an in-process RTSP server, and the container output is checked by
+Chromium's MP4 parser, which *accepts* it — it does not play it, because the test payloads
+are not decodable pictures. The retention arithmetic deletes real files under rules nobody
+has exercised against real footage.
 
 Robot control beyond a status row, and alerting tied to real sensor or camera events, are
 not built either.

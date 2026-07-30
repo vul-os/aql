@@ -9,8 +9,9 @@ see and control everything physical around a home or a business.
 Its device model has seven kinds: **camera, lighting, robot, climate, energy, sensor and
 access**. One of them — access — is finished and running end to end. The engine behind the
 others is running too, with four drivers on it, and energy metering is read end to end —
-but a camera is discovered and never decoded, and a robot has no driver at all. How far
-each kind's path goes is the thing to check, not whether the engine exists.
+a camera now records, plays back and streams a recent view — though it decodes no picture
+and has never met real hardware — and a robot has no driver at all. How far each kind's path
+goes is the thing to check, not whether the engine exists.
 
 ### What can it actually do today?
 
@@ -30,14 +31,18 @@ contracts have 63 conformance vectors (70 checks) that both sides are tested aga
 
 ### What can't it do?
 
-No Matter, no robot driver, and no camera pipeline — the ONVIF driver discovers cameras and probes
-their streams but receives no frames. The device engine itself, the automations runtime
-and energy metering are built, and all three are off unless you configure them.
+No Matter and no robot driver. The camera pipeline **is** built — discovery, stream probe,
+recording, retention, a per-camera viewing permission, playback and a recent live view — but
+no part of it has met a real camera, and it decodes no picture: it moves frames into a file
+a browser can play, rather than interpreting them. The device engine itself, the automations
+runtime and energy metering are built, and all of it is off unless you configure it.
 
-The offline emergency-access path is **half done**: the console requests and stores a
-grant against a real hub, but *presenting* one talks straight to the controller on the
-LAN or over BLE, which a browser tab cannot do. See [Devices](devices.md) and
-[Emergency access](emergency-access.md).
+The offline emergency-access path works **over the LAN**: the app requests a grant, holds
+it, and presents it straight to the controller over mDNS — anchoring the proof on the
+*controller's* clock rather than the phone's, so a phone whose clock is wrong after a
+blackout still opens the gate. What is missing is the **BLE** variant: the controller
+implements it, but no browser can reach a radio, and the app says so rather than implying
+otherwise. See [Devices](devices.md) and [Emergency access](emergency-access.md).
 
 ### Are the chat rails going away?
 
