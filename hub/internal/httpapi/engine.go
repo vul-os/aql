@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/vul-os/aql/hub/internal/devices"
+	"github.com/vul-os/aql/hub/internal/devices/accessdev"
 )
 
 // The device engine's HTTP surface.
@@ -169,6 +170,25 @@ func (s *Server) engineScopeFor(w http.ResponseWriter, r *http.Request) (engineS
 		}
 		for k := range keys {
 			owned[k] = true
+		}
+		// Access points are engine devices too, via the read-only `access`
+		// driver, and they have no device_ownership row — nothing claims them,
+		// because they are already owned through their location's account.
+		//
+		// Without this they read as UNCLAIMED, which on a multi-account hub
+		// means permits() denies them to everyone but the instance admin: a
+		// member would not see their OWN gates in the engine fleet. Fail-closed
+		// and therefore silent, which is why it is worth a test rather than a
+		// comment. See docs/ACCESS-ON-THE-ENGINE.md §3.5 — the ownership is
+		// DERIVED here, not stored, so there is still one source of truth for
+		// who a gate belongs to.
+		apIDs, err := s.store.AccessPointIDsForAccount(r.Context(), a.ID)
+		if err != nil {
+			writeErr(w, http.StatusInternalServerError, "internal")
+			return engineScope{}, false
+		}
+		for _, id := range apIDs {
+			owned[devices.Key(accessdev.DriverID, id)] = true
 		}
 	}
 	return engineScope{owned: owned}, true

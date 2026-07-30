@@ -167,3 +167,35 @@ type AccessPointRow struct {
 	DeviceID  string // paired controller, "" if none
 	Status    string
 }
+
+// AccessPointIDsForAccount lists the ids of one account's access points.
+//
+// Ids only. It exists for the device engine's tenancy scope, which needs to know
+// WHICH access points an account owns and nothing else about them — and a scope
+// check that pulls detail rows it does not read is a scope check that gets
+// slower every time somebody adds a column.
+//
+// Account-scoped, unlike AllAccessPoints directly above it. That one is the
+// driver's, deliberately cross-account and deliberately not reachable from a
+// request; this one is the request path's, and answers only for the account
+// asked about.
+func (s *Store) AccessPointIDsForAccount(ctx context.Context, accountID string) ([]string, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT ap.id
+		   FROM access_points ap
+		   JOIN locations l ON l.id = ap.location_id
+		  WHERE l.account_id = ?`, accountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}

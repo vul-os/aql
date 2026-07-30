@@ -154,6 +154,16 @@ belong to an account. The driver reports the latter; nothing new is stored. A
 device claimed twice, by two mechanisms, is the two-sources-of-truth failure
 again.
 
+**This was designed here and then not built, for a commit.** The driver carried
+the account id and dropped it, and `engineScope` resolves ownership only from
+`device_ownership` — where a gate has no row, because nothing claims a gate. So
+every access device read as UNCLAIMED, and on a multi-account hub `permits`
+denies an unclaimed device to everyone but the instance admin: a member could not
+see their own gates. Fail-closed, and therefore silent — no error, just a fleet
+that never mentioned them, on a screen that hides those rows anyway. The scope
+now derives the keys from the caller's access points, still storing nothing, and
+`engineaccess_test.go` holds both halves: my gate yes, yours no.
+
 ---
 
 ## 4. What this buys, stated plainly
