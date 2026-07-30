@@ -1,3 +1,7 @@
+<!-- no-broker-dep:allow-file: lists `vulos-relayd` as one of several tunnel-based reachability
+     alternatives (alongside cloudflared and Tailscale Funnel) beside the recommended
+     reverse-proxy setup — illustrative deployment prose, no default, no import. -->
+
 # Aql hub
 
 The whole hub as **one Go binary**: channels, rules, portal, API,

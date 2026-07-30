@@ -1,3 +1,7 @@
+<!-- no-broker-dep:allow-file: links to docs/EPHOR-CHAT-SEAM.md, a design analysis of gateway-mode
+     authorisation "including the parts that are designed but not built" — spec-analysis prose,
+     not a build or startup path. -->
+
 # Chat rail disclosure (KOTVA §26.3)
 
 Aql reaches residents over chat rails it does not own. [KOTVA §26.3][s26] requires any

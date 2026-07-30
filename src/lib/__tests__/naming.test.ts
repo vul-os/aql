@@ -3,6 +3,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
 
+// no-broker-dep:allow-file: this naming-convention test's own doc comment names Ephor three
+// times explaining WHY "gateway" is retired prose here ("Ephor genuinely is a gateway, and
+// this product delegates the chat rail to it") and exempts two docs by path from its stale
+// terminology sweep. It is a test asserting documentation consistency, not a dependency; it
+// imports nothing named ephor.
+
 /**
  * One component, one name.
  *

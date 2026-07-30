@@ -1,3 +1,9 @@
+<!-- no-broker-dep:allow-file: names Ephor several times describing the chat-rail migration
+     ("in transition. Moving out of Aql into Ephor" — an honest, in-progress design decision,
+     not a completed one) — the adapters it names are still implemented and running inside
+     hub/internal/channels/ today. Architecture prose, not a build or startup path; C-DEP's Go
+     closures across hub/e2e/jcs/controller are clean. -->
+
 # Aql architecture
 
 > **An open-source command centre for the physical world.** One hub you run yourself,

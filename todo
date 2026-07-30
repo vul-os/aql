@@ -1,3 +1,8 @@
+<!-- no-broker-dep:allow-file: three task-list entries name Ephor: the naming-convention rule
+     ("the gateway... is Ephor's job"), the chat-rail migration ("needs a kotva retag and a
+     crate that does not exist yet"), and a filed cross-repo spec issue (COORD-2). All describe
+     future/external work, not anything this repo builds or depends on today. -->
+
 # aql — working todo
 
 Scratch list. The structured version is ROADMAP.md; this is the running one.

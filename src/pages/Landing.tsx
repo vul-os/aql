@@ -1,3 +1,8 @@
+// no-broker-dep:allow-file: this page's copy names Ephor twice — an external link
+// (https://github.com/vul-os/ephor) and honest in-progress framing ("the channel rails
+// themselves are moving out of Aql and into Ephor... That move is in progress"). Rendered
+// text and an anchor tag, no fetch, no default endpoint, no import of anything named ephor.
+//
 // The in-app landing — what a browser gets at `/` from a self-hosted hub
 // binary.
 //
