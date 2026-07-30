@@ -3,7 +3,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import { DEVICE_KINDS, ENGINE_KINDS, REAL_KIND } from '../deviceKinds';
+import {
+  DEVICE_KINDS,
+  ENGINE_KINDS,
+  ENGINE_ROW_SUPPRESSED,
+  REAL_KIND,
+  suppressEngineRow,
+} from '../deviceKinds';
 
 /**
  * The console's seven device kinds, pinned to the engine's own catalogue.
@@ -67,5 +73,39 @@ describe('the console and the engine agree on the device kinds', () => {
     // suite should fail loudly rather than silently stop guarding anything.
     expect(readFileSync(path.join(repo, 'hub/internal/devices/model.go'), 'utf-8').length)
       .toBeGreaterThan(500);
+  });
+});
+
+describe('engine rows the console suppresses', () => {
+  it('suppresses access, because the hub already contributes a richer row for it', () => {
+    // The list in Devices.tsx is a concatenation of hub rows and engine rows.
+    // Once the `access` driver is enabled the engine reports every gate too, so
+    // without this filter a gate appears TWICE — which is the "two places
+    // showing one thing" docs/ACCESS-ON-THE-ENGINE.md §5 set out to avoid.
+    expect(suppressEngineRow(REAL_KIND)).toBe(true);
+  });
+
+  it('suppresses nothing else — every engine kind still draws a row', () => {
+    for (const kind of ENGINE_KINDS) {
+      expect(
+        suppressEngineRow(kind),
+        `${kind} is suppressed, so an operator who configured that driver sees ` +
+          `no row for the devices it found`,
+      ).toBe(false);
+    }
+  });
+
+  it('every suppressed kind is a real kind, and is one the hub renders itself', () => {
+    // A suppressed kind that the hub does NOT render separately would be a
+    // device the console silently loses: the engine found it, the filter
+    // dropped it, and nothing else draws it.
+    for (const kind of ENGINE_ROW_SUPPRESSED) {
+      expect(DEVICE_KINDS, `${kind} is suppressed but is not a device kind`).toContain(kind);
+      expect(
+        kind,
+        `${kind} is suppressed but the hub has no row of its own for it, so the ` +
+          `console would show nothing at all for those devices`,
+      ).toBe(REAL_KIND);
+    }
   });
 });

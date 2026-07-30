@@ -169,10 +169,20 @@ fold to unify the *actuation* paths should read §3.1 and stop.
 
 ## 5. Open questions this document does not settle
 
-- **Does the console merge the screens?** A gate appearing in the device list
-  while also having its own screen is two places showing one thing. Probably the
-  device list should link out rather than duplicate controls, but that is a
-  design question about the console and this is not that document.
+- ~~**Does the console merge the screens?**~~ **Answered, and the console had
+  mostly answered it already.** `Devices.tsx` was already contributing an Access
+  row per access point — sourced from the access-point API, carrying operation
+  counts and last-op time, and linking through to the screen where opening lives
+  rather than duplicating its controls. "Link, do not duplicate" was the shipped
+  behaviour before this design asked the question.
+
+  What the fold broke, briefly, was that: the list is a concatenation of hub rows
+  and engine rows, so once `-device-drivers=access` was on, every gate rendered
+  TWICE. The console now suppresses engine-sourced access rows
+  (`suppressEngineRow`), because the hub's row is strictly richer. The
+  suppression is of a ROW, not of the device: `GET /v1/engine/devices` still
+  returns access points, which is where a unified fleet is genuinely useful — an
+  API consumer asking the engine what exists should be told about the gates.
 - ~~**What does a gate's `status` reading contain?**~~ **Answered: nothing.**
   `Read` returns no readings at all. Whether the barrier is physically open is
   not known without a sensor most installations do not have, and the one fact
@@ -201,5 +211,6 @@ fold to unify the *actuation* paths should read §3.1 and stop.
    is the only driver that does NOT require `-device-config`, because it reads
    the database. Requiring a JSON file to list devices the product already knows
    about would be a file written to satisfy a check.
-4. **The console question in §5.** Still open, still the one that will take
-   longest to agree, and now the only thing between this design and finished.
+4. ~~The console question in §5.~~ **Done**, and it turned out to be the
+   smallest of the four: the console had already chosen link-over-duplicate, and
+   the work was keeping that true once the engine could also see a gate.

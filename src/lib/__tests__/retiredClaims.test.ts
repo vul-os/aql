@@ -144,16 +144,27 @@ function docFiles(): string[] {
       if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
       const p = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(p);
-      else if (p.endsWith('.md') || p.endsWith('.html')) out.push(p);
+      else if (p.endsWith('.md') || p.endsWith('.html') || p.endsWith('.ts') || p.endsWith('.tsx')) {
+        out.push(p);
+      }
     }
   };
   for (const d of ['docs', 'site', 'proto']) walk(path.join(repo, d));
+  // The console's own copy, which the feature-claims manifest calls out as "the
+  // exact layer that lies" and excludes from EVIDENCE for that reason. Excluded
+  // as evidence, included as a subject: src/lib/deviceKinds.ts told a reader
+  // "Robot has no driver at all" and "receives no video" for days after both
+  // stopped being true, and no guard looked because this walk stopped at .md.
+  //
+  // Tests are skipped — they quote retired claims on purpose, to prove the
+  // patterns still fire.
+  walk(path.join(repo, 'src'));
   for (const f of ['README.md', 'ROADMAP.md', 'ARCHITECTURE.md', 'SECURITY.md']) {
     out.push(path.join(repo, f));
   }
   // CHANGELOG is a dated record of what was true when written. Rewriting history
   // to match today is a different kind of dishonesty, so it is exempt.
-  return out.filter((p) => !p.endsWith('CHANGELOG.md'));
+  return out.filter((p) => !p.endsWith('CHANGELOG.md') && !p.includes('__tests__'));
 }
 
 describe('retired claims do not come back', () => {

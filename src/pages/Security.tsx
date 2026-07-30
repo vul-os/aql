@@ -24,8 +24,8 @@ const pillars = [
   },
   {
     n: '05',
-    title: 'Geofencing: an honest non-feature',
-    body: 'There is no geofencing code in Aql today — no radius check, no denied-outside-range verdict. A location shared over chat is asserted by the sender\'s device and trivially spoofable, so if we ever ship it, it\'ll be an advisory signal recorded for review, never a reason to deny an open on its own.',
+    title: 'Geofencing: enforced, and not a security control',
+    body: 'Geofence rules ship and they do refuse an open when the requester is not near the gate. What they are not is a defence. The position arrives in the request body: a phone asserts it, nothing verifies it, and any caller who wants to claim they are standing at the gate can do it with curl in one line. So it buys the resident who taps open from the office and expects the gate at home to stay shut, and an audited record that a request came from somewhere it should not have — and it buys nothing at all against someone deliberately lying about where they are. It runs last in the open path, after membership, grants, rate limits and time windows, because it is the weakest claim in the stack. An operator who mistakes it for a boundary is worse off than one who never enabled it.',
   },
   {
     n: '06',
