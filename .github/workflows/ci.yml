@@ -129,6 +129,25 @@ jobs:
       - name: go test
         working-directory: hub
         run: go test ./...
+      # The hub ships four binaries and CI only ever built one of them.
+      #
+      # release.yml produces linux/amd64, linux/arm64, darwin/amd64 and
+      # darwin/arm64, and it runs on tag push only — so a change that broke any
+      # platform but the runner's stayed green until somebody cut a release. The
+      # controller job has cross-builds for exactly this reason and says why; the
+      # hub had the same exposure and no equivalent step.
+      #
+      # Compile only. The tests run on the runner's platform above; this is here
+      # to catch a build that cannot happen at all, which needs no execution.
+      - name: cross-build every released platform
+        working-directory: hub
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          set -eux
+          for pair in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
+            GOOS="${pair%%/*}" GOARCH="${pair##*/}" go build ./...
+          done
       # A short fuzz run on the parsers that read UNAUTHENTICATED bytes.
       #
       # Seed inputs already run for free in `go test ./...` above — a Fuzz
