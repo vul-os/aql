@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/brand/aql-mark.svg" alt="Aql" width="96" height="96">
+<img src="brand/logo.svg" alt="Aql" width="96" height="96">
 
 # Aql
 
@@ -412,6 +412,16 @@ to `scripts/feature-claims.manifest.mjs` — and if you find a sentence here tha
 longer matches the code, that's a bug worth a PR on its own.
 
 ---
+
+## Brand
+
+The mark in [`brand/`](brand/) is the source of truth. Every icon this repo
+ships — favicon, PWA and app icons, the mark in the README and on the site — is
+rendered from `brand/logo.svg` rather than redrawn, so there is one approved
+drawing and no second copy to drift.
+
+Copy it outward, never edit a derived copy, and never edit `brand/` to match
+something downstream.
 
 ## License
 
