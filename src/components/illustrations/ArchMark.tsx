@@ -30,17 +30,17 @@ export function ArchMark({
       {...rest}
     >
       <path
-        d="M16 50 V32 a16 16 0 0 1 32 0 V50 H40 V32 a8 8 0 0 0 -16 0 V50 Z"
+        d="M14 50 V32 a18 18 0 0 1 36 0 V50 H40 V32 a8 8 0 0 0 -16 0 V50 Z"
         stroke="currentColor"
         className={strokeClassName}
-        strokeWidth="2.6"
+        strokeWidth="3.2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <circle
         cx="32"
         cy="42"
-        r="2.4"
+        r="3"
         className={cn('fill-terracotta', dotClassName)}
       />
     </svg>
