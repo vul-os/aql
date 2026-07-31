@@ -287,6 +287,24 @@ export const FEATURES = [
     ],
   },
   {
+    id: 'clock-proof-requires-a-successful-ack',
+    label:
+      'A controller clock proof is recorded only when the ping ack reports success, and ' +
+      'the whole path is exercised over real binaries',
+    docStatus: 'shipped',
+    docRefs: ['hub/README.md § environment settings — AQL_CLOCK_SYNC_INTERVAL'],
+    evidence: [
+      // The gate. RecordAckIfPing matches on the nonce alone, which is right —
+      // it proves the round-trip — but a failed ack is not proof of a clock.
+      [{ file: 'hub/internal/httpapi/clocksync.go', pattern: 'result != ackResultOK' }],
+      // Both transports, since the design's own argument is that long-poll is
+      // the case that needs this most.
+      [{ file: 'hub/internal/httpapi/devices.go', pattern: 'recordClockProof\\(ctx' }],
+      [{ file: 'hub/internal/httpapi/devices.go', pattern: 'recordClockProof\\(r.Context\\(\\)' }],
+      [{ file: 'e2e/clocksync_e2e_test.go', pattern: 'AControllersProofReachesTheHub' }],
+    ],
+  },
+  {
     id: 'go-test-gates-cannot-serve-a-cached-pass',
     label:
       'Every go test gate runs with -count=1, so a change to the shared conformance ' +

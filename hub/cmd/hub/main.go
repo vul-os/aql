@@ -41,6 +41,7 @@
 //
 //	AQL_DEVICE_REFRESH_INTERVAL       how often every driver is re-discovered (default 5m)
 //	AQL_ENERGY_INTERVAL               meter polling interval (default 60s)
+//	AQL_CLOCK_SYNC_INTERVAL           controller clock-proof ping interval (default 6h)
 //	AQL_ENERGY_SAMPLE_RETENTION       how long raw meter samples are kept
 //	                                  (default 720h / 30d; 0 keeps forever)
 //	AQL_ENERGY_TZ                     IANA timezone rollup buckets are anchored to
@@ -168,6 +169,9 @@ type config struct {
 	// Energy metering (internal/energy).
 	energyAccount  string
 	energyInterval time.Duration
+	// 0 = httpapi's 6-hour default. Not restated here: two places declaring
+	// the same default is two places for it to drift.
+	clockSyncInterval time.Duration
 	// energySampleRetention bounds the samples table. Deltas are never
 	// pruned; see energy.WithSampleRetention.
 	energySampleRetention time.Duration
@@ -279,8 +283,9 @@ func main() {
 		deviceConfig:  *deviceConfig,
 		deviceRefresh: envDurationOr("AQL_DEVICE_REFRESH_INTERVAL", defaultDeviceRefresh),
 
-		energyAccount:  *energyAccount,
-		energyInterval: envDurationOr("AQL_ENERGY_INTERVAL", energy.DefaultInterval),
+		energyAccount:     *energyAccount,
+		energyInterval:    envDurationOr("AQL_ENERGY_INTERVAL", energy.DefaultInterval),
+		clockSyncInterval: envDurationOr("AQL_CLOCK_SYNC_INTERVAL", 0),
 		// A default, not "off". Retention that has to be switched on is
 		// retention nobody switches on, and the failure mode is a disk that
 		// fills months later on a machine with no operator watching it.
@@ -667,6 +672,7 @@ func buildHub(cfg config, log *slog.Logger) (*hub, error) {
 		Automations:    h.automations,
 		// True only when the scheduler will actually be started below.
 		AutomationsScheduler: cfg.automations && h.automations != nil,
+		ClockSyncInterval:    cfg.clockSyncInterval,
 		Version:              Version,
 		Env:                  envOr("AQL_ENV", "self-hosted"),
 		PublicURL:            cfg.publicURL,

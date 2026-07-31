@@ -363,7 +363,12 @@ func (s *Server) handleControllerUplink(ctx context.Context, deviceID string, pu
 		// ResolveAck returns early on the common case, so recording after it
 		// would capture only the late-ack minority.
 		s.noteRepairAck(ctx, deviceID, ack.Nonce)
-		if ok, err := s.store.RecordAckIfPing(ctx, deviceID, ack.Nonce); err != nil {
+		// Only a SUCCESSFUL ack proves a clock. RecordAckIfPing matches on the
+		// nonce alone, so an ack reporting failure would otherwise be recorded
+		// as proof — the hub believing a controller synced because it replied,
+		// when what it replied was "I did not". That is the shape this file's
+		// header warns about: a hub that looks healthy while a clock ages out.
+		if ok, err := s.recordClockProof(ctx, deviceID, ack.Nonce, ack.Result); err != nil {
 			s.log.Error("record clock sync", "device_id", deviceID, "err", err)
 		} else if ok {
 			s.log.Info("controller clock sync proved", "device_id", deviceID)
@@ -602,7 +607,8 @@ func (s *Server) handleControllerAck(w http.ResponseWriter, r *http.Request) {
 	// for it: both branches below drop that ack on the floor. The long-poll
 	// controllers this matters most for would otherwise never be recorded.
 	s.noteRepairAck(r.Context(), ack.DeviceID, ack.Nonce)
-	if ok, err := s.store.RecordAckIfPing(r.Context(), ack.DeviceID, ack.Nonce); err != nil {
+	// Same rule as the WebSocket path: a failed ack is not proof.
+	if ok, err := s.recordClockProof(r.Context(), ack.DeviceID, ack.Nonce, ack.Result); err != nil {
 		s.log.Error("record clock sync", "device_id", ack.DeviceID, "err", err)
 	} else if ok {
 		s.log.Info("controller clock sync proved", "device_id", ack.DeviceID)

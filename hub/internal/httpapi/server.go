@@ -49,6 +49,15 @@ type Config struct {
 	// Live fans muxed fragments out to viewers. nil disables live view.
 	Live      *recording.Broadcaster
 	JWTSecret []byte
+	// ClockSyncInterval is how often connected controllers are pinged to prove
+	// their clock advanced. Zero = the 6-hour default, which is deliberately
+	// far inside the 14-day staleness limit (see clocksync.go).
+	//
+	// Configurable because the right cadence is a property of a SITE, not of
+	// this code: a fleet on links that drop for days wants a shorter one, and
+	// the budget it is spending against is fixed by the wire contract rather
+	// than by the hub.
+	ClockSyncInterval time.Duration
 	// AckTimeout bounds how long an open request waits for the device's
 	// cmd.ack before recording 'undelivered'. Zero = default 5 s.
 	AckTimeout time.Duration

@@ -68,6 +68,12 @@ import (
 	"github.com/vul-os/aql/hub/internal/keys"
 )
 
+// ackResultOK is the controller's success result for a non-actuation command
+// (controller/internal/command: ResultOK). A ping acked with anything else is a
+// controller that did NOT sync its clock, and must not be recorded as having
+// proved one.
+const ackResultOK = "ok"
+
 const (
 	// clockSyncInterval is how often connected controllers are pinged.
 	//
@@ -156,7 +162,11 @@ func (s *Server) SyncControllerClocks(ctx context.Context) int {
 // has just restarted is exactly when controllers may have been reconnecting,
 // and a fleet that has been up far longer than the hub is the normal case.
 func (s *Server) RunClockSync(ctx context.Context) {
-	t := time.NewTicker(clockSyncInterval)
+	every := s.cfg.ClockSyncInterval
+	if every <= 0 {
+		every = clockSyncInterval
+	}
+	t := time.NewTicker(every)
 	defer t.Stop()
 	for {
 		if n := s.SyncControllerClocks(ctx); n > 0 {
@@ -221,4 +231,32 @@ func (s *Server) handleClockFreshness(w http.ResponseWriter, r *http.Request) {
 		// client does not restate a constant that lives in another module.
 		"stale_after_s": keys.StaleClockLimitSeconds,
 	})
+}
+
+// recordClockProof records a clock sync only when the controller's ack reports
+// success.
+//
+// Wrapping the store call rather than changing it: the store answers "does this
+// nonce match the ping I minted", which is exactly right and is what makes a
+// recorded proof mean the signed nonce round-tripped. Whether the controller
+// then DID the thing is a different question, and it belongs here, with the ack
+// in hand, on both transports.
+// # What this still cannot prove, stated rather than implied
+//
+// That the controller then USED the iat it acked. A controller that replies
+// "ok" and never touches its own clock is indistinguishable from one that
+// synced, from here — the hub sees a reply, not an effect. Tampering confirms
+// it: making the controller ack successfully while skipping SyncClock leaves
+// every test green, and no assertion available to the hub could catch it.
+//
+// So the guarantee is bounded and worth naming: a recorded proof means this
+// controller RECEIVED and ACCEPTED a ping this hub minted, at a known time. The
+// step from there to "its clock advanced" rests on the controller's own
+// conformance tests, which is the right place for it — but it is a different
+// claim, and `clock-freshness` should not be read as more than the first.
+func (s *Server) recordClockProof(ctx context.Context, deviceID, nonce, result string) (bool, error) {
+	if result != ackResultOK {
+		return false, nil
+	}
+	return s.store.RecordAckIfPing(ctx, deviceID, nonce)
 }
