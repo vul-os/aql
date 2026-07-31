@@ -181,8 +181,11 @@ func (s *Server) chatFleetFor(ctx contextT, profileID string) []devices.IndexedD
 // branches, one new verb, five wrong at once — and this is the branch where
 // getting it wrong means a message that says nothing happened while something
 // did, or the reverse.
-func (s *Server) chatEngineVerbReply(ctx contextT, body, profileID, source string, v devices.Verb) string {
-	if res, handled := s.chatActuate(ctx, body, profileID, source, v); handled {
+func (s *Server) chatEngineVerbReply(ctx contextT, body, profileID, source, chatID string, v devices.Verb) string {
+	// A token in the body is a confirmation for the command being repeated
+	// alongside it. Extracted here, once, rather than in four rails.
+	token, _ := store.ConfirmationTokenIn(body)
+	if res, handled := s.chatActuate(ctx, body, profileID, source, chatID, token, v); handled {
 		return res.Reply
 	}
 	return s.unsupportedVerbReply(ctx, body, profileID, v)

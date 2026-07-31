@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/vul-os/aql/hub/internal/channels"
 	"github.com/vul-os/aql/hub/internal/devices"
@@ -62,7 +63,14 @@ func actuationServer(t *testing.T) *actEnv {
 
 func (e *actEnv) act(t *testing.T, body string, v devices.Verb) (chatActuationResult, bool) {
 	t.Helper()
-	return e.srv.chatActuate(context.Background(), body, e.profile, channels.KindWhatsApp, v)
+	return e.actIn(t, body, "chat-1", "", v)
+}
+
+// actIn is act with the conversation and any confirmation token made explicit —
+// the two things §3.4 adds.
+func (e *actEnv) actIn(t *testing.T, body, chatID, token string, v devices.Verb) (chatActuationResult, bool) {
+	t.Helper()
+	return e.srv.chatActuate(context.Background(), body, e.profile, channels.KindWhatsApp, chatID, token, v)
 }
 
 func (e *actEnv) commands(t *testing.T, command string) int {
@@ -125,17 +133,171 @@ func TestAHazardousVerbIsRefusedFromChat(t *testing.T) {
 	}
 }
 
-// A consequential verb is refused too — the ceiling is T1, not "anything below
-// hazardous". Resuming the cleaning bot costs time and power and is T2.
-func TestAConsequentialVerbIsAlsoRefused(t *testing.T) {
+// A consequential verb needs the second message §3.4 requires. Resuming the
+// cleaning bot costs time and power and is T2.
+func TestAConsequentialVerbNeedsConfirming(t *testing.T) {
 	e := actuationServer(t)
 	res, handled := e.act(t, "resume the cleaning bot", devices.VerbResume)
-	if !handled || res.Actuated {
-		t.Fatalf("handled=%v actuated=%v — T2 is above the chat ceiling", handled, res.Actuated)
+	if !handled {
+		t.Fatal("not handled")
 	}
-	if !strings.Contains(res.Reply, "consequential") {
+	if res.Actuated {
+		t.Fatal("a T2 verb actuated on one message")
+	}
+	tok := tokenFrom(t, res.Reply)
+	if !strings.Contains(res.Reply, "Cleaning Bot") {
+		t.Errorf("prompt does not name the device being authorized: %q", res.Reply)
+	}
+	// Explicitly not "reply yes" — §3.4 rules that out.
+	if strings.Contains(strings.ToLower(res.Reply), "reply yes") {
+		t.Errorf("prompt asks for a replayable yes: %q", res.Reply)
+	}
+	if n := e.commands(t, "resume"); n != 0 {
+		t.Errorf("an unconfirmed command was audited as sent: %d", n)
+	}
+
+	// The second message, carrying the token alongside the command.
+	res2, handled2 := e.actIn(t, "resume the cleaning bot "+tok, "chat-1", tok, devices.VerbResume)
+	if !handled2 || !res2.Actuated {
+		t.Fatalf("confirmed command did not run: handled=%v reply=%q", handled2, res2.Reply)
+	}
+	if n := e.commands(t, "resume"); n != 1 {
+		t.Errorf("audited `resume` rows: %d, want 1", n)
+	}
+}
+
+// A confirmation raises the ceiling by ONE tier. T4 stays refused however many
+// messages arrive: §3.3 wants step-up on a different rail and an armed window,
+// and a token is neither.
+func TestAConfirmationDoesNotUnlockHazardousMotion(t *testing.T) {
+	e := actuationServer(t)
+	res, _ := e.act(t, "resume the mower", devices.VerbResume)
+	if strings.Contains(res.Reply, "send this back") {
+		t.Fatal("a T4 verb was offered a confirmation")
+	}
+	if !strings.Contains(res.Reply, "hazardous-motion") {
 		t.Errorf("refusal does not name the tier: %q", res.Reply)
 	}
+	// Even holding a valid token for something else, T4 does not open. Mint one
+	// against the cleaning bot, then present it at the mower.
+	prompt, _ := e.act(t, "resume the cleaning bot", devices.VerbResume)
+	tok := tokenFrom(t, prompt.Reply)
+	res2, _ := e.actIn(t, "resume the mower "+tok, "chat-1", tok, devices.VerbResume)
+	if res2.Actuated {
+		t.Fatal("a confirmation for one device started a mower")
+	}
+	if n := e.commands(t, "resume"); n != 0 {
+		t.Errorf("something ran: %d resume rows", n)
+	}
+}
+
+// §3.4's whole reason for existing: "a confirmation for 'start the mower'
+// cannot confirm 'unlock the front door' if the two exchanges interleave".
+//
+// The token here is entirely VALID — right subject, right conversation,
+// unexpired, unspent — and was minted for a different intent. Only the hash
+// comparison stands between it and actuating the wrong device, and a tamper
+// removing that comparison left every other test in this package green, because
+// the mock fleet has one T2 device and a same-tier mismatch cannot be built by
+// sending messages. Minting directly is what makes the branch reachable.
+func TestAValidTokenForAnotherIntentConfirmsNothing(t *testing.T) {
+	e := actuationServer(t)
+	tok, err := e.st.MintConfirmation(context.Background(), store.PendingConfirmation{
+		Subject: "profile:" + e.profile, Channel: channels.KindWhatsApp, ChatID: "chat-1",
+		// A different device entirely.
+		IntentHash: store.IntentHash("mock:mower-1", "resume", nil),
+		DeviceKey:  "mock:mower-1", Verb: "resume",
+	}, time.Now().Unix())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res, handled := e.actIn(t, "resume the cleaning bot "+tok, "chat-1", tok, devices.VerbResume)
+	if !handled {
+		t.Fatal("not handled")
+	}
+	if res.Actuated {
+		t.Fatal("a confirmation minted for the mower resumed the cleaning bot")
+	}
+	if !strings.Contains(res.Reply, "mower-1") {
+		t.Errorf("reply does not say what the token was actually for: %q", res.Reply)
+	}
+	if n := e.commands(t, "resume"); n != 0 {
+		t.Errorf("something ran: %d rows", n)
+	}
+
+	// The mis-aimed token is SPENT — it was authentic and it was used. Leaving
+	// it live would make a mis-aimed confirmation reusable.
+	res2, _ := e.actIn(t, "resume the cleaning bot "+tok, "chat-1", tok, devices.VerbResume)
+	if res2.Actuated {
+		t.Error("a mis-aimed confirmation was still spendable")
+	}
+}
+
+// A refused command does not consume the member's confirmation.
+//
+// The tier check runs BEFORE redemption, so presenting a cleaning-bot token at
+// the mower refuses on tier and leaves the token intact for what it was minted
+// for. I expected the opposite when writing this and the code was right: a
+// command that never got as far as being authorized has no business spending
+// the authorization, and destroying it would mean a mistyped device name costs
+// the member their confirmation and a fresh round trip.
+func TestARefusedCommandDoesNotSpendTheConfirmation(t *testing.T) {
+	e := actuationServer(t)
+	prompt, _ := e.act(t, "resume the cleaning bot", devices.VerbResume)
+	tok := tokenFrom(t, prompt.Reply)
+
+	res, handled := e.actIn(t, "resume the mower "+tok, "chat-1", tok, devices.VerbResume)
+	if !handled || res.Actuated {
+		t.Fatalf("a token aimed at a T4 verb actuated: %q", res.Reply)
+	}
+	res2, _ := e.actIn(t, "resume the cleaning bot "+tok, "chat-1", tok, devices.VerbResume)
+	if !res2.Actuated {
+		t.Errorf("the refused command consumed the confirmation: %q", res2.Reply)
+	}
+}
+
+// A spent token does not work twice, end to end.
+func TestAConfirmationIsSingleUseThroughTheRail(t *testing.T) {
+	e := actuationServer(t)
+	prompt, _ := e.act(t, "resume the cleaning bot", devices.VerbResume)
+	tok := tokenFrom(t, prompt.Reply)
+
+	if res, _ := e.actIn(t, "resume the cleaning bot "+tok, "chat-1", tok, devices.VerbResume); !res.Actuated {
+		t.Fatal("first confirmation failed")
+	}
+	res, _ := e.actIn(t, "resume the cleaning bot "+tok, "chat-1", tok, devices.VerbResume)
+	if res.Actuated {
+		t.Error("a spent confirmation actuated a second time")
+	}
+	if n := e.commands(t, "resume"); n != 1 {
+		t.Errorf("audited `resume` rows: %d, want 1", n)
+	}
+}
+
+// A token from one conversation does not work in another, even for the same
+// member — §3.4 requires the confirming message to be in the same conversation.
+func TestAConfirmationDoesNotCrossConversations(t *testing.T) {
+	e := actuationServer(t)
+	prompt, _ := e.actIn(t, "resume the cleaning bot", "chat-1", "", devices.VerbResume)
+	tok := tokenFrom(t, prompt.Reply)
+
+	res, _ := e.actIn(t, "resume the cleaning bot "+tok, "chat-2", tok, devices.VerbResume)
+	if res.Actuated {
+		t.Fatal("a token was spent in another conversation")
+	}
+}
+
+// tokenFrom pulls the minted token out of a prompt, and fails loudly if the
+// prompt did not carry one — a test that silently used "" would exercise the
+// unconfirmed path while claiming to test the confirmed one.
+func tokenFrom(t *testing.T, reply string) string {
+	t.Helper()
+	tok, ok := store.ConfirmationTokenIn(reply)
+	if !ok {
+		t.Fatalf("no confirmation token in reply: %q", reply)
+	}
+	return tok
 }
 
 // `start` is refused earlier still: it is not a verb chat sends at all.
@@ -204,7 +366,7 @@ func TestATrueAmbiguityActuatesNothing(t *testing.T) {
 	}
 
 	res, handled := srv.chatActuate(context.Background(), "turn on the garden lights", u.ID,
-		channels.KindWhatsApp, devices.VerbOn)
+		channels.KindWhatsApp, "chat-1", "", devices.VerbOn)
 	if handled && res.Actuated {
 		t.Fatal("actuated one of two identically named devices — the member would be told the right one moved")
 	}
@@ -283,7 +445,7 @@ func TestNoEngineMeansTheRailFallsThrough(t *testing.T) {
 	ks, _ := keys.Load(dir)
 	srv := New(Config{Version: "test", JWTSecret: []byte("0123456789abcdef0123456789abcdef")},
 		st, ks, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)))
-	if _, handled := srv.chatActuate(context.Background(), "turn on the lights", "nobody", channels.KindWhatsApp, devices.VerbOn); handled {
+	if _, handled := srv.chatActuate(context.Background(), "turn on the lights", "nobody", channels.KindWhatsApp, "chat-1", "", devices.VerbOn); handled {
 		t.Error("a hub with no engine claimed to handle an actuation")
 	}
 }

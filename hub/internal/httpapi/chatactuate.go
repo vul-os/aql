@@ -51,6 +51,24 @@ import (
 // deployment can set.
 const chatTierCeiling = devices.TierReversible
 
+// chatConfirmedTierCeiling is how high a CONFIRMED command may go.
+//
+// TierConsequential — T2. §3.3's T2 row asks for a confirmation and a per-tier
+// daily counter and nothing else; T3 is the gate path, which has its own
+// reviewed stack and does not come through here; T4 additionally requires
+// step-up on a different rail and an operator-armed time window, neither of
+// which exists, so T4 stays refused however many messages are sent.
+//
+// A confirmation raises the ceiling by exactly one tier. It is not a skeleton
+// key.
+const chatConfirmedTierCeiling = devices.TierConsequential
+
+// chatT2PerDay is §3.3's "per-tier daily counter" for T2.
+//
+// Its own scope, like the query counter, so a day of irrigation commands cannot
+// exhaust the budget that opens a gate.
+const chatT2PerDay = 20
+
 // chatActuationCooldownS is the per-(subject, device, verb) cooldown §3.3's T1
 // row requires.
 //
@@ -90,8 +108,13 @@ type chatActuationResult struct {
 //
 // handled is false when the body is not an engine command at all, so the caller
 // falls through to its existing behaviour. Every other outcome — refused,
-// ambiguous, out of tier, cooled down, failed — is handled with a reply.
-func (s *Server) chatActuate(ctx contextT, body, profileID, source string, v devices.Verb) (chatActuationResult, bool) {
+// ambiguous, out of tier, unconfirmed, cooled down, failed — is handled with a
+// reply.
+//
+// chatID and confirmToken carry §3.4's two additional requirements: the
+// conversation the message arrived in, and any token the body carried. Both are
+// passed rather than derived here because only the rail knows them.
+func (s *Server) chatActuate(ctx contextT, body, profileID, source, chatID, confirmToken string, v devices.Verb) (chatActuationResult, bool) {
 	reg := s.registry()
 	if reg == nil {
 		return chatActuationResult{}, false
@@ -125,9 +148,12 @@ func (s *Server) chatActuate(ctx contextT, body, profileID, source string, v dev
 		}, true
 	}
 	if plan.Tier > chatTierCeiling {
-		return chatActuationResult{
-			Reply: channels.ActuationOutOfTier(m.Device.Device.Name, v, plan.Tier.String(), s.channelPublicURL()),
-		}, true
+		// Above T1: a confirmation may raise the ceiling by one tier, and only
+		// if the member is holding one for THIS intent.
+		res, ok := s.confirmedOrPrompt(ctx, plan, m, v, profileID, source, chatID, confirmToken)
+		if !ok {
+			return res, true
+		}
 	}
 
 	// Cooldown LAST among the checks, so a refused attempt never restarts
@@ -197,4 +223,77 @@ func errText(err error) string {
 		return ""
 	}
 	return err.Error()
+}
+
+// confirmedOrPrompt decides whether an above-T1 command may proceed.
+//
+// ok=true means proceed. ok=false means the returned result is the reply and
+// nothing actuates.
+//
+// # The re-resolution is the point
+//
+// A token names an intent hash; this recomputes the hash from the intent
+// resolved on THIS message and compares. That is not belt-and-braces — the
+// fleet can change between the two messages, and without it a token minted for
+// "resume the cleaning bot" would authorize whatever "resume the cleaning bot"
+// resolves to a minute later, which after a device rename or a driver reload
+// may be a different machine. The token authorizes an ACTION, not a sentence.
+//
+// # Why T4 cannot be reached from here at all
+//
+// The confirmed ceiling is T2. §3.3 requires step-up on a different rail and an
+// operator-armed time window for T4, and neither exists; a confirmation is not
+// a substitute for either. Sending a token at a T4 verb refuses exactly as
+// sending nothing does.
+func (s *Server) confirmedOrPrompt(
+	ctx contextT, plan devices.Plan, m channels.DeviceMatch, v devices.Verb,
+	profileID, source, chatID, confirmToken string,
+) (chatActuationResult, bool) {
+	name := m.Device.Device.Name
+	if plan.Tier > chatConfirmedTierCeiling {
+		return chatActuationResult{
+			Reply: channels.ActuationOutOfTier(name, v, plan.Tier.String(), s.channelPublicURL()),
+		}, false
+	}
+
+	want := store.IntentHash(m.Device.Key, string(v), nil)
+	subject := "profile:" + profileID
+
+	if confirmToken == "" {
+		tok, err := s.store.MintConfirmation(ctx, store.PendingConfirmation{
+			Subject: subject, Channel: source, ChatID: chatID,
+			IntentHash: want, DeviceKey: m.Device.Key, Verb: string(v),
+		}, time.Now().Unix())
+		if err != nil {
+			s.log.Error("mint confirmation", "err", err)
+			return chatActuationResult{
+				Reply: channels.ActuationRefused(name, v, "I could not set up a confirmation, so I did not send it"),
+			}, false
+		}
+		return chatActuationResult{Reply: channels.ConfirmationPrompt(name, v, tok)}, false
+	}
+
+	p, err := s.store.RedeemConfirmation(ctx, confirmToken, subject, source, chatID, time.Now().Unix())
+	if err != nil {
+		// One reply for unknown, expired, spent and wrong-conversation. Naming
+		// which would tell whoever is guessing how far they got, and none of
+		// the distinctions change what a member should do: ask again.
+		return chatActuationResult{Reply: channels.ConfirmationRejected(s.channelPublicURL())}, false
+	}
+	if p.IntentHash != want {
+		// The token was valid and is now SPENT, and it did not match. That is
+		// the interleaved-exchange case §3.4 names: a confirmation for one
+		// action arriving against another. Refuse, and say what it was for.
+		return chatActuationResult{Reply: channels.ConfirmationMismatch(p.Verb, p.DeviceKey, name, v)}, false
+	}
+
+	// §3.3's T2 row: a per-tier daily counter, its own scope so it cannot
+	// exhaust the budget that opens a gate.
+	over := s.store.NoteChatQuery(ctx, "t2:"+subject, chatT2PerDay, time.Now().Unix())
+	if over {
+		return chatActuationResult{
+			Reply: channels.ActuationRefused(name, v, "that is today's limit for commands like this"),
+		}, false
+	}
+	return chatActuationResult{}, true
 }

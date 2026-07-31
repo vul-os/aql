@@ -248,3 +248,42 @@ func verbPastTense(v devices.Verb) string {
 	}
 	return "updated"
 }
+
+// ConfirmationPrompt asks for the second message §3.4 requires.
+//
+// It names the device and the verb, because the token is opaque and a member
+// who has typed two commands needs to know which one they are about to
+// authorize. It does NOT say "reply yes": a bare yes is replayable and, in a
+// group, unattributable — the whole reason the token exists.
+func ConfirmationPrompt(deviceName string, v devices.Verb, token string) string {
+	return "That one needs confirming. To " + string(v) + " " + deviceName +
+		", send this back within a minute:\n\n" + token +
+		"\n\nIf you did not mean to, ignore this and nothing happens."
+}
+
+// ConfirmationRejected answers a token that is unknown, expired, spent, or from
+// another conversation — deliberately without saying which.
+//
+// Distinguishing them would tell whoever is guessing how far they got, and the
+// distinction changes nothing for a member: in every case the answer is to ask
+// again.
+func ConfirmationRejected(publicURL string) string {
+	msg := "That confirmation is no longer valid — they last a minute and work once. Send the command again to get a new one"
+	if publicURL != "" {
+		return msg + ", or use the console: " + trimURL(publicURL) + "/app."
+	}
+	return msg + "."
+}
+
+// ConfirmationMismatch answers a VALID token presented against a different
+// action — §3.4's interleaved-exchange case.
+//
+// It names what the token was for, because a member who has two commands in
+// flight has confirmed the wrong one and needs to know which. The token is
+// spent either way: it was authentic, it was used, and re-offering it would
+// make a mis-aimed confirmation reusable.
+func ConfirmationMismatch(mintedVerb, mintedDevice, askedName string, askedVerb devices.Verb) string {
+	return "That confirmation was for " + mintedVerb + " on " + mintedDevice +
+		", not " + string(askedVerb) + " " + askedName + ", so I did nothing. " +
+		"Send the command you meant again to get a fresh confirmation."
+}

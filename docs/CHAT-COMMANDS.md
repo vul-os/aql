@@ -583,9 +583,31 @@ per-location toggle, defaulting to today's behaviour.
 
 ### 3.4 Confirmation and step-up, defined precisely
 
-**Confirmation (PROPOSAL).** A second inbound message from the same identity, in
-the same conversation, carrying a **gateway-minted one-time token** bound to the
-hash of the resolved intent, within 60 s, single-use.
+**Confirmation — BUILT** (`store/chatconfirm.go`, migration 0027). A second
+inbound message from the same identity, in the same conversation, carrying a
+gateway-minted one-time token bound to the hash of the resolved intent, within
+60 s, single-use. Every one of those conditions is in the WHERE of a single
+UPDATE, which is the atomicity as much as the brevity: two deliveries of one
+confirming message race inside one statement and exactly one wins, where a
+SELECT-then-UPDATE would actuate twice — and for a confirmation that is the
+whole failure, because the second message IS the authorization.
+
+The intent hash is over the RESOLVED intent (device key, canonical verb, sorted
+args), never the message text, and the caller RE-RESOLVES at redemption and
+compares. Without that a token minted for "resume the cleaning bot" would
+authorize whatever that phrase resolves to a minute later, which after a rename
+or a driver reload may be a different machine.
+
+Two behaviours worth stating because they are not obvious from the rule:
+
+- **A refused command does not spend the token.** The tier check runs before
+  redemption, so aiming a valid token at a verb chat will not send refuses and
+  leaves the confirmation intact. A mistyped device name should not cost a
+  member their confirmation and a fresh round trip.
+- **A mis-aimed token IS spent.** It was authentic and it was used; re-offering
+  it would make a mis-aimed confirmation reusable. The reply names what it was
+  actually for, because a member with two commands in flight has confirmed the
+  wrong one and needs to know which.
 
 It is explicitly **not** "reply yes":
 

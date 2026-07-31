@@ -32,7 +32,7 @@ reference for how every other device kind should eventually work: a versioned wi
 contract, a device that verifies rather than trusts, and an audit trail you can check
 after the fact.
 
-**The hub** (`hub/`) — one Go binary, SQLite inside, **127 HTTP routes over 25
+**The hub** (`hub/`) — one Go binary, SQLite inside, **127 HTTP routes over 26
 migrations, and more than 1,000 tests green** across 18 packages:
 
 - [x] Accounts, locations, access points, members with roles, invites
@@ -458,9 +458,18 @@ and none has met physical hardware.
       because there is no member-at-their-own-gate argument for a lamp. Verbs taking a
       value are not sent at all — parsing "30" out of "dim the lounge to 30%" is a second
       resolution problem — and an ambiguity actuates nothing
-- [ ] Extend it further, to the other device classes. `set`, groups, and everything above
-      T1 remain in the console: T2 needs §3.4's intent-bound confirmation tokens and T4
-      needs step-up on a second rail, neither of which exists. §4.2's two unbuilt queries
+- [x] **T2 over chat, behind an intent-bound confirmation** — §3.4, migration 0027. A
+      consequential verb answers with a one-time token; the member sends it back within a
+      minute, in the same conversation, and only then does anything run. Explicitly not
+      "reply yes": a bare yes is replayable and, in a group, cannot be attributed to the
+      person asked. The token is bound to a hash of the RESOLVED intent and the intent is
+      re-resolved at redemption, so a confirmation for one device cannot authorize another
+      — the case §3.4 exists for. A confirmation raises the ceiling by exactly one tier:
+      T4 stays refused however many messages arrive, because it wants step-up on a
+      different rail and an operator-armed window and a token is neither
+- [ ] Extend it further, to the other device classes. `set`, groups and T4 remain in the
+      console. T4 needs step-up on a second rail (§3.4) and an operator-armed time window;
+      neither exists, and a confirmation is not a substitute for either. §4.2's two unbuilt queries
       are "how much solar today" (needs the energy engine on a rail) and "which lights are
       on" (an occupancy proxy, blocked on §4.4 rule 6's per-location opt-in, which does not
       exist — so it stays off rather than shipping without its switch)
@@ -469,8 +478,8 @@ and none has met physical hardware.
 
 ## Phase 2 — Local persistence & secrets (partly real)
 
-- [x] SQLite for state, history and configuration — shipped with the hub (25 migrations,
-      49 tables), one file to back up, pure-Go driver so it cross-compiles to a Pi
+- [x] SQLite for state, history and configuration — shipped with the hub (26 migrations,
+      50 tables), one file to back up, pure-Go driver so it cross-compiles to a Pi
 - [ ] Extend that schema to device state, telemetry and history once Phase 1 exists
 - [ ] **OS-keychain-backed credential vault** for device and service secrets, scoped per
       device, so nothing sits in plaintext in the SQLite file or a config file. Not built:
