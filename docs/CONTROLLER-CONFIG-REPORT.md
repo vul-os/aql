@@ -154,6 +154,15 @@ updated first — the same direction of compatibility §2 establishes.
    `typ`, `v` and `device_id` are checked by the independent verifier and not
    only by the implementations.
 2. Controller: emit after `ws.auth`, and on resolved-config change.
+   **Unblocked, and the precondition is pinned.** A controller can send this
+   unconditionally because a hub that predates the message ignores it rather than
+   dropping the session: `handleControllerUplink`'s switch has no default branch,
+   so an unrecognised `typ` is verified, recorded as device activity, and falls
+   through. `TestAnUnknownUplinkTypeDoesNotEndTheSession` holds that, and fails
+   against the regression that would actually be written — closing the connection
+   on a type the hub cannot parse, in the read loop where the connection lives.
+   Without it an upgraded controller authenticates, reports, and is hung up on,
+   in a loop, at a gate.
 3. Hub: verify (the existing uplink path already covers an unknown type's
    signature), store under migration 0026, expose on the device detail route.
 4. Console: replace the honest placeholder with the reported values, marking

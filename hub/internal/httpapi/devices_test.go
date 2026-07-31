@@ -557,3 +557,113 @@ func TestControllerPollFallback(t *testing.T) {
 		t.Errorf("http ack: %d", res4.StatusCode)
 	}
 }
+
+// A signed uplink of a type this hub does not know must not end the session.
+//
+// handleControllerUplink's switch has no default branch: an unrecognised `typ`
+// is verified, recorded as device activity, and then falls through. That is what
+// makes it safe for a NEWER controller to start sending something an OLDER hub
+// has never heard of — which is precisely what docs/CONTROLLER-CONFIG-REPORT.md
+// depends on. Step 2 of that design is the controller emitting `ctl.report`
+// unconditionally after auth, and it can only do that if a hub predating the
+// message ignores it rather than dropping the connection.
+//
+// The dangerous change here is a reasonable-looking one: adding
+// `default: log and disconnect` reads as hardening — refuse what you cannot
+// parse — and would turn every upgraded controller into one that authenticates,
+// reports, and is hung up on, in a loop. So the property is asserted, not left
+// to the absence of a case.
+func TestAnUnknownUplinkTypeDoesNotEndTheSession(t *testing.T) {
+	ts, srv, _ := newLiveServer(t)
+	_, _, _, deviceID, priv := pairDevice(t, ts)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	conn := dialWS(t, ts)
+	defer conn.Close(websocket.StatusNormalClosure, "done")
+
+	_, raw, err := conn.Read(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ch struct {
+		Cnonce string `json:"cnonce"`
+	}
+	if err := json.Unmarshal(raw, &ch); err != nil {
+		t.Fatal(err)
+	}
+	if err := conn.Write(ctx, websocket.MessageText,
+		signAuth(t, priv, deviceID, ch.Cnonce, time.Now().Unix())); err != nil {
+		t.Fatal(err)
+	}
+	for !srv.Hub().Connected(deviceID) {
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	// A correctly-signed message of a type this hub has no case for — the shape
+	// of ctl.report, sent by a controller newer than the hub.
+	reportMap := map[string]any{
+		"v": 0, "typ": "ctl.report", "device_id": deviceID,
+		"ts":       time.Now().Unix(),
+		"firmware": "0.1.0",
+		"config": map[string]any{
+			"pulse_ms": map[string]any{"value": 700, "source": "default"},
+		},
+	}
+	canonical, err := keys.Canonicalize(reportMap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reportMap["sig"] = base64.RawURLEncoding.EncodeToString(ed25519.Sign(priv, canonical))
+	reportRaw, err := json.Marshal(reportMap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := conn.Write(ctx, websocket.MessageText, reportRaw); err != nil {
+		t.Fatalf("writing an unknown uplink type failed: %v", err)
+	}
+
+	// The session must still work. Dispatching a command and getting its ack is
+	// the strongest available proof: it needs the connection, the read loop and
+	// the ack path all still alive after the unknown message.
+	env, err := srv.keys.SignCommand("open", deviceID, "ap-1", 30*time.Second, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	outcome := make(chan hub.AckOutcome, 1)
+	go func() {
+		outcome <- srv.Hub().Dispatch(ctx, deviceID, env, 5*time.Second, "unknown-typ-test")
+	}()
+
+	_, cmdRaw, err := conn.Read(ctx)
+	if err != nil {
+		t.Fatalf(`the session ended after an unknown uplink type: %v
+
+A hub that disconnects on a message it cannot parse makes every controller
+newer than itself unusable: it authenticates, sends what it has always sent,
+and is hung up on — in a loop, at a gate.`, err)
+	}
+	var cmd struct {
+		Nonce string `json:"nonce"`
+	}
+	if err := json.Unmarshal(cmdRaw, &cmd); err != nil {
+		t.Fatal(err)
+	}
+	ackMap := map[string]any{
+		"v": 0, "typ": "cmd.ack", "device_id": deviceID, "nonce": cmd.Nonce,
+		"result": "opened", "ts": time.Now().Unix(),
+	}
+	ackCanonical, err := keys.Canonicalize(ackMap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ackMap["sig"] = base64.RawURLEncoding.EncodeToString(ed25519.Sign(priv, ackCanonical))
+	ackRaw, _ := json.Marshal(ackMap)
+	if err := conn.Write(ctx, websocket.MessageText, ackRaw); err != nil {
+		t.Fatal(err)
+	}
+	if got := <-outcome; got.Delivery != "acked" || got.Result != "opened" {
+		t.Errorf("after an unknown uplink type the next command did not ack cleanly: %+v", got)
+	}
+}

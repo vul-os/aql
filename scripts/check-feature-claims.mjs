@@ -97,6 +97,33 @@ function readSafe(absPath) {
   }
 }
 
+/**
+ * Tests are not evidence that a feature exists.
+ *
+ * A `{root, pattern}` rule walked every file under the root, test files
+ * included, so a claim could be satisfied by a test that merely MENTIONS the
+ * thing — evidence that it is tested, not that it is built. Both directions were
+ * wrong: a `shipped` claim could rest on a test file, and a `planned` claim
+ * reported as shipped the moment anyone wrote a test naming it.
+ *
+ * Found the way these things should be: the guard fired on a test that mentions
+ * `ctl.report`, for a feature whose whole point is that it does NOT exist yet.
+ *
+ * This file's header already says evidence roots are implementation code and
+ * never UI copy. A test is not implementation either.
+ */
+function isTestFile(abs) {
+  const base = path.basename(abs);
+  return (
+    base.endsWith('_test.go') ||
+    base.endsWith('.test.ts') ||
+    base.endsWith('.test.tsx') ||
+    base.endsWith('.spec.ts') ||
+    base.endsWith('.spec.tsx') ||
+    abs.includes(`${path.sep}__tests__${path.sep}`)
+  );
+}
+
 /** Recursively yield absolute file paths under `absRoot`, skipping junk dirs. */
 function* walk(absRoot) {
   let entries;
@@ -110,7 +137,7 @@ function* walk(absRoot) {
     const abs = path.join(absRoot, entry.name);
     if (entry.isDirectory()) {
       yield* walk(abs);
-    } else if (entry.isFile()) {
+    } else if (entry.isFile() && !isTestFile(abs)) {
       yield abs;
     }
   }
