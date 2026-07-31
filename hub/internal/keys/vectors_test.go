@@ -117,6 +117,14 @@ type vecCheck struct {
 	Lockdown        bool       `json:"lockdown"`
 	LastGatewaySync int64      `json:"last_gateway_sync"`
 	Challenge       *challenge `json:"challenge"`
+	// The controller's cached deny-list at verification time
+	// (docs/GRANT-REVOCATION.md). Absent means no list, which denies nothing.
+	Revoked []revokedGrant `json:"revoked"`
+}
+
+type revokedGrant struct {
+	GrantID string `json:"grant_id"`
+	EXP     int64  `json:"exp"`
 }
 
 type step struct {
@@ -496,6 +504,20 @@ func verifyGrantRedemption(t *testing.T, gwPub ed25519.PublicKey, grantRaw, proo
 	// 3. Grant signature against the pinned gateway key.
 	if !keys.Verify(gwPub, jcsMinusSig(t, grantRaw, false), objSig(t, grantRaw)) {
 		return "badsig"
+	}
+	// 3a. The cached deny-list. After the signature, because an id read from
+	// unverified bytes is not an id; before the validity window, because a dead
+	// grant needs no further evaluation.
+	//
+	// This step was MISSING here for two commits after the vectors and the
+	// controller gained it, and this file is the hub's INDEPENDENT model of a
+	// controller — its whole job is to disagree when the implementation is
+	// wrong. It accepted a grant the controller refuses, which is the most
+	// dangerous direction a second implementation can be wrong in.
+	for _, r := range check.Revoked {
+		if r.GrantID == g.GrantID && (r.EXP == 0 || r.EXP >= check.Now) {
+			return "revoked"
+		}
 	}
 	// 4. Grant validity, skew on both bounds.
 	if check.Now < g.IAT-keys.ClockSkewSeconds {
