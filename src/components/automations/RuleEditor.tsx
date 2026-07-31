@@ -276,7 +276,10 @@ export default function RuleEditor({
   const metricHints = liveMetrics.length > 0 ? liveMetrics : METRIC_HINTS;
 
   // ── action ─────────────────────────────────────────────────────────────
-  const [actionKind, setActionKind] = useState<'device' | 'zone'>(rule?.action.zone ? 'zone' : 'device');
+  const [actionKind, setActionKind] = useState<'device' | 'zone' | 'alert'>(
+    rule?.action.notify ? 'alert' : rule?.action.zone ? 'zone' : 'device',
+  );
+  const [alertMessage, setAlertMessage] = useState(rule?.action.notify?.message ?? '');
   const [actionDeviceKey, setActionDeviceKey] = useState(rule?.action.device_key ?? '');
   const [actionZone, setActionZone] = useState(rule?.action.zone ?? '');
   const [verb, setVerb] = useState(rule?.action.verb ?? '');
@@ -401,6 +404,20 @@ export default function RuleEditor({
   }
 
   function buildAction(): AutomationRule['action'] | null {
+    // An alert names no device and carries no verb, so it is built before the
+    // target checks rather than being made to satisfy them.
+    if (actionKind === 'alert') {
+      const message = alertMessage.trim();
+      if (!message) {
+        setFormError('An alert needs something to say.');
+        return null;
+      }
+      if (message.length > 500) {
+        setFormError(`An alert message is at most 500 characters; this one is ${message.length}.`);
+        return null;
+      }
+      return { notify: { message } };
+    }
     const hasDevice = actionKind === 'device' && actionDeviceKey.trim() !== '';
     const hasZone = actionKind === 'zone' && actionZone.trim() !== '';
     if (!hasDevice && !hasZone) {
@@ -827,8 +844,40 @@ export default function RuleEditor({
             <button type="button" onClick={() => setActionKind('zone')} className={segmentClass(actionKind === 'zone')}>
               A zone
             </button>
+            {/* An alert drives nothing. Offered beside the two that do, because
+                "tell me" is a peer of "do something" and not a lesser option —
+                before it existed the only way to be told was to write a rule
+                that moved a device you did not want moved. */}
+            <button type="button" onClick={() => setActionKind('alert')} className={segmentClass(actionKind === 'alert')}>
+              Just alert me
+            </button>
           </div>
 
+          {actionKind === 'alert' ? (
+            <div className="mt-3">
+              <label className="block">
+                <span className="text-xs text-ink/60">Message</span>
+                <textarea
+                  required
+                  rows={2}
+                  maxLength={500}
+                  value={alertMessage}
+                  onChange={(e) => setAlertMessage(e.target.value)}
+                  placeholder="e.g. the water tank is below 20%"
+                  className={inputClass}
+                />
+              </label>
+              <p className="text-[11px] text-ink/50 mt-2 leading-relaxed">
+                Your words, sent to this account's webhooks when the rule fires. The hub adds
+                which rule spoke, what triggered it and when — it does not write the sentence,
+                because a generated one would be about the device and the useful sentence is
+                about what you want done. With no webhook configured the rule still runs and
+                its record says so, which is how you tell “no alert was raised” from “one was
+                raised and did not reach you”.
+              </p>
+            </div>
+          ) : (
+          <>
           <div className="mt-3 grid sm:grid-cols-2 gap-3">
             {actionKind === 'device' ? (
               <label className="block">
@@ -927,6 +976,8 @@ export default function RuleEditor({
               </p>
             )}
           </div>
+          </>
+          )}
         </div>
 
         <label className="block max-w-xs">

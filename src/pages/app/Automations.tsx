@@ -110,9 +110,14 @@ function triggerLine(trigger: AutomationRule['trigger']): string {
 }
 
 /** A human reading of a rule's action. Never implies the tier is editable. */
-function actionLine(action: AutomationRule['action']): string {
+export function actionLine(action: AutomationRule['action']): string {
+  // An alert drives nothing and carries no verb. Reading the verb first
+  // rendered "undefined unnamed target" for every alert rule the hub returned.
+  if (action.notify) {
+    return `alert: “${action.notify.message}”`;
+  }
   const target = action.device_key ?? action.zone ?? 'unnamed target';
-  return `${action.verb} ${target}`;
+  return `${action.verb ?? 'no verb'} ${target}`;
 }
 
 /** A readout derived from the live rule list, or an em dash when not live. */

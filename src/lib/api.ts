@@ -2013,10 +2013,16 @@ export type AutomationRule = {
     value?: number;
     state?: AutomationConditionState;
   }>;
+  /** An action is one of THREE shapes and never two: drive a device, drive a
+   *  zone, or ALERT. `verb` is absent on an alert — it drives nothing — so
+   *  anything reading this must branch on `notify` being present rather than
+   *  assuming a verb is there. A renderer that assumed one printed
+   *  "undefined unnamed target" for every alert rule. */
   action: {
     device_key?: string;
     zone?: string;
-    verb: string;
+    verb?: string;
+    notify?: { message: string };
     args?: Record<string, number>;
   };
   min_interval_seconds: number;

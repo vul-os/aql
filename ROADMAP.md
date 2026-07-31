@@ -809,7 +809,12 @@ and none has met physical hardware.
       second path — that one already signs, retries, records every delivery and retires a
       dead endpoint, and the retirement is the part most likely to be got wrong twice.
       `automation.alert` is in the closed event set with a published conformance vector,
-      because a dispatchable event without one fails the repo's own guard
+      because a dispatchable event without one fails the repo's own guard. **Reachable from
+      the console**: "Just alert me" sits beside "One device" and "A zone", because being
+      told is a peer of doing something rather than a lesser option. The client's action
+      type declared `verb` as required, so every alert rule the hub returned rendered as
+      "undefined unnamed target" — the type is honest now, which makes the compiler catch
+      the next one, and a test holds the ORDER (notify before verb), which it cannot
 - [ ] Camera-event alerting specifically — the trigger vocabulary covers device availability
       and sensor thresholds, not "motion seen" or "a clip was written", because the camera
       driver emits neither as an engine event yet
