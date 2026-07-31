@@ -716,6 +716,16 @@ and none has met physical hardware.
       holds — `Record` logs its errors because recording must never block actuation, while
       `RecordGrantRedeemed` RETURNS them, because the caller has to know whether the only
       evidence of an offline emergency open was captured
+- [x] **The agent's grant snapshot and pairing precondition are tested** — `GrantEnv` and
+      `EnsurePaired` were at zero, closing the controller coverage audit. `GrantEnv` is the
+      entire context an offline redemption is judged against, and each field fails
+      differently if dropped: no lockdown means a gate opens while sealed, no pinned key
+      means signatures are checked against the wrong one, a wall-clock `Now` breaks the
+      stale-clock rule the clock package exists to serve. Every field is asserted against a
+      deliberately non-default state, so a zero-valued Env cannot pass. Lockdown is read at
+      snapshot time rather than cached, so one set while running binds the very next
+      redemption. `EnsurePaired` is idempotent and refuses a half-configured first run
+      rather than dialling
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
 - [ ] Rate-limiting and scoping on movement commands, so a compromised client cannot drive

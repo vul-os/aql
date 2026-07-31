@@ -36,7 +36,7 @@ exist and which are design intent. The condensed operator-facing tour is
 | --- | --- |
 | Hub (`hub/`) — open path, console, API, device hub, audit | **Built.** 127 HTTP routes, 1,200 Go test functions green across 18 packages |
 | **Access module** — the first device kind wired end to end | **Built.** Signed commands, pinned-key controller, offline grants, tamper-evident audit |
-| Controller agent (`controller/`) — pairing, signed commands, grants, events | **Built.** 159 Go test functions green. GPIO relay driver and BLE radio are **not** |
+| Controller agent (`controller/`) — pairing, signed commands, grants, events | **Built.** 162 Go test functions green. GPIO relay driver and BLE radio are **not** |
 | Wire contracts (`proto/`) | **Built.** 75 conformance vectors, 110 checks, consumed by both sides |
 | Cross-module harness (`e2e/`) | **Built.** Boots real binaries and drives the open path over the wire |
 | Web console + desktop shell (`src/`, `src-tauri/`) | **Built.** Admin surfaces, the device / energy / automations screens over the real engine, and an emergency-access screen that requests and stores an offline grant |

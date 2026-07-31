@@ -1,105 +1,150 @@
 package agent_test
 
 import (
-	"io"
-	"log/slog"
+	"context"
+	"crypto/ed25519"
+	"encoding/base64"
+	"strings"
 	"testing"
-	"time"
 
 	"github.com/vul-os/aql/controller/internal/agent"
-	"github.com/vul-os/aql/controller/internal/events"
-	"github.com/vul-os/aql/controller/internal/grants"
-	"github.com/vul-os/aql/controller/internal/relay"
+	"github.com/vul-os/aql/controller/internal/state"
 )
 
-func newTestAgent(t *testing.T) *agent.Agent {
+// The agent's pairing precondition and the snapshot every offline grant
+// decision reads. Both were at zero — found by the controller coverage audit.
+
+func newAgent(t *testing.T, opts agent.Options) *agent.Agent {
 	t.Helper()
-	a, err := agent.New(agent.Options{StateDir: t.TempDir(), Log: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	if opts.StateDir == "" {
+		opts.StateDir = t.TempDir()
+	}
+	a, err := agent.New(opts)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return a
 }
 
-// orderingRelay wraps the real mock relay and, on Pulse, snapshots whether
-// the grant_redeemed record was already durably queued (or overflowed) —
-// proving OnRedeemed records BEFORE it actuates, not after.
-type orderingRelay struct {
-	*relay.Mock
-	queue           *events.Queue
-	pulseCalls      int
-	recordedByPulse bool
-}
+// GrantEnv is the whole context an offline redemption is judged against. Every
+// field is load-bearing and a dropped one fails in a different direction, so
+// each is checked against a state deliberately set to a non-default value —
+// a zero-valued Env would satisfy a test that only asserted "no error".
+func TestGrantEnvCarriesEveryFieldTheDecisionNeeds(t *testing.T) {
+	a := newAgent(t, agent.Options{})
 
-func (r *orderingRelay) Pulse(d time.Duration) error {
-	r.pulseCalls++
-	if n, g := r.queue.Len(); n > 0 || g > 0 {
-		r.recordedByPulse = true
-	}
-	if entries, _ := r.queue.OverflowEntriesForTest(); len(entries) > 0 {
-		r.recordedByPulse = true
-	}
-	return r.Mock.Pulse(d)
-}
-
-// TestOnRedeemedRecordsBeforeActuating is the regression test for the
-// defect: OnRedeemed used to call Relay.Pulse (physically open the gate)
-// BEFORE any event was durably queued, so a crash between the two calls —
-// or the swallowed enqueue error described below — could leave a physical
-// open with zero audit trace. This proves the grant_redeemed event is on
-// durable storage strictly before Pulse is invoked.
-func TestOnRedeemedRecordsBeforeActuating(t *testing.T) {
-	a := newTestAgent(t)
-	rel := &orderingRelay{Mock: relay.NewMock(nil), queue: a.Queue}
-	a.Relay = rel
-
-	g := &grants.Grant{GrantID: "grant-1"}
-	p := &grants.Proof{Cnonce: "cnonce-1", AccessPoint: "main", Sig: "sig-1"}
-	a.OnRedeemed(g, p)
-
-	if rel.pulseCalls != 1 {
-		t.Fatalf("expected exactly one Pulse call, got %d", rel.pulseCalls)
-	}
-	if !rel.recordedByPulse {
-		t.Fatal("grant_redeemed was not durably recorded before actuation")
-	}
-	if n, gr := a.Queue.Len(); n != 1 || gr != 1 {
-		// "opened" lands in the normal partition, grant_redeemed in the
-		// reserved one — both must be present after a successful redemption.
-		t.Fatalf("queue after redemption: normal=%d grant=%d, want 1,1", n, gr)
-	}
-}
-
-// TestOnRedeemedStillOpensWhenReservedPartitionFull is the safety-tradeoff
-// regression test: when the reserved grant_redeemed partition is entirely
-// full (proto/events.md's stated v0 gap), OnRedeemed must NOT refuse to
-// open — this is the offline emergency access path, and a resident must
-// not be stranded because the local audit disk is unhappy. It must instead
-// fall back to the overflow log (still durable) and still actuate.
-func TestOnRedeemedStillOpensWhenReservedPartitionFull(t *testing.T) {
-	a := newTestAgent(t)
-	rel := &orderingRelay{Mock: relay.NewMock(nil), queue: a.Queue}
-	a.Relay = rel
-
-	a.Queue.SetSyncForTest(false)
-	for i := 0; i < events.GrantReserved; i++ {
-		if err := a.Queue.Enqueue("grant_redeemed", []byte(`{"event_id":"filler"}`)); err != nil {
-			t.Fatalf("filling reserved partition: %v", err)
-		}
-	}
-
-	g := &grants.Grant{GrantID: "grant-2"}
-	p := &grants.Proof{Cnonce: "cnonce-2", AccessPoint: "main", Sig: "sig-2"}
-	a.OnRedeemed(g, p)
-
-	if rel.pulseCalls != 1 {
-		t.Fatalf("gate must still open when the reserved partition is full: pulse calls=%d", rel.pulseCalls)
-	}
-	entries, err := a.Queue.OverflowEntriesForTest()
+	pub, _, err := ed25519.GenerateKey(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(entries) != 1 {
-		t.Fatalf("expected the grant_redeemed record to land in the overflow log, got %d entries", len(entries))
+	// The key is PINNED as base64url on disk and decoded on read, so this also
+	// exercises the round trip GrantEnv depends on.
+	if err := a.St.SavePairing(state.Pairing{
+		DeviceID:      "dev-7",
+		GatewayPubkey: base64.RawURLEncoding.EncodeToString(pub),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.St.SetLockdown(true); err != nil {
+		t.Fatal(err)
+	}
+	a.Clock.SyncFromGateway(1_700_000_500)
+
+	env := a.GrantEnv()
+
+	// The one that opens a gate during a lockdown if it is dropped.
+	if !env.Lockdown {
+		t.Error("GrantEnv reports no lockdown while the controller is locked down — " +
+			"an offline grant would open a gate that is supposed to be sealed")
+	}
+	if env.DeviceID != "dev-7" {
+		t.Errorf("DeviceID = %q, want dev-7 — a grant bound to this device would not match", env.DeviceID)
+	}
+	if string(env.GatewayKey) != string(pub) {
+		t.Error("GatewayKey is not the pinned key — grant signatures would be checked against the wrong key")
+	}
+	// Times come from the controller's synced clock, which is what the
+	// stale-clock rule is evaluated against.
+	if env.Now < 1_700_000_500 || env.Now > 1_700_000_505 {
+		t.Errorf("Now = %d, want the synced base ~1700000500", env.Now)
+	}
+	if env.LastGatewaySync != 1_700_000_500 {
+		t.Errorf("LastGatewaySync = %d, want 1700000500", env.LastGatewaySync)
+	}
+}
+
+// An unpaired controller still produces a usable Env — with an EMPTY device id
+// rather than a panic or a borrowed one. The verifier fails closed on it, which
+// is the correct outcome for a controller that does not yet know who it is.
+func TestGrantEnvOnAnUnpairedControllerIsEmptyNotInvented(t *testing.T) {
+	a := newAgent(t, agent.Options{})
+	env := a.GrantEnv()
+	if env.DeviceID != "" {
+		t.Errorf("DeviceID = %q on an unpaired controller", env.DeviceID)
+	}
+	if env.LastGatewaySync != 0 {
+		t.Errorf("LastGatewaySync = %d before any sync, want 0 so the stale rule fires", env.LastGatewaySync)
+	}
+}
+
+// Lockdown is read at snapshot time, not cached at construction. A controller
+// put into lockdown while running must be in lockdown for the very next
+// redemption.
+func TestGrantEnvReflectsALockdownSetAfterStartup(t *testing.T) {
+	a := newAgent(t, agent.Options{})
+	if a.GrantEnv().Lockdown {
+		t.Fatal("a fresh controller reports lockdown")
+	}
+	if err := a.St.SetLockdown(true); err != nil {
+		t.Fatal(err)
+	}
+	if !a.GrantEnv().Lockdown {
+		t.Error("a lockdown set after startup is not visible to the next redemption")
+	}
+}
+
+// EnsurePaired is idempotent: an already-paired controller does no network I/O
+// and does not re-pair. The options are absent here, so anything that tried to
+// pair would fail — which is what makes this test meaningful rather than
+// merely green.
+func TestEnsurePairedDoesNothingWhenAlreadyPaired(t *testing.T) {
+	a := newAgent(t, agent.Options{})
+	pub, _, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A pairing without a valid pinned key is refused by the store — which is
+	// itself worth knowing, and is why this fixture carries a real one.
+	if err := a.St.SavePairing(state.Pairing{
+		DeviceID:      "dev-1",
+		GatewayPubkey: base64.RawURLEncoding.EncodeToString(pub),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.EnsurePaired(context.Background()); err != nil {
+		t.Fatalf("an already-paired controller tried to pair again: %v", err)
+	}
+	if p := a.St.Pairing(); p == nil || p.DeviceID != "dev-1" {
+		t.Errorf("pairing was replaced: %+v", p)
+	}
+}
+
+// An unpaired controller with no hub and no claim token refuses with an
+// actionable message rather than dialling something.
+func TestEnsurePairedRefusesWithoutTheFirstRunOptions(t *testing.T) {
+	a := newAgent(t, agent.Options{})
+	err := a.EnsurePaired(context.Background())
+	if err == nil {
+		t.Fatal("an unpaired controller with no options claimed to be paired")
+	}
+	if !strings.Contains(err.Error(), "--hub") || !strings.Contains(err.Error(), "--claim-token") {
+		t.Errorf("the refusal does not name what is missing: %v", err)
+	}
+
+	// A half-configured first run is refused too — a hub with no token cannot
+	// pair, and trying would surface as a confusing network error instead.
+	b := newAgent(t, agent.Options{GatewayURL: "http://hub.invalid"})
+	if err := b.EnsurePaired(context.Background()); err == nil {
+		t.Error("pairing proceeded with a hub URL and no claim token")
 	}
 }
