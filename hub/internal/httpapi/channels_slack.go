@@ -169,6 +169,12 @@ func (s *Server) processSlackEvent(ctx contextT, teamID string, ev *channels.Sla
 		notify := "Select a gate to " + verb.Infinitive()
 		s.slackReply(ctx, chatID, channelID, notify, channels.AccessBlocks(verb, displayName, gates, s.channelPublicURL()))
 	default:
+		// A question about a gate is ANSWERED (docs/CHAT-COMMANDS.md §4), before
+		// the unsupported-verb check and before the menu.
+		if reply := s.answerProfileGateQuestion(ctx, txt, profileID, channels.KindSlack); reply != "" {
+			s.slackReply(ctx, chatID, channelID, reply, nil)
+			return
+		}
 		// A verb chat cannot serve is answered, not redirected to a gate menu
 		// (channels/unsupported.go).
 		if v, ok := channels.UnsupportedVerb(txt); ok {

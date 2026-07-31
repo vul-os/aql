@@ -102,24 +102,13 @@ func (s *Server) handleDMTAPIntent(ctx contextT, intent channels.DMTAPIntent) {
 		verb, gateIntent := channels.TextGateIntent(txt)
 		// Asked about, not asked for. This rail resolves a NAMED gate on free
 		// text, so "when was the main gate last opened?" reached the actuation
-		// call with everything it needed. Answered here instead, before any
-		// gate lookup — the answer does not depend on which gate it is.
+		// call with everything it needed. Answered before any gate lookup — the
+		// answer does not depend on which gate it is.
 		if gateIntent == channels.IntentQuestion {
-			gates, err := s.store.AvailableAccessPointsByProfile(ctx, profileID)
-			if err != nil {
-				s.log.Error("dmtap available", "err", err)
-				return
+			if reply := s.answerProfileGateQuestion(ctx, txt, profileID, channels.KindDMTAP); reply != "" {
+				s.dmtapReply(ctx, chatID, intent.GroupID, reply)
 			}
-			reply := s.answerGateQuestion(ctx, txt, verb, gates, queryCaller{
-				subject: "profile:" + profileID,
-				source:  channels.KindDMTAP,
-				userFor: func(string) string { return profileID },
-			})
-			if reply == "" {
-				return // over the query cap: go quiet
-			}
-			s.dmtapReply(ctx, chatID, intent.GroupID, reply)
-			return
+			return // question handled, or over the cap and deliberately quiet
 		}
 		if gateIntent != channels.IntentCommand {
 			s.dmtapReply(ctx, chatID, intent.GroupID, channels.DMTAPMenu(displayName))

@@ -816,6 +816,14 @@ leaves"* (`src/lib/demoData.ts`), and reporting its state reports occupancy.
 | 5 — audited | `store.LogGateRead`, `access_logs` with command `read` |
 | 6 — occupancy opt-in | NOT built; nothing that needs it is exposed |
 
+Every rail serves it: WhatsApp and DMTAP resolve free text, and Telegram, Slack
+and Discord match command words exactly, so all five reach one shared branch
+rather than five hand-rolled ones. That is not a style preference here — five
+copies of an actuation branch is exactly how adding a third verb made five rails
+wrong at the same time (`channels/verb.go`'s `ActingWord`). Each rail is
+nonetheless tested through its own webhook, because a shared helper being
+correct and a given rail calling it are different claims.
+
 Two notes the implementation added to the rules as written.
 
 **Rule 1 narrows twice, and that has a cost.** The `IN` clause and the result

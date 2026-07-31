@@ -100,3 +100,35 @@ func (s *Server) answerGateQuestion(ctx contextT, body string, verb channels.Gat
 
 	return channels.QueryAnswer(kind, verb, facts, total, nowUnix, s.channelPublicURL())
 }
+
+// answerProfileGateQuestion is the whole question branch for a rail that
+// identifies its caller by profile — Telegram, Slack, Discord and DMTAP.
+//
+// Returns "" when there is nothing to send: the body was not a question, or the
+// caller is over the query cap. The two collapse deliberately. A rail asking
+// "do I have a reply" should not have to know which of those it was, and the
+// alternative — returning a bool alongside — is the shape that gets one branch
+// right on three rails and wrong on the fourth. That has already happened here
+// once: a third verb made five hand-rolled actuation branches wrong at the same
+// time (channels/verb.go's ActingWord).
+//
+// It reads the authorized set itself rather than taking one, because every
+// caller would otherwise fetch it identically two lines earlier, and a rail
+// that passed the WRONG set would leak another member's gates with nothing to
+// catch it — §4.4 rule 1 is that a query resolves only over the caller's own.
+func (s *Server) answerProfileGateQuestion(ctx contextT, body, profileID, source string) string {
+	verb, intent := channels.TextGateIntent(body)
+	if intent != channels.IntentQuestion {
+		return ""
+	}
+	gates, err := s.store.AvailableAccessPointsByProfile(ctx, profileID)
+	if err != nil {
+		s.log.Error("available for query", "err", err, "source", source)
+		return ""
+	}
+	return s.answerGateQuestion(ctx, body, verb, gates, queryCaller{
+		subject: "profile:" + profileID,
+		source:  source,
+		userFor: func(string) string { return profileID },
+	})
+}

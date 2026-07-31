@@ -160,6 +160,12 @@ func (s *Server) processDiscordMessage(ctx contextT, send channels.DiscordSender
 	case discordHelpWords[txt]:
 		s.discordText(ctx, send, chatID, msg.ChannelID, channels.DiscordMenu(displayName))
 	default:
+		// A question about a gate is ANSWERED (docs/CHAT-COMMANDS.md §4), before
+		// the unsupported-verb check and before the menu.
+		if reply := s.answerProfileGateQuestion(ctx, txt, profileID, channels.KindDiscord); reply != "" {
+			s.discordText(ctx, send, chatID, msg.ChannelID, reply)
+			return
+		}
 		// A verb the engine knows and chat cannot serve gets said plainly; a
 		// menu here would answer a question about lights with a list of gates.
 		if v, ok := channels.UnsupportedVerb(txt); ok {

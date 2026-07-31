@@ -146,6 +146,15 @@ func (s *Server) processTGMessage(ctx contextT, msg *channels.TGMessage) {
 	case tgHelpWords[txt]:
 		s.tgSendText(ctx, msg.Chat.ID, chatID, channels.TelegramMenu(displayName))
 	default:
+		// A question about a gate is ANSWERED (docs/CHAT-COMMANDS.md §4), before
+		// the unsupported-verb check and before the menu. This rail matches its
+		// command words exactly, so a question never actuated here as it did on
+		// the free-text rails — it fell through to the welcome menu instead,
+		// which offers to open the gate the member just asked about.
+		if reply := s.answerProfileGateQuestion(ctx, txt, profileID, channels.KindTelegram); reply != "" {
+			s.tgSendText(ctx, msg.Chat.ID, chatID, reply)
+			return
+		}
 		// A verb chat cannot serve is answered, not redirected to a gate menu
 		// (channels/unsupported.go).
 		if v, ok := channels.UnsupportedVerb(txt); ok {

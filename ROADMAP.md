@@ -390,7 +390,14 @@ and none has met physical hardware.
       cannot exhaust the open budget, and a `read` row in the same hash-chained audit table
       as an open. "Who opened the gate" is REFUSED although the log holds it — a member of
       a shared gate should not be able to track another resident from their phone — and is
-      refused before classification so it cannot be answered with the adjacent fact
+      refused before classification so it cannot be answered with the adjacent fact.
+      **On all five rails.** It landed on WhatsApp and DMTAP first because those are where
+      a question ACTUATED; Telegram, Slack and Discord match their command words exactly,
+      so a question there fell through to the welcome menu — an offer to open the gate the
+      member had just asked about. One shared branch (`answerProfileGateQuestion`), because
+      five hand-rolled actuation branches is how a third verb made five rails wrong at once
+      before, and each rail is tested through its own real webhook: "the helper is correct"
+      and "this rail calls it" are different claims
 - [x] **Documentation citations are checked, and four documents were wrong.**
       `docs/DESIGN-SYSTEM.md` cited 104 paths under a `lintel/` prefix — the repo this
       frontend was folded in from — so not one resolved, and three named components deleted
