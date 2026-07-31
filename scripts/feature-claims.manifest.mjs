@@ -97,18 +97,30 @@ export const FEATURES = [
   },
   {
     id: 'controller-config-report-hub-side',
-    label: 'The hub stores a reported controller configuration and shows an operator what is in effect',
+    label: 'The hub verifies, stores (migration 0026) and serves a reported controller configuration at GET /v1/devices/{id}/config-report',
+    docStatus: 'shipped',
+    docRefs: [
+      'docs/CONTROLLER-CONFIG-REPORT.md § 6 step 3',
+      'proto/commands.md § Configuration report',
+    ],
+    evidence: [
+      [{ file: 'hub/internal/store/migrations/0026_controller_config_reports.sql' }],
+      [{ root: 'hub/internal/store', pattern: 'func \\(s \\*Store\\) SaveConfigReport' }],
+      [{ root: 'hub/internal/httpapi', pattern: 'handleControllerConfigReport' }],
+      [{ file: 'hub/internal/httpapi/server.go', pattern: 'devices/\\{id\\}/config-report' }],
+    ],
+  },
+  {
+    id: 'controller-config-report-console',
+    label: 'The console shows what a controller reported, marking firmware defaults as defaults instead of the honest placeholder',
     docStatus: 'planned',
     docRefs: [
-      'docs/CONTROLLER-CONFIG-REPORT.md § 6 steps 3 and 4',
+      'docs/CONTROLLER-CONFIG-REPORT.md § 6 step 4',
       'ROADMAP.md — "A controller never reports its configuration back"',
     ],
-    // The hub still has no case for ctl.report and no table for it. When either
-    // appears this fails until ROADMAP and the console placeholder are corrected.
-    evidence: [[
-      { root: 'hub/internal', pattern: 'ctl\\.report' },
-      { root: 'hub/internal/store/migrations', pattern: 'controller_config_reports' },
-    ]],
+    // src/ is UI copy and never evidence elsewhere in this file; here the claim
+    // IS about the UI, so the evidence is the api client gaining the call.
+    evidence: [[{ file: 'src/lib/api.ts', pattern: 'config-report' }]],
   },
   // ── planned / not implemented — the nine (ten, by plain count) 2026-07-20
   // overclaims, now correctly marked in the docs. This check's job is to

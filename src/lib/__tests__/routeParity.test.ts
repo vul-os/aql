@@ -208,6 +208,17 @@ const KNOWN_UNAVAILABLE: Array<{ method: string; path: string }> = [];
 // reach, each with the client that does. Anything else must be callable from
 // src/lib/api.ts.
 const NON_CONSOLE_ROUTES: Array<{ method: string; path: string; reason: string }> = [
+  // PENDING, not permanent. The hub serves this and the console will call it;
+  // docs/CONTROLLER-CONFIG-REPORT.md § 6 step 4 is the remaining work — the
+  // device screen still shows its honest placeholder rather than the reported
+  // values. The `controller-config-report-console` claim stays `planned` until a
+  // component reads it, so this entry outliving its plan is independently
+  // visible rather than resting on someone re-reading this list.
+  {
+    method: 'GET',
+    path: '/v1/devices/{id}/config-report',
+    reason: 'PENDING step 4 — see docs/CONTROLLER-CONFIG-REPORT.md § 6',
+  },
   { method: 'POST', path: '/api/controller/challenge', reason: 'controller firmware — device auth handshake' },
   { method: 'POST', path: '/api/controller/poll', reason: 'controller firmware — command long-poll' },
   { method: 'POST', path: '/api/controller/ack', reason: 'controller firmware — command result ack' },

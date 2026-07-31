@@ -361,6 +361,41 @@ func (s *Server) handleControllerUplink(ctx context.Context, deviceID string, pu
 		s.handleLateAck(ctx, deviceID, ack)
 	case "event":
 		s.handleControllerEvent(ctx, deviceID, msg)
+	case "ctl.report":
+		s.handleControllerConfigReport(ctx, deviceID, msg)
+	}
+}
+
+// handleControllerConfigReport records what a controller says it is actually
+// running (proto/commands.md "Configuration report").
+//
+// The signature is already verified by the caller. This stores and nothing else:
+// it does not diff the report against what the hub sent, and it does not
+// re-send on mismatch. An automatic reconciler is a loop that fights a human
+// with a serial cable, and this product's answer to divergence is to show it.
+//
+// A failure to record is logged and dropped. The report is display data, the
+// controller sends a fresh one on its next connect, and a session that can still
+// carry an open command is worth more than this row.
+func (s *Server) handleControllerConfigReport(ctx context.Context, deviceID string, msg []byte) {
+	var rep struct {
+		Firmware string          `json:"firmware"`
+		TS       int64           `json:"ts"`
+		Config   json.RawMessage `json:"config"`
+	}
+	if err := jsonUnmarshal(msg, &rep); err != nil {
+		s.log.Warn("controller config report unparseable", "device", deviceID, "err", err)
+		return
+	}
+	if len(rep.Config) == 0 {
+		// A report with no config says nothing and would overwrite one that
+		// did. Dropped rather than stored as an empty object, which a console
+		// could not tell from "this controller resolves nothing".
+		s.log.Warn("controller config report carried no config", "device", deviceID)
+		return
+	}
+	if err := s.store.SaveConfigReport(ctx, deviceID, rep.Config, rep.Firmware, rep.TS); err != nil {
+		s.log.Error("record controller config report", "device", deviceID, "err", err)
 	}
 }
 
@@ -637,4 +672,59 @@ func (s *Server) handleDeviceEvents(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"events": out})
+}
+
+// handleDeviceConfigReport serves what a controller last reported it is running
+// (proto/commands.md "Configuration report").
+//
+// 404 for a device this caller cannot see, matching handleDeviceEvents: a device
+// they may not read must be indistinguishable from one that does not exist.
+//
+// A controller that has never reported answers 200 with reported:false — NOT
+// 404, and not the firmware defaults. "This device has told us nothing" and
+// "this device does not exist" are different answers, and inventing the defaults
+// would show numbers nobody confirmed. Every controller predating ctl.report
+// reports nothing, so this is the common case, not an edge one.
+func (s *Server) handleDeviceConfigReport(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		writeErr(w, http.StatusBadRequest, "missing_id")
+		return
+	}
+	accountID, err := s.store.DeviceAccountID(r.Context(), id)
+	if errors.Is(err, store.ErrNotFound) {
+		writeErr(w, http.StatusNotFound, "device_not_found")
+		return
+	}
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	if !s.requireAccountAdmin(w, r, accountID) {
+		return
+	}
+
+	rep, err := s.store.ConfigReportFor(r.Context(), id)
+	if errors.Is(err, store.ErrNotFound) {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"device_id": id,
+			"reported":  false,
+			"detail": "This controller has not reported its configuration. It is running " +
+				"something — every controller does — but nothing here knows what, so nothing " +
+				"here will guess.",
+		})
+		return
+	}
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"device_id":   rep.DeviceID,
+		"reported":    true,
+		"config":      rep.Config,
+		"firmware":    rep.Firmware,
+		"reported_at": rep.ReportedAt,
+		"received_at": rep.ReceivedAt,
+	})
 }

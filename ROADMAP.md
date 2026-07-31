@@ -32,7 +32,7 @@ reference for how every other device kind should eventually work: a versioned wi
 contract, a device that verifies rather than trusts, and an audit trail you can check
 after the fact.
 
-**The hub** (`hub/`) — one Go binary, SQLite inside, **126 HTTP routes over 24
+**The hub** (`hub/`) — one Go binary, SQLite inside, **127 HTTP routes over 25
 migrations, and more than 1,000 tests green** across 18 packages:
 
 - [x] Accounts, locations, access points, members with roles, invites
@@ -207,7 +207,14 @@ hub's issuance endpoint):
       grants are still held on a phone — **before** the rotation, not afterwards at a gate.
       (`lockdown`/`lift` are deliberately controller-local — `offline_grants.go` says so —
       and were never part of this gap)
-- [ ] **A controller never reports its configuration back.** `cmd.ack` carries a result
+- [x] **A controller reports its configuration back.** `ctl.report` (proto/commands.md)
+      carries the RESOLVED `pulse_ms` and `hold_max` with their source, so "700 ms" and
+      "700 ms (default)" are distinguishable; the hub stores it (migration 0026) and serves
+      `GET /v1/devices/{id}/config-report`. A controller that has never reported answers
+      `reported:false` rather than the defaults, because inferring them would show numbers
+      nobody confirmed. STILL OPEN: the console renders the placeholder, not the values.
+      The original note follows, for the record.
+- [ ] ~~**A controller never reports its configuration back.**~~ `cmd.ack` carries a result
       and a detail and nothing else, so the hub cannot show an operator what `pulse_ms`,
       `hold_max` are currently set to — only send new ones. (`sensor_debounce_ms` is not
       one of them: `config` accepts it and the controller stores it, but nothing reads it —
@@ -353,8 +360,8 @@ and none has met physical hardware.
 
 ## Phase 2 — Local persistence & secrets (partly real)
 
-- [x] SQLite for state, history and configuration — shipped with the hub (24 migrations,
-      48 tables), one file to back up, pure-Go driver so it cross-compiles to a Pi
+- [x] SQLite for state, history and configuration — shipped with the hub (25 migrations,
+      49 tables), one file to back up, pure-Go driver so it cross-compiles to a Pi
 - [ ] Extend that schema to device state, telemetry and history once Phase 1 exists
 - [ ] **OS-keychain-backed credential vault** for device and service secrets, scoped per
       device, so nothing sits in plaintext in the SQLite file or a config file. Not built:

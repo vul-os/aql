@@ -1,10 +1,9 @@
 # A controller reporting its configuration back
 
-**Status: the controller half is built; the hub half is not.** The contract and
-its vectors exist (`proto/commands.md`, `proto/vectors/reports.json`), and a
-controller signs and sends `ctl.report`. Nothing yet STORES or SHOWS it — the hub
-has no case for the type and no table, so today the message is sent and ignored,
-which is exactly what an older hub does with it and therefore safe.
+**Status: sent, stored and served. Not yet shown.** A controller signs and sends
+`ctl.report`; the hub verifies it, stores it under migration 0026 and serves it
+at `GET /v1/devices/{id}/config-report`. What remains is step 4 — the console
+still shows its honest placeholder rather than the reported values.
 
 ROADMAP has carried this since the controller gained tunable actuation: `cmd.ack`
 carries a result and a detail and nothing else, so the hub can send `pulse_ms`,
@@ -178,8 +177,12 @@ is the answer, and `report-omits-an-unresolved-key` pins it.
    on a type the hub cannot parse, in the read loop where the connection lives.
    Without it an upgraded controller authenticates, reports, and is hung up on,
    in a loop, at a gate.
-3. Hub: verify (the existing uplink path already covers an unknown type's
-   signature), store under migration 0026, expose on the device detail route.
+3. ~~Hub: verify, store under migration 0026, expose it.~~ **Done.** The uplink
+   path already verified the signature; the new case stores the `config` object
+   verbatim so a key the hub has never heard of survives to be shown.
+   `GET /v1/devices/{id}/config-report` serves it, answering 200 with
+   `reported:false` — not 404, and not the defaults — for a controller that has
+   never sent one, which is every controller predating the message.
 4. Console: replace the honest placeholder with the reported values, marking
    defaults as defaults.
 

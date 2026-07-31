@@ -458,6 +458,7 @@ func (s *Server) Router() http.Handler {
 	// Admin-only; the access-relevant ones are already in every member's
 	// audit view.
 	mux.Handle("GET /v1/devices/{id}/events", s.requireAuth(s.handleDeviceEvents))
+	mux.Handle("GET /v1/devices/{id}/config-report", s.requireAuth(s.handleDeviceConfigReport))
 	// Remote controller retuning (deviceconfig.go). The hub is the only place
 	// a bad value can be stopped: the controller stores whatever it is sent.
 	mux.Handle("PATCH /v1/devices/{id}/config", s.requireAuth(s.handleDeviceConfig))

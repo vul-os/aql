@@ -36,12 +36,29 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '../../..');
 
 /**
- * Routes the console deliberately never calls. Each needs a reason.
+ * Routes with no client in api.ts. Each needs a reason, and there are two kinds.
+ *
+ * MOST are routes the console deliberately never calls — inbound rails, the
+ * controller's own transport — and those reasons are permanent.
+ *
+ * A few are PENDING: the hub serves it, the console will call it, and the work
+ * has not landed. Those say so and name where the remaining step is written
+ * down, because "nobody wired this up yet" and "a browser is not a party to
+ * this" are different facts and an inventory that blurs them stops being an
+ * inventory. A pending entry that outlives its plan is the thing to look for
+ * when this list is next read.
  *
  * Patterns match the normalized "METHOD /path" form, with `{param}` for any
  * path variable.
  */
 const NO_CLIENT_NEEDED = new Map<string, string>([
+  // PENDING — the hub serves it and the console does not call it yet.
+  // docs/CONTROLLER-CONFIG-REPORT.md § 6 step 4 is the remaining work: the
+  // device screen still shows its honest placeholder rather than the reported
+  // values. Tracked independently as the `controller-config-report-console`
+  // claim, which stays `planned` until a component reads it.
+  ['GET /v1/devices/{param}/config-report', 'PENDING step 4 — see docs/CONTROLLER-CONFIG-REPORT.md § 6'],
+
   // Inbound chat rails. These are called BY WhatsApp, Slack and Telegram, not
   // by a browser — the console is not a party to them at all.
   ['GET /webhooks/whatsapp', 'inbound rail — Meta calls this to verify the subscription'],
