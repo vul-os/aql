@@ -247,7 +247,7 @@ func (s *Server) waHandleText(ctx contextT, msg *channels.WAMessage, from, chatI
 			s.log.Error("wa profile by phone", "err", err)
 			profileID = ""
 		}
-		return text(to, chatID, s.unsupportedVerbReply(ctx, body, profileID, v))
+		return text(to, chatID, s.chatEngineVerbReply(ctx, body, profileID, channels.KindWhatsApp, v))
 	}
 
 	// Fallback: welcome menu — a body naming no verb at all. Also an offer to

@@ -188,3 +188,63 @@ func UnsupportedVerbReplyFor(m DeviceMatch, publicURL string) string {
 	b.WriteString(". Send \"menu\" for the gates you can reach.")
 	return b.String()
 }
+
+// ---------------------------------------------------------------------------
+// Actuation replies (docs/CHAT-COMMANDS.md §3)
+// ---------------------------------------------------------------------------
+
+// ActuationDone reports that a device was driven.
+//
+// Past tense and specific, naming the device. The gate path says "Opening Main
+// gate…" because a gate takes seconds to move and the ack is separate; an
+// engine command has already returned by the time this is written, so the
+// present continuous would be a claim about a thing that has finished.
+func ActuationDone(deviceName string, v devices.Verb) string {
+	return "Done — " + deviceName + " is now " + verbPastTense(v) + "."
+}
+
+// ActuationRefused explains why nothing happened, in the terms the member can
+// act on. Every caller supplies a reason; there is no generic branch, because
+// "I couldn't do that" is the reply this whole document exists to avoid.
+func ActuationRefused(deviceName string, v devices.Verb, why string) string {
+	return "I did not " + string(v) + " " + deviceName + " — " + why + "."
+}
+
+// ActuationOutOfTier refuses a verb chat will not send at all.
+//
+// It names the tier rather than saying "not allowed", because the member has
+// done nothing wrong and the limit is a property of the SURFACE: the same
+// person can do this from the console. Telling them where it works is the
+// difference between a limit and a dead end.
+func ActuationOutOfTier(deviceName string, v devices.Verb, tier, publicURL string) string {
+	msg := "I will not " + string(v) + " " + deviceName + " from chat — that is a " + tier +
+		" command, and chat only sends reversible ones"
+	if publicURL != "" {
+		return msg + ". It is in the console: " + trimURL(publicURL) + "/app"
+	}
+	return msg + ". It is in the console."
+}
+
+// verbPastTense renders the state a device is in after a verb.
+//
+// Fail-safe rather than fail-closed, the same choice ActingWord makes: an
+// unrecognised verb yields a neutral phrasing rather than inventing a state.
+// Claiming a device is "off" when the verb was something else is exactly the
+// wrong-copy failure this file exists to prevent.
+func verbPastTense(v devices.Verb) string {
+	switch v {
+	case devices.VerbOn:
+		return "on"
+	case devices.VerbOff:
+		return "off"
+	case devices.VerbToggle:
+		return "switched"
+	case devices.VerbStop:
+		return "stopped"
+	case devices.VerbPause:
+		return "paused"
+	case devices.VerbResume:
+		return "running"
+	}
+	return "updated"
+}

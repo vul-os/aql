@@ -172,6 +172,22 @@ func (s *Server) chatFleetFor(ctx contextT, profileID string) []devices.IndexedD
 // the refusal legible — and it puts the resolver in front of real fleets and
 // real phrasings in a message that moves nothing, which is the order a
 // component whose failure mode is "the wrong device" has to be built in.
+// chatEngineVerbReply is the single entry point a rail uses for an engine verb:
+// it actuates when everything resolves at T1, and otherwise returns the
+// refusal that names what it understood.
+//
+// One function rather than "try actuate, then maybe refuse" at four call sites.
+// The rails already got this shape wrong once — five hand-rolled actuation
+// branches, one new verb, five wrong at once — and this is the branch where
+// getting it wrong means a message that says nothing happened while something
+// did, or the reverse.
+func (s *Server) chatEngineVerbReply(ctx contextT, body, profileID, source string, v devices.Verb) string {
+	if res, handled := s.chatActuate(ctx, body, profileID, source, v); handled {
+		return res.Reply
+	}
+	return s.unsupportedVerbReply(ctx, body, profileID, v)
+}
+
 func (s *Server) unsupportedVerbReply(ctx contextT, body, profileID string, v devices.Verb) string {
 	fleet := s.chatFleetFor(ctx, profileID)
 	if len(fleet) == 0 {

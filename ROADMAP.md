@@ -445,9 +445,22 @@ and none has met physical hardware.
       hint about which devices are plausible and not an identification of one. Nothing
       actuates through it: the consumer is the REFUSAL, which now names the device it
       understood, so the resolver is wrong in public before it is ever wrong at a relay
-- [ ] Extend it further, to the other device classes. Chat still reaches only the access
-      module; the engine's verbs (`on`/`off`/`set`/`start`…) are recognised and honestly
-      refused (`channels/unsupported.go`) rather than driven. §4.2's two unbuilt queries
+- [x] **Chat drives engine devices, at T1 and no higher.** `docs/CHAT-COMMANDS.md` §3:
+      "turn on the garden lights" resolves, actuates and is audited in the same
+      hash-chained `access_logs` a gate open goes to (§3.8 — never a second table). The
+      ceiling is `TierReversible` and it is load-bearing rather than decorative: `resume`
+      is a verb chat sends and `resume` on a mower's blade-job is HAZARDOUS MOTION, so the
+      ceiling is the only thing between a text message and spinning blades. It refuses by
+      naming the tier and where the command DOES work, because the member has done nothing
+      wrong and the limit is a property of the surface. A per-(subject, device, verb)
+      cooldown makes a duplicate webhook delivery idempotent without blocking the inverse
+      verb or another device; it fails CLOSED, unlike the gate path's reviewed fail-open,
+      because there is no member-at-their-own-gate argument for a lamp. Verbs taking a
+      value are not sent at all — parsing "30" out of "dim the lounge to 30%" is a second
+      resolution problem — and an ambiguity actuates nothing
+- [ ] Extend it further, to the other device classes. `set`, groups, and everything above
+      T1 remain in the console: T2 needs §3.4's intent-bound confirmation tokens and T4
+      needs step-up on a second rail, neither of which exists. §4.2's two unbuilt queries
       are "how much solar today" (needs the energy engine on a rail) and "which lights are
       on" (an occupancy proxy, blocked on §4.4 rule 6's per-location opt-in, which does not
       exist — so it stays off rather than shipping without its switch)

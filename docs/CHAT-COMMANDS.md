@@ -543,6 +543,26 @@ Assignment rules:
 
 ### 3.3 What each tier requires
 
+**T0 and T1 are BUILT** (`httpapi/chatactuate.go`). T0 is §4's read path. T1
+actuates: resolve, check the tier against a ceiling of `TierReversible`, claim a
+per-(subject, device, verb) cooldown, execute, audit. T2 and above are refused
+by that ceiling and stay refused until §3.4's confirmation exists — the table
+below is the specification for them, not a description.
+
+Three implementation notes the table does not carry:
+
+- **The ceiling is not decorative.** `resume` is a verb chat sends, and `resume`
+  on a mower's blade-job is `TierHazardousMotion`. A test that reached the
+  ceiling with `start` passed for the wrong reason — `start` is not a verb chat
+  sends at all, so it never got that far.
+- **Chat sends no verb that takes a value.** `set` is T1 on a dimmer and is
+  still not reachable: parsing a quantity out of free text is a second
+  resolution problem with its own failure modes.
+- **The cooldown fails closed.** `openpath.go`'s limiter fails OPEN, and §3.5
+  records that as a reviewed decision for a member standing at their own gate.
+  There is no equivalent argument for a lamp, so a counter-store error refuses.
+
+
 **PROPOSAL.** "Existing stack" means the limits at `openpath.go:57-190`.
 
 | Tier | Identity | Confirmation | Step-up | Time window | Limits |

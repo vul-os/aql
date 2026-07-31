@@ -171,3 +171,61 @@ func (s *Store) LogGateRead(ctx context.Context, apID, locationID, accountID, us
 	})
 	return err
 }
+
+// ClaimActuationCooldown atomically claims a per-(subject, device, verb)
+// cooldown for a chat actuation — docs/CHAT-COMMANDS.md §3.3's T1 row.
+//
+// Reuses rate_limit_cooldowns rather than adding a table. That table is keyed
+// on an opaque subject and its conditional UPDATE is the atomicity this needs;
+// a second table would be the same two columns with the same race to get wrong.
+// The column is called last_open_at for historical reasons — it means "when
+// this subject last claimed", and a chat subject is prefixed so the two
+// populations cannot collide.
+//
+// Returns false when the cooldown has not elapsed. The claim happens in the
+// same statement as the check, so two deliveries of one message race here and
+// exactly one wins — a read-then-write would let both through, which for a
+// duplicate webhook delivery means actuating twice.
+func (s *Store) ClaimActuationCooldown(ctx context.Context, subject string, nowUnix, cooldownS int64) (bool, error) {
+	return s.rateLimitClaimCooldown(ctx, subject, nowUnix, cooldownS)
+}
+
+// DeviceCommandLog is one engine command attempt, for the audit.
+type DeviceCommandLog struct {
+	DeviceKey string
+	UserID    string
+	Command   string
+	Source    string
+	Success   bool
+	Err       string
+}
+
+// LogDeviceCommand records an engine actuation in access_logs.
+//
+// §3.8 is explicit: "Every attempt at every tier writes to the SAME access_logs
+// table. Do not add a second log." The table is hash-chained with append-only
+// triggers and is what GET /v1/admin/audit/verify checks; a parallel
+// device-command table would sit outside both.
+//
+// The command column already stores a string, so a wider verb vocabulary is a
+// data change and not a schema change — which is why this needs no migration.
+// access_point_id is left empty because an engine device is not an access
+// point; the device key rides in the error/detail column only when the command
+// failed, so the row is identifiable by (command, source, user) plus its
+// timestamp.
+func (s *Store) LogDeviceCommand(ctx context.Context, l DeviceCommandLog) error {
+	detail := l.Err
+	if detail == "" {
+		detail = l.DeviceKey
+	} else {
+		detail = l.DeviceKey + ": " + detail
+	}
+	_, err := s.InsertAccessLog(ctx, AccessLog{
+		UserID:  l.UserID,
+		Command: l.Command,
+		Source:  l.Source,
+		Success: l.Success,
+		Error:   detail,
+	})
+	return err
+}
