@@ -176,7 +176,18 @@ var NeedsAccessPoint = map[string]bool{"open": true, "hold": true, "close": true
 
 // LockdownAllowed is the lockdown matrix: while latched, only these commands
 // are accepted (proto/commands.md §Verification step 5).
-var LockdownAllowed = map[string]bool{"lift": true, "ping": true, "config": true, "repair": true}
+//
+// `revoke` is on the list, which looks like a widening of an emergency freeze
+// and is the opposite. The matrix exists to stop ACTUATION while latched, and a
+// revocation list actuates nothing — it can only add denials. Excluding it
+// produced a perverse sequence: an operator who latched lockdown and then fired
+// someone had to LIFT the freeze, opening every gate to everyone, in order to
+// install the targeted revocation that would let them lift it safely. The blunt
+// lever must be able to hand over to the precise one without passing through
+// "open" (docs/GRANT-REVOCATION.md §3.8).
+var LockdownAllowed = map[string]bool{
+	"lift": true, "ping": true, "config": true, "repair": true, "revoke": true,
+}
 
 // ---- cmd.ack (proto/commands.md §Acknowledgement) ----
 

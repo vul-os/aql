@@ -64,8 +64,11 @@ parentheses, from the `detail` vocabulary below):
    the store is small and bounded; 1024 slots is ample at that horizon. If the
    store ever fills with live nonces, reject new commands fail-closed rather than
    evict a live nonce.
-5. During `lockdown`, only `lift`, `ping`, `config`, `repair` are accepted
-   (`lockdown`).
+5. During `lockdown`, only `lift`, `ping`, `config`, `repair`, `revoke` are
+   accepted (`lockdown`). `revoke` is on the list because it actuates nothing
+   and can only add denials; excluding it would force an operator to LIFT the
+   freeze — opening every gate — in order to install the targeted revocation
+   that makes lifting safe.
 
 Any failure → no actuation, log an `event` (see events.md) with the reason. Never
 "open on doubt".

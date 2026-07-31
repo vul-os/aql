@@ -141,6 +141,24 @@ reading the old text would under-react to a firing. There was no way to land the
 field without rewriting the paragraph, which is exactly the property wanted from
 a test guarding prose.
 
+### 3.8 It must land WHILE lockdown is latched
+
+Found by building it, not by designing it: `revoke` was refused during lockdown,
+because the matrix in `proto/commands.md` step 5 predates the command.
+
+That is backwards for the sequence an operator actually performs. Someone is
+fired; the operator latches lockdown, because it is the only lever that works
+instantly; and now they need to narrow the freeze to that one person so everyone
+else can get back in. With `revoke` refused, the only route to a targeted
+revocation is to **lift first** — opening every gate to everyone, including the
+person just fired — which is exactly the state the freeze exists to prevent.
+
+Allowing it costs nothing. The matrix is there to stop ACTUATION while latched,
+and a deny-list actuates nothing: it can only add refusals. So `revoke` joins
+`lift`, `ping`, `config` and `repair`, in all three places the matrix is
+written — the contract, the controller, and the hub's second implementation of
+the same check.
+
 ## 4. What this does NOT fix, stated plainly
 
 **A controller that has not been online since the revocation still opens.** If
@@ -191,6 +209,37 @@ ceiling `docs/THREAT-MODEL.md` §5 names for every signed object.
    the SHIPPED transcripts with a mutated `Env`, which exercises the real core
    against real signed bytes but does not make the behaviour cross-implementable.
 5. **The hub**: compose the list, send it on revocation and on reconnect. Not
-   done — this is what makes the feature reachable by an operator rather than by
-   a hand-signed command.
+   done, and larger than this line first assumed — building the controller half
+   surfaced a prerequisite nobody had written down.
+
+   **The hub does not persist the grants it issues.** `POST /v1/offline-grants`
+   mints, signs and returns a grant, writes an admin-audit row, and keeps
+   nothing. So there is no set to select "revoked and unexpired" from, and the
+   revocation the console already offers has nowhere to write a fact the hub
+   could later send.
+
+   The audit log is not the answer, even though it holds every field needed.
+   `admin_audit_log` is hash-chained, append-only EVIDENCE. A deny-list is
+   operational state: it changes when a grant is revoked, when a member is
+   reinstated, and when an entry expires. Reading evidence to decide what to
+   actuate is the category error migration 0010 refused for `automation_runs`,
+   and it would put a mutable operational query on the one table whose value is
+   that it never changes.
+
+   So step 5 is really three things, and **claims migration 0030**:
+
+   - `offline_grants` — one row per issued grant: `grant_id`, the account, the
+     member, `iat`, `exp`, and revocation columns. Enough to answer "which
+     grants are revoked and not yet expired", and no more; the grant BYTES are
+     not stored, because the controller verifies them from what is presented
+     and the hub re-signing is not a thing anything needs.
+   - A monotonic counter for `seq`. It cannot be derived from revocation
+     timestamps — two revocations in the same second would collide — and it must
+     survive a restart, so it is stored, not computed.
+   - Composition and delivery: build the list per controller, send on
+     revocation and on reconnect, and treat a `revoke_stale` ack as the alarm
+     §3.5 says it is rather than a retry.
+
+   Until that lands, the deny-list is reachable only by a hand-signed command,
+   which is exactly what the status line at the top of this document says.
 6. The console, if §5's first question is answered yes.

@@ -212,8 +212,12 @@ type VerifyContext struct {
 
 // lockdownAllowed is the lockdown matrix: while latched, only these commands
 // are accepted (proto/commands.md §Verification step 5).
+//
+// `revoke` is included: it actuates nothing and can only ADD denials, so it
+// cannot weaken the freeze. See the controller's copy of this map for the
+// sequence that excluding it broke.
 var lockdownAllowed = map[string]bool{
-	"lift": true, "ping": true, "config": true, "repair": true,
+	"lift": true, "ping": true, "config": true, "repair": true, "revoke": true,
 }
 
 // needsAccessPoint lists the commands that actuate a specific access point.

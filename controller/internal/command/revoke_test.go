@@ -163,3 +163,65 @@ func TestAMalformedRevokeIsRefusedWhole(t *testing.T) {
 		t.Errorf("seq = %d after only malformed lists, want 0", got)
 	}
 }
+
+// A revocation must land WHILE lockdown is latched.
+//
+// docs/GRANT-REVOCATION.md §3.8. The sequence that motivates this is the one an
+// operator actually performs: someone is fired, the operator latches lockdown
+// because it is the only lever that works instantly, and now needs to narrow it
+// to that one person so everybody else can get back in. If `revoke` were
+// refused under lockdown, the only route to a targeted revocation would be to
+// LIFT first — opening every gate to everyone, including the person just fired,
+// which is precisely the state the freeze exists to prevent.
+//
+// Allowing it costs nothing: the list actuates nothing and can only add
+// denials, so it cannot weaken the freeze it arrives during.
+func TestARevocationLandsWhileLockdownIsLatched(t *testing.T) {
+	_, gwPriv, _, gwPubB64, ctrlPriv := testKeys(t)
+	check := vectorfile.Check{
+		Now:          1789000010,
+		DeviceID:     "de71ce00-0000-4000-8000-000000000001",
+		AccessPoints: []string{"main"},
+	}
+	p, fake, _ := newProcessor(t, check, gwPubB64, ctrlPriv)
+
+	n := 0
+	run := func(name string, payload map[string]any) wire.Ack {
+		t.Helper()
+		n++
+		m := map[string]any{
+			"v": 0, "typ": "cmd", "cmd": name,
+			"device_id": check.DeviceID,
+			"nonce":     wire.B64u([]byte{byte(n), 4, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}),
+			"iat":       fake.NowSec, "exp": fake.NowSec + 30,
+		}
+		if payload != nil {
+			m["payload"] = payload
+		}
+		raw, err := p.Process(signCmd(t, gwPriv, m))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return parseAck(t, raw)
+	}
+
+	if a := run("lockdown", nil); a.Result != command.ResultOK {
+		t.Fatalf("lockdown: %+v", a)
+	}
+	if a := run("revoke", map[string]any{"seq": 1, "entries": []any{
+		map[string]any{"grant_id": "fired-worker", "exp": check.Now + 3600},
+	}}); a.Result != command.ResultOK {
+		t.Fatalf("revoke under lockdown: %+v — an operator would have to lift the freeze "+
+			"to install a targeted revocation", a)
+	}
+	if !p.State.RevokedAt("fired-worker", check.Now) {
+		t.Fatal("the revocation was acknowledged under lockdown and did not land")
+	}
+	// And the freeze itself is untouched: revoke is not a back door to lifting.
+	if !p.State.Lockdown() {
+		t.Fatal("revoke cleared the lockdown latch")
+	}
+	if a := run("open", nil); a.Result == "opened" {
+		t.Fatal("a gate opened while lockdown was latched")
+	}
+}

@@ -151,6 +151,57 @@ describe('closed vocabularies match the hub', () => {
     ).toEqual(go);
   });
 
+  /**
+   * The lockdown matrix exists three times and all three must agree.
+   *
+   * `proto/commands.md` step 5 is the contract. `controller/internal/wire` is
+   * what a real controller enforces. `hub/internal/keys` is a SECOND,
+   * independent implementation of the controller-side check, written so the
+   * shared conformance vectors are verified by something other than the code
+   * under test — which is only worth having if the two implementations are
+   * actually kept in step, and nothing was checking that.
+   *
+   * The divergence this catches is not hypothetical. `revoke` was added to the
+   * matrix because refusing it under lockdown forced an operator to LIFT the
+   * freeze — opening every gate — to install a targeted revocation. Adding it
+   * to one copy and not the other would leave the hub believing a command the
+   * controller refuses, or the reverse, with the vector suite still green
+   * because each side agrees with itself.
+   */
+  it('the lockdown matrix agrees across the contract, the controller and the hub', () => {
+    const mapKeys = (src: string, name: string): string[] => {
+      const at = src.indexOf(`${name} = map[string]bool{`);
+      expect(at, `${name} is no longer declared`).toBeGreaterThan(-1);
+      const open = src.indexOf('{', at);
+      const close = src.indexOf('}', open);
+      expect(close, `${name} is unterminated`).toBeGreaterThan(open);
+      return [...src.slice(open, close).matchAll(/"([^"]+)":\s*true/g)].map((m) => m[1]).sort();
+    };
+
+    const controller = mapKeys(read('controller/internal/wire/wire.go'), 'LockdownAllowed');
+    const hub = mapKeys(read('hub/internal/keys/envelope.go'), 'lockdownAllowed');
+
+    expect(controller.length, 'the matrix parsed empty').toBeGreaterThan(3);
+    expect(
+      hub,
+      'the hub and the controller disagree about which commands survive a lockdown — ' +
+        'the hub verifier is a second implementation of the same contract and the vector ' +
+        'suite cannot see the difference, because each side agrees with itself',
+    ).toEqual(controller);
+
+    // And the contract itself. Step 5 names the set in prose; a matrix that
+    // drifts from the document is a controller doing something nobody wrote
+    // down.
+    const commands = read('proto/commands.md');
+    const step5 = /During `lockdown`, only ([^.]*?) are\s+accepted/s.exec(commands);
+    expect(step5, 'proto/commands.md no longer states the lockdown matrix in step 5').not.toBeNull();
+    const documented = [...step5![1].matchAll(/`([a-z_]+)`/g)].map((m) => m[1]).sort();
+    expect(
+      documented,
+      'proto/commands.md step 5 lists a different set from the code that enforces it',
+    ).toEqual(controller);
+  });
+
   it('access-point kinds match the handler and the schema', () => {
     // The handler's allowlist is the authority the API enforces.
     const handler = read('hub/internal/httpapi/access.go');

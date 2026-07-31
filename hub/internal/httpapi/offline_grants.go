@@ -164,11 +164,20 @@ func (s *Server) handleOfflineGrantIssue(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Audit: "so an operator can see who holds what" — proto/grants.md has
-	// no revocation channel, so this is the honest substitute: a platform
-	// admin can see every issued grant's member/access_points/devices/exp
-	// and decide whether a lockdown is warranted. Best-effort per
+	// Audit: "so an operator can see who holds what". Best-effort per
 	// WriteAdminAudit's own contract — never blocks issuance.
+	//
+	// This used to be described as the substitute for a revocation channel,
+	// on the grounds that proto/grants.md had none. It has one now (`revoke`,
+	// docs/GRANT-REVOCATION.md) — but this log is still not what feeds it, and
+	// must not become that. admin_audit_log is hash-chained, append-only
+	// EVIDENCE; a deny-list is operational state that changes when a grant is
+	// revoked, reinstated or expires. Reading evidence to decide what to
+	// actuate is the same category error 0010 refused for automation_runs.
+	//
+	// The hub therefore still cannot compose a revocation list: it does not
+	// persist the grants it issues anywhere else. That is the gap named in
+	// docs/GRANT-REVOCATION.md §6 step 5, and it needs migration 0030.
 	if err := s.store.WriteAdminAudit(r.Context(), c.Sub, "offline_grant_issue", "grant", grantID, true,
 		map[string]any{
 			"member":        c.Sub,
