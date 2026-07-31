@@ -55,6 +55,10 @@ const (
 	ReasonCnonceUnknown    = "cnonce_unknown"
 	ReasonCnonceExpired    = "cnonce_expired"
 	ReasonCnonceReplay     = "cnonce_replay"
+	// ReasonRevoked: the grant is on the controller's cached deny-list
+	// (docs/GRANT-REVOCATION.md). Distinct from "expired" on purpose — an
+	// operator needs to see that a revocation took effect, not a timeout.
+	ReasonRevoked = "revoked"
 )
 
 // Reject is a fail-closed verification verdict carrying the machine-readable

@@ -45,6 +45,7 @@ Field rules:
 | `ping` | liveness + clock check; reply carries controller time | drift telemetry |
 | `config` | update actuation params (pulse ms, sensor debounce, `hold_max`) | additive keys only |
 | `repair` | accept a new hub key: payload carries `next_pubkey` | key rotation; signed by the *current* pinned key |
+| `revoke` | replace the cached offline-grant deny-list | payload `{seq, issued_at, entries[]}`; monotonic `seq`, older or equal refused |
 
 ## Verification (controller side, fail-closed)
 
@@ -88,6 +89,39 @@ cnonce_unknown | cnonce_expired | cnonce_replay | hw:…`
 
 The hub records the ack in the audit log; an unacked command past `exp` is recorded
 as `undelivered` and surfaces in chat ("couldn't reach the gate — it may be offline").
+
+## Revocation list (`revoke`)
+
+Replaces the controller's cached offline-grant deny-list, consulted at step 3a
+of grants.md's verification order. Designed in
+[`docs/GRANT-REVOCATION.md`](../docs/GRANT-REVOCATION.md).
+
+Payload:
+
+```json
+{ "seq": 12, "issued_at": 1750000000,
+  "entries": [ { "grant_id": "…", "exp": 1750600000 } ] }
+```
+
+- `seq` is **monotonic per hub**. The controller stores the highest it has
+  accepted and refuses any list at or below it. This is not belt-and-braces on
+  top of the envelope signature — it defends a different attack. The signature
+  stops a list being *forged*; `seq` stops a genuine older list being *replayed*
+  to un-revoke a grant the attacker holds.
+- `issued_at` is for operator display and is **not** a security input. A
+  timestamp an attacker can influence must not decide whether a revocation
+  sticks.
+- `entries` REPLACES the stored list rather than adding to it, so a reinstated
+  member is handled by the hub simply not listing them.
+- `exp` is the revoked grant's own expiry. Entries past it are dropped on write:
+  such a grant already fails step 4, so the entry buys nothing.
+- An empty `entries` with a higher `seq` is meaningful — it says "nothing is
+  revoked" — and is distinct from never having received a list at all, which is
+  `seq` 0 and means the controller denies nothing.
+
+A controller that has never received a `revoke` behaves exactly as one built
+before the command existed. The list can refuse a grant; it can never authorise
+one.
 
 ## Configuration report (`ctl.report`)
 

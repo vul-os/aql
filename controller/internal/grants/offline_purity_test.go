@@ -17,10 +17,16 @@ import (
 //
 //	"the 11-step check above touches nothing but the presented bytes and the
 //	 controller's own pinned key / clock / lockdown state"
-//	"There is no per-member or per-grant offline deny-list; the verification
-//	 core takes no input besides the presented grant and local controller
-//	 state, by design — that locality is the feature this whole path exists
-//	 for."
+//	"the verification core takes no input besides the presented grant and
+//	 local controller state, by design — that locality is the feature this
+//	 whole path exists for."
+//
+// The second quote used to begin "There is no per-member or per-grant offline
+// deny-list". There is one now (docs/GRANT-REVOCATION.md), and this test is
+// what forced grants.md to say so: adding Env.Revoked failed it, and the only
+// way through was to rewrite the paragraph an operator reads when deciding how
+// urgently to latch lockdown. The surviving half is the half that still holds
+// — the deny-list is LOCAL state, so the core still consults nothing remote.
 //
 // That is the ONE thing in the revocation section that can silently stop
 // being true. The rest of the section is honest negatives ("only the grant's
@@ -50,6 +56,7 @@ var documentedEnvFields = []string{
 	"LastGatewaySync", // local clock trust (stale-clock, step 1)
 	"Lockdown",        // the only sub-TTL revocation lever in v0
 	"Now",             // the clock
+	"Revoked",         // cached deny-list lookup, local state (GRANT-REVOCATION.md)
 	"TZ",              // window evaluation
 }
 

@@ -144,8 +144,9 @@ hub's issuance endpoint):
       probes nothing. The banner says a controller is *responding*, never that the gate
       will open: the probe carries no signature, so identity is still settled at the gate
       against the controller's pinned hub key
-- [ ] Grant revocation semantics beyond "wait for expiry". Still unbuilt, but no longer
-      undesigned: [`docs/GRANT-REVOCATION.md`](docs/GRANT-REVOCATION.md) settles the question
+- [ ] Grant revocation semantics beyond "wait for expiry". **The controller half is
+      built; the hub does not yet compose or send a list, so today the deny-list is
+      reachable only by a hand-signed command.** Designed in [`docs/GRANT-REVOCATION.md`](docs/GRANT-REVOCATION.md) settles the question
       `proto/grants.md` leaves open. A signed deny-list of `{grant_id, exp}` pairs, delivered
       as a `revoke` command and cached by the controller, consulted between the signature
       check and the validity window. Two properties do the work: **absence is never denial**,
@@ -154,7 +155,10 @@ hub's issuance endpoint):
       forging a list — the envelope signature stops that — but replaying an older, emptier
       one. What it cannot fix is a controller that has not been online since the revocation;
       that is irreducible without a live channel at the gate, which is the thing this whole
-      path exists to avoid needing
+      path exists to avoid needing. Landing it was forced to be honest by a test that
+      predates it: `offline_purity_test.go` fails when `grants.Env` gains a field, precisely
+      so the paragraph an operator reads before deciding whether to latch lockdown cannot
+      stay behind the code. There was no way to add the field without rewriting it
 
 **Hardware the reference controller has never actually touched:**
 

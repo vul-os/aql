@@ -69,6 +69,10 @@ from the cmd.ack `detail` vocabulary, commands.md)
 1. Stale-clock rule below (`stale_clock`).
 2. Not in lockdown (`lockdown`).
 3. `grant.sig` against the pinned hub key (`badsig`).
+3a. `grant.grant_id` is not on the cached deny-list (`revoked`). Absent list =
+   nothing revoked. After the signature because an id from unverified bytes is
+   not an id; before the window because a dead grant needs no further
+   evaluation. See [`docs/GRANT-REVOCATION.md`](../docs/GRANT-REVOCATION.md).
 4. `grant.iat − 90 ≤ now ≤ grant.exp + 90` (`not_yet_valid` / `expired`).
 5. Own `device_id` ∈ `grant.devices` (`wrong_device`).
 6. Requested `access_point` ∈ `grant.access_points` and equals
@@ -119,27 +123,53 @@ rest of its `windows`, at any controller listing this device in `devices`
   issued, or be scoped down — but that only takes effect on the member's
   *next* refresh, and does nothing to a copy already on their device.
 
-### What an operator must actually do to revoke fast
+### What an operator can do to revoke fast
 
-Latch `lockdown` on the specific controller(s) the member could reach
-(commands.md `lockdown`; the verification order above denies every offline
-redemption with `lockdown` while latched, exactly as it denies every live
-command except `lift`/`ping`/`config`/`repair`). This is the **only**
-sub-TTL lever in v0, and it is blunt on purpose: it has no notion of "this
-one member" — it stops everyone, including legitimate members, until
-`lift`. There is no per-member or per-grant offline deny-list; the
-verification core takes no input besides the presented grant and local
+**A per-grant deny-list now exists** (`revoke`, commands.md;
+[`docs/GRANT-REVOCATION.md`](../docs/GRANT-REVOCATION.md)). The hub sends a
+signed, monotonically numbered list of `{grant_id, exp}` pairs; the controller
+caches it durably and consults it at **step 3a**, after the signature check and
+before the validity window. A revoked grant is denied with `revoked`.
+
+This section previously read "There is no per-member or per-grant offline
+deny-list", and the sentence that followed it is the one that still governs:
+**the verification core takes no input besides the presented grant and local
 controller state, by design — that locality is the feature this whole path
-exists for.
+exists for.** That has not changed. The deny-list IS local state, cached while
+the controller could reach the hub and consulted when it cannot; the core opens
+no socket to check it, and `offline_purity_test.go` holds that.
+
+Three properties bound what it does and does not buy:
+
+- **Absence is never denial.** A controller holding no list behaves exactly as
+  it did before the feature existed. The list can refuse a grant; it can never
+  authorise one. So there is no rollout ordering to get wrong and no delivery
+  failure that locks a resident out.
+- **A monotonic `seq` is what makes it real.** Command envelopes are already
+  signed, so a list cannot be forged — but it can be *withheld*, and an
+  attacker replaying an older, emptier signed list would un-revoke a grant they
+  hold. The controller stores the highest `seq` it has accepted and refuses
+  anything at or below it.
+- **It converges when the controller next hears from the hub, not instantly.**
+  A controller that has not been online since the revocation still opens. That
+  is irreducible without a live channel at redemption time, which is the thing
+  this whole path exists to avoid needing.
+
+`lockdown` remains the lever for "stop everything now", and it is still the
+only one that needs no prior contact with the controller: it is blunt on purpose
+— it has no notion of "this one member" and stops everyone until `lift`. The
+deny-list is the precise lever; lockdown is the immediate one.
 
 ### Does the controller learn of revocation on reconnect?
 
-No. There is no message anywhere in this contract set — not here, not in
-events.md, commands.md or pairing.md — that tells a controller "grant `X`
-/ member `Y` is now revoked." A controller that goes offline holding no
-cached deny-state and reconnects a week later has exactly the same
-offline-grant behavior it had before it went offline, governed only by
-each grant's own `exp`. **v0: undefined / open question.**
+**Yes, now.** `revoke` (commands.md) is that message. A controller that goes
+offline and reconnects receives the current list and caches it, so its
+offline-grant behaviour from that point reflects every revocation the hub knew
+about at contact.
+
+What remains true, and is the honest residue of the old answer: **while it is
+offline it learns nothing.** A controller that has not reached the hub since
+the revocation is governed only by each grant's own `exp`, exactly as before.
 
 ### Honest summary
 
@@ -147,11 +177,19 @@ This is a **bounded-exposure tradeoff**, not a defect to paper over:
 offline-capable access control cannot also be instantly revocable without
 either (a) a live channel to the controller at redemption time — which
 would defeat the entire point of this path — or (b) a revocation list the
-controller caches and consults while still offline. v0 has neither. If (b)
-is ever wanted, treat it as a v1 proposal, not a v0 fix: it needs new wire
-surface (e.g. a `revocations` list, or a per-member generation counter the
-controller caches on last contact and checks against the grant's `iat`),
-which this additive pass does not add.
+controller caches and consults while still offline.
+
+**(b) is now built.** It is the `revoke` command and step 3a above, designed in
+[`docs/GRANT-REVOCATION.md`](../docs/GRANT-REVOCATION.md). What it changes is
+the TYPICAL case, which used to be identical to the worst case: a controller on
+a working LAN learns within one command round-trip instead of waiting out a
+seven-day TTL.
+
+What it does not change is the worst case itself. A controller the hub cannot
+reach cannot be told anything, so `exp` is still the outer bound and `lockdown`
+is still the only lever that needs no prior contact. An operator deciding how
+urgently to latch lockdown after a firing should reason about **whether that
+controller is reachable**, not about the TTL.
 
 ### Implementation status
 

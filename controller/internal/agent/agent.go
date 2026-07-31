@@ -149,13 +149,28 @@ func (a *Agent) GrantEnv() grants.Env {
 	if p := a.St.Pairing(); p != nil {
 		deviceID = p.DeviceID
 	}
+	now := a.Clock.Now()
 	return grants.Env{
-		Now:             a.Clock.Now(),
+		Now:             now,
 		LastGatewaySync: a.Clock.LastGatewaySync(),
 		DeviceID:        deviceID,
 		Lockdown:        a.St.Lockdown(),
 		GatewayKey:      a.St.GatewayKey(),
 		TZ:              nil, // v0 default UTC
+		// The cached deny-list, read from durable local state
+		// (docs/GRANT-REVOCATION.md). Bound here rather than passed as data so
+		// a redemption late in a long-running process sees the list as it is
+		// NOW, not as it was when the Env was first built — a `revoke` that
+		// arrived a second ago must already count.
+		//
+		// `now` is captured once above and closed over, so an entry's expiry is
+		// compared against the same instant the validity window is. Reading the
+		// clock again in here would let a redemption straddle two instants —
+		// harmless today, and the kind of thing that stops being harmless when
+		// someone adds a second time-dependent step.
+		Revoked: func(grantID string) bool {
+			return a.St.RevokedAt(grantID, now)
+		},
 	}
 }
 

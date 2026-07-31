@@ -91,6 +91,17 @@ type Env struct {
 	// TZ is the controller's configured timezone for window evaluation
 	// (nil = UTC, the v0 default).
 	TZ *time.Location
+	// Revoked answers "is this grant id on the cached deny-list" from LOCAL
+	// state — docs/GRANT-REVOCATION.md. A function rather than the list
+	// itself so the verification core keeps knowing nothing about how the
+	// list is stored, delivered or pruned; it is handed the same kind of
+	// answer Lockdown is.
+	//
+	// NIL MEANS NO LIST, AND NO LIST MEANS NOTHING IS REVOKED. That is
+	// §3.3 and it is the reason this can be deployed in any order: a
+	// controller that has never received a list behaves exactly as it did
+	// before this field existed, so no delivery failure can strand anyone.
+	Revoked func(grantID string) bool
 }
 
 // pending is one issued challenge awaiting its proof.
@@ -209,6 +220,16 @@ func (x *Exchange) HandleProof(raw []byte, env Env) (*Result, *Grant, *Proof) {
 	// 3. grant.sig against the pinned gateway key.
 	if err := wire.VerifyRaw(env.GatewayKey, grantRaw); err != nil {
 		return deny(wire.ReasonBadSig)
+	}
+	// 3a. Not on the cached deny-list (docs/GRANT-REVOCATION.md).
+	//
+	// AFTER the signature and before the validity window, deliberately. The
+	// grant's bytes must be authentic before its id means anything — acting on
+	// an id from an unverified blob would let anyone deny anyone by presenting
+	// a forged grant carrying their id — and there is no reason to evaluate
+	// windows, devices or nonces for a grant that is already dead.
+	if env.Revoked != nil && env.Revoked(g.GrantID) {
+		return deny(wire.ReasonRevoked)
 	}
 	// 4. grant.iat − 90 ≤ now ≤ grant.exp + 90.
 	if env.Now < g.IAT-wire.ClockSkewSeconds {

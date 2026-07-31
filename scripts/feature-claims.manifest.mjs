@@ -251,6 +251,36 @@ export const FEATURES = [
     evidence: [{ root: 'hub/internal', pattern: '"POST /v1/offline-grants"|handleOfflineGrantIssue', flags: 'i' }],
   },
   {
+    id: 'offline-grant-revocation-controller',
+    label:
+      'The controller half of sub-TTL grant revocation: a `revoke` command caches a ' +
+      'monotonically numbered deny-list, consulted at verification step 3a',
+    docStatus: 'shipped',
+    docRefs: [
+      'docs/GRANT-REVOCATION.md',
+      'proto/commands.md § Revocation list (`revoke`)',
+      // Quoted, because this is the paragraph an operator reads when deciding
+      // how urgently to latch lockdown after a firing, and it said the
+      // opposite until this landed.
+      'proto/grants.md § Revocation vs. in-flight grants — "A per-grant deny-list now exists"',
+    ],
+    evidence: [
+      // The rule the whole thing rests on. Named by its behaviour, not its
+      // file: a deny-list without rollback protection is worse than none,
+      // because it reads as protection.
+      [{ root: 'controller/internal/state', pattern: 'ErrRevocationRollback' }],
+      [{ root: 'controller/internal/state', pattern: 'func \\(s \\*Store\\) RevokedAt' }],
+      // The verification step, and the Env field that carries it.
+      [{ file: 'controller/internal/grants/grants.go', pattern: 'env\\.Revoked\\(g\\.GrantID\\)' }],
+      [{ file: 'controller/internal/wire/wire.go', pattern: 'ReasonRevoked' }],
+      // Delivery. Without this the list is unreachable and every test above
+      // still passes.
+      [{ file: 'controller/internal/command/command.go', pattern: 'case "revoke":' }],
+      // Bound into the live redemption path, not merely available.
+      [{ file: 'controller/internal/agent/agent.go', pattern: 'St\\.RevokedAt' }],
+    ],
+  },
+  {
     id: 'offline-grant-app-client',
     // RE-SCOPED. This used to read "App client that requests, stores and
     // presents an offline grant", which has stopped being the right question:

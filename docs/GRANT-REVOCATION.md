@@ -1,13 +1,22 @@
 # Revoking an offline grant before it expires
 
-**Status: design. No code accompanies this document.** It settles the question
-`proto/grants.md` § "Revocation vs. in-flight grants" leaves open — the section
-ends *"**v0: undefined / open question.**"* and names option (b), a revocation
-list the controller caches and consults while still offline, as the thing that
-would close it.
+**Status: the controller half is built; the hub half is not.** §3's decisions
+are code — `state.SetRevocations` with the monotonic `seq` rule, `RevokedAt`,
+`grants.Env.Revoked`, step 3a in the verification core, the `revoke` command,
+and the binding in `agent.GrantEnv`. What does not exist yet is anything that
+SENDS a list: the hub does not compose one on revocation or on reconnect, so
+today the deny-list is reachable only by a hand-signed command. §6 steps 5 and
+6 are the remainder.
+
+It answers the question `proto/grants.md` § "Revocation vs. in-flight grants"
+left open. That section used to end "v0: undefined / open question" and named
+option (b) — a revocation list the controller caches and consults while still
+offline — as the thing that would close it. It now describes what is built, and
+`offline_purity_test.go` is why: the paragraph could not stay as it was once
+`Env` gained the field.
 
 Read [`proto/grants.md`](../proto/grants.md) first; this document depends on it
-entirely and changes nothing in it until the code lands.
+entirely.
 
 ---
 
@@ -125,11 +134,12 @@ all, and the documented order puts those before anything grant-derived.
 handed in by the caller exactly as `Lockdown` and `LastGatewaySync` are. The
 verification core still opens no file and no socket.
 
-`controller/internal/grants/offline_purity_test.go` will fail when that field is
-added. That is the test working: it is written to force this document's
-paragraph and `proto/grants.md`'s revocation section to change in the same
-commit as the code, because an operator reading today's text would under-react
-to a firing.
+`controller/internal/grants/offline_purity_test.go` failed the moment that field
+was added, which is the test working. It is written to force `proto/grants.md`'s
+revocation section to change in the same commit as the code, because an operator
+reading the old text would under-react to a firing. There was no way to land the
+field without rewriting the paragraph, which is exactly the property wanted from
+a test guarding prose.
 
 ## 4. What this does NOT fix, stated plainly
 
@@ -164,13 +174,23 @@ ceiling `docs/THREAT-MODEL.md` §5 names for every signed object.
 
 ## 6. The order of work
 
-1. **The rollback test first** (§3.5), against the current code, asserting the
-   controller has no notion of `seq` yet — so it fails for the right reason
-   when the feature lands rather than being written afterwards to match it.
-2. `proto/grants.md`'s revocation section and `proto/commands.md`'s command
-   table, together, since the purity test requires the prose to move with the
-   code.
-3. The controller: persisted `seq` + entries, the `Env` field, the new step.
-4. Conformance vectors for accept, refuse-revoked, and refuse-rollback.
-5. The hub: compose the list, send it on revocation and on reconnect.
+1. ~~The rollback test first (§3.5).~~ **Done**, and written from this document
+   before the code existed rather than afterwards to match it —
+   `TestAnOlderListIsRefusedSoARevocationCannotBeRolledBack`.
+2. ~~`proto/grants.md`'s revocation section and `proto/commands.md`'s command
+   table.~~ **Done**, and not by choice: adding `Env.Revoked` failed
+   `offline_purity_test.go`, which exists to make the prose move with the code.
+   It worked exactly as written.
+3. ~~The controller: persisted `seq` + entries, the `Env` field, the new step.~~
+   **Done**, plus the `revoke` command handler, which was not on this list and
+   should have been — without it the list is unreachable and every other test
+   passes anyway.
+4. **Conformance vectors** for accept, refuse-revoked and refuse-rollback. Not
+   done: `vectorfile.Check` has no revocation field, so this needs the shared
+   schema and `proto/vectors/verify.mjs` to move together. The Go tests replay
+   the SHIPPED transcripts with a mutated `Env`, which exercises the real core
+   against real signed bytes but does not make the behaviour cross-implementable.
+5. **The hub**: compose the list, send it on revocation and on reconnect. Not
+   done — this is what makes the feature reachable by an operator rather than by
+   a hand-signed command.
 6. The console, if §5's first question is answered yes.

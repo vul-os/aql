@@ -8,6 +8,7 @@ package command
 import (
 	"crypto/ed25519"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -37,6 +38,12 @@ const (
 	ResultError     = "error"
 	DetailRepairBad = "repair_invalid" // additive detail: malformed repair payload
 	DetailConfigBad = "config_invalid" // additive detail: malformed config payload
+	DetailRevokeBad = "revoke_invalid" // additive detail: malformed revoke payload
+	// DetailRevokeStale: the list is not newer than the stored one. Reported
+	// rather than swallowed as success — an operator seeing this repeatedly is
+	// seeing either an attacker replaying an old list or a hub that reset its
+	// counter, and both need saying out loud (docs/GRANT-REVOCATION.md §3.5).
+	DetailRevokeStale = "revoke_stale"
 )
 
 // NonceStore is the persistent replay store seam (internal/noncestore in
@@ -252,6 +259,35 @@ func (p *Processor) execute(cmd *wire.Command, now int64) (result, detail string
 			return ResultError, "hw:persist"
 		}
 		return ResultOK, ""
+	case "revoke":
+		// Replace the cached offline-grant deny-list
+		// (docs/GRANT-REVOCATION.md, proto/commands.md § Revocation list).
+		//
+		// The envelope is already verified against the pinned hub key before
+		// dispatch, so this parses trusted bytes. What it must NOT do is trust
+		// the ORDER they arrived in — see SetRevocations' seq rule.
+		seq, ok := numField(cmd.Payload, "seq")
+		if !ok || seq <= 0 {
+			return ResultError, DetailRevokeBad
+		}
+		issued, _ := numField(cmd.Payload, "issued_at")
+		raw, ok := cmd.Payload["entries"]
+		if !ok {
+			return ResultError, DetailRevokeBad
+		}
+		list, err := parseRevocations(raw)
+		if err != nil {
+			return ResultError, DetailRevokeBad
+		}
+		if err := p.State.SetRevocations(state.RevocationList{
+			Seq: seq, IssuedAt: issued, Entries: list,
+		}, p.Clock.Now()); err != nil {
+			if errors.Is(err, state.ErrRevocationRollback) {
+				return ResultError, DetailRevokeStale
+			}
+			return ResultError, "hw:persist"
+		}
+		return ResultOK, ""
 	case "repair":
 		next, _ := cmd.Payload["next_pubkey"].(string)
 		if next == "" {
@@ -344,3 +380,35 @@ func ResolvedConfig(stored map[string]int64) map[string]wire.ConfigEntry {
 		"hold_max": resolve("hold_max", DefaultHoldMax),
 	}
 }
+
+// parseRevocations reads the `entries` array of a `revoke` payload.
+//
+// Strict: an entry that is not an object, or carries no grant_id, fails the
+// whole command rather than being skipped. A partially-applied deny-list is the
+// worst outcome available here — the operator is told the revocation landed
+// while some of it did not — so this refuses and reports, and the hub resends.
+func parseRevocations(raw any) ([]state.Revocation, error) {
+	arr, ok := raw.([]any)
+	if !ok {
+		return nil, errBadRevokePayload
+	}
+	out := make([]state.Revocation, 0, len(arr))
+	for _, item := range arr {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			return nil, errBadRevokePayload
+		}
+		id, ok := obj["grant_id"].(string)
+		if !ok || id == "" {
+			return nil, errBadRevokePayload
+		}
+		var exp int64
+		if v, ok := numField(obj, "exp"); ok {
+			exp = v
+		}
+		out = append(out, state.Revocation{GrantID: id, EXP: exp})
+	}
+	return out, nil
+}
+
+var errBadRevokePayload = errors.New("command: malformed revoke payload")

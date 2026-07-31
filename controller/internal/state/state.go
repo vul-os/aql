@@ -38,6 +38,14 @@ type persisted struct {
 	Config          map[string]int64 `json:"config,omitempty"`
 	LastGatewaySync int64            `json:"last_gateway_sync,omitempty"`
 	AccessPoints    []string         `json:"access_points,omitempty"`
+
+	// Cached grant deny-list (docs/GRANT-REVOCATION.md). Seq 0 means "never
+	// received one", which is distinct from "received an empty one" — the
+	// first is absence, the second is a hub actively saying nothing is
+	// revoked, and only the second should make a lower seq suspicious.
+	RevocationSeq      int64        `json:"revocation_seq,omitempty"`
+	RevocationIssuedAt int64        `json:"revocation_issued_at,omitempty"`
+	Revocations        []Revocation `json:"revocations,omitempty"`
 }
 
 // Store is the mutex-guarded durable state, written atomically (tmp+rename,
