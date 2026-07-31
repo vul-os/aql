@@ -697,6 +697,16 @@ and none has met physical hardware.
       stale-clock rule working across a reboot; an unsynced clock reports stale, so offline
       decisions fail closed; and a corrective sync may move the clock BACKWARD, because the
       gateway is the authority and a clock that only advanced would be unfixable
+- [x] **The controller's device identity is tested** — it had no test file at all, and it
+      is the keypair the hub knows a controller BY (`proto/pairing.md` rule 2), so a failure
+      here is not a degradation, it is a controller the hub no longer recognises. Pinned:
+      an identity survives a reload (a regenerating `Load` would present an unknown key
+      after every restart and every gate behind it would stop opening); two controllers
+      never share one; a CORRUPT seed refuses to load rather than quietly minting a new
+      identity — the helpful fix there turns a repairable fault into a silent re-pairing
+      that overwrites the original seed; the seed file is 0600 and holds the seed ALONE,
+      with the public key derived; and `PublicKeyB64` is unpadded base64url, the format
+      `pair.redeem` carries
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
 - [ ] Rate-limiting and scoping on movement commands, so a compromised client cannot drive
