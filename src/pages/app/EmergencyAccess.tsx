@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Field } from '@/components/ui/Field';
 import { ArchMark } from '@/components/illustrations/ArchMark';
+import { IssuedGrantsPanel } from '@/components/access/IssuedGrantsPanel';
 import { useAuth } from '@/lib/auth';
 import { api, type AccessPointDetail } from '@/lib/api';
 import {
@@ -504,6 +505,11 @@ export default function EmergencyAccess() {
           onCancel={() => setConfirmForgetAll(false)}
         />
       )}
+
+      {/* What the HUB holds, as opposed to what this device holds. Placed last
+          because it is the rarer question — until a phone goes missing, at
+          which point it is the only one that matters. */}
+      <IssuedGrantsPanel />
     </>
   );
 }

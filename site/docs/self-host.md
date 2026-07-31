@@ -27,7 +27,7 @@ bills you directly).
 > core now: auth, accounts / locations / access points, controller pairing and the
 > WebSocket device hub, the signed open path, the admin console, rate limits and quotas,
 > visitor grants, the tamper-evident audit log, offline-grant issuance, and texting
-> `open` works today over WhatsApp, Slack or Telegram — 129 HTTP routes registered in
+> `open` works today over WhatsApp, Slack or Telegram — 131 HTTP routes registered in
 > `hub/internal/httpapi/server.go`, and over a thousand Go test functions across 18
 > packages, all green. **Building from source is the reliable path today** — see the
 > commands below.

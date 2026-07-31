@@ -1,12 +1,15 @@
 # Revoking an offline grant before it expires
 
-**Status: the controller half is built; the hub half is not.** §3's decisions
-are code — `state.SetRevocations` with the monotonic `seq` rule, `RevokedAt`,
-`grants.Env.Revoked`, step 3a in the verification core, the `revoke` command,
-and the binding in `agent.GrantEnv`. What does not exist yet is anything that
-SENDS a list: the hub does not compose one on revocation or on reconnect, so
-today the deny-list is reachable only by a hand-signed command. §6 steps 5 and
-6 are the remainder.
+**Status: built end to end, and never run against a controller on real
+hardware.** §3's decisions are code on both sides — the monotonic `seq` rule,
+step 3a in the verification core, the `revoke` command, and on the hub side
+migration 0030, the revoke route, and delivery both on revocation and on
+reconnect. An operator can revoke a grant from the emergency-access screen and
+the gates that named it are told.
+
+What is NOT done: conformance vectors (§6 step 4), so the behaviour is proven in
+Go against real signed bytes but is not yet cross-implementable; and §5's open
+questions.
 
 It answers the question `proto/grants.md` § "Revocation vs. in-flight grants"
 left open. That section used to end "v0: undefined / open question" and named
@@ -208,38 +211,32 @@ ceiling `docs/THREAT-MODEL.md` §5 names for every signed object.
    schema and `proto/vectors/verify.mjs` to move together. The Go tests replay
    the SHIPPED transcripts with a mutated `Env`, which exercises the real core
    against real signed bytes but does not make the behaviour cross-implementable.
-5. **The hub**: compose the list, send it on revocation and on reconnect. Not
-   done, and larger than this line first assumed — building the controller half
-   surfaced a prerequisite nobody had written down.
+5. ~~**The hub**: compose the list, send it on revocation and on reconnect.~~
+   **Done**, and larger than this line first assumed — building the controller
+   half surfaced a prerequisite nobody had written down.
 
-   **The hub does not persist the grants it issues.** `POST /v1/offline-grants`
-   mints, signs and returns a grant, writes an admin-audit row, and keeps
-   nothing. So there is no set to select "revoked and unexpired" from, and the
-   revocation the console already offers has nowhere to write a fact the hub
-   could later send.
+   **The hub did not persist the grants it issued.** `POST /v1/offline-grants`
+   minted, signed and returned a grant, wrote an admin-audit row and kept
+   nothing. So there was no set to select "revoked and unexpired" from. The
+   audit log was not the answer despite holding every field: `admin_audit_log`
+   is hash-chained append-only EVIDENCE, and a deny-list is operational state
+   that changes on revocation, reinstatement and expiry. Reading evidence to
+   decide what to actuate is the category error migration 0010 refused for
+   `automation_runs`.
 
-   The audit log is not the answer, even though it holds every field needed.
-   `admin_audit_log` is hash-chained, append-only EVIDENCE. A deny-list is
-   operational state: it changes when a grant is revoked, when a member is
-   reinstated, and when an entry expires. Reading evidence to decide what to
-   actuate is the category error migration 0010 refused for `automation_runs`,
-   and it would put a mutable operational query on the one table whose value is
-   that it never changes.
+   **Migration 0030** therefore adds `offline_grants` (what was issued, to whom,
+   until when, and whether it is revoked — never the grant BYTES, which nothing
+   needs and which would put a live credential at rest), `offline_grant_devices`
+   (which controllers a grant names, so a deny-list can be scoped to the gate
+   that will consult it — a grant can span accounts, so scoping by account would
+   be wrong for exactly the grants hardest to reason about), and a single-row
+   monotonic counter for `seq`.
 
-   So step 5 is really three things, and **claims migration 0030**:
+   Delivery happens twice. On revocation, to every controller the grant named.
+   And on RECONNECT, which is what makes §4's claim true — sending only at
+   revocation time would leave a controller that was offline at that moment
+   ignorant forever, and the gate on a flaky link is the one an operator worries
+   about. The reconnect push READS the counter rather than bumping it, or every
+   reconnect would look like new information.
 
-   - `offline_grants` — one row per issued grant: `grant_id`, the account, the
-     member, `iat`, `exp`, and revocation columns. Enough to answer "which
-     grants are revoked and not yet expired", and no more; the grant BYTES are
-     not stored, because the controller verifies them from what is presented
-     and the hub re-signing is not a thing anything needs.
-   - A monotonic counter for `seq`. It cannot be derived from revocation
-     timestamps — two revocations in the same second would collide — and it must
-     survive a restart, so it is stored, not computed.
-   - Composition and delivery: build the list per controller, send on
-     revocation and on reconnect, and treat a `revoke_stale` ack as the alarm
-     §3.5 says it is rather than a retry.
-
-   Until that lands, the deny-list is reachable only by a hand-signed command,
-   which is exactly what the status line at the top of this document says.
 6. The console, if §5's first question is answered yes.

@@ -164,6 +164,27 @@ func (s *Server) handleOfflineGrantIssue(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Remember it, BEFORE the audit row and before responding. This is what
+	// makes the grant revocable at all (migration 0030): a grant the hub does
+	// not remember cannot be put on a deny-list, and the holder would keep it
+	// for the full TTL no matter what an operator did.
+	//
+	// Unlike the audit write below this is NOT best-effort. Returning a signed
+	// grant the hub has no record of would hand out access it can never take
+	// back — a failure that is invisible at issue time and discovered only when
+	// someone tries to revoke.
+	if err := s.store.RecordOfflineGrant(r.Context(), store.OfflineGrant{
+		GrantID:      grantID,
+		MemberUserID: c.Sub,
+		IssuedAt:     g.IAT,
+		ExpiresAt:    g.EXP,
+		Devices:      devices,
+	}); err != nil {
+		s.log.Error("record offline grant", "grant_id", grantID, "err", err)
+		writeErr(w, http.StatusInternalServerError, "internal")
+		return
+	}
+
 	// Audit: "so an operator can see who holds what". Best-effort per
 	// WriteAdminAudit's own contract — never blocks issuance.
 	//

@@ -251,6 +251,38 @@ export const FEATURES = [
     evidence: [{ root: 'hub/internal', pattern: '"POST /v1/offline-grants"|handleOfflineGrantIssue', flags: 'i' }],
   },
   {
+    id: 'offline-grant-revocation-hub',
+    label:
+      'The hub remembers issued grants (migration 0030), revokes one, and pushes the ' +
+      'deny-list to every controller it named — on revocation and on reconnect',
+    docStatus: 'shipped',
+    docRefs: [
+      'docs/GRANT-REVOCATION.md § 6 — "Delivery happens twice"',
+      'ROADMAP.md § Grant revocation semantics',
+    ],
+    evidence: [
+      // Remembering is the load-bearing half and the invisible one: a grant the
+      // hub never recorded cannot be revoked, and nothing at issue time says so.
+      [
+        {
+          file: 'hub/internal/store/migrations/0030_offline_grants.sql',
+          pattern: 'CREATE TABLE offline_grants',
+        },
+      ],
+      [{ file: 'hub/internal/httpapi/offline_grants.go', pattern: 'RecordOfflineGrant' }],
+      // Revocation and the counter move together or not at all.
+      [{ root: 'hub/internal/store', pattern: 'func \\(s \\*Store\\) RevokeOfflineGrant' }],
+      [{ root: 'hub/internal/store', pattern: 'func \\(s \\*Store\\) DenyListForDevice' }],
+      // Delivery, both times it happens. Reconnect is the one that makes
+      // "converges when the controller next hears from the hub" true.
+      [{ file: 'hub/internal/httpapi/offline_grant_revoke.go', pattern: 'SignCommandWithPayload\\("revoke"' }],
+      [{ file: 'hub/internal/httpapi/devices.go', pattern: 'pushDenyListOnConnect' }],
+      // Reachable from a screen, not just from a route.
+      [{ file: 'src/components/access/IssuedGrantsPanel.tsx', pattern: 'offlineGrantRevoke' }],
+      [{ file: 'src/pages/app/EmergencyAccess.tsx', pattern: 'IssuedGrantsPanel' }],
+    ],
+  },
+  {
     id: 'offline-grant-revocation-controller',
     label:
       'The controller half of sub-TTL grant revocation: a `revoke` command caches a ' +

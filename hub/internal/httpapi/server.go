@@ -382,6 +382,8 @@ func (s *Server) Router() http.Handler {
 	// offline grants (spec: proto/grants.md) — the gateway-side issuance half
 	// of the emergency no-internet path; controller/internal/grants verifies.
 	mux.Handle("POST /v1/offline-grants", s.requireAuth(s.handleOfflineGrantIssue))
+	mux.Handle("GET /v1/offline-grants", s.requireAuth(s.handleOfflineGrantList))
+	mux.Handle("POST /v1/offline-grants/{id}/revoke", s.requireAuth(s.handleOfflineGrantRevoke))
 
 	// Time-window rules (see timewindows.go): when a given member may open a
 	// given door. Writes are admin-only; the list is readable by any member,

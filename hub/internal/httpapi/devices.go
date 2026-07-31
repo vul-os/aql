@@ -288,6 +288,19 @@ func (s *Server) handleControllerWS(w http.ResponseWriter, r *http.Request) {
 	defer unregister()
 	s.log.Info("controller connected", "device", deviceID)
 
+	// Push the offline-grant deny-list on reconnect (docs/GRANT-REVOCATION.md).
+	//
+	// This is what makes the design's central claim true: "revocation converges
+	// when the controller next hears from the hub". Sending only at revocation
+	// time would leave a controller that was offline at that moment ignorant
+	// forever, which is the exact case the deny-list exists for — the gate at
+	// the end of a flaky link is the one an operator worries about.
+	//
+	// The seq is READ, not bumped. A reconnect delivers the list as it already
+	// stands; advancing the counter here would make every reconnect look like
+	// new information and force controllers to re-store an identical list.
+	go s.pushDenyListOnConnect(context.WithoutCancel(ctx), deviceID)
+
 	// Writer: hub → socket.
 	writeErrCh := make(chan error, 1)
 	go func() {

@@ -689,6 +689,27 @@ export const api = {
   offlineGrantIssue: (body: { app_pubkey: string; access_point_ids: string[] }) =>
     apiFetch<unknown>('/offline-grants', { method: 'POST', body }),
 
+  /** The grants this member holds, as the HUB remembers them (migration 0030).
+   *  Distinct from what the device has in its vault: the vault holds the signed
+   *  bytes, this says whether the hub still considers them live. A grant
+   *  revoked from another device shows as revoked here and unchanged there,
+   *  which is the whole point of asking. */
+  offlineGrantsList: () =>
+    apiFetch<{ grants: OfflineGrantRow[] }>('/offline-grants'),
+
+  /** Revoke one issued grant and push the deny-list to every controller it
+   *  named. Returns the controllers a signed command was dispatched for —
+   *  named, not counted, because a gate that did NOT get it is one an operator
+   *  may still need to latch (docs/GRANT-REVOCATION.md §4).
+   *
+   *  site: grant_not_found (404, also when the caller may not revoke it),
+   *  grant_not_revocable (409, already revoked). */
+  offlineGrantRevoke: (grantId: string) =>
+    apiFetch<{ grant_id: string; seq: number; dispatched: string[]; failed?: string[] }>(
+      `/offline-grants/${encodeURIComponent(grantId)}/revoke`,
+      { method: 'POST' },
+    ),
+
   // Locations — nested under /accounts/{id}/locations on the gateway, NOT
   // /locations/accounts/{id}/locations (the old Workers backend's shape).
   locationsList: (accountId: string) =>
@@ -1987,6 +2008,18 @@ export type MaintenanceCreateInput = {
  *  nothing. Kept closed so a kind the hub gained and the console has not
  *  handled fails to compile; callers rendering an unknown kind off the wire
  *  narrow at the boundary instead. */
+/** One issued offline grant as the hub remembers it (migration 0030). The hub
+ *  stores no grant BYTES — only what is needed to answer "is this revoked, and
+ *  is it still worth telling a controller about". */
+export type OfflineGrantRow = {
+  grant_id: string;
+  issued_at: UnixSeconds;
+  expires_at: UnixSeconds;
+  revoked: boolean;
+  /** Absent when not revoked. */
+  revoked_at?: UnixSeconds;
+};
+
 export type AutomationTriggerKind = 'schedule' | 'threshold' | 'event' | 'clip';
 
 /** The state a condition can require of a device. Deliberately only two: a
