@@ -159,7 +159,24 @@ func (s *Server) waHandleText(ctx contextT, msg *channels.WAMessage, from, chatI
 	// member an offer to open the gate they just asked a question about, which
 	// is the misdirection unsupported.go exists to avoid.
 	if intent == channels.IntentQuestion {
-		return text(to, chatID, channels.GateQuestionReply(verb, portal))
+		reply := s.answerGateQuestion(ctx, body, verb, allGrants, queryCaller{
+			subject: "phone:" + from,
+			source:  channels.KindWhatsApp,
+			userFor: func(apID string) string {
+				uid, ok, err := s.store.MemberUserIDByPhoneForAP(ctx, from, apID)
+				if err != nil || !ok {
+					// A visitor-grant holder has no user row. The read is still
+					// audited, with the access point and the channel, which is
+					// what answers "who was told about this gate" later.
+					return ""
+				}
+				return uid
+			},
+		})
+		if reply == "" {
+			return nil // over the query cap: go quiet, the webhook still 200s
+		}
+		return text(to, chatID, reply)
 	}
 
 	if hasVerb && !isHelp {

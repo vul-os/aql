@@ -1,6 +1,8 @@
 package httpapi
 
 import (
+	"context"
+	"github.com/vul-os/aql/hub/internal/store"
 	"net/http"
 	"strings"
 	"testing"
@@ -283,8 +285,8 @@ func TestWhatsAppAQuestionAboutTheGateDoesNotOpenIt(t *testing.T) {
 		}
 		// Not the welcome menu. Being offered a gate to open is the misdirection
 		// that made the original behaviour hard to notice.
-		if !strings.Contains(sent[0].body, "haven't touched it") {
-			t.Errorf("%q reply does not say nothing moved: %q", q, sent[0].body)
+		if strings.Contains(sent[0].body, "Which gate") {
+			t.Errorf("%q answered with a gate menu: %q", q, sent[0].body)
 		}
 		if strings.Contains(sent[0].body, "Opening") || strings.Contains(sent[0].body, "Closing") {
 			t.Errorf("%q reply implies actuation: %q", q, sent[0].body)
@@ -301,6 +303,173 @@ func TestWhatsAppARealOpenStillOpensAfterTheQuestionGuard(t *testing.T) {
 		waPost(e.h, waTextMsg(testPhoneRaw, "wamid.r"+strconv.Itoa(i), body, waPhoneID))
 		if n := e.successOpens(t, channels.KindWhatsApp); n != 1 {
 			t.Errorf("%q produced %d audited opens, want 1 — a real request was refused", body, n)
+		}
+	}
+}
+
+// A question is ANSWERED from the hub's own record, and the answer is audited.
+//
+// docs/CHAT-COMMANDS.md §4.4 rule 5: reads of a security system are
+// security-relevant events. The row goes to access_logs with command "read", so
+// this asserts both that the member was told something true and that the
+// telling was recorded — and, critically, that the read did not land in the
+// open counters, which would turn every question into a phantom entry in the
+// gate's own history.
+func TestWhatsAppAQuestionIsAnsweredAndAudited(t *testing.T) {
+	e := setupChannels(t, permissiveRL())
+
+	// A real open first, so there is something true to report.
+	waPost(e.h, waTextMsg(testPhoneRaw, "wamid.pre", "open", waPhoneID))
+	if n := e.successOpens(t, channels.KindWhatsApp); n != 1 {
+		t.Fatalf("setup open not audited: %d", n)
+	}
+	before := len(e.wa.all())
+
+	waPost(e.h, waTextMsg(testPhoneRaw, "wamid.ask", "when was the gate last opened?", waPhoneID))
+	sent := e.wa.all()[before:]
+	if len(sent) != 1 {
+		t.Fatalf("replies: %+v", sent)
+	}
+	if !strings.Contains(sent[0].body, "Main gate") || !strings.Contains(sent[0].body, "last opened") {
+		t.Errorf("question not answered from the record: %q", sent[0].body)
+	}
+	// The qualifier §4.1 requires: an ack is not a barrier that moved.
+	if !strings.Contains(sent[0].body, "not proof the gate moved") {
+		t.Errorf("answer presents an ack as movement: %q", sent[0].body)
+	}
+
+	logs, err := e.st.AccessLogsByAccount(context.Background(), e.acct, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reads := 0
+	for _, l := range logs {
+		if l.Command == "read" {
+			reads++
+		}
+	}
+	if reads != 1 {
+		t.Errorf("read disclosures audited: %d, want 1", reads)
+	}
+	// And the read did not inflate the gate's open history.
+	if n := e.successOpens(t, channels.KindWhatsApp); n != 1 {
+		t.Errorf("a question changed the open count: %d, want 1", n)
+	}
+}
+
+// The unanswerable one. §4.1 is explicit that the hub cannot know a gate's
+// position, and that saying so is the requirement rather than a shortfall.
+func TestWhatsAppIsTheGateClosedIsRefusedSpecifically(t *testing.T) {
+	e := setupChannels(t, permissiveRL())
+	waPost(e.h, waTextMsg(testPhoneRaw, "wamid.pos", "is the gate closed?", waPhoneID))
+	sent := e.wa.all()
+	if len(sent) != 1 {
+		t.Fatalf("replies: %+v", sent)
+	}
+	if !strings.Contains(sent[0].body, "no position sensor") {
+		t.Errorf("position question not refused with its reason: %q", sent[0].body)
+	}
+	if strings.Contains(sent[0].body, "Main gate is closed") || strings.Contains(sent[0].body, "Main gate is open") {
+		t.Errorf("hub claimed a physical state it cannot know: %q", sent[0].body)
+	}
+}
+
+// §4.4 rule 4: the query budget is its own scope.
+//
+// Asserted on the counters rather than by flooding, because a flood also trips
+// the per-minute chat throttle (ChatMsgsPerMin), which silences everything
+// inbound and would make this pass for the wrong reason — the opens would stop
+// because the rail went quiet, not because the budgets are shared.
+//
+// What must be true: asking questions increments query_1h and leaves the open
+// budget untouched. If the two shared a scope, a remote reconnaissance sweep —
+// cheap, needing only a linked identity — would become a denial-of-open against
+// a member standing at their own gate.
+func TestAQuestionSpendsTheQueryBudgetAndNotTheOpenBudget(t *testing.T) {
+	e := setupChannels(t, permissiveRL())
+
+	count := func(scope string) int64 {
+		var n int64
+		if err := e.st.DB().QueryRow(
+			`SELECT coalesce(sum(count), 0) FROM rate_limit_counters WHERE scope = ?`, scope).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+
+	for i := 0; i < 3; i++ {
+		waPost(e.h, waTextMsg(testPhoneRaw, "wamid.b"+strconv.Itoa(i), "when was the gate last opened?", waPhoneID))
+	}
+	if got := count("query_1h"); got != 3 {
+		t.Errorf("query_1h = %d, want 3 — questions are not counted in their own scope", got)
+	}
+	if got := count("opens_1h"); got != 0 {
+		t.Errorf("opens_1h = %d after three questions, want 0 — a question spent the open budget", got)
+	}
+	if n := e.successOpens(t, channels.KindWhatsApp); n != 0 {
+		t.Fatalf("questions actuated: %d", n)
+	}
+
+	// And a real open still works, spending the open budget and not the query one.
+	waPost(e.h, waTextMsg(testPhoneRaw, "wamid.bopen", "open", waPhoneID))
+	if n := e.successOpens(t, channels.KindWhatsApp); n != 1 {
+		t.Fatalf("open after questions: %d", n)
+	}
+	if got := count("query_1h"); got != 3 {
+		t.Errorf("query_1h = %d after an open, want 3 — an open spent the query budget", got)
+	}
+}
+
+// Past the cap the rail goes quiet rather than answering, and the webhook still
+// 200s. A reply is itself a signal to whoever is probing.
+func TestAQuestionPastTheCapIsNotAnswered(t *testing.T) {
+	e := setupChannels(t, store.RateLimitConfig{OpenCooldownS: 0, OpensPerHour: 1000, ChatMsgsPerMin: 10000, AccountOpensPerHour: 100000})
+	for i := 0; i < QueriesPerHour+3; i++ {
+		rec := waPost(e.h, waTextMsg(testPhoneRaw, "wamid.c"+strconv.Itoa(i), "when was the gate last opened?", waPhoneID))
+		if rec.Code != 200 {
+			t.Fatalf("webhook stopped 200ing at %d: %d", i, rec.Code)
+		}
+	}
+	if n := len(e.wa.all()); n != QueriesPerHour {
+		t.Errorf("%d replies for %d questions, want %d — the cap did not bind", n, QueriesPerHour+3, QueriesPerHour)
+	}
+}
+
+// §4.4 rule 1: a device you cannot command is a device you cannot see.
+//
+// A second account's gate exists on the same hub and must not appear in the
+// answer, must not be counted in the "of N" total, and must not produce an
+// audit row — the last one matters because a read row against a gate nobody
+// asked about would be a disclosure recorded for a disclosure that did not
+// happen, which corrupts the log in the opposite direction.
+func TestAQuestionOnlyReportsGatesTheAskerCouldOpen(t *testing.T) {
+	e := setupChannels(t, permissiveRL())
+
+	// A whole separate tenant on the same hub.
+	otherAccess, _ := register(t, e.h, "other@elsewhere.test")
+	_, otherLoc := tenantIDs(t, e.h, otherAccess)
+	otherAP := createAP(t, e.h, otherAccess, otherLoc, "Neighbour driveway")
+
+	waPost(e.h, waTextMsg(testPhoneRaw, "wamid.scope", "when was the gate last opened?", waPhoneID))
+	sent := e.wa.all()
+	if len(sent) != 1 {
+		t.Fatalf("replies: %+v", sent)
+	}
+	if strings.Contains(sent[0].body, "Neighbour driveway") {
+		t.Errorf("answer named another account's gate: %q", sent[0].body)
+	}
+	// Not counted either — "1 of 2" would disclose that a second gate exists.
+	if strings.Contains(sent[0].body, "Showing") {
+		t.Errorf("answer counted gates outside the authorized set: %q", sent[0].body)
+	}
+
+	logs, err := e.st.AccessLogsByAccount(context.Background(), e.acct, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, l := range logs {
+		if l.Command == "read" && l.AccessPointID == otherAP {
+			t.Errorf("a read was audited against a gate the asker cannot see")
 		}
 	}
 }

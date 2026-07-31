@@ -748,11 +748,14 @@ Real position requires controller I/O — the `held_open` event, which explicitl
 *"needs position sensor"* (`proto/events.md:42`), and which the roadmap lists as
 protocol-supported but unshipped (`../ARCHITECTURE.md:271`).
 
-**PROPOSAL — the honest reply shape.** Never "The gate is closed." Instead:
-*"Last open command acked at 12:04. This gate has no position sensor, so I can't
-confirm its current state."* Same discipline as the existing denial copy, which
-is a behavioural contract precisely because *"a denial never pretends the gate
-opened"* (`channels/reply.go:12-14`).
+**BUILT, in that shape.** Never "The gate is closed." What it says is *"Main
+gate: last open command acked about 3 h ago"* followed by *"I can't confirm
+whether a gate is open or closed right now — these gates have no position
+sensor, so the hub only knows what it was last told to do."* Same discipline as
+the existing denial copy, which is a behavioural contract precisely because
+*"a denial never pretends the gate opened"* (`channels/reply.go:12-14`), and
+pinned the same way: a test fails if the reply ever names a gate as being in a
+state.
 
 ### 4.2 What a read path may answer
 
@@ -760,13 +763,29 @@ opened"* (`channels/reply.go:12-14`).
 engine exists, from cached device state — never by inventing a new signed read
 command to the controller.
 
-| Query | Source | Answerable today |
+| Query | Source | State |
 |---|---|---|
-| "when was the gate last opened" | `access_logs` (`store/accesspoints.go:30-35`) | yes |
-| "is the controller online" | `devices.last_seen_at` (`store/devices.go:150-155`) | yes |
-| "is the gate closed" | needs a position sensor (`proto/events.md:42`) | **no — say so** |
-| "how much solar today" | energy engine (`ROADMAP.md:39-43`) | no |
-| "which lights are on" | device state store (`ROADMAP.md:17-27`) | no |
+| "when was the gate last opened" | `access_logs`, via `store.GateReadSummary` | **built** |
+| "when was it last closed" | same, selected by the verb the member used | **built** |
+| "is the controller online" | `devices.last_seen_at` | **built** |
+| "is the gate closed" | needs a position sensor (`proto/events.md:42`) | **built as a refusal** — §4.1 |
+| "who opened the gate" | `access_logs` has it | **refused on purpose** — see below |
+| "how much solar today" | energy engine | not built |
+| "which lights are on" | device state store | not built, and gated on rule 6 |
+
+**"Who opened the gate" is refused although the hub knows.** It is the one query
+in this table the data could answer and the product should not. A member of a
+shared gate would be able to track another resident's comings and goings from
+their phone, and no rule in §4.4 authorises that. `whoWords` is checked before
+every answerable classification precisely so the question is refused as itself
+rather than quietly answered with the adjacent fact — "who closed the gate"
+contains "closed" and would otherwise have been answered with the last close
+time, which is an evasion dressed as an answer.
+
+The two unbuilt rows are unbuilt for different reasons. Solar needs the energy
+engine wired to a rail. "Which lights are on" is an occupancy proxy and is
+blocked on rule 6's per-location opt-in, which does not exist yet — so it stays
+off rather than shipping without its switch.
 
 ### 4.3 Reads leak more than commands do
 
@@ -781,7 +800,31 @@ leaves"* (`src/lib/demoData.ts`), and reporting its state reports occupancy.
 
 ### 4.4 Rules for read paths
 
-**PROPOSAL.**
+**BUILT.** Each rule and where it lives:
+
+| Rule | Where |
+|---|---|
+| 1 — authorized set only | `store.GateReadSummary` takes `[]AvailableAP`, and narrows twice |
+| 2 — cap and state it | `PickerCapacity`, capped before the read; "Showing 3 of 12" |
+| 3 — no raw telemetry | `channels.GateFact` carries four fields; elapsed time is coarse |
+| 4 — separate counter | `query_1h` scope, `store.NoteChatQuery`, `QueriesPerHour` |
+| 5 — audited | `store.LogGateRead`, `access_logs` with command `read` |
+| 6 — occupancy opt-in | NOT built; nothing that needs it is exposed |
+
+Two notes the implementation added to the rules as written.
+
+**Rule 1 narrows twice, and that has a cost.** The `IN` clause and the result
+re-ordering both restrict to the authorized set. Breaking either alone leaves
+the other holding, so a tamper against one is indistinguishable from a working
+guard — the scoping test was only shown to catch a widened read by disabling
+BOTH. Anyone verifying this boundary has to do the same.
+
+**Rule 5 does not go through `LogAccess`.** That is the actuation choke point;
+it runs geofence, time-window and quota checks that have no meaning for a
+question, and it refuses any command that is not an open or a close. A read
+writes to the same append-only hash-chained table through `InsertAccessLog`,
+carrying its location and account so the row survives the `ON DELETE SET NULL`
+foreign keys that migration 0007's snapshots exist for.
 
 1. **Same authorization as commands.** A query resolves only over the caller's
    authorized set — the exact rule `AvailableAccessPointsByPhone` /

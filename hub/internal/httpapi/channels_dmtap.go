@@ -105,7 +105,20 @@ func (s *Server) handleDMTAPIntent(ctx contextT, intent channels.DMTAPIntent) {
 		// call with everything it needed. Answered here instead, before any
 		// gate lookup — the answer does not depend on which gate it is.
 		if gateIntent == channels.IntentQuestion {
-			s.dmtapReply(ctx, chatID, intent.GroupID, channels.GateQuestionReply(verb, s.channelPublicURL()))
+			gates, err := s.store.AvailableAccessPointsByProfile(ctx, profileID)
+			if err != nil {
+				s.log.Error("dmtap available", "err", err)
+				return
+			}
+			reply := s.answerGateQuestion(ctx, txt, verb, gates, queryCaller{
+				subject: "profile:" + profileID,
+				source:  channels.KindDMTAP,
+				userFor: func(string) string { return profileID },
+			})
+			if reply == "" {
+				return // over the query cap: go quiet
+			}
+			s.dmtapReply(ctx, chatID, intent.GroupID, reply)
 			return
 		}
 		if gateIntent != channels.IntentCommand {

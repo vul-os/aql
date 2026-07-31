@@ -381,11 +381,22 @@ and none has met physical hardware.
       and the order is what keeps it narrow — "open the gate and keep the dog inside" has
       the two words the other way round and is still an open, which is the direction that
       would otherwise leave a barrier standing open
+- [x] **Chat answers questions as well as commanding.** `docs/CHAT-COMMANDS.md` §4's T0
+      read path: "when was the gate last opened", "when was it last closed" and "is the
+      controller online" are answered from the hub's own record, and "is the gate closed"
+      is refused with its reason — the hub has no position sensor and says so rather than
+      guessing about a physical barrier. Every §4.4 rule is code: the authorized set only,
+      capped at `PickerCapacity` with the truncation stated, a `query_1h` counter that
+      cannot exhaust the open budget, and a `read` row in the same hash-chained audit table
+      as an open. "Who opened the gate" is REFUSED although the log holds it — a member of
+      a shared gate should not be able to track another resident from their phone — and is
+      refused before classification so it cannot be answered with the adjacent fact
 - [ ] Extend it further, to the other device classes. Chat still reaches only the access
       module; the engine's verbs (`on`/`off`/`set`/`start`…) are recognised and honestly
-      refused (`channels/unsupported.go`) rather than driven. The T0 read path
-      (`docs/CHAT-COMMANDS.md` §4) is the next step and now has somewhere to attach:
-      questions are already separated from commands, they are simply not answered yet
+      refused (`channels/unsupported.go`) rather than driven. §4.2's two unbuilt queries
+      are "how much solar today" (needs the energy engine on a rail) and "which lights are
+      on" (an occupancy proxy, blocked on §4.4 rule 6's per-location opt-in, which does not
+      exist — so it stays off rather than shipping without its switch)
 
 ---
 
