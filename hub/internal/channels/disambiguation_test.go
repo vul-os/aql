@@ -266,8 +266,16 @@ func TestSlackAccessBlocksStaysUnderCeiling(t *testing.T) {
 	}
 }
 
-// TestEveryPickerDisclosesTruncation: WhatsApp, Telegram, Slack and DMTAP all
-// cap their lists; none of them may drop rows silently.
+// TestEveryPickerDisclosesTruncation: every rail caps its list; none of them
+// may drop rows silently.
+//
+// "Every" has to mean every, and for a while it did not: Discord and two of
+// DMTAP's three renderers were absent, so three pickers a member actually sees
+// were capped by code nothing checked. All three were in fact correct — this
+// closed a COVERAGE gap, not a defect — but a renderer that stops asking for
+// the notice fails no test it is not in, and the failure is invisible from the
+// outside: a member with 34 gates is shown 10, picks the nearest name, and
+// never learns the one they wanted was not on the list.
 func TestEveryPickerDisclosesTruncation(t *testing.T) {
 	gates := manyGates(34)
 
@@ -311,6 +319,73 @@ func TestEveryPickerDisclosesTruncation(t *testing.T) {
 	if got := DMTAPGateList(gates, testPortal); !strings.Contains(got, "Showing 10 of 34") || strings.Count(got, "\n") != 11 {
 		t.Errorf("dmtap list: %q", got)
 	}
+
+	// DMTAP's other two renderers. Both are reached from the actuation path —
+	// the prompt when a body names no gate, the ambiguity reply when it names
+	// several — so both are lists a member picks from under time pressure.
+	if got := DMTAPGatePrompt(VerbOpen, gates, testPortal); !strings.Contains(got, "Showing 10 of 34") {
+		t.Errorf("dmtap prompt: %q", got)
+	}
+	if got := DMTAPAmbiguousPrompt(VerbOpen, gates, testPortal); !strings.Contains(got, "Showing 10 of 34") {
+		t.Errorf("dmtap ambiguous prompt: %q", got)
+	}
+
+	// Discord. Its cap is the tighter of PickerCapacity and DiscordMaxButtons,
+	// and the components are action ROWS of up to five buttons each — so the
+	// row count is not the button count, and only the body can state the total.
+	dbody, comps := DiscordGatePicker(VerbOpen, "Which gate would you like to open?", gates, testPortal)
+	if !strings.Contains(dbody, "Showing 10 of 34") {
+		t.Errorf("discord body: %q", dbody)
+	}
+	if n := discordButtonCount(comps); n != PickerCapacity {
+		t.Errorf("discord buttons: %d, want %d", n, PickerCapacity)
+	}
+}
+
+// The number the notice states must be the number actually rendered.
+//
+// Discord is the only rail with a two-level structure — buttons are packed into
+// action ROWS, and both levels have their own ceiling. The notice is computed
+// from the button count, but what a member sees is the buttons inside the rows,
+// and nothing ties those together except arithmetic: DiscordMaxButtons happens
+// to equal DiscordMaxActionRows × DiscordButtonsPerRow, so every button built
+// fits in a row that gets emitted.
+//
+// Change any one of those three constants independently and the row loop starts
+// dropping buttons the notice has already counted — "Showing 30 of 34" over 25
+// buttons, which is a truncation disclosure that itself under-reports the
+// truncation. This asserts the property rather than the arithmetic, so it holds
+// whichever constant moves.
+func TestDiscordDisclosesTheNumberItActuallyRenders(t *testing.T) {
+	for _, total := range []int{3, 10, 26, 34, 60} {
+		gates := manyGates(total)
+		body, comps := DiscordGatePicker(VerbOpen, "Which gate?", gates, testPortal)
+		rendered := discordButtonCount(comps)
+		if rendered > total {
+			t.Fatalf("%d gates rendered %d buttons", total, rendered)
+		}
+		if rendered == total {
+			if strings.Contains(body, "Showing") {
+				t.Errorf("%d gates all rendered, yet the body claims truncation: %q", total, body)
+			}
+			continue
+		}
+		want := "Showing " + itoa(int64(rendered)) + " of " + itoa(int64(total))
+		if !strings.Contains(body, want) {
+			t.Errorf("%d gates → %d buttons, body does not say %q: %q", total, rendered, want, body)
+		}
+	}
+}
+
+// discordButtonCount counts the buttons a member can actually tap: the ones
+// inside emitted action rows, not the ones the renderer built.
+func discordButtonCount(comps []DiscordComponent) int {
+	n := 0
+	for _, row := range comps {
+		inner, _ := row["components"].([]DiscordComponent)
+		n += len(inner)
+	}
+	return n
 }
 
 // TestPickersStaySilentWhenComplete: the disclosure appears only when rows
@@ -332,6 +407,15 @@ func TestPickersStaySilentWhenComplete(t *testing.T) {
 	}
 	if strings.Contains(DMTAPGateList(gates, testPortal), "Showing") {
 		t.Error("dmtap added a notice for a complete list")
+	}
+	if strings.Contains(DMTAPGatePrompt(VerbOpen, gates, testPortal), "Showing") {
+		t.Error("dmtap prompt added a notice for a complete list")
+	}
+	if strings.Contains(DMTAPAmbiguousPrompt(VerbOpen, gates, testPortal), "Showing") {
+		t.Error("dmtap ambiguous prompt added a notice for a complete list")
+	}
+	if dbody, _ := DiscordGatePicker(VerbOpen, "Which gate?", gates, testPortal); strings.Contains(dbody, "Showing") {
+		t.Errorf("discord added a notice for a complete list: %q", dbody)
 	}
 }
 

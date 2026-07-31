@@ -424,6 +424,18 @@ and none has met physical hardware.
       the scanned list left every other assertion green while that rail went unread — both
       now have their own check. A rail may still WRITE the audit row §4.4 rule 5 requires,
       because writing evidence is not consulting it
+- [x] **Every chat picker that truncates says so — now including the three nobody was
+      checking.** `TestEveryPickerDisclosesTruncation` covered WhatsApp, Telegram, Slack
+      and one of DMTAP's three renderers; Discord and DMTAP's other two were capped by
+      code no test read. All three were correct, so this closed a COVERAGE gap rather than
+      a defect — but a renderer that stops asking for the notice fails no test it is not
+      in, and the failure is invisible: a member with 34 gates is shown 10, picks the
+      nearest name, and never learns theirs was not on the list. Discord additionally now
+      asserts that the number the notice STATES equals the number actually rendered — its
+      buttons are packed into action rows with a ceiling at each level, and those agree
+      only because `DiscordMaxButtons` is defined as rows × per-row. `docs/CHAT-COMMANDS.md`
+      §2.3 recorded Slack as "not enforced" and asked for constants that already exist;
+      corrected
 - [ ] Extend it further, to the other device classes. Chat still reaches only the access
       module; the engine's verbs (`on`/`off`/`set`/`start`…) are recognised and honestly
       refused (`channels/unsupported.go`) rather than driven. §4.2's two unbuilt queries

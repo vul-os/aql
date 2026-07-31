@@ -434,16 +434,30 @@ heuristics are how the wrong door opens.
 **Stage 4 — ask the discriminating question, do not dump a list.** When the
 candidate set is larger than the rail's picker capacity, reply with the question
 that partitions it — "Which zone: Perimeter, Exterior, or Interior?" — rather
-than a truncated list. Per-rail capacities are already known and must become
-explicit constants rather than inline `== 10` breaks:
+than a truncated list. **Still a proposal**; what this stage asked for
+underneath it is built:
 
-| Rail | Capacity | Today |
+| Rail | Capacity | State |
 |---|---|---|
-| WhatsApp interactive list | 10 rows/section | enforced, silently (`channels/whatsapp.go:189-191`) |
-| Telegram inline keyboard | 10 rows | enforced, silently (`channels/telegram.go:86-88`) |
-| Slack Block Kit | must be capped | **not enforced** (`channels/slack.go:99-110`) |
+| WhatsApp interactive list | `PickerCapacity` rows/section | capped, and says so |
+| Telegram inline keyboard | `PickerCapacity` rows | capped, and says so |
+| Slack Block Kit | `PickerCapacity` gate sections | capped, and says so |
+| Discord | `PickerCapacity`, packed into action rows | capped, and says so |
+| DMTAP | `PickerCapacity` lines | capped, and says so, in all three renderers |
 
-Whenever a list *is* truncated, it must say so: "showing 10 of 34".
+The "explicit constants rather than inline `== 10` breaks" this stage asked for
+is `channels.PickerCapacity`, and Slack — recorded here as **not enforced** —
+has been capped since. Every renderer emits `TruncationNotice`: *"Showing 10 of
+34 — this list is incomplete."*
+
+Discord is the one worth naming. Its buttons are packed into action ROWS and
+both levels carry their own ceiling, so the number the notice states and the
+number a member can tap are only equal by arithmetic — `DiscordMaxButtons` is
+DEFINED as rows × buttons-per-row. Change any of the three independently and
+the row loop starts dropping buttons the notice has already counted, which is a
+truncation disclosure that under-reports the truncation. A test asserts the
+rendered count matches the stated one rather than asserting the arithmetic, so
+it holds whichever constant moves.
 
 **Stage 5 — groups as explicit targets.** "All lights", "exterior lights", a
 saved group. Group expansion is allowed for T0/T1 verbs. **Group expansion is
