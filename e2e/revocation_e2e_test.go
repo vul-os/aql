@@ -138,3 +138,89 @@ func TestRevoke_LandsWhileLockedDown(t *testing.T) {
 			"was lost to the freeze it was meant to replace", res, det)
 	}
 }
+
+// A real controller REPORTS which deny-list it is enforcing, and the hub serves
+// it.
+//
+// docs/GRANT-REVOCATION.md §5. "Dispatched" and "applied" differ exactly when
+// it matters — a command queued for a gate that never reconnects looks
+// identical to one delivered — so the hub asking the gate is the only honest
+// answer to "did my revocation land".
+//
+// Unit tests cover each half: the controller building the report block, the hub
+// ingesting it, the hub comparing it against its own counter. None of them puts
+// a ctl.report on a socket. This does.
+func TestRevoke_ControllerReportsWhatItIsEnforcing(t *testing.T) {
+	gw := startGateway(t)
+	ten := gw.register(t)
+	dev, claim := gw.createDevice(t, ten, "sim-controller")
+	ap := gw.createAP(t, ten, "Main Gate", dev)
+
+	s := startSim(t, gw, dev, claim)
+	_ = s
+	gw.waitDeviceConnected(t, ten, dev, 10*time.Second)
+
+	report := func() map[string]any {
+		t.Helper()
+		st, body, raw := httpJSON(t, http.MethodGet, gw.url+"/v1/devices/"+dev+"/config-report", ten.token, nil)
+		if st != http.StatusOK {
+			t.Fatalf("config-report: %d %s", st, raw)
+		}
+		rev, _ := body["revocation"].(map[string]any)
+		if rev == nil {
+			t.Fatalf("config-report carries no revocation block: %v", body)
+		}
+		return rev
+	}
+
+	// Before anything is revoked the hub's counter is 0, and a controller
+	// reporting seq 0 is a CONFIRMATION that it holds no list — distinct from
+	// having said nothing, which is what an older firmware would look like.
+	deadline := time.Now().Add(15 * time.Second)
+	var rev map[string]any
+	for time.Now().Before(deadline) {
+		rev = report()
+		if rev["reported"] == true {
+			break
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	if rev["reported"] != true {
+		t.Fatalf("the controller never reported its deny-list state: %v — nothing can "+
+			"confirm a revocation reached it", rev)
+	}
+	if rev["seq"] != float64(0) {
+		t.Errorf("seq before any revocation = %v, want 0", rev["seq"])
+	}
+
+	appPriv, appPub := newAppKey(t)
+	_ = appPriv
+	g := gw.issueOfflineGrant(t, ten, appPub, []string{ap})
+	gid := grantIDOf(t, g)
+	st, _, raw := httpJSON(t, http.MethodPost, gw.url+"/v1/offline-grants/"+gid+"/revoke", ten.token, map[string]any{})
+	if st != http.StatusOK {
+		t.Fatalf("revoke: %d %s", st, raw)
+	}
+
+	// The controller sends a fresh report when its deny-list changes, so the
+	// hub's view catches up without being asked.
+	deadline = time.Now().Add(15 * time.Second)
+	for time.Now().Before(deadline) {
+		rev = report()
+		if seq, _ := rev["seq"].(float64); seq >= 1 {
+			break
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	if seq, _ := rev["seq"].(float64); seq < 1 {
+		t.Fatalf("after revoking, the gate still reports seq %v — it has not applied the "+
+			"deny-list, or it has and never said so", rev["seq"])
+	}
+	if rev["up_to_date"] != true {
+		t.Errorf("up_to_date = %v with hub_seq %v and gate seq %v — the hub cannot tell an "+
+			"operator the revocation landed", rev["up_to_date"], rev["hub_seq"], rev["seq"])
+	}
+	if entries, _ := rev["entries"].(float64); entries != 1 {
+		t.Errorf("entries = %v, want 1", rev["entries"])
+	}
+}

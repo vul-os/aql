@@ -187,6 +187,7 @@ func (r *Runner) dispatch(conn *WSConn, raw []byte, log *slog.Logger) {
 	switch probe.Typ {
 	case "cmd":
 		before := command.ResolvedConfig(r.St.Config())
+		revBefore := r.St.Revocations().Seq
 		ack, err := r.Proc.Process(raw)
 		if err != nil {
 			log.Error("command processing", "err", err)
@@ -195,12 +196,26 @@ func (r *Runner) dispatch(conn *WSConn, raw []byte, log *slog.Logger) {
 		if err := conn.WriteMessage(ack); err != nil {
 			log.Warn("ack send failed", "err", err)
 		}
-		// A `config` command that landed changes what this gate will do, and
-		// "did my change land" is half of why the report exists. Compared on
-		// the RESOLVED values rather than on the command: a config setting a
-		// key this controller does not read, or re-sending a value already in
-		// effect, changes nothing an operator should be shown as new.
-		if after := command.ResolvedConfig(r.St.Config()); !sameResolvedConfig(before, after) {
+		// A command that changed what this gate WILL DO, or what it now
+		// REFUSES, is the other half of why the report exists — "did my change
+		// land" answered by the device rather than by the hub assuming its own
+		// success.
+		//
+		// Config is compared on the RESOLVED values rather than on the command:
+		// a config setting a key this controller does not read, or re-sending a
+		// value already in effect, changes nothing an operator should be shown
+		// as new.
+		//
+		// The revocation sequence is the second trigger and was missing. It was
+		// found by an e2e test rather than by review: a `revoke` changes the
+		// deny-list and not the config, so nothing reported it and the hub's
+		// view stayed stale until the controller happened to RECONNECT — which
+		// for the gate on a flaky link, the one this feature exists for, could
+		// be days. An operator asking "did my revocation land" would have been
+		// told "not reported" long after it had.
+		configChanged := !sameResolvedConfig(before, command.ResolvedConfig(r.St.Config()))
+		revChanged := r.St.Revocations().Seq != revBefore
+		if configChanged || revChanged {
 			if p := r.St.Pairing(); p != nil {
 				r.reportConfig(conn, p.DeviceID, log)
 			}

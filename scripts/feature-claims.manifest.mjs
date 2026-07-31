@@ -398,6 +398,12 @@ export const FEATURES = [
       // being populated from it.
       [{ file: 'hub/internal/httpapi/devices.go', pattern: '"revocation":\\s+revocation' }],
       [{ file: 'src/components/device/ControllerConfig.tsx', pattern: 'function RevocationState' }],
+      // The report must fire when the DENY-LIST changes, not only when config
+      // does. Without this the hub's view is stale until the controller happens
+      // to reconnect, which for a gate on a flaky link could be days — and the
+      // whole point is answering "did it land" now.
+      [{ file: 'controller/internal/transport/runner.go', pattern: 'configChanged \\|\\| revChanged' }],
+      [{ file: 'e2e/revocation_e2e_test.go', pattern: 'ControllerReportsWhatItIsEnforcing' }],
     ],
   },
   {

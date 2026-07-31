@@ -143,7 +143,12 @@ the hub can show what is in effect rather than only what it last sent.
 ```
 
 Sent once after `ws.auth` succeeds, and again whenever the resolved
-configuration changes. **Not** carried on `cmd.ack`: a gate nobody has commanded
+configuration OR the cached deny-list changes. Both triggers matter for the same
+reason — "did my change land" has to be answered by the device — and the second
+was missing at first: a `revoke` changes the deny-list and not the config, so
+nothing reported it and the hub's view stayed stale until the controller
+happened to reconnect. For the gate on a flaky link, which is the one that
+feature exists for, that could be days. **Not** carried on `cmd.ack`: a gate nobody has commanded
 would never report, leaving the hub's view emptiest for the quietest controllers.
 
 `value` is the RESOLVED number — what the controller will actually use — and

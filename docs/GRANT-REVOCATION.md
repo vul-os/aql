@@ -202,6 +202,15 @@ ceiling `docs/THREAT-MODEL.md` §5 names for every signed object.
 
   `entries` is display only. The sequence decides whether a revocation landed; a
   count that disagreed with it would be a second, weaker answer to one question.
+
+  A report is sent when the deny-list CHANGES, not only on reconnect. That was
+  missing when this shipped and an e2e test found it, not review: `ctl.report`
+  was re-sent only when the resolved config changed, and a `revoke` changes
+  neither the config nor anything else that triggered a report — so the hub kept
+  showing the old sequence until the controller happened to reconnect. An
+  operator asking "did my revocation land" would have been told "not reported"
+  long after it had, which is the failure this whole section exists to prevent,
+  arriving through the mechanism meant to prevent it.
 - ~~**What does the console show?**~~ **Answered.** Each controller's page says
   whether it is up to date, behind (naming both sequences, and saying in words
   that a revoked grant would still open it), or unable to say. And the grants
