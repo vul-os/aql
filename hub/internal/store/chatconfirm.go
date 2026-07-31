@@ -153,19 +153,29 @@ func (s *Store) RedeemConfirmation(ctx context.Context, token, subject, channel,
 	return p, nil
 }
 
-// ConfirmationTokenIn extracts a token from a message body.
+// ConfirmationTokenIn extracts a token from a message body, returning it in the
+// canonical (upper) case the token was minted in.
 //
 // Tokens are looked for anywhere in the body rather than requiring the message
 // to be the token alone: rails add quoting, autocorrect adds punctuation, and a
-// member replying to a prompt often types "yes CONF-…". The prefix is what
-// makes that safe to scan for — an id with no prefix would match arbitrary
-// words and turn every message into a redemption attempt.
+// member replying to a prompt often types "yes OK-…". The prefix is what makes
+// that safe to scan for — an id with no prefix would match arbitrary words and
+// turn every message into a redemption attempt.
+//
+// # Case-insensitive, and that is not a nicety
+//
+// Every rail normalises an inbound body with channels.NormalizeText, which
+// LOWERCASES it. A case-sensitive scan therefore matched nothing a member could
+// actually send: the first version of this failed to find its own minted token
+// in the very next message, so a T2 command answered a confirmation with a
+// fresh confirmation, forever. The store tests passed throughout because they
+// carried the raw token; only a test driving the real webhook could see it.
 func ConfirmationTokenIn(body string) (string, bool) {
 	for _, w := range strings.FieldsFunc(body, func(r rune) bool {
 		return !(r == '-' || r == '_' || (r >= '0' && r <= '9') || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z'))
 	}) {
-		if strings.HasPrefix(w, ConfirmationPrefix) && len(w) > len(ConfirmationPrefix) {
-			return w, true
+		if len(w) > len(ConfirmationPrefix) && strings.EqualFold(w[:len(ConfirmationPrefix)], ConfirmationPrefix) {
+			return strings.ToUpper(w), true
 		}
 	}
 	return "", false

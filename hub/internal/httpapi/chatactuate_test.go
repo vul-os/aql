@@ -449,3 +449,112 @@ func TestNoEngineMeansTheRailFallsThrough(t *testing.T) {
 		t.Error("a hub with no engine claimed to handle an actuation")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// End to end, through the real webhooks.
+// ---------------------------------------------------------------------------
+
+// Everything above drives chatActuate directly. That establishes the rule and
+// says nothing about whether a rail reaches it — and until this test, none did:
+// setupChannels attaches no engine, so registry() was nil in every chat test and
+// the actuation branch returned "not handled" before doing anything.
+//
+// The same gap I have hit twice before in this package, in the same shape: a
+// helper proved correct and a call site nobody exercised.
+func TestARealMessageActuatesADevice(t *testing.T) {
+	e := setupChannelsWithEngine(t, permissiveRL())
+
+	rec := waPost(e.h, waTextMsg(testPhoneRaw, "wamid.act1", "turn on the garden lights", waPhoneID))
+	if rec.Code != 200 {
+		t.Fatalf("code %d", rec.Code)
+	}
+	sent := e.wa.all()
+	if len(sent) != 1 {
+		t.Fatalf("replies: %+v", sent)
+	}
+	if !strings.Contains(sent[0].body, "Garden Lights") || !strings.Contains(sent[0].body, "now on") {
+		t.Errorf("reply does not report the actuation: %q", sent[0].body)
+	}
+
+	logs, err := e.st.AccessLogsByAccount(context.Background(), e.acct, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	for _, l := range logs {
+		if l.Command == "on" && l.Source == channels.KindWhatsApp {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Errorf("audited `on` rows from whatsapp: %d, want 1", n)
+	}
+}
+
+// The confirmation round trip over a real rail.
+//
+// This is the test that can only be written end to end: redemption requires the
+// SAME conversation, so it fails if a rail threads a different chat id into the
+// second message than it did the first. Calling chatActuate directly passes a
+// chat id chosen by the test and could never catch that.
+func TestAConfirmationRoundTripsOverARealRail(t *testing.T) {
+	e := setupChannelsWithEngine(t, permissiveRL())
+
+	waPost(e.h, waTextMsg(testPhoneRaw, "wamid.c1", "resume the cleaning bot", waPhoneID))
+	first := e.wa.all()
+	if len(first) != 1 {
+		t.Fatalf("replies: %+v", first)
+	}
+	tok, ok := store.ConfirmationTokenIn(first[0].body)
+	if !ok {
+		t.Fatalf("no token in the prompt: %q", first[0].body)
+	}
+
+	// Nothing has run yet.
+	if countCommands(t, e, "resume") != 0 {
+		t.Fatal("a T2 verb ran on the first message")
+	}
+
+	waPost(e.h, waTextMsg(testPhoneRaw, "wamid.c2", "resume the cleaning bot "+tok, waPhoneID))
+	second := e.wa.all()
+	if len(second) != 2 {
+		t.Fatalf("replies after confirming: %+v", second)
+	}
+	if !strings.Contains(second[1].body, "Cleaning Bot") {
+		t.Errorf("confirmation reply: %q", second[1].body)
+	}
+	if n := countCommands(t, e, "resume"); n != 1 {
+		t.Errorf("audited `resume` rows: %d, want 1 — the confirmation did not carry", n)
+	}
+}
+
+// A hazardous verb is refused over the wire too, with no token offered.
+func TestARealMessageCannotStartAMowersBlades(t *testing.T) {
+	e := setupChannelsWithEngine(t, permissiveRL())
+	waPost(e.h, waTextMsg(testPhoneRaw, "wamid.haz", "resume the mower", waPhoneID))
+	sent := e.wa.all()
+	if len(sent) != 1 {
+		t.Fatalf("replies: %+v", sent)
+	}
+	if strings.Contains(sent[0].body, "send this back") {
+		t.Error("a T4 verb was offered a confirmation over the wire")
+	}
+	if n := countCommands(t, e, "resume"); n != 0 {
+		t.Errorf("a mower resumed: %d rows", n)
+	}
+}
+
+func countCommands(t *testing.T, e *chEnv, command string) int {
+	t.Helper()
+	logs, err := e.st.AccessLogsByAccount(context.Background(), e.acct, 200)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	for _, l := range logs {
+		if l.Command == command && l.Success {
+			n++
+		}
+	}
+	return n
+}

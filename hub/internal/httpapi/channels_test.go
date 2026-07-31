@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/vul-os/aql/hub/internal/channels"
+	"github.com/vul-os/aql/hub/internal/devices"
 	"github.com/vul-os/aql/hub/internal/keys"
 	"github.com/vul-os/aql/hub/internal/store"
 )
@@ -164,6 +165,29 @@ func permissiveRL() store.RateLimitConfig {
 }
 
 func setupChannels(t *testing.T, rl store.RateLimitConfig) *chEnv {
+	return setupChannelsOpt(t, rl, nil)
+}
+
+// setupChannelsWithEngine is setupChannels with a device engine attached.
+//
+// Separate rather than default, because attaching a fleet CHANGES what the
+// existing tests see: the unsupported-verb reply resolves a device once there
+// is one, so making every chat test engine-backed would rewrite assertions that
+// are about the no-engine path — which is also a real deployment, and the
+// default one.
+func setupChannelsWithEngine(t *testing.T, rl store.RateLimitConfig) *chEnv {
+	t.Helper()
+	reg := devices.NewRegistry()
+	if err := reg.Register(devices.NewMockDriver("mock")); err != nil {
+		t.Fatal(err)
+	}
+	if err := reg.Refresh(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	return setupChannelsOpt(t, rl, reg)
+}
+
+func setupChannelsOpt(t *testing.T, rl store.RateLimitConfig, reg *devices.Registry) *chEnv {
 	t.Helper()
 	dir := t.TempDir()
 	st, err := store.Open(dir)
@@ -180,6 +204,7 @@ func setupChannels(t *testing.T, rl store.RateLimitConfig) *chEnv {
 		PublicURL:  "https://gate.example",
 		JWTSecret:  []byte("0123456789abcdef0123456789abcdef"),
 		RateLimits: rl,
+		Devices:    reg,
 		Channels: channels.Config{
 			WhatsAppAppSecret:     waSecret,
 			WhatsAppVerifyToken:   waVerify,

@@ -162,6 +162,19 @@ func TestATokenIsFoundInAMessageThatCarriesWords(t *testing.T) {
 			t.Errorf("%q → (%q, %v)", body, got, ok)
 		}
 	}
+	// The case every rail actually delivers. NormalizeText lowercases an
+	// inbound body before anything sees it, so a case-sensitive scan finds
+	// nothing a member could send — which is exactly what happened: a T2
+	// command answered its own confirmation with a fresh confirmation, forever.
+	lowered := strings.ToLower(tok)
+	got, ok := ConfirmationTokenIn("resume the cleaning bot " + lowered)
+	if !ok {
+		t.Fatalf("a lowercased token is not found — no rail could ever redeem one: %q", lowered)
+	}
+	if got != tok {
+		t.Errorf("lowercased token returned %q, want the canonical %q", got, tok)
+	}
+
 	// And an ordinary message is not a redemption attempt.
 	for _, body := range []string{"ok", "yes", "turn on the lights", "okay then"} {
 		if _, ok := ConfirmationTokenIn(body); ok {

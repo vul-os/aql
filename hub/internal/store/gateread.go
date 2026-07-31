@@ -193,6 +193,9 @@ func (s *Store) ClaimActuationCooldown(ctx context.Context, subject string, nowU
 // DeviceCommandLog is one engine command attempt, for the audit.
 type DeviceCommandLog struct {
 	DeviceKey string
+	// AccountID is the owning account. When empty it is looked up from the
+	// device claim, and falls back to nothing rather than to a guess.
+	AccountID string
 	UserID    string
 	Command   string
 	Source    string
@@ -200,7 +203,8 @@ type DeviceCommandLog struct {
 	Err       string
 }
 
-// LogDeviceCommand records an engine actuation in access_logs.
+// LogDeviceCommand records an engine actuation in access_logs, under the
+// account that owns the device.
 //
 // §3.8 is explicit: "Every attempt at every tier writes to the SAME access_logs
 // table. Do not add a second log." The table is hash-chained with append-only
@@ -210,9 +214,24 @@ type DeviceCommandLog struct {
 // The command column already stores a string, so a wider verb vocabulary is a
 // data change and not a schema change — which is why this needs no migration.
 // access_point_id is left empty because an engine device is not an access
-// point; the device key rides in the error/detail column only when the command
-// failed, so the row is identifiable by (command, source, user) plus its
-// timestamp.
+// point; the device key rides in the detail column, so the row is identifiable
+// by (command, source, user, device) plus its timestamp.
+//
+// # account_id is not optional, and leaving it out was a real defect
+//
+// The first version of this wrote no account. The row landed in the table and
+// in the hash chain, and was invisible to AccessLogsByAccount — which is how
+// the console, and every member, actually reads the log. An audit row nobody
+// can find is close to no audit row at all, and unit tests counting rows in the
+// whole table could not see the difference. A rail-level test reading it the
+// way the product does is what surfaced it.
+//
+// The account is the one that OWNS the device, not the one the actor happens to
+// belong to: the log answers "what happened to my devices", and on a
+// multi-tenant hub those are different questions. A device nobody has claimed —
+// the normal state on a single-household hub, where claiming is unnecessary —
+// falls back to the actor's account, because an unclaimed device on a one-account
+// hub belongs to that account in every sense except a row in a table.
 func (s *Store) LogDeviceCommand(ctx context.Context, l DeviceCommandLog) error {
 	detail := l.Err
 	if detail == "" {
@@ -220,12 +239,19 @@ func (s *Store) LogDeviceCommand(ctx context.Context, l DeviceCommandLog) error 
 	} else {
 		detail = l.DeviceKey + ": " + detail
 	}
+	accountID := l.AccountID
+	if accountID == "" {
+		if owner, ok, err := s.AccountForDeviceKey(ctx, l.DeviceKey); err == nil && ok {
+			accountID = owner
+		}
+	}
 	_, err := s.InsertAccessLog(ctx, AccessLog{
-		UserID:  l.UserID,
-		Command: l.Command,
-		Source:  l.Source,
-		Success: l.Success,
-		Error:   detail,
+		AccountID: accountID,
+		UserID:    l.UserID,
+		Command:   l.Command,
+		Source:    l.Source,
+		Success:   l.Success,
+		Error:     detail,
 	})
 	return err
 }

@@ -467,6 +467,18 @@ and none has met physical hardware.
       — the case §3.4 exists for. A confirmation raises the ceiling by exactly one tier:
       T4 stays refused however many messages arrive, because it wants step-up on a
       different rail and an operator-armed window and a token is neither
+- [x] **Two defects the unit tests could not see, found by driving the real webhooks.**
+      Every actuation test called the helper directly, and `setupChannels` attaches no
+      engine — so no rail test had ever reached the actuation path at all. With one
+      attached: (1) engine commands were audited with NO account_id, so the row existed in
+      the hash chain and was invisible to `AccessLogsByAccount`, which is how the console
+      and every member actually read the log — an audit row nobody can find is close to no
+      audit row; unit tests counting rows across the whole table could not tell the
+      difference. (2) The confirmation token was UNREDEEMABLE on every rail: bodies are
+      lowercased by `NormalizeText` before anything sees them, and the scan was
+      case-sensitive, so a T2 command answered its own confirmation with a fresh
+      confirmation, forever. The store tests passed throughout because they carried the
+      raw token
 - [ ] Extend it further, to the other device classes. `set`, groups and T4 remain in the
       console. T4 needs step-up on a second rail (§3.4) and an operator-armed time window;
       neither exists, and a confirmation is not a substitute for either. §4.2's two unbuilt queries

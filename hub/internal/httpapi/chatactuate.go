@@ -186,6 +186,10 @@ func (s *Server) chatActuate(ctx contextT, body, profileID, source, chatID, conf
 	// sent, and both matter when a member says "I turned it off".
 	if err := s.store.LogDeviceCommand(ctx, store.DeviceCommandLog{
 		DeviceKey: m.Device.Key,
+		// The actor's account, used only when the device is unclaimed — the
+		// normal state on a one-household hub, where claiming is unnecessary
+		// and an unowned device still belongs to the only account there is.
+		AccountID: s.soleAccountFor(ctx, profileID),
 		UserID:    profileID,
 		Command:   string(v),
 		Source:    source,
@@ -296,4 +300,21 @@ func (s *Server) confirmedOrPrompt(
 		}, false
 	}
 	return chatActuationResult{}, true
+}
+
+// soleAccountFor returns the actor's account when they have exactly one.
+//
+// Exactly one, deliberately. A member of several accounts acting on an
+// UNCLAIMED device gives no basis for choosing which account's log the row
+// belongs in, and picking one would file a real event under a possibly wrong
+// tenant — worse than filing it under none, because it would look right. With
+// several accounts the row keeps whatever the device claim says, and an
+// unclaimed device on a multi-account hub is already unreachable: permits()
+// denies it, so this path is not taken.
+func (s *Server) soleAccountFor(ctx contextT, userID string) string {
+	accounts, err := s.store.AccountsForUser(ctx, userID)
+	if err != nil || len(accounts) != 1 {
+		return ""
+	}
+	return accounts[0].ID
 }
