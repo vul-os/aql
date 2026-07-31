@@ -647,6 +647,15 @@ and none has met physical hardware.
       worse on a real camera and honest about what has been verified — a long-lived session
       means keepalives, mid-stream parameter-set changes and servers that drop connections,
       none of which can be developed against a fake without inventing the behaviour.
+- [x] **The camera LIVE route is tested.** It had no tests at all: `Config.Live` is nil in
+      every harness, so the handler 404'd before reaching §2.4's `camera:view` check or
+      §2.5's audit — both of which it implements a second time, alongside the clip path
+      that was thoroughly covered. Found by auditing which `Config` fields no test ever
+      sets, after the same shape (a helper proved correct, a call site nobody exercised)
+      produced two real defects on the chat path. Tampering also showed a refusal test
+      using a plain `httptest` request HANGS on a regression — the handler streams and the
+      request context never ends — so it ran for ten minutes instead of reporting that an
+      owner had watched a camera without permission; the refusal tests now carry deadlines
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
 - [ ] Rate-limiting and scoping on movement commands, so a compromised client cannot drive

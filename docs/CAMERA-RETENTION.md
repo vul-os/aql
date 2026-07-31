@@ -230,6 +230,20 @@ had to be built, and all five now are:
 5. **A viewer**, which is where fMP4 pays off: a browser plays it without a
    plugin. `src/pages/app/Footage.tsx`, `src/components/camera/LiveView.tsx`.
 
+**The live route had no tests until 2026-07-31**, and the reason is worth
+recording: `Config.Live` is nil in every test harness, so the handler returned
+404 before reaching any of its body. §2.4's grant check and §2.5's audit are
+written twice — once on the clip path, once on the live path — and only the
+clip path was exercised. A rule proved on one route and duplicated, unchecked,
+on another is the same defect shape as a rule not written down at all.
+
+One thing that surfaced while tampering: a refusal test using a plain
+`httptest` request HANGS when the grant check regresses, because the handler
+starts streaming and the request context never ends. It ran for ten minutes
+rather than reporting that an owner had just watched a camera without
+permission. The refusal tests now carry deadlines, so a regression fails
+instead of looking like an infrastructure problem.
+
 Steps 1 and 2 were said to need a real camera. They were built against an
 in-process RTSP server instead, which is why the status at the top of this
 document distinguishes built from run: the wire format is exercised and the
