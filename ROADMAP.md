@@ -144,8 +144,9 @@ hub's issuance endpoint):
       probes nothing. The banner says a controller is *responding*, never that the gate
       will open: the probe carries no signature, so identity is still settled at the gate
       against the controller's pinned hub key
-- [x] **Grant revocation beyond "wait for expiry"** — built end to end, never run against
-      a controller on real hardware. Migration 0030 remembers what was issued; revoking from
+- [x] **Grant revocation beyond "wait for expiry"** — built end to end and proven over real
+      binaries (e2e starts a hub and a controller, opens a gate, revokes, and shows the same
+      grant refused); never run against real hardware. Migration 0030 remembers what was issued; revoking from
       the emergency-access screen pushes a signed deny-list to every controller the grant
       named, and a controller that was offline gets it on reconnect. Each gate then REPORTS
       which list it is enforcing (`ctl.report`, migration 0031), so "did my revocation land"

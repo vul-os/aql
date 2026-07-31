@@ -280,6 +280,10 @@ export const FEATURES = [
       // Reachable from a screen, not just from a route.
       [{ file: 'src/components/access/IssuedGrantsPanel.tsx', pattern: 'offlineGrantRevoke' }],
       [{ file: 'src/pages/app/EmergencyAccess.tsx', pattern: 'IssuedGrantsPanel' }],
+      // Proven over REAL binaries, which is the only place the wiring between
+      // the two modules is exercised. Every part of this feature is unit-tested
+      // in isolation and its one shipped bug lived in the seam between them.
+      [{ file: 'e2e/revocation_e2e_test.go', pattern: 'want denied/revoked' }],
     ],
   },
   {

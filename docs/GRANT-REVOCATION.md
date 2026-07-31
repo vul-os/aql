@@ -1,7 +1,13 @@
 # Revoking an offline grant before it expires
 
-**Status: built end to end, and never run against a controller on real
-hardware.** §3's decisions are code on both sides — the monotonic `seq` rule,
+**Status: built end to end and proven over real binaries; never run against a
+controller on real HARDWARE.** `e2e/revocation_e2e_test.go` starts an actual hub
+and an actual controller, opens a gate with a grant, revokes it through the
+console's own route, and shows the same grant refused with `revoked` — including
+while lockdown is latched, then lifted, which is §3.8's sequence. What remains
+untested is a physical gate.
+
+ §3's decisions are code on both sides — the monotonic `seq` rule,
 step 3a in the verification core, the `revoke` command, and on the hub side
 migration 0030, the revoke route, and delivery both on revocation and on
 reconnect. An operator can revoke a grant from the emergency-access screen and
