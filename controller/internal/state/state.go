@@ -201,8 +201,14 @@ func (s *Store) SetLockdown(v bool) error {
 	return s.mutate(func(d *persisted) { d.Lockdown = v })
 }
 
-// Config returns a copy of the actuation config (pulse_ms, hold_max,
-// sensor_debounce_ms, …).
+// Config returns a copy of the actuation config as STORED.
+//
+// `config` accepts an open map, so this can hold keys the controller never
+// reads. Today it resolves pulse_ms and hold_max and nothing else —
+// sensor_debounce_ms in particular is accepted, stored and ignored, because the
+// debounce that actually applies is a property of the relay wiring
+// (-relay …,sensor-debounce=20ms), not of configuration. Stored is not in
+// effect, and anything showing these to an operator has to say which it is.
 func (s *Store) Config() map[string]int64 {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -29,17 +29,13 @@
             "source": "default"
           },
           "hold_max": {
-            "value": 30,
-            "source": "default"
-          },
-          "sensor_debounce_ms": {
-            "value": 20,
+            "value": 1800,
             "source": "default"
           }
         },
-        "sig": "pxg6i407kizbjc7VunQae6YcozVytSU9IxQnlSU7UzUIFJ0SmLvXc6n-oqVi3VeIDiFr1GmalzKYwRPhBKOvAA"
+        "sig": "0FZ7luuIhqweHa6kYlR6s3kyeyMtpByd6ZvhlHX00nBAwPKyiLhh9qACF3owD9LNpn5MNhEBLc_Ge6dRSRf1Bw"
       },
-      "canonical": "{\"config\":{\"hold_max\":{\"source\":\"default\",\"value\":30},\"pulse_ms\":{\"source\":\"default\",\"value\":700},\"sensor_debounce_ms\":{\"source\":\"default\",\"value\":20}},\"device_id\":\"de71ce00-0000-4000-8000-000000000001\",\"firmware\":\"0.1.0\",\"ts\":1789000020,\"typ\":\"ctl.report\",\"v\":0}"
+      "canonical": "{\"config\":{\"hold_max\":{\"source\":\"default\",\"value\":1800},\"pulse_ms\":{\"source\":\"default\",\"value\":700}},\"device_id\":\"de71ce00-0000-4000-8000-000000000001\",\"firmware\":\"0.1.0\",\"ts\":1789000020,\"typ\":\"ctl.report\",\"v\":0}"
     },
     {
       "name": "report-mixed-sources",
@@ -63,15 +59,11 @@
           "hold_max": {
             "value": 45,
             "source": "config"
-          },
-          "sensor_debounce_ms": {
-            "value": 20,
-            "source": "default"
           }
         },
-        "sig": "JNAHecGErjmbDHAdXl0VvvTeZXDWTqw4S-FnQYLmVaBfqhPqBkIpwzomeJ7_vlJlI1nYzY02EkftpOuyArRqBg"
+        "sig": "FlFkSyLbODB98FAL5G8lyRVf0mkebzD558W15idxS5ClMy4mrKDjRB8AjQBMZyS4lrtbqR9IT5jPLFI5DcVYBA"
       },
-      "canonical": "{\"config\":{\"hold_max\":{\"source\":\"config\",\"value\":45},\"pulse_ms\":{\"source\":\"default\",\"value\":700},\"sensor_debounce_ms\":{\"source\":\"default\",\"value\":20}},\"device_id\":\"de71ce00-0000-4000-8000-000000000001\",\"firmware\":\"0.1.0\",\"ts\":1789000020,\"typ\":\"ctl.report\",\"v\":0}"
+      "canonical": "{\"config\":{\"hold_max\":{\"source\":\"config\",\"value\":45},\"pulse_ms\":{\"source\":\"default\",\"value\":700}},\"device_id\":\"de71ce00-0000-4000-8000-000000000001\",\"firmware\":\"0.1.0\",\"ts\":1789000020,\"typ\":\"ctl.report\",\"v\":0}"
     },
     {
       "name": "report-unknown-key",
@@ -100,6 +92,34 @@
         "sig": "-n-wAkaFCOwfng8MolIft9nDcpRkuwX7FFSlMHBA4c-9xe0uOUqn829TPukzhL8L0w792UKstlG9krcfriv2Aw"
       },
       "canonical": "{\"config\":{\"pulse_ms\":{\"source\":\"default\",\"value\":700},\"strike_ms\":{\"source\":\"config\",\"value\":120}},\"device_id\":\"de71ce00-0000-4000-8000-000000000001\",\"firmware\":\"0.1.0\",\"ts\":1789000020,\"typ\":\"ctl.report\",\"v\":0}"
+    },
+    {
+      "name": "report-omits-an-unresolved-key",
+      "desc": "A controller whose config was sent sensor_debounce_ms — which it stores and never reads, because the real debounce comes from the relay wiring. The key is ABSENT from the report: reporting it as source \"config\" would tell an operator a setting is in effect when the gate is using a value from a command line they cannot see.",
+      "expect": "accept",
+      "check": {
+        "device_id": "de71ce00-0000-4000-8000-000000000001"
+      },
+      "signer": "controller",
+      "object": {
+        "v": 0,
+        "typ": "ctl.report",
+        "device_id": "de71ce00-0000-4000-8000-000000000001",
+        "ts": 1789000020,
+        "firmware": "0.1.0",
+        "config": {
+          "pulse_ms": {
+            "value": 700,
+            "source": "default"
+          },
+          "hold_max": {
+            "value": 45,
+            "source": "config"
+          }
+        },
+        "sig": "FlFkSyLbODB98FAL5G8lyRVf0mkebzD558W15idxS5ClMy4mrKDjRB8AjQBMZyS4lrtbqR9IT5jPLFI5DcVYBA"
+      },
+      "canonical": "{\"config\":{\"hold_max\":{\"source\":\"config\",\"value\":45},\"pulse_ms\":{\"source\":\"default\",\"value\":700}},\"device_id\":\"de71ce00-0000-4000-8000-000000000001\",\"firmware\":\"0.1.0\",\"ts\":1789000020,\"typ\":\"ctl.report\",\"v\":0}"
     },
     {
       "name": "report-badsig",

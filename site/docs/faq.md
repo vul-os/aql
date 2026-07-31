@@ -27,7 +27,7 @@ way down to the metal:
   audit view.
 
 The hub is 126 HTTP routes and 1,106 Go test functions; the controller agent is 137
-more; the wire contracts have 74 conformance vectors (109 checks) that both sides are
+more; the wire contracts have 75 conformance vectors (110 checks) that both sides are
 tested against.
 
 ### What can't it do?

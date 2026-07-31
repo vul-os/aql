@@ -20,9 +20,15 @@ import (
 
 // Defaults for actuation config (overridable via the `config` command).
 const (
-	DefaultPulseMs  = 700
-	DefaultHoldMax  = 1800
-	DefaultDebounce = 50
+	DefaultPulseMs = 700
+	DefaultHoldMax = 1800
+	// DefaultDebounce is deliberately absent. It existed here unused, next to two
+	// defaults that ARE resolved, which read as "sensor_debounce_ms is an
+	// actuation setting like the others". It is not: the debounce that applies is
+	// a property of the relay wiring (-relay …,sensor-debounce=20ms, parsed into
+	// relay.Spec), and `config` merely accepts and stores the key. A default for
+	// a value nothing resolves is a default that will one day be reported as
+	// being in effect.
 	ResultOK        = "ok" // success result for non-actuation commands, see README
 	ResultOpened    = "opened"
 	ResultHeld      = "held"

@@ -789,8 +789,7 @@ console.log('wrote keys.json');
     ...signedVec('controller', report({
       config: {
         pulse_ms: entry(700, 'default'),
-        hold_max: entry(30, 'default'),
-        sensor_debounce_ms: entry(20, 'default'),
+        hold_max: entry(1800, 'default'),
       },
     })),
   });
@@ -803,7 +802,6 @@ console.log('wrote keys.json');
       config: {
         pulse_ms: entry(700, 'default'),
         hold_max: entry(45, 'config'),
-        sensor_debounce_ms: entry(20, 'default'),
       },
     })),
   });
@@ -816,6 +814,18 @@ console.log('wrote keys.json');
       config: {
         pulse_ms: entry(700, 'default'),
         strike_ms: entry(120, 'config'),
+      },
+    })),
+  });
+  vectors.push({
+    name: 'report-omits-an-unresolved-key',
+    desc: 'A controller whose config was sent sensor_debounce_ms — which it stores and never reads, because the real debounce comes from the relay wiring. The key is ABSENT from the report: reporting it as source "config" would tell an operator a setting is in effect when the gate is using a value from a command line they cannot see.',
+    expect: 'accept',
+    check,
+    ...signedVec('controller', report({
+      config: {
+        pulse_ms: entry(700, 'default'),
+        hold_max: entry(45, 'config'),
       },
     })),
   });

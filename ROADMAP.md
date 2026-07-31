@@ -209,7 +209,9 @@ hub's issuance endpoint):
       and were never part of this gap)
 - [ ] **A controller never reports its configuration back.** `cmd.ack` carries a result
       and a detail and nothing else, so the hub cannot show an operator what `pulse_ms`,
-      `hold_max` or `sensor_debounce_ms` are currently set to — only send new ones. The
+      `hold_max` are currently set to — only send new ones. (`sensor_debounce_ms` is not
+      one of them: `config` accepts it and the controller stores it, but nothing reads it —
+      the debounce that applies comes from the `-relay` spec. Stored is not in effect.) The
       console says so plainly rather than leaving empty boxes to be read as "unset". Fixing
       it means widening the ack (or adding a report) in `proto/`, which is a wire-contract
       change across both modules and the conformance vectors.

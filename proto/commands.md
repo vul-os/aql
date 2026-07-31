@@ -98,9 +98,8 @@ the hub can show what is in effect rather than only what it last sent.
 { "v": 0, "typ": "ctl.report", "device_id": "uuid", "ts": 1789000001,
   "firmware": "0.1.0",
   "config": {
-    "pulse_ms":           { "value": 700, "source": "default" },
-    "hold_max":           { "value": 30,  "source": "config"  },
-    "sensor_debounce_ms": { "value": 20,  "source": "default" }
+    "pulse_ms": { "value": 700, "source": "default" },
+    "hold_max": { "value": 30,  "source": "config"  }
   },
   "sig": "base64url(ed25519(controller_key, JCS(message minus sig)))" }
 ```
@@ -131,6 +130,24 @@ by the signature.
 A device that has sent no report is **"not reported yet"**. It is never rendered
 as the defaults: inferring them would show numbers nobody confirmed, and every
 controller predating this message sends none.
+
+### A key the controller does not resolve is not reported
+
+The report carries only keys the controller actually reads when it actuates.
+That is narrower than what the `config` command ACCEPTS, and deliberately so.
+
+`config`'s payload is an open map, so the hub can send anything and the
+controller stores it. Today it resolves `pulse_ms` and `hold_max` and nothing
+else — `sensor_debounce_ms` is accepted, stored, and never read, because the
+debounce that actually applies is a property of the relay wiring
+(`-relay …,sensor-debounce=20ms`) rather than of configuration.
+
+Reporting a stored-but-unread key would be the exact failure this message exists
+to prevent: an operator seeing `sensor_debounce_ms: {source: "config"}` would
+read it as "my setting is in effect", when the gate is using the value from a
+command line they cannot see. **Absence is the honest answer**, and a console
+showing a configured key that never appears in a report should say the controller
+does not use it.
 
 See [`docs/CONTROLLER-CONFIG-REPORT.md`](../docs/CONTROLLER-CONFIG-REPORT.md)
 for why the carrier is a session report, and what is deliberately left open.

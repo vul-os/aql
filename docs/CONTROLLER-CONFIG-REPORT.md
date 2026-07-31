@@ -112,9 +112,8 @@ settings.
 { "v": 0, "typ": "ctl.report", "device_id": "uuid", "ts": 1789000001,
   "firmware": "0.1.0",
   "config": {
-    "pulse_ms":           { "value": 700, "source": "default" },
-    "hold_max":           { "value": 30,  "source": "config"  },
-    "sensor_debounce_ms": { "value": 20,  "source": "default" }
+    "pulse_ms": { "value": 700, "source": "default" },
+    "hold_max": { "value": 30,  "source": "config"  }
   },
   "sig": "base64url(ed25519(controller_key, JCS(message minus sig)))" }
 ```
@@ -123,6 +122,14 @@ settings.
 answer both questions in §1. Unknown keys are ignored by the hub rather than
 rejected, so a controller that learns a new tunable does not need the hub
 updated first — the same direction of compatibility §2 establishes.
+
+**Only keys the controller RESOLVES appear.** An earlier draft of this document
+and of the spec listed `sensor_debounce_ms` beside the other two, which was
+wrong: `config` accepts it and the controller stores it, but nothing reads it —
+the debounce that applies is a property of the relay wiring
+(`-relay …,sensor-debounce=20ms`). Reporting a stored-but-unread key as
+`source: "config"` is precisely the lie this message exists to stop, so absence
+is the answer, and `report-omits-an-unresolved-key` pins it.
 
 ---
 
