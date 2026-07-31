@@ -684,6 +684,19 @@ and none has met physical hardware.
       it — at which point nothing opens. Also pinned: the nonce is recorded BEFORE dispatch
       (an ack can arrive faster than the write), a repaired controller is not sent another,
       and a rotation completes only once every controller has moved
+- [x] **The controller's clock is tested.** `internal/clock` had a test file and one
+      function at 100% — `Stale`, which is pure — while every stateful path was at zero:
+      `NewSynced`, `Now`, `SyncFromGateway`, `LastGatewaySync`. A test file plus a green
+      function is the shape that stops anyone looking. This clock is the time base every
+      OFFLINE grant is verified against, so a wrong `Now()` either honours expired grants
+      or refuses valid ones, and neither is visible from the hub. Now pinned: after a sync
+      `Now()` follows the gateway base advanced by the LOCAL MONOTONIC clock and never the
+      wall clock (the reason the package exists — an RTC-less board's wall clock is a boot
+      guess NTP may step at any moment); before the first sync it falls back to the wall
+      clock but still reports the PERSISTED sync instant, which is what keeps the
+      stale-clock rule working across a reboot; an unsynced clock reports stale, so offline
+      decisions fail closed; and a corrective sync may move the clock BACKWARD, because the
+      gateway is the authority and a clock that only advanced would be unfixable
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
 - [ ] Rate-limiting and scoping on movement commands, so a compromised client cannot drive
