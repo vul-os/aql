@@ -234,7 +234,20 @@ func LocationCommandVerb(cmd string) (GateVerb, bool) {
 // to a pulse, and the gate would swing shut in the face of whoever was told it
 // would stay open. That is a worse failure than the reverse: a hold misread as
 // an open is a promise broken at the gate, where a person is standing.
+// TextGateVerb reports the verb a body COMMANDS, and answers false for a body
+// that merely asks about one — "when was the gate last opened?" names a verb
+// and orders nothing. See question.go for why the narrowing lives here rather
+// than at the call sites: every caller of this function actuates on `ok`, and a
+// guard each of them has to remember is a guard one of them will not.
 func TextGateVerb(body string) (GateVerb, bool) {
+	v, intent := TextGateIntent(body)
+	return v, intent == IntentCommand
+}
+
+// textGateVerbRaw is the original word-matching, with no view on whether the
+// body is asking or ordering. Unexported: TextGateIntent is the only caller,
+// and a second one would be a way back to the defect.
+func textGateVerbRaw(body string) (GateVerb, bool) {
 	switch {
 	case strings.Contains(body, "close"):
 		return VerbClose, true

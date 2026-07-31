@@ -96,8 +96,19 @@ func (s *Server) handleDMTAPIntent(ctx contextT, intent channels.DMTAPIntent) {
 		// — so a verbless body is a question, answered with the menu. WhatsApp
 		// already worked this way (it needs "open"/"close" in the body to reach
 		// its actuation branch at all); this makes DMTAP match.
-		verb, hasVerb := channels.TextGateVerb(txt)
-		if !hasVerb {
+		// gateIntent, not `intent` — that name is taken by the DMTAP envelope
+		// this handler is processing, and shadowing it here would have compiled
+		// while silently reading the wrong thing two lines down.
+		verb, gateIntent := channels.TextGateIntent(txt)
+		// Asked about, not asked for. This rail resolves a NAMED gate on free
+		// text, so "when was the main gate last opened?" reached the actuation
+		// call with everything it needed. Answered here instead, before any
+		// gate lookup — the answer does not depend on which gate it is.
+		if gateIntent == channels.IntentQuestion {
+			s.dmtapReply(ctx, chatID, intent.GroupID, channels.GateQuestionReply(verb, s.channelPublicURL()))
+			return
+		}
+		if gateIntent != channels.IntentCommand {
 			s.dmtapReply(ctx, chatID, intent.GroupID, channels.DMTAPMenu(displayName))
 			return
 		}

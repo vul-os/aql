@@ -146,10 +146,21 @@ func (s *Server) waHandleText(ctx contextT, msg *channels.WAMessage, from, chatI
 	// which one it is. Nothing downstream re-guesses it and nothing falls back
 	// to a default — hasVerb false means the body asked for neither and the
 	// welcome menu (which genuinely offers open) is the reply.
-	verb, hasVerb := channels.TextGateVerb(body)
+	verb, intent := channels.TextGateIntent(body)
+	hasVerb := intent == channels.IntentCommand
 	isHelp := body == "hi" || body == "hello" || body == "help" || body == "menu"
 
 	portal := s.channelPublicURL()
+
+	// A body that asks ABOUT a gate is answered, never actuated. Before the
+	// help check and before the actuation branch, because "when was the gate
+	// last opened?" is neither a greeting nor a command and used to be treated
+	// as the second. Falling through to the welcome menu instead would hand the
+	// member an offer to open the gate they just asked a question about, which
+	// is the misdirection unsupported.go exists to avoid.
+	if intent == channels.IntentQuestion {
+		return text(to, chatID, channels.GateQuestionReply(verb, portal))
+	}
 
 	if hasVerb && !isHelp {
 		command := verb.Command()

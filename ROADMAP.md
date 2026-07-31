@@ -358,9 +358,24 @@ and none has met physical hardware.
       resolves to close everywhere. In the text matcher hold is checked BEFORE open, which
       is a correctness requirement rather than a preference: every natural phrasing ("hold
       the gate open", "keep it open") contains the word "open"
+- [x] **A question about a gate no longer opens the gate.** `TextGateVerb` matched
+      `Contains(body, "open")` and "opened" contains "open", so on the free-text rails
+      "when was the gate last opened?" opened it and "is the gate closed?" closed it —
+      driven end to end through the WhatsApp webhook, each produced a real audited open
+      against a one-gate household, because a body naming no gate collapses onto the only
+      one. `channels/question.go` classifies a body as command, question or neither, and
+      `TextGateVerb` now answers `ok` only for a command: the narrowing is in the OLD door
+      so every existing caller became safe without changing, rather than a guard each rail
+      has to remember. The rails answer the question plainly instead of offering a gate
+      menu, and the reply names the message that WOULD have opened it, because the
+      classifier will sometimes be wrong about a real request and a false refusal has to be
+      recoverable in one message. Polite requests stay commands — "could you open the
+      gate" is not a question — which is the half a one-directional test would miss
 - [ ] Extend it further, to the other device classes. Chat still reaches only the access
       module; the engine's verbs (`on`/`off`/`set`/`start`…) are recognised and honestly
-      refused (`channels/unsupported.go`) rather than driven
+      refused (`channels/unsupported.go`) rather than driven. The T0 read path
+      (`docs/CHAT-COMMANDS.md` §4) is the next step and now has somewhere to attach:
+      questions are already separated from commands, they are simply not answered yet
 
 ---
 

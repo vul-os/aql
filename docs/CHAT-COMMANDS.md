@@ -692,6 +692,41 @@ why in a system that opens physical gates, and it applies unchanged.
 
 ## 4. Queries, not just commands
 
+### 4.0 A question must first stop being a command
+
+**BUILT**, and it had to come before anything in this section.
+
+`TextGateVerb` resolved a verb by substring: `Contains(body, "open")`. "opened"
+contains "open". So the questions §4.2 proposes answering were, on the
+free-text rails, *actuating*:
+
+| Body | What it did |
+|---|---|
+| "when was the gate last opened?" | opened the gate |
+| "who opened the front gate today" | opened the gate |
+| "is the gate closed?" | closed the gate |
+
+Each verified end to end through the WhatsApp webhook, each producing a real
+audited open, because a household with one location and one gate collapses a
+body that names no gate onto the only one — the common case this product is for.
+
+`channels/question.go` now classifies a body as `IntentCommand`,
+`IntentQuestion` or `IntentNone`. The rules are chosen to be certain about
+questions rather than exhaustive: an interrogative word anywhere (`when`,
+`who`, `how`, `which`…), a leading auxiliary (`is`, `did`, `was`…), or a gate
+verb appearing only in a form that cannot be an order ("opened", "closing").
+Explicitly not rules: a trailing "?", and the modals `can`/`could`/`would` —
+"Can you open the gate?" is a request with a question mark on it, and members
+write like that.
+
+The narrowing lives inside `TextGateVerb` rather than at the call sites, so a
+caller that has never heard of questions gets the safe answer. A rail that wants
+to answer one calls `TextGateIntent` deliberately.
+
+This does not answer any question — §4.2's table is still unbuilt. It makes the
+answer "I can't tell you that yet" instead of a gate swinging open, which is the
+precondition for building the rest.
+
 ### 4.1 The gateway cannot answer "is the gate closed"
 
 This has to be said before any read-path design, because the obvious query is

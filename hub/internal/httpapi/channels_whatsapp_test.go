@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/vul-os/aql/hub/internal/channels"
+	"strconv"
 )
 
 // waTextMsg builds a signed-friendly WhatsApp text webhook body.
@@ -251,6 +252,55 @@ func TestWhatsAppGateVerbStillWinsOverAnUnsupportedOne(t *testing.T) {
 	for _, m := range sent {
 		if strings.Contains(m.body, "only open and close") {
 			t.Fatalf("a gate request was diverted to the unsupported-verb reply: %q", m.body)
+		}
+	}
+}
+
+// The defect, end to end, on the rail where it was reachable without naming a
+// gate: a one-gate household collapses any body onto its only gate, so a
+// question about the gate opened the gate.
+//
+// This drives the real webhook and counts AUDITED opens rather than inspecting
+// the matcher, because the matcher was only half of it — the collapse rule is
+// what turned a bad classification into a moving barrier.
+func TestWhatsAppAQuestionAboutTheGateDoesNotOpenIt(t *testing.T) {
+	for i, q := range []string{
+		"when was the gate last opened?",
+		"who opened the front gate today",
+		"is the gate closed?",
+	} {
+		e := setupChannels(t, permissiveRL())
+		rec := waPost(e.h, waTextMsg(testPhoneRaw, "wamid.q"+strconv.Itoa(i), q, waPhoneID))
+		if rec.Code != 200 {
+			t.Fatalf("%q code: %d", q, rec.Code)
+		}
+		if n := e.successOpens(t, channels.KindWhatsApp); n != 0 {
+			t.Errorf("%q produced %d audited opens — a question moved the gate", q, n)
+		}
+		sent := e.wa.all()
+		if len(sent) != 1 {
+			t.Fatalf("%q replies: %+v", q, sent)
+		}
+		// Not the welcome menu. Being offered a gate to open is the misdirection
+		// that made the original behaviour hard to notice.
+		if !strings.Contains(sent[0].body, "haven't touched it") {
+			t.Errorf("%q reply does not say nothing moved: %q", q, sent[0].body)
+		}
+		if strings.Contains(sent[0].body, "Opening") || strings.Contains(sent[0].body, "Closing") {
+			t.Errorf("%q reply implies actuation: %q", q, sent[0].body)
+		}
+	}
+}
+
+// The control on the same rail. If the question guard is too eager the product
+// stops doing the one thing it is for, and that failure is invisible to the
+// test above.
+func TestWhatsAppARealOpenStillOpensAfterTheQuestionGuard(t *testing.T) {
+	for i, body := range []string{"open", "open the gate", "can you open the gate?", "please open the main gate"} {
+		e := setupChannels(t, permissiveRL())
+		waPost(e.h, waTextMsg(testPhoneRaw, "wamid.r"+strconv.Itoa(i), body, waPhoneID))
+		if n := e.successOpens(t, channels.KindWhatsApp); n != 1 {
+			t.Errorf("%q produced %d audited opens, want 1 — a real request was refused", body, n)
 		}
 	}
 }
