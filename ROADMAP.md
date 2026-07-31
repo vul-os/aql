@@ -218,7 +218,12 @@ hub's issuance endpoint):
       fields it knows, so an older hub accepts an ack carrying a field it has never heard
       of — and the unknown field is still inside the signature, so nothing on the path can
       rewrite it. An additive `config` object therefore needs no version bump and no flag
-      day for mixed-version fleets
+      day for mixed-version fleets. **Designed** in
+      [`docs/CONTROLLER-CONFIG-REPORT.md`](docs/CONTROLLER-CONFIG-REPORT.md): the carrier is
+      a session-scoped `ctl.report` rather than the ack, because a gate nobody has
+      commanded would otherwise never report; the value carried is the RESOLVED one with
+      its source, since "700 ms" and "700 ms (default)" are different claims; and a device
+      with no report reads as "not reported yet", never as defaults
 - [ ] Controller TAMPER sensing does not exist, and the MOCK relay's position sensor is a
       constant. The GPIO build's `GateClosed` is real — it reads a kernel-debounced input line
       claimed alongside the relay output. This line previously said "sensors return static

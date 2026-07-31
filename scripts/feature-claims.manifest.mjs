@@ -73,6 +73,25 @@ export const FEATURES = [
     // Evidence on the package alone would pass for a driver that had quietly
     // grown an actuation path.
   },
+  // ── the controller reporting its configuration back.
+  // docs/CONTROLLER-CONFIG-REPORT.md is the design and says "designed, not
+  // built" in those words. This holds that line in both directions: nobody can
+  // imply the hub can show a controller's live pulse_ms/hold_max, and the day
+  // ctl.report lands the check fails until ROADMAP's open item and the console's
+  // honest placeholder are updated.
+  {
+    id: 'controller-config-report',
+    label: 'A controller reports its resolved actuation config back (ctl.report) so the hub can show what is in effect',
+    docStatus: 'planned',
+    docRefs: [
+      'docs/CONTROLLER-CONFIG-REPORT.md — the design, and why the carrier is a session report rather than the ack',
+      'ROADMAP.md — "A controller never reports its configuration back"',
+    ],
+    evidence: [[
+      { root: 'controller/internal', pattern: 'ctl\\.report' },
+      { root: 'hub/internal', pattern: 'ctl\\.report' },
+    ]],
+  },
   // ── planned / not implemented — the nine (ten, by plain count) 2026-07-20
   // overclaims, now correctly marked in the docs. This check's job is to
   // make sure nobody re-overclaims them by accident, and to catch the day
