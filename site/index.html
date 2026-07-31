@@ -187,9 +187,6 @@ code{font-family:var(--font-mono);font-size:.88em}
   font-size:12.5px;color:var(--ink-faint);text-decoration:none;white-space:nowrap;
   transition:border-color .18s,color .18s;
 }
-.vulos-badge:hover{border-color:var(--terracotta);color:var(--ink)}
-.vulos-badge img{width:18px;height:18px;border-radius:5px;display:block}
-@media(min-width:720px){.vulos-badge{display:inline-flex}}
 @media(min-width:960px){.nav{display:flex}}
 .theme-btn,.menu-btn{
   display:grid;place-items:center;width:36px;height:36px;border-radius:999px;
@@ -623,9 +620,7 @@ code{font-family:var(--font-mono);font-size:.88em}
         <a href="https://github.com/vul-os/aql" rel="noopener">GitHub</a>
         <a class="nav-cta" href="docs.html#/self-host">Run your hub</a>
       </nav>
-      <a class="vulos-badge" href="https://vulos.org" rel="noopener" title="Aql is part of the vulos suite">
-        <img src="./assets/vulos-logo.png" alt="" aria-hidden="true">Part of vulos
-      </a>
+      <a class="vulos-home" href="https://vulos.org" target="_blank" rel="noopener" title="Vulos — open, self-hostable software" aria-label="Vulos — open, self-hostable software"><img src="./assets/vulos-logo.png" alt="" width="22" height="22"></a>
       <button class="theme-btn" id="themeToggle" type="button" aria-label="Toggle dark mode">
         <svg class="ic-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
           <circle cx="12" cy="12" r="4.6"/>
@@ -672,7 +667,7 @@ code{font-family:var(--font-mono);font-size:.88em}
       <div>
         <div class="hero-eyebrow">
           <span class="pulse-dot" aria-hidden="true"></span>
-          <span class="eyebrow">part of the vulos suite</span>
+          <span class="eyebrow">one hub, on a box you own</span>
         </div>
         <h1 class="display-tight">
           Everything<br>
@@ -1928,16 +1923,16 @@ caddy reverse-proxy --to 127.0.0.1:8080
           <ul>
             <li><a href="https://github.com/vul-os/aql" rel="noopener">GitHub — vul-os/aql</a></li>
             <li><a href="https://github.com/vul-os/zana" rel="noopener">Zana — open hardware</a></li>
-            <li><a href="https://vulos.org" rel="noopener">The vulos suite</a></li>
             <li><a href="mailto:hello@vulos.org">hello@vulos.org</a></li>
           </ul>
         </div>
       </div>
+      <a class="vulos-foot" href="https://vulos.org" target="_blank" rel="noopener"><img src="./assets/vulos-logo.png" alt="" width="18" height="18"><span>Part of <strong>Vulos</strong> — open, self-hostable software</span></a>
       <div class="footer-strip">
         <span>&copy; 2026 Aql</span>
         <span aria-hidden="true">&mdash;</span>
         <span>one hub owns everything</span>
-        <span class="right">MIT or Apache-2.0 &middot; durban</span>
+        <span class="right">durban</span>
       </div>
     </div>
   </div>

@@ -26,6 +26,7 @@
 // problem: mDNS is unauthenticated by construction, so a browse result is an
 // address to check, never a device to trust. See ControllerDiscoveryCard.
 
+import type { EngineActiveState } from '@/lib/api';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from './AppLayout';
@@ -638,6 +639,9 @@ function EngineDetail({ row }: { row: Extract<Row, { source: 'engine' }> }) {
   const [args, setArgs] = useState<Record<string, number>>(() =>
     Object.fromEntries(controls.filter((c) => c.arg).map((c) => [c.verb, c.arg!.initial])),
   );
+  // null = this device declares no state, so there is nothing to show. That is
+  // different from 'unknown', which means it could report and did not.
+  const [active, setActive] = useState<EngineActiveState | null>(null);
   const [busyVerb, setBusyVerb] = useState<string | null>(null);
   const [awaitingConfirm, setAwaitingConfirm] = useState<{ control: EngineControl; message: string } | null>(null);
   const [outcome, setOutcome] = useState<
@@ -649,6 +653,8 @@ function EngineDetail({ row }: { row: Extract<Row, { source: 'engine' }> }) {
     try {
       const res = await api.engineReadings(d.key);
       setReadings(res.readings ?? []);
+      // Taken from the hub, never derived here — see EngineReadingsResponse.
+      setActive(res.state_declared ? (res.active ?? 'unknown') : null);
     } catch (err) {
       setReadings(null);
       setReadingsError(readingsErrorMessage(err));
@@ -688,7 +694,27 @@ function EngineDetail({ row }: { row: Extract<Row, { source: 'engine' }> }) {
   return (
     <>
       <div className="mt-5 rounded-2xl border border-ink/8 bg-paper-warm/40 px-5 py-4">
-        <p className="text-[10px] uppercase tracking-[0.18em] text-ink/45">Readings</p>
+        <div className="flex items-baseline justify-between gap-4">
+          <p className="text-[10px] uppercase tracking-[0.18em] text-ink/45">Readings</p>
+          {/* The resolved state, for devices whose capability declares one.
+              "Not reporting" is shown rather than assumed to be off: a device
+              that never answered is not a device that is switched off, and
+              collapsing the two is the failure the hub's three-valued answer
+              exists to prevent. */}
+          {active !== null && (
+            <span
+              data-shot="device-active"
+              className={cn(
+                'text-[11px] font-medium',
+                active === 'active' && 'text-ink',
+                active === 'inactive' && 'text-ink/55',
+                active === 'unknown' && 'text-ink/40 italic',
+              )}
+            >
+              {active === 'active' ? 'On' : active === 'inactive' ? 'Off' : 'Not reporting'}
+            </span>
+          )}
+        </div>
         {readings === null && !readingsError && <p className="mt-2 text-sm text-ink/55">Reading…</p>}
         {readingsError && (
           <p

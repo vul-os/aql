@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"log/slog"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -270,5 +271,62 @@ func TestPartialConsentAnswersNothing(t *testing.T) {
 	full := srv.answerOccupancyQuestion(ctx, "which lights are on", u, "whatsapp")
 	if strings.Contains(full, "has not turned on occupancy answers") {
 		t.Fatalf("full consent still refused: %q", full)
+	}
+}
+
+// The readings route reports the resolved ACTIVE state, so the console and a
+// chat reply cannot disagree about the same lamp.
+//
+// Computed on the hub rather than in the client: re-deriving it in TypeScript
+// would put a second copy of the catalogue's declarations in a language that
+// cannot see them, and the two would diverge the first time a capability gained
+// a state.
+func TestTheReadingsRouteReportsResolvedState(t *testing.T) {
+	dir := t.TempDir()
+	st, err := store.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { st.Close() })
+	ks, _ := keys.Load(dir)
+	reg := devices.NewRegistry()
+	if err := reg.Register(devices.NewMockDriver("mock")); err != nil {
+		t.Fatal(err)
+	}
+	if err := reg.Refresh(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	srv := New(Config{Version: "test", JWTSecret: []byte("0123456789abcdef0123456789abcdef"), Devices: reg},
+		st, ks, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)))
+	h := srv.Router()
+	access, _ := register(t, h, "readings@x.test")
+
+	// A dimmable lamp: declares a state and reports a level.
+	rec, out := doJSON(t, h, "GET", "/v1/engine/devices/mock:lamp-1/readings", access, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("readings: %d %v", rec.Code, out)
+	}
+	if out["active"] == nil {
+		t.Fatal("no active state on the response — the console would have to derive it")
+	}
+	if out["state_declared"] != true {
+		t.Errorf("state_declared = %v for a dimmable lamp", out["state_declared"])
+	}
+	if got := out["active"]; got != "active" && got != "inactive" {
+		t.Errorf("active = %v, want a resolved state for a lamp that reports a level", got)
+	}
+
+	// A thermostat declares no state, and says so rather than omitting the
+	// field — absence would be ambiguous between "not supported" and "did not
+	// report".
+	rec, out = doJSON(t, h, "GET", "/v1/engine/devices/mock:thermo-1/readings", access, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("thermostat readings: %d", rec.Code)
+	}
+	if out["state_declared"] != false {
+		t.Errorf("a setpoint declares a state: %v", out["state_declared"])
+	}
+	if out["active"] != "unknown" {
+		t.Errorf("active = %v for a device with no declared state, want unknown", out["active"])
 	}
 }

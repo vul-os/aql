@@ -332,7 +332,30 @@ func (s *Server) handleEngineReadings(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, m)
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"readings": out})
+
+	// The device's resolved ACTIVE state, computed HERE rather than by the
+	// caller.
+	//
+	// The rule lives in devices.ActiveFrom, which the chat read path also uses.
+	// Re-deriving it in TypeScript would mean a second copy of the catalogue's
+	// declarations in a language that cannot see them, and the two would
+	// disagree the first time a capability gained a state — with the console
+	// and a chat reply saying different things about the same lamp.
+	//
+	// Always present, including "unknown". A field that appeared only when the
+	// answer was known would make absence ambiguous between "not supported by
+	// this hub version" and "this device did not report", and the second is a
+	// thing the console has to be able to show.
+	body := map[string]any{"readings": out}
+	if dev, ok := reg.Get(key); ok {
+		st := devices.ActiveFrom(dev.Device.Capabilities, readings)
+		body["active"] = st.String()
+		// Whether this device COULD ever answer, which is a different question
+		// from whether it did. An operator whose light never reports needs to
+		// tell "nobody mapped its metric" from "it is offline right now".
+		body["state_declared"] = devices.HasDeclaredState(dev.Device.Capabilities)
+	}
+	writeJSON(w, http.StatusOK, body)
 }
 
 type engineExecuteReq struct {

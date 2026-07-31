@@ -783,6 +783,15 @@ and none has met physical hardware.
       is STRUCTURAL, not proof a resolver accepts it: there is no DNS library in the module
       and the real consumer is Bonjour/NSD, so this is the same built-versus-run-against-
       hardware distinction `docs/CAMERA-RETENTION.md` draws
+- [x] **The console shows a device's resolved state, served rather than re-derived.**
+      `GET /v1/engine/devices/{key}/readings` now carries `active` and `state_declared`,
+      computed by the same `devices.ActiveFrom` the chat read path uses — deriving it in
+      TypeScript would be a second copy of the catalogue's declarations in a language that
+      cannot see them, and the two would disagree the first time a capability gained a
+      state. `active` is always present including `"unknown"`, because a field that appeared
+      only when the answer was known would make absence ambiguous between "this hub does not
+      support it" and "this device did not report". The device page shows On / Off / **Not
+      reporting** — never assuming the third is the second
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
 - [ ] Rate-limiting and scoping on movement commands, so a compromised client cannot drive

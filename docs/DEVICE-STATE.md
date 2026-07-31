@@ -129,6 +129,24 @@ one — and a stale "off" reported as current is exactly the failure §4.1 refus
 for the gate sensor. A consumer that wants state pays for a read, or does
 without.
 
+### 3.5 One implementation, served rather than re-derived
+
+`GET /v1/engine/devices/{key}/readings` carries the resolved state alongside the
+raw readings, computed by `devices.ActiveFrom` — the same function the chat read
+path calls.
+
+The console does not re-derive it. Doing so would put a second copy of this
+catalogue's declarations in TypeScript, which cannot see them, and the two would
+diverge the first time a capability gained a state: the device page and a chat
+reply saying different things about the same lamp.
+
+The response carries `active` ALWAYS, including `"unknown"`, and a separate
+`state_declared`. A field that appeared only when the answer was known would
+make absence ambiguous between "this hub version does not support it" and "this
+device did not report", and the console has to be able to show the second. The
+two together also separate the operator's two different problems: nobody mapped
+this device's metric, versus it is offline right now.
+
 ## 4. What this unblocks, and what it does not
 
 Unblocks: `CHAT-COMMANDS.md` §4.2's "which lights are on", behind §4.4 rule 6's

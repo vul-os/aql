@@ -1619,7 +1619,28 @@ export type EngineReading = {
   text?: string;
 };
 
-export type EngineReadingsResponse = { readings: EngineReading[] };
+/** How a device's declared state resolved. Mirrors devices.ActiveState. */
+export type EngineActiveState = 'active' | 'inactive' | 'unknown';
+
+export type EngineReadingsResponse = {
+  readings: EngineReading[];
+  /**
+   * The device's resolved state, computed by the HUB.
+   *
+   * Never re-derived here. The rule lives in the Go catalogue
+   * (`devices.ActiveFrom`) and deriving it again in TypeScript would be a
+   * second copy of declarations this side cannot see — the console and a chat
+   * reply would then disagree about the same lamp the first time a capability
+   * gained a state.
+   *
+   * `unknown` is a real answer, not a missing one: the device may have no
+   * declared state, or may simply not have reported it. `state_declared`
+   * separates those, and an operator needs the difference — "nobody mapped its
+   * metric" and "it is offline right now" want different fixes.
+   */
+  active?: EngineActiveState;
+  state_declared?: boolean;
+};
 
 export type EngineExecuteResponse = {
   ok: boolean;
