@@ -726,6 +726,15 @@ and none has met physical hardware.
       snapshot time rather than cached, so one set while running binds the very next
       redemption. `EnsurePaired` is idempotent and refuses a half-configured first run
       rather than dialling
+- [x] **The camera driver's redirect policy is tested**, closing the hub-side coverage
+      audit. `checkRedirect` is installed on the ONVIF client unconditionally — "not
+      negotiable from config", because the request carries that camera's credentials — and
+      had no tests: a redirect leaving the host would hand those credentials wherever the
+      camera pointed and make the hub fetch from an address nobody validated. Pinned:
+      same-host redirects pass, a different host or PORT is refused with a sentinel that
+      distinguishes policy from a dial failure, the chain is bounded, and the comparison is
+      against the ORIGINAL request rather than the previous hop — otherwise a chain walks
+      away one host at a time, each hop "same as the last"
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
 - [ ] Rate-limiting and scoping on movement commands, so a compromised client cannot drive

@@ -565,3 +565,98 @@ func TestReadDegradesWhenNoMediaArrives(t *testing.T) {
 		t.Errorf("media_flowing = %v, want 0", m["media_flowing"].Value)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Redirect policy
+// ---------------------------------------------------------------------------
+//
+// checkRedirect had no tests, found by the hub coverage audit. It is installed
+// on the ONVIF client unconditionally — "not negotiable from config", because
+// the request carries this camera's credentials — so a redirect that moved it
+// to another host would hand those credentials wherever the camera pointed, and
+// make the hub fetch from an address nobody validated. Same shape as the
+// webhook dispatcher's refusal to follow redirects, for the same reason.
+
+func redirectReq(t *testing.T, rawurl string) *http.Request {
+	t.Helper()
+	req, err := http.NewRequest("GET", rawurl, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return req
+}
+
+func TestARedirectMayNotLeaveTheCamerasHost(t *testing.T) {
+	origin := redirectReq(t, "http://cam.local/onvif/device_service")
+
+	// Same host: allowed, because a camera relocating its own endpoint is
+	// ordinary and the credentials stay where they were going.
+	if err := checkRedirect(redirectReq(t, "http://cam.local/onvif/v2"), []*http.Request{origin}); err != nil {
+		t.Errorf("a same-host redirect was refused: %v", err)
+	}
+
+	// Another host: refused, with the sentinel that distinguishes a policy
+	// refusal from a dial failure.
+	for _, target := range []string{
+		"http://evil.example/onvif",
+		"http://169.254.169.254/latest/meta-data/", // the cloud-metadata classic
+		"http://cam.local.evil.example/onvif",      // suffix that looks like the host
+	} {
+		err := checkRedirect(redirectReq(t, target), []*http.Request{origin})
+		if !errors.Is(err, errCrossHostRedirect) {
+			t.Errorf("redirect to %s: %v, want errCrossHostRedirect", target, err)
+		}
+	}
+
+	// A different PORT on the same name is a different host, and refused —
+	// otherwise a camera could point the hub at anything else on its box.
+	if err := checkRedirect(redirectReq(t, "http://cam.local:8080/onvif"), []*http.Request{origin}); !errors.Is(err, errCrossHostRedirect) {
+		t.Errorf("redirect to another port: %v, want refusal", err)
+	}
+}
+
+// The comparison is against the ORIGINAL request, not the previous hop.
+//
+// Comparing to via[len-1] would let a chain walk away one host at a time —
+// each hop "same as the last" while the destination drifts arbitrarily far from
+// the camera that was dialled. This is the difference between a policy and the
+// appearance of one, and it is invisible in a single-hop test.
+func TestARedirectChainIsJudgedAgainstTheOriginalHost(t *testing.T) {
+	origin := redirectReq(t, "http://cam.local/onvif")
+
+	// The chain must already contain a FOREIGN host for the two rules to
+	// disagree — which is the tampered world, where an earlier cross-host hop
+	// was let through. A chain whose hops all share a host cannot tell
+	// via[0] from via[len-1], so a fixture built that way passes under both
+	// rules and proves nothing. The first version of this test was built that
+	// way and did not catch the tamper.
+	strayed := redirectReq(t, "http://elsewhere.example/x")
+
+	err := checkRedirect(redirectReq(t, "http://elsewhere.example/next"),
+		[]*http.Request{origin, strayed})
+	if !errors.Is(err, errCrossHostRedirect) {
+		t.Errorf("a chain that had already left cam.local was allowed to continue: %v — "+
+			"the rule is comparing against the previous hop, so a redirect chain can walk "+
+			"away one host at a time", err)
+	}
+}
+
+// A redirect loop is bounded, so a camera cannot hold a request open forever.
+func TestARedirectChainIsBounded(t *testing.T) {
+	origin := redirectReq(t, "http://cam.local/onvif")
+	via := make([]*http.Request, 0, 6)
+	for i := 0; i < 5; i++ {
+		via = append(via, origin)
+	}
+	err := checkRedirect(redirectReq(t, "http://cam.local/onvif/again"), via)
+	if err == nil {
+		t.Fatal("an unbounded redirect chain was allowed")
+	}
+	if errors.Is(err, errCrossHostRedirect) {
+		t.Errorf("the depth limit reported a cross-host refusal: %v", err)
+	}
+	// One hop short of the limit is still fine.
+	if err := checkRedirect(redirectReq(t, "http://cam.local/onvif/again"), via[:4]); err != nil {
+		t.Errorf("refused at four hops: %v", err)
+	}
+}
