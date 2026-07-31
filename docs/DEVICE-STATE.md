@@ -141,9 +141,23 @@ which is a store and a retention question of its own — closer to
 
 ## 5. Open questions this document does not settle
 
-- **Where the mapping lives.** Driver config is the obvious home, but a device
-  claimed from discovery has no config file entry. It may want to be a hub-side
-  per-device setting instead, which is a table and a migration.
+- ~~**Where the mapping lives.**~~ **Answered: driver config, with no new
+  mechanism.** `StateTopic.Metric` already documents itself as using "the
+  capability's own vocabulary", so an operator naming their topic's metric
+  `level` on a device that claims `light.dimmable` IS the mapping — a rename at
+  the driver boundary, with the catalogue's name as the wire between config and
+  consumer. No table, no migration, no new interface method. Proved rather than
+  assumed: `TestAConfiguredLampResolvesToAMachineReadableState` publishes to a
+  broker, reads through the driver and asks the catalogue, and its sibling shows
+  a metric the operator named something else resolving to UNKNOWN rather than
+  being guessed at.
+
+  What remains open is narrower than the original question: a device claimed
+  from DISCOVERY still has no config entry to carry a mapping. For protocols
+  whose semantics the driver knows (a Zigbee OnOff cluster), the driver can emit
+  the catalogue's name directly and needs nothing from an operator; for the rest,
+  a discovered device simply has no state until someone says what its readings
+  mean. That is the safe default and needs no design to be correct.
 - **Whether `Active` belongs on the capability or the device.** A dimmable light
   and a switch have different notions of it; a driver that exposes both on one
   device would need per-capability states, which the shape above does not carry.

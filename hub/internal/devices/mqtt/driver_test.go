@@ -905,3 +905,82 @@ func TestRegistryDrivesIt(t *testing.T) {
 		t.Fatalf("registry Close: %v", err)
 	}
 }
+
+// The seam docs/DEVICE-STATE.md §5 left open, closed by evidence rather than
+// more design: a real MQTT device, configured the way an operator configures
+// one, resolves to a machine-readable state through the catalogue.
+//
+// The mapping mechanism turned out to need no new API. StateTopic.Metric
+// already "uses the capability's own vocabulary", so an operator naming their
+// topic's metric `level` on a device that claims `light.dimmable` IS the
+// mapping — a rename at the driver boundary, with the catalogue's name as the
+// wire between config and consumer.
+//
+// This test is what makes that claim true rather than plausible. It publishes
+// to a broker, reads through the driver, and asks the catalogue.
+func TestAConfiguredLampResolvesToAMachineReadableState(t *testing.T) {
+	d, b, _ := newConnected(t, lampDevice())
+
+	b.push(t, "home/lamp1/level", "62", 0)
+	waitReading(t, d, "lamp-1", "level")
+
+	rs, err := d.Read(context.Background(), "lamp-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	caps := []devices.CapabilityID{devices.CapDimmable}
+	if got := devices.ActiveFrom(caps, rs); got != devices.StateActive {
+		t.Fatalf("a lamp at 62%% reads as %v, want active", got)
+	}
+
+	// Zero is off, not unknown: the device reported, and what it reported was
+	// nothing on.
+	b.push(t, "home/lamp1/level", "0", 0)
+	// Waiting for the VALUE, not just the metric: the metric is already present
+	// from the first publish, so waiting on its existence would race and this
+	// test would sometimes assert against 62.
+	waitFor(t, "lamp-1 level to reach 0", func() bool {
+		rs, err := d.Read(context.Background(), "lamp-1")
+		if err != nil {
+			return false
+		}
+		for _, r := range rs {
+			if r.Metric == "level" && r.Value == 0 {
+				return true
+			}
+		}
+		return false
+	})
+	rs, err = d.Read(context.Background(), "lamp-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := devices.ActiveFrom(caps, rs); got != devices.StateInactive {
+		t.Fatalf("a lamp at 0%% reads as %v, want inactive", got)
+	}
+}
+
+// The other half of §2's argument, end to end: an operator who names the metric
+// something else has NOT mapped it, and the hub says unknown rather than
+// guessing that their word means brightness.
+func TestALampWhoseMetricIsNamedSomethingElseIsUnknown(t *testing.T) {
+	dc := lampDevice()
+	dc.State = []StateTopic{{Metric: "brightness", Topic: "home/lamp1/level", QoS: 1}}
+	d, b, _ := newConnected(t, dc)
+
+	b.push(t, "home/lamp1/level", "62", 0)
+	waitReading(t, d, "lamp-1", "brightness")
+
+	rs, err := d.Read(context.Background(), "lamp-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rs) == 0 {
+		t.Fatal("the driver reported nothing at all")
+	}
+	got := devices.ActiveFrom([]devices.CapabilityID{devices.CapDimmable}, rs)
+	if got != devices.StateUnknown {
+		t.Fatalf("an unmapped metric resolved to %v — the hub guessed that a word the "+
+			"operator chose means brightness", got)
+	}
+}

@@ -499,8 +499,14 @@ and none has met physical hardware.
       count and said to be. **The catalogue half is now built**: `StateSpec` declared for
       lighting and jobs, read by `devices.ActiveFrom`, whose three-valued answer makes
       UNKNOWN distinct from off — a device that was never polled, or whose driver emits an
-      undeclared metric, is not counted as off. The driver-side mapping is still open, so
-      an unmapped device resolves to unknown, which is the safe direction. §4.4 rule 6's per-location opt-in that has to precede it IS
+      undeclared metric, is not counted as off. **The driver mapping needed no new
+      mechanism**: `StateTopic.Metric` already uses the catalogue's vocabulary, so an
+      operator naming their MQTT topic's metric `level` on a device claiming
+      `light.dimmable` IS the mapping — proved end to end against a broker, alongside its
+      opposite, where a metric the operator named `brightness` resolves to unknown rather
+      than being guessed at. What is still open is only the DISCOVERED case: a device
+      claimed from discovery has no config entry, and until a driver emits the catalogue's
+      name itself it simply has no state — the safe default. §4.4 rule 6's per-location opt-in that has to precede it IS
       built (`location_disclosure`, migration 0028): off unless an admin
       turns it on, per location, recorded with who and when, audited both ways, and a member
       asking a location that has not opted in is told the switch exists rather than met
