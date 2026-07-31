@@ -6,29 +6,32 @@ the plan. That port never happened — lintel's frontend became Aql's outright, 
 every value below now describes live code at `src/`, not a target to build toward.
 §7 records why the direction changed.
 
-Paths written as `lintel/...` in citations refer to the pre-fold layout; those files
-now live at the same path minus the `lintel/` prefix (`lintel/src/styles/tokens.css`
-is today `src/styles/tokens.css`).
+Citations are repo-relative paths as they exist today. They used to carry a
+`lintel/` prefix and a line number, both from the pre-fold repository; the
+prefix was simply wrong after the fold, and the line numbers were worse than
+wrong — `AccessPoints.tsx:94` was still IN RANGE and pointed at unrelated code,
+which is a citation that looks precise and is not. Paths a check can verify
+beat line numbers nobody re-checks, and `src/lib/__tests__/docCitations.test.ts`
+now verifies them.
 
-Every value below is cited `path:line` from the files actually read. Where lintel
-itself doesn't determine something (e.g. it has no dedicated wordmark SVG), this
-document says so rather than inventing one.
+Where the code doesn't determine something (e.g. there is no dedicated wordmark
+SVG), this document says so rather than inventing one.
 
 ---
 
 ## 1. Colour palette
 
 Lintel's palette is defined once, as CSS custom properties, in
-`lintel/src/styles/tokens.css:1-76`, and is **duplicated verbatim** (same hex
-values) inline in the standalone marketing site at `lintel/site/index.html:51-109`
+`src/styles/tokens.css`, and is **duplicated verbatim** (same hex
+values) inline in the standalone marketing site at `site/index.html`
 — confirming these are the canonical, final values rather than a work-in-progress
 subset.
 
 The palette is described in its own header comment as: *"warm neutrals + copper
 accent... light: near-black ink on warm white paper. dark: true near-black
-backgrounds — premium, not brownish."* (`lintel/src/styles/tokens.css:1-4`)
+backgrounds — premium, not brownish."* (`src/styles/tokens.css`)
 
-### Light theme (`:root`, `lintel/src/styles/tokens.css:6-40`)
+### Light theme (`:root`, `src/styles/tokens.css`)
 
 | Role | Variable | Hex / value |
 |---|---|---|
@@ -54,7 +57,7 @@ backgrounds — premium, not brownish."* (`lintel/src/styles/tokens.css:1-4`)
 | Aside surface (branded panel, both themes) | `--aside-surface` | `#141210` |
 | Aside ink (text on aside) | `--aside-ink` | `#FAFAF8` |
 
-### Dark theme (`:root[data-theme='dark']`, `lintel/src/styles/tokens.css:42-76`)
+### Dark theme (`:root[data-theme='dark']`, `src/styles/tokens.css`)
 
 | Role | Variable | Hex / value |
 |---|---|---|
@@ -80,7 +83,7 @@ backgrounds — premium, not brownish."* (`lintel/src/styles/tokens.css:1-4`)
 | Aside surface (a touch warmer than `--paper` so the panel reads distinct at night) | `--aside-surface` | `#1A1714` |
 | Aside ink | `--aside-ink` | `#F5EFE6` |
 
-Note: `lintel/site/index.html:69-73` additionally names `--signal`'s role explicitly
+Note: `site/index.html` additionally names `--signal`'s role explicitly
 as *"successful gate-open green — not whatsapp"* and pairs it with a `--signal-wash`
 (12%/14% tint) and separate `--band`/`--band-text`/`--band-edge` names for what
 `tokens.css` calls `--aside-*` — same values, different names between the React
@@ -89,12 +92,12 @@ same design concept with a naming mismatch between the two codebases.
 
 ### A legacy colour still lurking in shadows
 
-`lintel/src/components/ui/Card.tsx:25` and `lintel/src/components/ui/Button.tsx:29`
+`src/components/ui/Card.tsx` and `src/components/ui/Button.tsx`
 hardcode drop-shadow colours as `rgba(26, 31, 54, ...)` — that decimal triple is
 `#1A1F36`, a **deep navy that does not appear anywhere in `tokens.css`**. It
-matches the background rect fill in `lintel/public/favicon.svg:5` and
-`lintel/public/icon.svg:5` (`fill="#1A1F36"`) and the OG-card gradient in
-`lintel/public/og.svg:5-6` (`#1A1F36` → `#0F1326`). This means the shipped favicon/
+matches the background rect fill in `public/favicon.svg` and
+`public/icon.svg` (`fill="#1A1F36"`) and the OG-card gradient in
+`public/og.svg` (`#1A1F36` → `#0F1326`). This means the shipped favicon/
 mark predates (or was deliberately kept off) the warm-neutral palette rewrite —
 the mark is still on the old navy identity while the rest of the UI moved to warm
 near-black. **RESOLVED (see §8):** the mark was re-keyed to `--ink` (`#141210`) rather
@@ -108,27 +111,27 @@ belongs to the palette it ships beside. The shadow hardcodes in `Card.tsx` and
 
 ### Families — self-hosted, three variable fonts
 
-Declared via `@font-face` in `lintel/src/styles/main.css:9-51` (portal) and
-identically in `lintel/site/index.html:35-46` (site — the site is fully
+Declared via `@font-face` in `src/styles/main.css` (portal) and
+identically in `site/index.html` (site — the site is fully
 self-contained HTML/CSS, no build step). All three ship as **variable woff2**
 files, vendored so the app makes **no request to fonts.googleapis.com /
-fonts.gstatic.com** (explicit comment, `lintel/src/styles/main.css:4-8`).
+fonts.gstatic.com** (explicit comment, `src/styles/main.css`).
 
 | Family | Weight axis | Style | File | Found at |
 |---|---|---|---|---|
-| Fraunces | 100–900 | normal | `fraunces-var.woff2` | `lintel/public/fonts/fraunces-var.woff2`, `lintel/site/fonts/fraunces-var.woff2` |
-| Fraunces | 100–900 | italic | `fraunces-italic-var.woff2` | `lintel/public/fonts/fraunces-italic-var.woff2`, `lintel/site/fonts/fraunces-italic-var.woff2` |
-| Inter | 100–900 | normal | `inter-var.woff2` | `lintel/public/fonts/inter-var.woff2`, `lintel/site/fonts/inter-var.woff2` |
-| Inter | 100–900 | italic | `inter-italic-var.woff2` | `lintel/public/fonts/inter-italic-var.woff2`, `lintel/site/fonts/inter-italic-var.woff2` |
-| JetBrains Mono | 100–800 | normal | `jetbrains-mono-var.woff2` | `lintel/public/fonts/jetbrains-mono-var.woff2`, `lintel/site/fonts/jetbrains-mono-var.woff2` |
-| JetBrains Mono | 100–800 | italic | `jetbrains-mono-italic-var.woff2` | `lintel/public/fonts/jetbrains-mono-italic-var.woff2`, `lintel/site/fonts/jetbrains-mono-italic-var.woff2` |
+| Fraunces | 100–900 | normal | `fraunces-var.woff2` | `public/fonts/fraunces-var.woff2`, `site/fonts/fraunces-var.woff2` |
+| Fraunces | 100–900 | italic | `fraunces-italic-var.woff2` | `public/fonts/fraunces-italic-var.woff2`, `site/fonts/fraunces-italic-var.woff2` |
+| Inter | 100–900 | normal | `inter-var.woff2` | `public/fonts/inter-var.woff2`, `site/fonts/inter-var.woff2` |
+| Inter | 100–900 | italic | `inter-italic-var.woff2` | `public/fonts/inter-italic-var.woff2`, `site/fonts/inter-italic-var.woff2` |
+| JetBrains Mono | 100–800 | normal | `jetbrains-mono-var.woff2` | `public/fonts/jetbrains-mono-var.woff2`, `site/fonts/jetbrains-mono-var.woff2` |
+| JetBrains Mono | 100–800 | italic | `jetbrains-mono-italic-var.woff2` | `public/fonts/jetbrains-mono-italic-var.woff2`, `site/fonts/jetbrains-mono-italic-var.woff2` |
 
-The files exist identically in both `lintel/public/fonts/` (used by the React
-portal build) and `lintel/site/fonts/` (used by the static marketing/docs site) —
+The files exist identically in both `public/fonts/` (used by the React
+portal build) and `site/fonts/` (used by the static marketing/docs site) —
 same six files, duplicated per-deployable, per
-`lintel/src/styles/main.css:5-7` comment: *"same files web/landing.html uses."*
+`src/styles/main.css` comment: *"same files web/landing.html uses."*
 
-Role assignment (`lintel/src/styles/main.css:69-71`):
+Role assignment (`src/styles/main.css`):
 ```css
 --font-display: "Fraunces", "Iowan Old Style", "Apple Garamond", serif;
 --font-sans:    "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -137,7 +140,7 @@ Role assignment (`lintel/src/styles/main.css:69-71`):
 - **Fraunces** (a "soft serif" variable font with an `opsz`/`wght`/`SOFT` axis) is
   the *display* face — headings, stat numbers, the "lintel" wordmark itself.
 - **Inter** is the body/UI sans — set as the default on `html, body`
-  (`lintel/src/styles/main.css:96-104`).
+  (`src/styles/main.css`).
 - **JetBrains Mono** is used for anything tabular/technical: audit-log
   timestamps, IDs, code blocks, "eyebrow" kicker labels.
 
@@ -145,16 +148,16 @@ Role assignment (`lintel/src/styles/main.css:69-71`):
 
 Fraunces exposes a custom `SOFT` variable axis (roundness of the serifs). Lintel
 uses three named utility classes that dial it differently per context
-(`lintel/src/styles/main.css:138-155`):
+(`src/styles/main.css`):
 
 ```css
 .font-display        { font-variation-settings: "SOFT" 30;  }              /* default heading softness */
 .font-display-tight  { font-variation-settings: "SOFT" 0; letter-spacing: -0.02em; } /* tight hero headline */
 .numeral              { font-feature-settings: "lnum","tnum"; font-variation-settings: "SOFT" 100; } /* stat digits — max soft, tabular */
 ```
-The marketing site duplicates this exactly (`lintel/site/index.html:130-132`) and
+The marketing site duplicates this exactly (`site/index.html`) and
 additionally uses literal `font-weight` alongside the axis (`420` for `.display`,
-`440` for `.display-tight`, `lintel/site/index.html:130-131`) — Fraunces variable
+`440` for `.display-tight`, `site/index.html`) — Fraunces variable
 weight, not a fixed static weight.
 
 ### Sizes / weights / line-heights actually observed
@@ -162,35 +165,34 @@ weight, not a fixed static weight.
 These are Tailwind utility classes and literal `font-size` declarations pulled
 from real component/page markup — not a designed "type scale" file (none exists;
 lintel has no `tailwind.config.js`, sizing comes from Tailwind v4's CSS-first
-`@theme` block in `lintel/src/styles/main.css:53-74`, which only overrides
+`@theme` block in `src/styles/main.css`, which only overrides
 *colors*, *font families* and one custom radius — font sizes are Tailwind's
 stock scale plus a handful of arbitrary `text-[…]` values).
 
 | Context | Class / rule | Effective size | Source |
 |---|---|---|---|
-| Hero H1 (site) | `.hero h1` | `clamp(2.9rem, 10.5vw, 7.6rem)`, `line-height: .92` | `lintel/site/index.html:207` |
-| Hero H1 (portal landing) | `.font-display-tight` + `leading-[0.94] tracking-[-0.02em]` | fluid, Tailwind text scale | `lintel/src/components/landing/Hero.tsx:52` |
-| Section H2 | `.section-head h2` | `clamp(2.2rem, 5.4vw, 4.2rem)`, `line-height: .98` | `lintel/site/index.html:271` |
-| Chat-copy H2 | `.chat-copy h2` | `clamp(2.2rem, 5vw, 3.6rem)`, `line-height: 1.02` | `lintel/site/index.html:280` |
-| Self-host band H2 | `.selfhost h2` | `clamp(2.2rem, 5.4vw, 4rem)`, `line-height: .98` | `lintel/site/index.html:347` |
-| Brand wordmark (nav) | `.brand-name` | `22px`, italic Fraunces, `SOFT 60`, `letter-spacing: -.01em` | `lintel/site/index.html:158` |
-| Footer wordmark | `.footer .brand-name` | `38px` | `lintel/site/index.html:397` |
-| Stat value (`StatBlock`) | `font-display text-3xl` | `30px` (Tailwind `text-3xl`) | `lintel/src/components/ui/Card.tsx:49` |
-| Stat value (site) | `.stat-row dd` | `26px`, `SOFT 100` numeral style | `lintel/site/index.html:228` |
-| Card/dashboard numeral | `.numeral` class | inherits, `lnum`/`tnum` + `SOFT 100` | `lintel/src/styles/main.css:151-155` |
-| Body copy (base) | `html,body` | browser default `16px` (site sets explicit `font-size:16px; line-height:1.6`, `lintel/site/index.html:117`) | portal: `lintel/src/styles/main.css:96-104` (no explicit size override) |
-| Hero tagline (site) | `.hero-tag` | `18px`, `line-height:1.65` | `lintel/site/index.html:211` |
-| Hero sub (site) | `.hero-sub` | `15px`, `line-height:1.7` | `lintel/site/index.html:213` |
-| Eyebrow / kicker | `.eyebrow` | `11px`, `letter-spacing:.22em`, uppercase, mono | `lintel/site/index.html:133` |
-| Table header (`Th`) | Tailwind classes | `10px` (`text-[10px]`), `tracking-[0.18em]`, uppercase | `lintel/src/pages/app/admin/shared.tsx:175` |
-| Status pill / badge text | Tailwind | `10px` (`text-[10px]`), `tracking-[0.16em]`, uppercase | `lintel/src/pages/app/admin/shared.tsx:198,209` |
-| Field label | Tailwind | `text-sm` (14px), `font-medium` | `lintel/src/components/ui/Field.tsx:79` |
-| Field input text | Tailwind | `text-[15px]` | `lintel/src/components/ui/Field.tsx:94` |
-| Button text (md) | Tailwind | `text-[15px]` | `lintel/src/components/ui/Button.tsx:22` |
-| Code block (`hl-pre`) | `.hl-pre` | `12.5px`, `line-height:1.65`, weight `500`, mono | `lintel/src/styles/main.css:634-643` |
-| Code toolbar language tag | `.hl-lang` | `10.5px/1`, `letter-spacing:.18em`, uppercase | `lintel/src/styles/main.css:608-613` |
-| Accordion question (FAQ) | Tailwind | `text-xl sm:text-2xl md:text-3xl` (20/24/30px), `font-display` | `lintel/src/components/ui/Accordion.tsx:22` |
-| Modal title (`ConfirmModal`) | Tailwind | `text-2xl` (24px), `font-display` | `lintel/src/pages/app/admin/shared.tsx:146` |
+| Hero H1 (site) | `.hero h1` | `clamp(2.45rem, 5.6vw, 4.25rem)`, `line-height: .95` | `site/index.html` |
+| Section H2 | `.section-head h2` | `clamp(1.7rem, 3.1vw, 2.5rem)`, `line-height: 1.04` | `site/index.html` |
+| Chat-copy H2 | `.chat-copy h2` | `clamp(1.8rem, 3.4vw, 2.7rem)`, `line-height: 1.04` | `site/index.html` |
+| Self-host band H2 | `.selfhost h2` | `clamp(1.85rem, 3.6vw, 2.9rem)`, `line-height: 1.02` | `site/index.html` |
+| Zana band H2 | `.zana h2` | `clamp(1.8rem, 3.3vw, 2.6rem)`, `line-height: 1.04` | `site/index.html` |
+| Brand wordmark (nav) | `.brand-name` | `22px`, italic Fraunces, `SOFT 60`, `letter-spacing: -.01em` | `site/index.html` |
+| Footer wordmark | `.footer .brand-name` | `38px` | `site/index.html` |
+| Stat value (`StatBlock`) | `font-display text-3xl` | `30px` (Tailwind `text-3xl`) | `src/components/ui/Card.tsx` |
+| Stat value (site) | `.stat-row dd` | `22px`, `SOFT 100` numeral style | `site/index.html` |
+| Card/dashboard numeral | `.numeral` class | inherits, `lnum`/`tnum` + `SOFT 100` | `src/styles/main.css` |
+| Body copy (base) | `html,body` | browser default `16px` | portal: `src/styles/main.css` (no explicit size override) |
+| Hero tagline (site) | `.hero-tag` | `16.5px`, `line-height:1.6` | `site/index.html` |
+| Hero sub (site) | `.hero-sub` | `15px`, `line-height:1.7` | `site/index.html` |
+| Eyebrow / kicker | `.eyebrow` | `11px`, `letter-spacing:.22em`, uppercase, mono | `site/index.html` |
+| Table header (`Th`) | Tailwind classes | `10px` (`text-[10px]`), `tracking-[0.18em]`, uppercase | `src/pages/app/admin/shared.tsx` |
+| Status pill / badge text | Tailwind | `10px` (`text-[10px]`), `tracking-[0.16em]`, uppercase | `src/pages/app/admin/shared.tsx:198,209` |
+| Field label | Tailwind | `text-sm` (14px), `font-medium` | `src/components/ui/Field.tsx` |
+| Field input text | Tailwind | `text-[15px]` | `src/components/ui/Field.tsx` |
+| Button text (md) | Tailwind | `text-[15px]` | `src/components/ui/Button.tsx` |
+| Code block (`hl-pre`) | `.hl-pre` | `12.5px`, `line-height:1.65`, weight `500`, mono | `src/styles/main.css` |
+| Code toolbar language tag | `.hl-lang` | `10.5px/1`, `letter-spacing:.18em`, uppercase | `src/styles/main.css` |
+| Modal title (`ConfirmModal`) | Tailwind | `text-2xl` (24px), `font-display` | `src/pages/app/admin/shared.tsx` |
 
 **Letter-spacing convention**: uppercase micro-labels ("kickers", table headers,
 badges, pill tabs) consistently use very wide tracking — `0.16em`–`0.22em` — at
@@ -210,7 +212,7 @@ prominent position.
 
 ### Spacing
 
-No custom spacing scale is defined — `lintel/src/styles/main.css:53-74`'s
+No custom spacing scale is defined — `src/styles/main.css`'s
 `@theme` block overrides only colors, font families, and `--radius-arch`.
 Spacing is Tailwind v4's stock 4px-based scale used directly
 (`gap-2`, `p-6`, `px-4`, `h-11`, etc., seen throughout the components already
@@ -221,37 +223,37 @@ lintel relies entirely on Tailwind defaults for spacing.
 
 One custom radius token exists:
 ```css
---radius-arch: 999px 999px 4px 4px;   /* lintel/src/styles/main.css:73 */
+--radius-arch: 999px 999px 4px 4px;   /* src/styles/main.css:73 */
 ```
 This is the signature "arch" shape (fully rounded top corners, near-square
 bottom corners) — used for decorative icon chips on the marketing site
-(`lintel/site/index.html:243,372`) and echoed structurally in the actual arch
+(`site/index.html:243,372`) and echoed structurally in the actual arch
 glyph of the logo mark. It is **not currently used anywhere in the React portal
-source** (`grep` for `radius-arch` in `lintel/src` only finds its own
-definition, `lintel/src/styles/main.css:73`) — it's a site-only decorative
+source** (`grep` for `radius-arch` in `src` only finds its own
+definition, `src/styles/main.css`) — it's a site-only decorative
 device today, a real but underused asset.
 
 Everything else uses Tailwind's stock radius scale directly:
-- `rounded-full` — buttons (`lintel/src/components/ui/Button.tsx:21-23`), pills/chips/badges, pagination buttons, filter tabs
-- `rounded-3xl` — cards (`lintel/src/components/ui/Card.tsx:25`), modal panel (`lintel/src/components/ui/Modal.tsx:60`)
-- `rounded-xl` — inputs (`lintel/src/components/ui/Field.tsx:83`), search box (`lintel/src/pages/app/admin/shared.tsx:279`)
-- `rounded-lg` — nav links (`lintel/src/components/nav/AppSidebar.tsx:26,45`)
-- `rounded-md` — small icon buttons (`lintel/src/components/ui/Field.tsx:64`)
-- `rounded-[42px]` / `rounded-[38px]` — one-off arbitrary values for the phone-mockup illustration (`lintel/src/components/landing/WhatsAppDemo.tsx:112,116`)
+- `rounded-full` — buttons (`src/components/ui/Button.tsx`), pills/chips/badges, pagination buttons, filter tabs
+- `rounded-3xl` — cards (`src/components/ui/Card.tsx`), modal panel (`src/components/ui/Modal.tsx`)
+- `rounded-xl` — inputs (`src/components/ui/Field.tsx`), search box (`src/pages/app/admin/shared.tsx`)
+- `rounded-lg` — nav links (`src/components/nav/AppSidebar.tsx:26,45`)
+- `rounded-md` — small icon buttons (`src/components/ui/Field.tsx`)
+- `rounded-[42px]` / `rounded-[38px]` — one-off arbitrary values for the phone-mockup illustration (`src/components/landing/WhatsAppDemo.tsx:112,116`)
 
 ### Shadows
 
 Two named tokens exist in `tokens.css` (`--shadow-paper`, `--shadow-deep`,
 see §1 tables) but are **not referenced by variable name anywhere in
-`lintel/src`** (`grep` for `shadow-paper|shadow-deep` in `lintel/src` only
+`src`** (`grep` for `shadow-paper|shadow-deep` in `src` only
 matches their own definitions in `tokens.css`). In practice every component
 hardcodes its own arbitrary Tailwind shadow value that approximates the same
 idea:
-- Buttons: `shadow-[0_1px_0_rgba(0,0,0,0.08),0_8px_24px_-12px_rgba(214,98,77,0.55)]` (primary, tinted with terracotta) / `rgba(26,31,54,0.6)` (ink variant) — `lintel/src/components/ui/Button.tsx:28-29`
-- Cards: `shadow-[0_1px_0_rgba(26,31,54,0.04),0_12px_32px_-16px_rgba(26,31,54,0.18)]` — `lintel/src/components/ui/Card.tsx:25`
-- Modal: `shadow-[0_24px_64px_-24px_rgba(0,0,0,0.5)]` — `lintel/src/components/ui/Modal.tsx:60`
-- Toasts: `shadow-[0_12px_32px_-12px_rgba(0,0,0,0.35)]` — `lintel/src/pages/app/admin/shared.tsx:104`
-- Code figure (`.hl-figure`): `box-shadow: 0 1px 2px rgba(14,12,10,.06), 0 12px 32px -16px rgba(14,12,10,.30)`, dark variant swaps to `rgba(255,255,255,.03)`/`rgba(0,0,0,.55)` — `lintel/src/styles/main.css:591,596`
+- Buttons: `shadow-[0_1px_0_rgba(0,0,0,0.08),0_8px_24px_-12px_rgba(214,98,77,0.55)]` (primary, tinted with terracotta) / `rgba(26,31,54,0.6)` (ink variant) — `src/components/ui/Button.tsx`
+- Cards: `shadow-[0_1px_0_rgba(26,31,54,0.04),0_12px_32px_-16px_rgba(26,31,54,0.18)]` — `src/components/ui/Card.tsx`
+- Modal: `shadow-[0_24px_64px_-24px_rgba(0,0,0,0.5)]` — `src/components/ui/Modal.tsx`
+- Toasts: `shadow-[0_12px_32px_-12px_rgba(0,0,0,0.35)]` — `src/pages/app/admin/shared.tsx`
+- Code figure (`.hl-figure`): `box-shadow: 0 1px 2px rgba(14,12,10,.06), 0 12px 32px -16px rgba(14,12,10,.30)`, dark variant swaps to `rgba(255,255,255,.03)`/`rgba(0,0,0,.55)` — `src/styles/main.css:591,596`
 
 Pattern: soft, large-blur, negative-spread drop shadows (never hard/sharp), with
 shadow colour tinted toward the surface's own ink or the component's accent
@@ -263,7 +265,7 @@ not shadows, for separation).
 
 Hairline borders are the primary separator, not shadows or heavy dividers.
 Standard idiom: `border border-ink/10` (sidebar, top bar dividers —
-`lintel/src/components/nav/AppSidebar.tsx:10`, `AppTopBar.tsx:18`), `border-ink/8`
+`src/components/nav/AppSidebar.tsx`, `AppTopBar.tsx:18`), `border-ink/8`
 (cards — `Card.tsx:7-10`), `border-ink/15` (inputs, filter-pill borders —
 `Field.tsx:74`, `shared.tsx:243,251,279`). Opacity step-down (`/8` → `/10` →
 `/15` → `/25`) is used consistently as the "how much emphasis does this line
@@ -278,14 +280,14 @@ Single source of truth: **one HTML attribute**, `data-theme`, set on
 `<html>` (`document.documentElement`):
 
 ```ts
-// lintel/src/lib/theme.tsx:43-48
+// src/lib/theme.tsx:43-48
 useEffect(() => {
   document.documentElement.dataset.theme = theme;
 }, [theme]);
 ```
 
-- Storage key: `localStorage['lintel.theme']` (`lintel/src/lib/theme.tsx:19,35`).
-- Initial resolution order (`lintel/src/lib/theme.tsx:22-27`): explicit stored
+- Storage key: `localStorage['lintel.theme']` (`src/lib/theme.tsx:19,35`).
+- Initial resolution order (`src/lib/theme.tsx`): explicit stored
   value (`'light'`/`'dark'`) → else `window.matchMedia('(prefers-color-scheme: dark)')`
   → else `'light'`.
 - All colour tokens are re-declared under `:root[data-theme='dark']` in
@@ -294,25 +296,25 @@ useEffect(() => {
 - `color-scheme: light` / `color-scheme: dark` is set alongside (`tokens.css:7,43`)
   so native form controls / scrollbars also flip.
 - The switch is **deliberately not** globally transitioned (explicit comment,
-  `lintel/src/styles/main.css:76-82`): only `html { background-color, color }`
+  `src/styles/main.css`): only `html { background-color, color }`
   and `body { background-color, background-image }` get a short crossfade
   (`0.3s`–`0.4s ease`, `main.css:83-94`). A prior attempt at transitioning
   *every* element for 1.6s produced visible artifacts and was reverted — this
   is a "don't regress" note for whoever ports this.
-- The toggle control (`lintel/src/components/nav/ThemeToggle.tsx`) is a single
+- The toggle control (`src/components/nav/ThemeToggle.tsx`) is a single
   button with two stacked SVG icons (sun/moon) whose opacity/rotation/scale are
   driven purely by `:root[data-theme='dark'] .theme-toggle-sun / .theme-toggle-moon`
-  CSS rules (`lintel/src/styles/main.css:205-273`) — no icon-swap in JS, just a
+  CSS rules (`src/styles/main.css`) — no icon-swap in JS, just a
   CSS state selector.
 - Three toggle visual variants (`default`, `landing`, `auth`) share the same
   mechanism, differing only in size/border/background chrome
-  (`lintel/src/components/nav/ThemeToggle.tsx:14-25`).
+  (`src/components/nav/ThemeToggle.tsx`).
 
 ---
 
 ## 5. Component patterns
 
-### Buttons (`lintel/src/components/ui/Button.tsx`)
+### Buttons (`src/components/ui/Button.tsx`)
 - 5 variants: `primary` (terracotta fill), `ink` (near-black fill), `paper`
   (paper-cool fill + hairline border), `outline` (transparent, border, inverts
   to ink fill on hover), `ghost` (transparent, tints `bg-ink/5` on hover).
@@ -327,7 +329,7 @@ useEffect(() => {
 - `LinkButton` is a parallel component sharing the same class tables so
   `<Link>` and `<button>` are visually indistinguishable (`Button.tsx:52-68`).
 
-### Cards (`lintel/src/components/ui/Card.tsx`)
+### Cards (`src/components/ui/Card.tsx`)
 - 4 "tones": `paper` (default, `bg-paper-cool` + `border-ink/8`), `ink` (fully
   inverted, dark fill even in light mode — used for the hero stat tile seen in
   the dashboard screenshot), `cream` (`bg-paper-warm`), `transparent`.
@@ -337,7 +339,7 @@ useEffect(() => {
   (`Card.tsx:35-53`) — this is the exact shape of the "OPENS TODAY / 47 / +6 vs
   yesterday" tile in the dashboard screenshot.
 
-### Tables (audit/activity log — `lintel/src/pages/app/admin/AdminAudit.tsx`,
+### Tables (audit/activity log — `src/pages/app/admin/AdminAudit.tsx`,
 `shared.tsx:171-186`)
 - `Th`: left-aligned, `10px` uppercase, `0.18em` tracking, 55%-opacity ink,
   *not* bold (`font-normal`) — a deliberately quiet header, not a loud one.
@@ -349,7 +351,7 @@ useEffect(() => {
   has its own row of filter-kind pills below that (`Success/Denied/Opens/
   Closes/Rate limited/Quota/Suspended`, `AdminAudit.tsx:23-32,80-98`).
 - Status is conveyed via a small coloured dot + label (`ResultDot`,
-  `lintel/src/pages/app/admin/AdminAccounts.tsx:377-394`): moss = success-open,
+  `src/pages/app/admin/AdminAccounts.tsx`): moss = success-open,
   ink = success-close, gold = rate-limited, terracotta = denied/other — dot
   colour is the primary signal, text is secondary.
 - Timestamps and IDs are always `font-mono`, small (10–12px), muted
@@ -384,7 +386,7 @@ useEffect(() => {
   `bg-ink text-paper` (or `bg-ink/90` for the outer tab row) — no accent-colour
   fill is ever used for "selected", only ink.
 
-### Form fields (`lintel/src/components/ui/Field.tsx`)
+### Form fields (`src/components/ui/Field.tsx`)
 - Label row: 14px medium label left, optional trailing hint/link right
   (`labelTrailing`, e.g. a "Forgot password?" link sits inline with the label,
   not below the field).
@@ -398,7 +400,7 @@ useEffect(() => {
 - Errors render below the field in small terracotta-deep text with `role="alert"`
   (`Field.tsx:99-103`).
 
-### Modal (`lintel/src/components/ui/Modal.tsx`)
+### Modal (`src/components/ui/Modal.tsx`)
 - Responsive shape-shift: **bottom sheet on mobile** (`rounded-t-3xl`, pinned
   to bottom edge, full width), **centered dialog on desktop**
   (`sm:rounded-3xl`, translate-centered, `max-w-md`) — one component, two
@@ -411,23 +413,23 @@ useEffect(() => {
 ### Empty and error states
 No dedicated `<EmptyState>` component exists — every page inlines its own
 short, specific, human-voiced sentence inside a plain `Card`, e.g.:
-- `"No access points yet. Add one and pair a device to start tracking opens."` (`lintel/src/pages/app/AccessPoints.tsx:94`)
-- `"No members yet — that's unusual, you should at least be in here."` (`lintel/src/pages/app/Members.tsx:82`)
-- `"No devices yet. Hit Pair new device to get a claim token."` (`lintel/src/pages/app/Devices.tsx:107`)
-- `"No activity yet — opens and closes will appear here."` (`lintel/src/pages/app/Dashboard.tsx:284`)
-- `"Nothing logged for this filter."` (`lintel/src/pages/app/admin/AdminAudit.tsx:107`)
+- `"No access points yet. Add one and pair a device to start tracking opens."` (`src/pages/app/AccessPoints.tsx`)
+- `"No members yet — that's unusual, you should at least be in here."` (`src/pages/app/Members.tsx`)
+- `"No devices yet. Hit Pair new device to get a claim token."` (`src/pages/app/Devices.tsx`)
+- `"No activity yet — opens and closes will appear here."` (`src/pages/app/Overview.tsx`)
+- `"Nothing logged for this filter."` (`src/pages/app/admin/AdminAudit.tsx`)
 
 Convention: `text-ink/55`–`/65` at `text-sm`, left-padded inside an otherwise
 empty `Card`, always a full sentence with a next action named in it, never a
 generic "No data" or an icon-only illustration. Loading states are equally
 terse (`"Loading…"`, `LoadingRow`, `shared.tsx:336-338`) and error states are a
 single `text-terracotta-deep` sentence with `role="alert"` (`ErrorNote`,
-`shared.tsx:340-346`; ad-hoc equivalent at `lintel/src/pages/app/AccessPoints.tsx:81-84`).
+`shared.tsx:340-346`; ad-hoc equivalent at `src/pages/app/AccessPoints.tsx`).
 There is an explicit comment ruling out fabricated empty-state data even in
-degraded scenarios (`lintel/src/pages/app/Analytics.tsx:58`: *"'not available'
+degraded scenarios (`src/pages/app/Analytics.tsx`: *"'not available'
 rather than rendering a fabricated empty state"*).
 
-### Prism / code blocks (`lintel/src/styles/main.css:580-696`)
+### Prism / code blocks (`src/styles/main.css`)
 Dedicated dark "figure" chrome independent of page theme — code blocks stay a
 near-black surface (`#14110E` light-mode host page / `#0B0A09` dark-mode host
 page) with a toolbar (language tag + copy button) on top and warm/editorial

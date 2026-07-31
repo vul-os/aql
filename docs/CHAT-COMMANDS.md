@@ -99,9 +99,9 @@ one it exists to bound. §2.2(d)'s FIXED note has said "`open` / `close` /
 `hold`" the whole time — the two halves of the document disagreed.
 
 Aql's device model is heterogeneous by design: an ID, a kind, a zone, a state,
-and a set of commands/telemetry per device (`docs/ARCHITECTURE.md:96-127`),
+and a set of commands/telemetry per device (`ARCHITECTURE.md`),
 demonstrated today by twelve demo devices spanning Camera, Lighting, Robot,
-Climate, Energy, Sensor and Access kinds (`src/lib/demoData.ts`).
+Climate, Energy, Sensor and Access kinds (`devices/model.go`).
 
 This spec generalises "a chat message actuates a device" from one verb on one
 device class to a verb registry over Aql's device model — **without** loosening
@@ -120,7 +120,7 @@ any property the access path currently holds.
 
 ### Design constraints for everything below
 
-- Local-first, no cloud broker (`docs/ARCHITECTURE.md:158-168`).
+- Local-first, no cloud broker (`ARCHITECTURE.md`).
 - Fail-closed on ambiguity.
 - No new external dependency — everything proposed here is Go stdlib plus what
   the gateway already links.
@@ -154,11 +154,16 @@ The tier is derived, never parsed. A message cannot assert its own risk level.
 ### 1.2 Capabilities, not device types
 
 Aql already models a device as *"an ID, a kind, a zone, a state, and a set of
-commands/telemetry"* (`docs/ARCHITECTURE.md:100-101`), and the console's shape
-is `{id, name, kind, zone, state, read, detail, seen}` (`src/lib/demoData.ts`).
+commands/telemetry"* (`ARCHITECTURE.md`), and the console's shape
+was `{id, name, kind, zone, state, read, detail, seen}` on a demo dataset that
+has since been deleted.
 
-**PROPOSAL.** Add one field to that internal shape — `capabilities: []CapabilityID`
-— and keep everything else. A capability is a named, versioned bundle of verbs
+**BUILT.** The shape is now `EngineDevice` (`src/lib/api.ts`), served live by
+the engine: `{key, driver, kind, name, zone, capabilities, availability,
+summary, last_seen}`. The one field this section proposed adding —
+`capabilities` — is on it, carrying catalogue ids like `light.dimmable` from
+`devices/capability.go`. The rest of this section describes why, and remains
+the reasoning behind the shipped model rather than a plan for it. A capability is a named, versioned bundle of verbs
 with typed arguments and a fixed safety tier. Verbs attach to capabilities, not
 to device kinds, so a lock inside a Robot and a lock on a door share one verb.
 
@@ -868,7 +873,7 @@ retention and are readable by workspace admins.
 
 For a project whose non-negotiables are *"local-first"*, *"no cloud
 dependency"* and *"the box, not a vendor server, is the root of authority"*
-(`docs/ARCHITECTURE.md:158-168`, `docs/THREAT-MODEL.md:19-20`), a chat rail is a
+(`ARCHITECTURE.md`, `docs/THREAT-MODEL.md:19-20`), a chat rail is a
 deliberate, bounded exception. The boundary below is what keeps it bounded.
 
 > Aql's own default posture is LAN-only, with remote access opt-in and explicit
@@ -1064,7 +1069,7 @@ lintel carried a docs-vs-code tripwire — `scripts/check-feature-claims.mjs` pl
 a hand-maintained manifest (commit `de10f68`) that failed the build when a doc
 claimed a feature with no code evidence, *and* when a "planned" claim's evidence
 appeared. It did not survive the fold: `scripts/` in this repo contains only
-`screenshot.mjs`; the originals are still readable under `lintel/scripts/`.
+`screenshot.mjs`; the originals are readable in the pre-fold repository's history.
 
 If it is restored, every claim in this document registers as **planned**, with
 the exception of the shipped-behaviour citations in §0, §1.3, §2.1 and §5.4.
@@ -1114,6 +1119,6 @@ authority resolution), `channels_dmtap.go`.
 **Wire contracts** — `proto/commands.md`, `proto/events.md`, `proto/grants.md`,
 `proto/pairing.md`, `proto/vectors/`.
 
-**Aql device model** — `src/lib/data.ts` (demo shapes),
-`docs/ARCHITECTURE.md` (driver seam, non-negotiables), `ROADMAP.md` (what is
+**Aql device model** — `src/lib/api.ts` (`EngineDevice`, the live shape),
+`ARCHITECTURE.md` (driver seam, non-negotiables), `ROADMAP.md` (what is
 built), `docs/THREAT-MODEL.md` (target posture).

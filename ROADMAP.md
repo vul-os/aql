@@ -391,6 +391,21 @@ and none has met physical hardware.
       as an open. "Who opened the gate" is REFUSED although the log holds it — a member of
       a shared gate should not be able to track another resident from their phone — and is
       refused before classification so it cannot be answered with the adjacent fact
+- [x] **Documentation citations are checked, and four documents were wrong.**
+      `docs/DESIGN-SYSTEM.md` cited 104 paths under a `lintel/` prefix — the repo this
+      frontend was folded in from — so not one resolved, and three named components deleted
+      since (`Accordion.tsx`, `Hero.tsx`, `WhatsAppDemo.tsx`). Worse than the paths: EVERY
+      row of its type-scale table stated a size the site stopped using when the landing was
+      redesigned (hero H1 documented as `clamp(2.9rem, 10.5vw, 7.6rem)`, actually
+      `clamp(2.45rem, 5.6vw, 4.25rem)`) — a design system anyone building to would have
+      produced type most of a third too large. Corrected against the CSS and verified
+      mechanically. `docs/CHAT-COMMANDS.md` cited the deleted `demoData.ts` nine times and
+      still called §1.2's `capabilities` field a PROPOSAL when `EngineDevice.capabilities`
+      has shipped. `src/lib/__tests__/docCitations.test.ts` now resolves every cited path
+      across `docs/`, `proto/`, README, ROADMAP and ARCHITECTURE. Line numbers were dropped
+      rather than corrected: `AccessPoints.tsx:94` was still IN RANGE and pointed at
+      unrelated code, and a citation that looks precise and is not is worse than one that
+      does not pretend
 - [ ] Extend it further, to the other device classes. Chat still reaches only the access
       module; the engine's verbs (`on`/`off`/`set`/`start`…) are recognised and honestly
       refused (`channels/unsupported.go`) rather than driven. §4.2's two unbuilt queries
