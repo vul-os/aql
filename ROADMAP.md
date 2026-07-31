@@ -735,6 +735,16 @@ and none has met physical hardware.
       distinguishes policy from a dial failure, the chain is bounded, and the comparison is
       against the ORIGINAL request rather than the previous hop — otherwise a chain walks
       away one host at a time, each hop "same as the last"
+- [x] **The mDNS responder is tested and fuzzed.** The whole package was at zero, found by
+      re-running the coverage audit with `-coverpkg` — it parses datagrams ANYONE on the LAN
+      can send to a device that opens gates, and it is hand-rolled DNS wire format. The
+      classic hazard is there and holds: a compression pointer that points at itself, or a
+      two-pointer cycle, terminates rather than spinning forever in a UDP read path. Also
+      pinned: labels and pointers running past the end are refused, a RESPONSE is never
+      answered (two advertisers on one LAN would otherwise answer each other indefinitely),
+      and `consumed` counts bytes at the ORIGINAL offset rather than wherever a pointer
+      chain ended. Two fuzz targets are wired into CI beside the existing four; 900k
+      executions found no crash
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
 - [ ] Rate-limiting and scoping on movement commands, so a compromised client cannot drive

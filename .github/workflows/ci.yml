@@ -372,6 +372,10 @@ jobs:
           fuzz ./internal/grants/ FuzzHandleProof
           fuzz ./internal/framing/ FuzzReassemblerPush
           fuzz ./internal/framing/ FuzzChunkRoundTrip
+          # mDNS parses datagrams anyone on the LAN can send to a device that
+          # opens gates, and it is hand-rolled DNS wire format.
+          fuzz ./internal/mdns/ FuzzDecodeName
+          fuzz ./internal/mdns/ FuzzIsQueryFor
 
   e2e-browser:
     name: e2e-browser (real Chromium against a real hub binary)
