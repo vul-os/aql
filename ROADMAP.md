@@ -485,8 +485,13 @@ and none has met physical hardware.
       once-unbuilt queries, **"how much solar today" is built** — one number per source for
       one day, which rule 3 permits where a curve would be the appliance fingerprint §4.3
       warns about; a meter that was down makes the figure a floor and says so. **"Which
-      lights are on" is still not answered**, but §4.4 rule 6's per-location opt-in that has
-      to precede it IS built (`location_disclosure`, migration 0028): off unless an admin
+      lights are on" is still not answered, and not for want of plumbing**: a device's state
+      exists only as `Device.Summary`, free text a driver wrote for a human, which the model
+      documents as "presentational; never parsed". Counting lights would mean guessing each
+      driver's vocabulary and reporting the guess as a fact about someone's home; it needs a
+      machine-readable state on the device model, and `devices/summarycontract_test.go` now
+      denies the shortcut. §4.4 rule 6's per-location opt-in that has to precede it IS
+      built (`location_disclosure`, migration 0028): off unless an admin
       turns it on, per location, recorded with who and when, audited both ways, and a member
       asking a location that has not opted in is told the switch exists rather than met
       with silence

@@ -882,8 +882,15 @@ rather than quietly answered with the adjacent fact — "who closed the gate"
 contains "closed" and would otherwise have been answered with the last close
 time, which is an evasion dressed as an answer.
 
-"Which lights are on" is still not ANSWERED — the device engine does not serve
-per-device state to chat. What exists now is rule 6's switch, which had to come
+"Which lights are on" is still not ANSWERED, and the reason is worth stating
+precisely because it is not plumbing. A device's state exists only as
+`Device.Summary`: free text a driver wrote for a human — "62% · warm", "warm
+white", "on" — which `devices/model.go` documents as "presentational; never
+parsed". Counting lights would mean guessing at each driver's vocabulary and
+reporting the guess as a fact about someone's home, which is the failure this
+whole section exists to avoid. It needs a machine-readable state on the device
+model, and `devices/summarycontract_test.go` denies the shortcut until there is
+one. What exists now is rule 6's switch, which had to come
 first: a household is asked before anything about the people in it can be
 disclosed, and the absence of consent is the answer until then.
 
