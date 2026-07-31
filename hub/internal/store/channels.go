@@ -225,6 +225,38 @@ func (s *Store) MemberUserIDByPhoneForAP(ctx context.Context, phoneE164, accessP
 	return userID, true, nil
 }
 
+// VerifiedProfileIDByPhone resolves a phone number to the member profile it is
+// verified against.
+//
+// The phone rails' equivalent of ResolveChannelIdentity, which the other rails
+// use. It exists because a phone-identified caller had no way to ask a question
+// that is not about one specific access point — MemberUserIDByPhoneForAP needs
+// an access point id, which is the wrong shape for "who is this", and using it
+// with an arbitrary gate to answer that would make the answer depend on which
+// gate was picked.
+//
+// verified_at IS NOT NULL is the whole security of this: an unverified number
+// is a claim, not an identity, and the linking ceremony is what turns one into
+// the other. Membership is deliberately NOT checked here — that is the scope
+// function's question, and answering it in two places is how the two come to
+// disagree.
+func (s *Store) VerifiedProfileIDByPhone(ctx context.Context, phoneE164 string) (string, bool, error) {
+	var id string
+	err := s.db.QueryRowContext(ctx,
+		`SELECT u.id
+		 FROM profile_phone_numbers ppn
+		 JOIN users u ON u.id = ppn.profile_id
+		 WHERE ppn.phone_e164 = ? AND ppn.verified_at IS NOT NULL AND u.status = 'active'
+		 LIMIT 1`, phoneE164).Scan(&id)
+	if err == sql.ErrNoRows {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	return id, true, nil
+}
+
 // ---------------------------------------------------------------------------
 // Channel identities (Slack / Telegram): (channel, external_id) → profile
 // ---------------------------------------------------------------------------

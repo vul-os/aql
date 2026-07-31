@@ -158,7 +158,7 @@ func (s *Server) processTGMessage(ctx contextT, msg *channels.TGMessage) {
 		// A verb chat cannot serve is answered, not redirected to a gate menu
 		// (channels/unsupported.go).
 		if v, ok := channels.UnsupportedVerb(txt); ok {
-			s.tgSendText(ctx, msg.Chat.ID, chatID, channels.UnsupportedVerbReply(v, s.channelPublicURL()))
+			s.tgSendText(ctx, msg.Chat.ID, chatID, s.unsupportedVerbReply(ctx, txt, profileID, v))
 			return
 		}
 		s.tgSendText(ctx, msg.Chat.ID, chatID, channels.TelegramMenu(displayName))

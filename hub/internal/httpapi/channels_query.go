@@ -3,6 +3,8 @@ package httpapi
 import (
 	"time"
 
+	"github.com/vul-os/aql/hub/internal/devices"
+
 	"github.com/vul-os/aql/hub/internal/channels"
 	"github.com/vul-os/aql/hub/internal/store"
 )
@@ -131,4 +133,49 @@ func (s *Server) answerProfileGateQuestion(ctx contextT, body, profileID, source
 		source:  source,
 		userFor: func(string) string { return profileID },
 	})
+}
+
+// chatFleetFor returns the engine devices a chat caller may see.
+//
+// The SAME scope rule the console uses (engineScopeForUser), not a chat-shaped
+// copy of it. A parallel implementation is how a rail and the console end up
+// disagreeing about which devices a member owns, and the direction of that
+// disagreement is not predictable — a second copy is as likely to be wider as
+// narrower, and wider here means naming a neighbour's devices in a reply.
+//
+// Returns nil for every failure, including "not engine authority". A refusal
+// that names no device is the existing behaviour and is always safe; there is
+// nothing a rail should do differently because the engine declined to describe
+// itself.
+func (s *Server) chatFleetFor(ctx contextT, profileID string) []devices.IndexedDevice {
+	reg := s.registry()
+	if reg == nil || profileID == "" {
+		return nil
+	}
+	scope, err := s.engineScopeForUser(ctx, profileID)
+	if err != nil {
+		return nil
+	}
+	var out []devices.IndexedDevice
+	for _, d := range reg.Devices() {
+		if scope.permits(d.Key) {
+			out = append(out, d)
+		}
+	}
+	return out
+}
+
+// unsupportedVerbReply answers a verb chat cannot serve, naming the device the
+// member meant when it can work that out.
+//
+// Chat actuates nothing on the engine and this does not change that. It makes
+// the refusal legible — and it puts the resolver in front of real fleets and
+// real phrasings in a message that moves nothing, which is the order a
+// component whose failure mode is "the wrong device" has to be built in.
+func (s *Server) unsupportedVerbReply(ctx contextT, body, profileID string, v devices.Verb) string {
+	fleet := s.chatFleetFor(ctx, profileID)
+	if len(fleet) == 0 {
+		return channels.UnsupportedVerbReply(v, s.channelPublicURL())
+	}
+	return channels.UnsupportedVerbReplyFor(channels.ResolveDevice(body, v, fleet), s.channelPublicURL())
 }

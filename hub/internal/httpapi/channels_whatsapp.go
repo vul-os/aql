@@ -239,7 +239,15 @@ func (s *Server) waHandleText(ctx contextT, msg *channels.WAMessage, from, chatI
 	// After the gate branch above, never before it: a body naming open or close
 	// is routed exactly as it always was, mixed intent included.
 	if v, ok := channels.UnsupportedVerb(body); ok {
-		return text(to, chatID, channels.UnsupportedVerbReply(v, portal))
+		// Resolved through the verified-phone profile, so this rail's refusal
+		// names the device the same way the others do. A phone with no verified
+		// profile falls back to the generic reply rather than to a wider fleet.
+		profileID, _, err := s.store.VerifiedProfileIDByPhone(ctx, from)
+		if err != nil {
+			s.log.Error("wa profile by phone", "err", err)
+			profileID = ""
+		}
+		return text(to, chatID, s.unsupportedVerbReply(ctx, body, profileID, v))
 	}
 
 	// Fallback: welcome menu — a body naming no verb at all. Also an offer to

@@ -170,7 +170,7 @@ func (s *Server) processDiscordMessage(ctx contextT, send channels.DiscordSender
 		// menu here would answer a question about lights with a list of gates.
 		if v, ok := channels.UnsupportedVerb(txt); ok {
 			s.discordText(ctx, send, chatID, msg.ChannelID,
-				channels.UnsupportedVerbReply(v, s.channelPublicURL()))
+				s.unsupportedVerbReply(ctx, txt, profileID, v))
 			return
 		}
 		// A body that names no command word is a question, not an instruction.

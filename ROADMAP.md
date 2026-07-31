@@ -436,6 +436,15 @@ and none has met physical hardware.
       only because `DiscordMaxButtons` is defined as rows × per-row. `docs/CHAT-COMMANDS.md`
       §2.3 recorded Slack as "not enforced" and asked for constants that already exist;
       corrected
+- [x] **Device resolution over the engine fleet** — `docs/CHAT-COMMANDS.md` §2.3 stages 1
+      (verb-first filtering) and 3 (scored matching with a margin). Stage 1 is the
+      correctness one: a device whose capabilities do not expose the verb is not a worse
+      match, it is not a match, so "open the front gate camera" resolves to nothing rather
+      than scoring a camera on its name. A tie is never broken — not by slice order, not by
+      recency — and a zone or kind word alone is below the floor, because "the shed" is a
+      hint about which devices are plausible and not an identification of one. Nothing
+      actuates through it: the consumer is the REFUSAL, which now names the device it
+      understood, so the resolver is wrong in public before it is ever wrong at a relay
 - [ ] Extend it further, to the other device classes. Chat still reaches only the access
       module; the engine's verbs (`on`/`off`/`set`/`start`…) are recognised and honestly
       refused (`channels/unsupported.go`) rather than driven. §4.2's two unbuilt queries

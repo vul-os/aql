@@ -133,3 +133,58 @@ func UnsupportedVerbReply(v devices.Verb, publicURL string) string {
 	b.WriteString(" Send \"menu\" for the gates you can reach.")
 	return b.String()
 }
+
+// UnsupportedVerbReplyFor is UnsupportedVerbReply with the device resolved.
+//
+// # Why the refusal does the resolving
+//
+// The resolver's failure mode is not "no answer" — it is the WRONG device, with
+// a success message naming the right one. So its first consumer is a reply that
+// changes nothing: a member asking to turn on the porch light is told which
+// device was understood, and where it can actually be done. If the resolution
+// is wrong, they see it is wrong, and nothing has moved.
+//
+// That is the order this seam has to be built in. When actuation does arrive it
+// will pass through a resolver that has been answering in public, against real
+// fleets and real phrasings, rather than one whose first outing is at a relay.
+//
+// The refusal itself is unchanged in force: chat still actuates nothing on the
+// engine. Naming the device is not a step toward doing it, it is what makes the
+// refusal legible.
+func UnsupportedVerbReplyFor(m DeviceMatch, publicURL string) string {
+	var b strings.Builder
+	b.WriteString("I can only open and close gates from chat — I can't ")
+	b.WriteString(string(m.Verb))
+	b.WriteString(" anything from here.")
+
+	switch {
+	case m.Unique():
+		// Confirms understanding while refusing. "I know which one you mean and
+		// I still will not" is a different message from "I do not do that", and
+		// only the first tells the member their phrasing was fine.
+		b.WriteString(" You mean ")
+		b.WriteString(m.Device.Device.Name)
+		if z := m.Device.Device.Zone; z != "" {
+			b.WriteString(" (")
+			b.WriteString(z)
+			b.WriteString(")")
+		}
+		b.WriteString(", which is in the console")
+	case m.Ambiguous():
+		// Said even though nothing would actuate. A member who thinks they
+		// named one device and named three should learn that here rather than
+		// the first time it matters.
+		b.WriteString(" That name matches ")
+		b.WriteString(itoa(int64(len(m.Candidates))))
+		b.WriteString(" devices, so I could not tell which you meant")
+	default:
+		b.WriteString(" Lights, climate and the rest are in the console")
+	}
+	if publicURL != "" {
+		b.WriteString(": ")
+		b.WriteString(trimURL(publicURL))
+		b.WriteString("/app")
+	}
+	b.WriteString(". Send \"menu\" for the gates you can reach.")
+	return b.String()
+}

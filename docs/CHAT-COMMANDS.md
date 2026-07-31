@@ -402,6 +402,22 @@ verb is a fail-open, and the default happens to be the T3 one.
 **PROPOSAL.** Replace the flat picker with progressive narrowing. Each stage
 runs only if the previous one left more than one candidate.
 
+**Stages 1 and 3 are BUILT** (`channels/resolve.go`), and nothing actuates
+through them. Their only consumer is the refusal, which now names the device it
+understood: *"I can only open and close gates from chat — I can't turn on
+anything from here. You mean Porch Light (Exterior), which is in the console."*
+
+That ordering is deliberate. This resolver's failure mode is not "no answer",
+it is the WRONG device with a success message naming the right one, so it earns
+its way to an actuation path by being wrong in public first — in a message that
+changes nothing, against real fleets and real phrasings. The fleet it resolves
+over comes from the same `engineScopeForUser` the console uses, extracted from
+its HTTP handler rather than reimplemented, because a parallel scope is how a
+rail and the console come to disagree about who owns what, and the direction of
+that disagreement is not predictable.
+
+Stages 2, 4, 5 and 6 are not built.
+
 **Stage 1 — verb-first filtering.** Resolve the verb before the target, then
 drop every device whose capabilities do not expose that verb. This is the single
 largest reduction available and it is free: "dim" eliminates every gate, camera,

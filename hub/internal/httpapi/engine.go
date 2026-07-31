@@ -124,49 +124,67 @@ func (sc engineScope) permits(key string) bool {
 // returns ok=false. Fail-closed at every branch: an error establishing the
 // precondition means the precondition is not established.
 func (s *Server) engineScopeFor(w http.ResponseWriter, r *http.Request) (engineScope, bool) {
-	c := claimsFrom(r)
-	u, err := s.store.UserByID(r.Context(), c.Sub)
-	if err != nil || u.Status != "active" {
+	scope, err := s.engineScopeForUser(r.Context(), claimsFrom(r).Sub)
+	switch {
+	case err == errNotEngineAuthority:
 		writeErr(w, http.StatusForbidden, "not_engine_authority")
 		return engineScope{}, false
+	case err != nil:
+		writeErr(w, http.StatusInternalServerError, "internal")
+		return engineScope{}, false
+	}
+	return scope, true
+}
+
+// errNotEngineAuthority separates "this caller may not" from "this failed",
+// so the HTTP wrapper can answer 403 and 500 differently while the rule itself
+// has no opinion about status codes.
+var errNotEngineAuthority = errors.New("not engine authority")
+
+// engineScopeForUser is the rule, with no HTTP in it.
+//
+// Extracted so a chat rail can ask the same question. The alternative — a
+// second, chat-shaped scope function — is how the console and a rail end up
+// disagreeing about which devices a member owns, and the direction that
+// disagreement runs is not predictable: a parallel implementation is as likely
+// to be wider as narrower.
+func (s *Server) engineScopeForUser(ctx contextT, userID string) (engineScope, error) {
+	u, err := s.store.UserByID(ctx, userID)
+	if err != nil || u.Status != "active" {
+		return engineScope{}, errNotEngineAuthority
 	}
 	if u.IsPlatformAdmin {
-		return engineScope{admin: true}, true
+		return engineScope{admin: true}, nil
 	}
 
-	n, err := s.store.AccountCount(r.Context())
+	n, err := s.store.AccountCount(ctx)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal")
-		return engineScope{}, false
+		return engineScope{}, err
 	}
-	member, err := s.store.IsMemberOfAnyAccount(r.Context(), c.Sub)
+	member, err := s.store.IsMemberOfAnyAccount(ctx, userID)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal")
-		return engineScope{}, false
+		return engineScope{}, err
 	}
 	if !member {
-		writeErr(w, http.StatusForbidden, "not_engine_authority")
-		return engineScope{}, false
+		return engineScope{}, errNotEngineAuthority
 	}
 	if n == 1 {
-		return engineScope{soleAccount: true}, true
+		return engineScope{soleAccount: true}, nil
 	}
 
 	// Several accounts: the caller sees exactly what their accounts have
 	// claimed. An empty set is a legitimate answer — a member who has claimed
 	// nothing has no devices, which is different from being refused outright
 	// and is why this does not 403 here.
-	accounts, err := s.store.AccountsForUser(r.Context(), c.Sub)
+	accounts, err := s.store.AccountsForUser(ctx, userID)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "internal")
-		return engineScope{}, false
+		return engineScope{}, err
 	}
 	owned := map[string]bool{}
 	for _, a := range accounts {
-		keys, err := s.store.DeviceKeysForAccount(r.Context(), a.ID)
+		keys, err := s.store.DeviceKeysForAccount(ctx, a.ID)
 		if err != nil {
-			writeErr(w, http.StatusInternalServerError, "internal")
-			return engineScope{}, false
+			return engineScope{}, err
 		}
 		for k := range keys {
 			owned[k] = true
@@ -182,16 +200,15 @@ func (s *Server) engineScopeFor(w http.ResponseWriter, r *http.Request) (engineS
 		// comment. See docs/ACCESS-ON-THE-ENGINE.md §3.5 — the ownership is
 		// DERIVED here, not stored, so there is still one source of truth for
 		// who a gate belongs to.
-		apIDs, err := s.store.AccessPointIDsForAccount(r.Context(), a.ID)
+		apIDs, err := s.store.AccessPointIDsForAccount(ctx, a.ID)
 		if err != nil {
-			writeErr(w, http.StatusInternalServerError, "internal")
-			return engineScope{}, false
+			return engineScope{}, err
 		}
 		for _, id := range apIDs {
 			owned[devices.Key(accessdev.DriverID, id)] = true
 		}
 	}
-	return engineScope{owned: owned}, true
+	return engineScope{owned: owned}, nil
 }
 
 // requireEngineAuthority gates every engine route. See the note above for why
