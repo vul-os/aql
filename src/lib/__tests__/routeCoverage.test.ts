@@ -69,8 +69,9 @@ type Route = { method: string; path: string };
 /** Every route the gateway registers, via its own routegen tool.
  *
  * Memoised: this shells out to a full Go compile and three tests here want the
- * same answer, which is enough to put each of them near vitest's 5s budget. A
- * test that times out reports a timeout, not the defect it was written for. */
+ * same answer. One compile instead of three is right regardless of whether it
+ * prevents a timeout — see routeParity for what is and is not demonstrable about
+ * the timeout that prompted this. */
 let routesCache: Route[] | null = null;
 
 function gatewayRoutes(): Route[] {

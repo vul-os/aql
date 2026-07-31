@@ -144,10 +144,17 @@ function extractFrontendCalls(source: string): FrontendCall[] {
 // ── gateway extraction (shells out to the Go source of truth) ──────────────
 
 // Memoised: `go run ./cmd/routegen` is a full Go compile, and five tests in this
-// file need the same answer. Called per test it lands each of them on vitest's
-// 5s budget — measured at 3.2s, 4.8s and one outright timeout — which reports
-// "Test timed out" rather than naming any defect. Same shape already fixed twice
-// in this repo, in naming.test.ts and in docCounts' exception check.
+// file need the same answer. One compile instead of five took this file from
+// 5229ms (with one test timing out) to 1820ms when the two route files are run
+// together.
+//
+// HONEST LIMIT on that claim. The timeout was observed once, during the first
+// `npm run check` — where the Go gates run first and leave the build cache
+// churned — and it has NOT been reproducible since, with or without this change:
+// reverting the memoisation passes the full suite and passes check.sh. So the
+// trigger looks like a cold Go build cache under contention, which this reduces
+// exposure to rather than eliminates. Doing the work once is right regardless;
+// calling it the fix would be a cause I cannot demonstrate.
 let gatewayRoutesCache: GatewayRoute[] | null = null;
 
 function loadGatewayRoutes(): GatewayRoute[] {

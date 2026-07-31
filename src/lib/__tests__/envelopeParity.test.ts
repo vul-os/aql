@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 /**
  * The gap responseShape leaves open, closed per endpoint.
@@ -39,13 +39,24 @@ const repo = path.resolve(here, '../../..');
 
 type Route = { method: string; path: string; handler?: string; envelope?: string[] };
 
+// Memoised and warmed in a hook, like routeParity and routeCoverage.
+//
+// This file looked fast — 353ms — plausibly because those two run first and
+// leave Go's build cache warm; worker ordering is not guaranteed. Two compiles
+// where one will do is worth removing on its own. What this is NOT is a
+// demonstrated timeout fix: see routeParity's note for why that causal claim
+// could not be reproduced.
+let routesCache: Route[] | null = null;
+
 function gatewayRoutes(): Route[] {
+  if (routesCache) return routesCache;
   const raw = execFileSync('go', ['run', './cmd/routegen'], {
     cwd: path.join(repo, 'hub'),
     encoding: 'utf-8',
     maxBuffer: 8 * 1024 * 1024,
   });
-  return JSON.parse(raw) as Route[];
+  routesCache = JSON.parse(raw) as Route[];
+  return routesCache;
 }
 
 /** Normalize a path the way routeParity does, so the two agree. */
@@ -123,6 +134,11 @@ function inlineEnvelopes(): Array<{ path: string; keys: string[]; line: number }
   }
   return out;
 }
+
+// Pay the routegen compile once, in a hook with its own budget.
+beforeAll(() => {
+  gatewayRoutes();
+});
 
 describe('response envelope parity', () => {
   it('every inline response envelope matches the route it actually calls', () => {
