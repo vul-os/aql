@@ -272,6 +272,54 @@ describe('documentation citations', () => {
     expect(problems, 'a document attributes words to a file that does not contain them').toEqual([]);
   });
 
+  /**
+   * The docs index must not contradict a document's own status line.
+   *
+   * `docs/README.md` is a table, and a table row is the cheapest thing in the
+   * repository to leave behind. Two rows called shipped work "**Designed, not
+   * built**" — CONTROLLER-CONFIG-REPORT, which is built end to end and says so
+   * in its first sentence, and ACCESS-ON-THE-ENGINE, whose §3 decisions are
+   * code. A reader deciding what to look at reads the index, not eleven status
+   * lines, so the index is where "shipped work described as unbuilt" does the
+   * most damage.
+   *
+   * Only this one direction is checked, and deliberately. Judging whether a
+   * status line's prose ("mostly proposal, and no longer entirely") agrees with
+   * an index summary is not mechanisable; a flat contradiction between "not
+   * built" and "built" is.
+   */
+  it('the docs index does not call a document unbuilt when the document says otherwise', () => {
+    const index = readFileSync(resolve(root, 'docs/README.md'), 'utf8');
+    const problems: string[] = [];
+    let rows = 0;
+
+    for (const line of index.split('\n')) {
+      const link = line.match(/\[`([A-Za-z0-9_.-]+\.md)`\]\(([^)]+)\)/);
+      if (!link || !line.startsWith('|')) continue;
+      const target = resolve(root, 'docs', link[1]);
+      if (!existsSync(target)) continue;
+      rows++;
+
+      // What the ROW claims. Bounded to explicit unbuilt phrasings rather than
+      // any appearance of "built", because "never run against a camera" and
+      // "built end to end" both contain the word.
+      const rowSaysUnbuilt = /\*\*(?:Designed, not built|Nothing in it is built|Not built)\.?\*\*/i.test(line);
+      if (!rowSaysUnbuilt) continue;
+
+      // What the DOCUMENT claims, from its own status line.
+      const status = readFileSync(target, 'utf8').match(/\*\*Status:[^*]*\*\*/i);
+      if (!status) continue;
+      const text = status[0];
+      const saysBuilt = /\bbuilt\b/i.test(text) && !/\bnot built\b|\bunbuilt\b|\bnothing\b/i.test(text);
+      if (saysBuilt) {
+        problems.push(`docs/README.md calls ${link[1]} unbuilt, but it says: ${text}`);
+      }
+    }
+
+    expect(rows, 'no index rows parsed — the docs table changed shape').toBeGreaterThan(5);
+    expect(problems, 'the docs index contradicts a document it links to').toEqual([]);
+  });
+
   it('no document cites the pre-fold lintel/ layout as a path', () => {
     // The fold is done and those paths are gone. Kept as its own expectation
     // because EXTERNAL_REPOS has to list `lintel/` — a doc CAN legitimately

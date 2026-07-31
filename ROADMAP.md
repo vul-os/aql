@@ -144,8 +144,17 @@ hub's issuance endpoint):
       probes nothing. The banner says a controller is *responding*, never that the gate
       will open: the probe carries no signature, so identity is still settled at the gate
       against the controller's pinned hub key
-- [ ] Grant revocation semantics beyond "wait for expiry" (currently an accepted v0
-      non-goal)
+- [ ] Grant revocation semantics beyond "wait for expiry". Still unbuilt, but no longer
+      undesigned: [`docs/GRANT-REVOCATION.md`](docs/GRANT-REVOCATION.md) settles the question
+      `proto/grants.md` leaves open. A signed deny-list of `{grant_id, exp}` pairs, delivered
+      as a `revoke` command and cached by the controller, consulted between the signature
+      check and the validity window. Two properties do the work: **absence is never denial**,
+      so no controller that has not yet received a list can strand a resident and there is no
+      rollout ordering to get wrong; and a **monotonic `seq`**, because the attack is not
+      forging a list — the envelope signature stops that — but replaying an older, emptier
+      one. What it cannot fix is a controller that has not been online since the revocation;
+      that is irreducible without a live channel at the gate, which is the thing this whole
+      path exists to avoid needing
 
 **Hardware the reference controller has never actually touched:**
 
