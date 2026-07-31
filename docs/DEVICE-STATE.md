@@ -152,10 +152,20 @@ this device's metric, versus it is offline right now.
 Unblocks: `CHAT-COMMANDS.md` §4.2's "which lights are on", behind §4.4 rule 6's
 per-location consent, which is already built.
 
-Does not unblock, and worth saying so: **automations that trigger on state.** A
-rule like "when the porch light has been on for an hour" needs state HISTORY,
-which is a store and a retention question of its own — closer to
-`CAMERA-RETENTION.md` than to this. Nothing here should be read as designing it.
+Also unblocked, and since built: **automation conditions that test state at the
+moment a rule fires.** `automations.Condition` carries a `State` requiring the
+device to be active or inactive, resolved through `devices.ActiveFrom` — the
+same function the chat read path and the device page use, so the three cannot
+disagree. This is a POINT-IN-TIME test and needs no history: the engine already
+takes a fresh reading before every run. An unknown state refuses the run rather
+than reading as inactive, which is the whole reason this document exists.
+
+Still does not unblock, and worth keeping separate: **automations that trigger
+on state, or that test its DURATION.** A rule like "when the porch light has
+been on for an hour" needs state HISTORY, which is a store and a retention
+question of its own — closer to `CAMERA-RETENTION.md` than to this. So does
+firing a rule the moment a state CHANGES, rather than checking it when some
+other trigger fires. Nothing here should be read as designing either.
 
 ## 5. Open questions this document does not settle
 

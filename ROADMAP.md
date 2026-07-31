@@ -537,6 +537,11 @@ and none has met physical hardware.
 - [x] A real `trigger → condition → action` engine over live device state
       (`hub/internal/automations/`), managed over `/v1/accounts/{id}/automations`
 - [x] Scheduling, conditions and run history, persisted; the scheduler survives restart
+- [x] Conditions come in two shapes: a numeric comparison, or a **state** test resolved
+      through the capability's own declaration (`docs/DEVICE-STATE.md`) rather than a
+      metric name the author had to know — so "while the mower is docked" is sayable, and
+      keeps meaning the same thing after an operator renames a metric. A device whose
+      state the hub does not know satisfies neither and refuses the run
 - [x] Fail-closed behaviour on ambiguous sensor state for anything that actuates
 - [x] A compile-time `MaxActionTier` ceiling on unattended actuation, checked on the save
       path and again immediately before the driver call. Every access verb is above it, so

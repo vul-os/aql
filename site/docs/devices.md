@@ -137,6 +137,20 @@ metric *crossing* a bound — edge-triggered, so a tank already below 20% at boo
 fire a rule written for "when it drops below 20%"), and `event` (a device changing
 availability).
 
+Conditions come in two shapes, and a condition is one or the other — never both. A
+**reading** condition compares a metric to a number. A **state** condition asks whether
+the device is on or off, resolved through its capability's own declaration rather than a
+metric name you had to know, so "while the mower is docked" is sayable and keeps meaning
+the same thing if you later rename a metric. The two are exclusive because a condition
+carrying both would have two possible meanings, and the hub refuses it rather than
+picking one.
+
+Either way, a condition that **cannot be evaluated refuses the run** instead of passing
+or quietly failing. A device that has not reported its state, or that declares no state
+at all, satisfies neither `is on` nor `is off` — treating silence as "off" is how a rule
+written to act when something is idle ends up acting against a device that has simply
+stopped talking.
+
 The property to know before writing a rule: **an unattended action is bounded by a
 compile-time ceiling.** `MaxActionTier` is `TierConsequential`, checked both when a rule
 is saved and again immediately before the driver call, and no flag, request or config
