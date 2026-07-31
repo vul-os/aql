@@ -820,9 +820,19 @@ and none has met physical hardware.
       for action forms, built by the editor. None of the existing reachability guards could
       have caught this — an action form adds no route and no client method, so it was
       unreachable in a way nothing measured
-- [ ] Camera-event alerting specifically — the trigger vocabulary covers device availability
-      and sensor thresholds, not "motion seen" or "a clip was written", because the camera
-      driver emits neither as an engine event yet
+- [x] **Camera alerting, for what a camera actually reports.** The line above previously said
+      camera events were absent; that was incomplete in a way that undersold what works. The
+      driver emits `media_flowing`, `media_packets`, `media_lost`, `reachable` and
+      `stream_ok` as numeric readings, so the most operationally useful camera alert — THIS
+      CAMERA HAS STOPPED STREAMING — is a threshold rule and fires today, as does one on
+      packet loss climbing. Proved end to end rather than claimed
+- [ ] "Motion seen" and "a clip was written" specifically. The camera driver emits neither as
+      a reading, and the event vocabulary is a closed set of availability transitions, so
+      neither is expressible. A threshold on a metric nobody publishes SAVES and never fires
+      — the runner records that as a skip once per outage rather than silently, which is the
+      difference between a rule an operator can debug and one they wrongly believe covers
+      them. Clip-written is the more tractable of the two: clips are already indexed with a
+      timestamp, so it fits the runner's polling model without an event bus yet
 - [x] **Rate-limiting and scoping on movement commands.** The scoping half existed
       (`engineScope`); there was NO rate limit on `POST /v1/engine/devices/{key}/execute` at
       all, so a stolen token could loop `start` on a mower and nothing on that path would
