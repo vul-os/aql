@@ -490,7 +490,13 @@ and none has met physical hardware.
       documents as "presentational; never parsed". Counting lights would mean guessing each
       driver's vocabulary and reporting the guess as a fact about someone's home; it needs a
       machine-readable state on the device model, and `devices/summarycontract_test.go` now
-      denies the shortcut. §4.4 rule 6's per-location opt-in that has to precede it IS
+      denies the shortcut. **Designed in [`docs/DEVICE-STATE.md`](docs/DEVICE-STATE.md)**,
+      where the hard part turned out not to be adding a field: three of the five in-tree
+      drivers let the OPERATOR name the metric, so a hub seeing `level` on an MQTT topic
+      does not know it means brightness rather than a water tank. The decision is that a
+      capability declares a SEMANTIC state and a driver MAPS its metric onto it — stated in
+      configuration, never inferred — and that devices with no mapping are excluded from any
+      count and said to be. §4.4 rule 6's per-location opt-in that has to precede it IS
       built (`location_disclosure`, migration 0028): off unless an admin
       turns it on, per location, recorded with who and when, audited both ways, and a member
       asking a location that has not opted in is told the switch exists rather than met

@@ -890,7 +890,10 @@ parsed". Counting lights would mean guessing at each driver's vocabulary and
 reporting the guess as a fact about someone's home, which is the failure this
 whole section exists to avoid. It needs a machine-readable state on the device
 model, and `devices/summarycontract_test.go` denies the shortcut until there is
-one. What exists now is rule 6's switch, which had to come
+one. That model change is designed in `docs/DEVICE-STATE.md`, which had to
+answer a question this section did not anticipate: three of the five in-tree
+drivers let the operator NAME the metric, so the catalogue cannot own the
+vocabulary and the mapping has to be something an operator states. What exists now is rule 6's switch, which had to come
 first: a household is asked before anything about the people in it can be
 disclosed, and the absence of consent is the answer until then.
 
