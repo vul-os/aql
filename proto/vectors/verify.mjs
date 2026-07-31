@@ -89,7 +89,7 @@ const STALE_CLOCK_LIMIT = CONSTANTS.stale_clock_limit_seconds;
 // command window, cnonce TTL or stale-clock apply — generate.mjs deliberately
 // gives it its own `profile` block instead of the shared header.
 {
-  const documents = ['pairing.json', 'commands.json', 'grants.json', 'events.json', 'acks.json'];
+  const documents = ['pairing.json', 'commands.json', 'grants.json', 'events.json', 'acks.json', 'reports.json'];
   let compared = 0;
   for (const f of documents) {
     const c = load(f).spec_constants;
@@ -317,6 +317,30 @@ for (const f of ['events.json', 'acks.json']) {
   }
 }
 
+// --- reports.json ------------------------------------------------------------
+//
+// ctl.report gets its OWN evaluator rather than reusing evalControllerSigned,
+// which checks the signature and nothing else.
+//
+// That is deliberate, and evalWsAuth's comment above is why: its typ/v and
+// device_id checks were absent here for a long time, so this file — whose whole
+// job is to disagree with the implementations rather than inherit their gaps —
+// agreed with them instead. A message type added today starts with the checks
+// that one had to learn.
+function evalReport(obj, check) {
+  if (obj.typ !== 'ctl.report' || obj.v !== 0) return rej('badsig');
+  if (!verifyObject(obj, KEYS.controller.pub)) return rej('badsig');
+  // After the signature, deliberately: refusing on device_id first would answer
+  // "is this a device you know" to anyone who can send bytes.
+  if (obj.device_id !== check.device_id) return rej('wrong_device');
+  return acc();
+}
+
+for (const v of load('reports.json').vectors) {
+  checkEntry(v.name, v);
+  assertOutcome(v.name, v.expect, v.reason, evalReport(v.object, v.check));
+}
+
 // --- webhooks.json -----------------------------------------------------------
 //
 // The outbound profile is not Ed25519-over-JCS and shares no code with
@@ -452,6 +476,6 @@ if (failures > 0) {
   process.exit(1);
 }
 console.log(
-  `OK — ${checked} checks passed across pairing/commands/grants/events/acks/webhooks ` +
+  `OK — ${checked} checks passed across pairing/commands/grants/events/acks/reports/webhooks ` +
     `vectors and the shared canonicalisation cases (proto/jcs-cases.json).`
 );

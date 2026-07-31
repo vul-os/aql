@@ -89,6 +89,52 @@ cnonce_unknown | cnonce_expired | cnonce_replay | hw:…`
 The hub records the ack in the audit log; an unacked command past `exp` is recorded
 as `undelivered` and surfaces in chat ("couldn't reach the gate — it may be offline").
 
+## Configuration report (`ctl.report`)
+
+A controller reports the actuation configuration it is **actually running**, so
+the hub can show what is in effect rather than only what it last sent.
+
+```json
+{ "v": 0, "typ": "ctl.report", "device_id": "uuid", "ts": 1789000001,
+  "firmware": "0.1.0",
+  "config": {
+    "pulse_ms":           { "value": 700, "source": "default" },
+    "hold_max":           { "value": 30,  "source": "config"  },
+    "sensor_debounce_ms": { "value": 20,  "source": "default" }
+  },
+  "sig": "base64url(ed25519(controller_key, JCS(message minus sig)))" }
+```
+
+Sent once after `ws.auth` succeeds, and again whenever the resolved
+configuration changes. **Not** carried on `cmd.ack`: a gate nobody has commanded
+would never report, leaving the hub's view emptiest for the quietest controllers.
+
+`value` is the RESOLVED number — what the controller will actually use — and
+`source` is `config` when it came from a `config` command and `default` when it
+came from the firmware's compiled-in value. Both are required. A controller that
+has never been configured and one configured a year ago are otherwise
+indistinguishable, and "700 ms" and "700 ms (default)" are different claims.
+
+The hub verifies it as any controller uplink: `sig` against the enrolled
+`controller_pubkey`, then `device_id` against the device the session belongs to
+(`wrong_device`). It is DISPLAY DATA and authorises nothing — it cannot relax
+`hold_max`, lift lockdown, or affect what the controller will accept. The
+configuration the hub *sends* is unchanged by anything here.
+
+Unknown keys inside `config` are ignored rather than rejected, so a controller
+that learns a new tunable does not require the hub to be updated first. That
+direction is safe because uplink verification canonicalises the bytes it
+received minus `sig`, not a rebuild of known fields — an older hub accepts a
+message carrying a field it has never heard of, and the field is still covered
+by the signature.
+
+A device that has sent no report is **"not reported yet"**. It is never rendered
+as the defaults: inferring them would show numbers nobody confirmed, and every
+controller predating this message sends none.
+
+See [`docs/CONTROLLER-CONFIG-REPORT.md`](../docs/CONTROLLER-CONFIG-REPORT.md)
+for why the carrier is a session report, and what is deliberately left open.
+
 ## Delivery semantics under partition
 
 A signed envelope can be lost at any of three points: before the controller

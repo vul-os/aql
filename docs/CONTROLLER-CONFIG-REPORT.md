@@ -145,9 +145,14 @@ updated first — the same direction of compatibility §2 establishes.
 
 ## 6. The order of work
 
-1. `proto/commands.md` — the `ctl.report` message, and vectors in
-   `proto/vectors/`. The contract both sides implement, and the part that must
-   be right before either does.
+1. ~~`proto/commands.md` — the `ctl.report` message, and vectors in
+   `proto/vectors/`.~~ **Done.** The spec section is `commands.md`
+   "Configuration report", and `proto/vectors/reports.json` carries five
+   vectors: all-defaults, mixed sources, an unknown key accepted, a bad
+   signature, and a correctly-signed report from the wrong device. verify.mjs
+   evaluates them with its OWN checker rather than the signature-only one, so
+   `typ`, `v` and `device_id` are checked by the independent verifier and not
+   only by the implementations.
 2. Controller: emit after `ws.auth`, and on resolved-config change.
 3. Hub: verify (the existing uplink path already covers an unknown type's
    signature), store under migration 0026, expose on the device detail route.

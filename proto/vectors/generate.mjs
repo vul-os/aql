@@ -761,6 +761,94 @@ console.log('wrote keys.json');
 }
 
 // ============================================================================
+// reports.json — ctl.report (commands.md "Configuration report")
+// ============================================================================
+//
+// Its own file rather than more entries in acks.json, because it is a distinct
+// message on a distinct trigger: acks answer a command, reports answer a
+// session. Bundling them would make "how many acks does this fleet send" and
+// "how many reports" the same number.
+{
+  const vectors = [];
+  const check = { device_id: DEVICE_ID };
+  const report = (fields) => ({
+    v: 0,
+    typ: 'ctl.report',
+    device_id: DEVICE_ID,
+    ts: T0 + 20,
+    firmware: '0.1.0',
+    ...fields,
+  });
+  const entry = (value, source) => ({ value, source });
+
+  vectors.push({
+    name: 'report-all-defaults',
+    desc: 'A controller that has never been configured. Every source is "default" — this is the case that must NOT be renderable as "unset".',
+    expect: 'accept',
+    check,
+    ...signedVec('controller', report({
+      config: {
+        pulse_ms: entry(700, 'default'),
+        hold_max: entry(30, 'default'),
+        sensor_debounce_ms: entry(20, 'default'),
+      },
+    })),
+  });
+  vectors.push({
+    name: 'report-mixed-sources',
+    desc: 'A configured controller. hold_max came from a config command, the rest are firmware defaults — the distinction the report exists to carry.',
+    expect: 'accept',
+    check,
+    ...signedVec('controller', report({
+      config: {
+        pulse_ms: entry(700, 'default'),
+        hold_max: entry(45, 'config'),
+        sensor_debounce_ms: entry(20, 'default'),
+      },
+    })),
+  });
+  vectors.push({
+    name: 'report-unknown-key',
+    desc: 'A newer controller reporting a tunable this hub does not know. Accepted and the key ignored: uplink verification covers the bytes received, so an additive change needs no version bump.',
+    expect: 'accept',
+    check,
+    ...signedVec('controller', report({
+      config: {
+        pulse_ms: entry(700, 'default'),
+        strike_ms: entry(120, 'config'),
+      },
+    })),
+  });
+  vectors.push({
+    name: 'report-badsig',
+    desc: 'Signed by a key that is not this device\'s enrolled controller key.',
+    expect: 'reject',
+    reason: 'badsig',
+    check,
+    ...signedVec('attacker', report({
+      config: { pulse_ms: entry(700, 'default') },
+    })),
+  });
+  vectors.push({
+    name: 'report-wrong-device',
+    desc: 'Correctly signed, but addressed from a device other than the one this session authenticated. Refused AFTER the signature, so an unsigned probe learns nothing about which devices exist.',
+    expect: 'reject',
+    reason: 'wrong_device',
+    check,
+    ...signedVec('controller', {
+      v: 0,
+      typ: 'ctl.report',
+      device_id: OTHER_DEVICE_ID,
+      ts: T0 + 20,
+      firmware: '0.1.0',
+      config: { pulse_ms: entry(700, 'default') },
+    }),
+  });
+
+  writeVectors('reports.json', { ...HEADER('commands.md#configuration-report'), vectors });
+}
+
+// ============================================================================
 // webhooks.json
 // ============================================================================
 //
