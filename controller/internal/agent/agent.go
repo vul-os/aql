@@ -268,6 +268,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	runner := &transport.Runner{
 		Priv: a.ID.Private(), St: a.St, Proc: a.Proc, Queue: a.Queue,
 		Clock: a.Clock, Log: a.Log, AllowInsecure: a.Opts.AllowInsecure,
+		Firmware: a.Opts.Firmware,
 	}
 	go func() { errc <- runner.Run(ctx) }()
 

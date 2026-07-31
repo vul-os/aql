@@ -32,6 +32,9 @@ type Runner struct {
 	Clock         *clock.Synced
 	Log           *slog.Logger
 	AllowInsecure bool // permit ws:// + http:// endpoints (tests/dev)
+	// Firmware is reported in ctl.report. Empty is honest — a build that does
+	// not know its own version says so rather than claiming one.
+	Firmware string
 
 	// wsFailures counts consecutive WS dial/auth failures before falling
 	// back to long-poll for one cycle.
@@ -126,6 +129,16 @@ func (r *Runner) runWS(ctx context.Context, p *state.Pairing, log *slog.Logger) 
 	log.Info("hub connected", "ws", p.WSURL)
 	r.wsFailures = 0
 
+	// 1b. Report the actuation configuration this controller will actually
+	// apply (proto/commands.md "Configuration report").
+	//
+	// Sent on every connect, not on the ack: a gate nobody has commanded would
+	// otherwise never report, leaving the hub's view emptiest for the quietest
+	// controllers. Best-effort — a hub that predates this message ignores an
+	// unknown typ without ending the session, and a write failure here must not
+	// cost us a connection that can still open a gate.
+	r.reportConfig(conn, p.DeviceID, log)
+
 	// 2. Drain queued events (grants partition first). The v0 contract has
 	// no event-level ack, so an event is marked delivered after a
 	// successful frame write; the hub dedupes on event_id, so the
@@ -173,6 +186,7 @@ func (r *Runner) dispatch(conn *WSConn, raw []byte, log *slog.Logger) {
 	}
 	switch probe.Typ {
 	case "cmd":
+		before := command.ResolvedConfig(r.St.Config())
 		ack, err := r.Proc.Process(raw)
 		if err != nil {
 			log.Error("command processing", "err", err)
@@ -180,6 +194,16 @@ func (r *Runner) dispatch(conn *WSConn, raw []byte, log *slog.Logger) {
 		}
 		if err := conn.WriteMessage(ack); err != nil {
 			log.Warn("ack send failed", "err", err)
+		}
+		// A `config` command that landed changes what this gate will do, and
+		// "did my change land" is half of why the report exists. Compared on
+		// the RESOLVED values rather than on the command: a config setting a
+		// key this controller does not read, or re-sending a value already in
+		// effect, changes nothing an operator should be shown as new.
+		if after := command.ResolvedConfig(r.St.Config()); !sameResolvedConfig(before, after) {
+			if p := r.St.Pairing(); p != nil {
+				r.reportConfig(conn, p.DeviceID, log)
+			}
 		}
 	default:
 		// Additive contracts: ignore unknown message types.
@@ -309,4 +333,41 @@ func pollURL(wsURL string) (*url.URL, error) {
 	}
 	u.Path = u.Path + "/poll"
 	return u, nil
+}
+
+// reportConfig sends one ctl.report. Best-effort by design.
+//
+// A hub that predates the message ignores an unknown `typ` without ending the
+// session, so sending it unconditionally is safe against older hubs
+// (hub.handleControllerUplink has no default branch;
+// TestAnUnknownUplinkTypeDoesNotEndTheSession holds that). A failure here is
+// logged and dropped: a connection that can still carry an open command is worth
+// more than a report, and the next connect sends a fresh one anyway.
+func (r *Runner) reportConfig(conn *WSConn, deviceID string, log *slog.Logger) {
+	cfg := command.ResolvedConfig(r.St.Config())
+	raw, err := wire.SignCtlReport(r.Priv, deviceID, r.Firmware, r.Clock.Now(), cfg)
+	if err != nil {
+		log.Warn("config report not signed", "err", err)
+		return
+	}
+	if err := conn.WriteMessage(raw); err != nil {
+		log.Warn("config report not sent", "err", err)
+	}
+}
+
+// sameResolvedConfig reports whether two resolutions would show an operator the
+// same thing. Source is compared as well as value: 700 from a config command and
+// 700 from the firmware are the same number and different answers to "did my
+// change land".
+func sameResolvedConfig(a, b map[string]wire.ConfigEntry) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, av := range a {
+		bv, ok := b[k]
+		if !ok || av.Value != bv.Value || av.Source != bv.Source {
+			return false
+		}
+	}
+	return true
 }

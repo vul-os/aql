@@ -311,3 +311,36 @@ func numField(m map[string]any, k string) (int64, bool) {
 		return 0, false
 	}
 }
+
+// ResolvedConfig reports the actuation settings this controller will actually
+// apply, for proto/commands.md's `ctl.report`.
+//
+// It answers the two questions a stored map cannot. "What will this gate do" is
+// Value: the resolved number, defaults included, so a never-configured
+// controller reports 700 rather than nothing. "Did my change land" is Source:
+// a value that came from a `config` command reads differently from one that came
+// from the firmware, and without that they are the same number.
+//
+// ONLY keys this package actually resolves appear. `config` accepts an open map
+// and the controller stores whatever it is sent, so the stored map can contain
+// keys nothing reads — sensor_debounce_ms is accepted, stored and ignored,
+// because the debounce that applies belongs to the relay wiring rather than to
+// configuration. Reporting a stored-but-unread key would tell an operator their
+// setting is in effect when the gate is using a value from a command line they
+// cannot see, which is the failure the report exists to prevent. Absence is the
+// honest answer; see proto/commands.md "A key the controller does not resolve is
+// not reported".
+func ResolvedConfig(stored map[string]int64) map[string]wire.ConfigEntry {
+	resolve := func(key string, def int64) wire.ConfigEntry {
+		// Same rule cfgInt applies at actuation time: a non-positive stored
+		// value is not an override, it is a value the actuation path ignores.
+		if v, ok := stored[key]; ok && v > 0 {
+			return wire.ConfigEntry{Value: v, Source: wire.SourceConfig}
+		}
+		return wire.ConfigEntry{Value: def, Source: wire.SourceDefault}
+	}
+	return map[string]wire.ConfigEntry{
+		"pulse_ms": resolve("pulse_ms", DefaultPulseMs),
+		"hold_max": resolve("hold_max", DefaultHoldMax),
+	}
+}

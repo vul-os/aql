@@ -1,8 +1,10 @@
 # A controller reporting its configuration back
 
-**Status: designed, not built.** No code implements this. The compatibility
-property it rests on IS built and tested — see §2 — but nothing yet sends,
-stores or shows a configuration.
+**Status: the controller half is built; the hub half is not.** The contract and
+its vectors exist (`proto/commands.md`, `proto/vectors/reports.json`), and a
+controller signs and sends `ctl.report`. Nothing yet STORES or SHOWS it — the hub
+has no case for the type and no table, so today the message is sent and ignored,
+which is exactly what an older hub does with it and therefore safe.
 
 ROADMAP has carried this since the controller gained tunable actuation: `cmd.ack`
 carries a result and a detail and nothing else, so the hub can send `pulse_ms`,
@@ -160,7 +162,13 @@ is the answer, and `report-omits-an-unresolved-key` pins it.
    evaluates them with its OWN checker rather than the signature-only one, so
    `typ`, `v` and `device_id` are checked by the independent verifier and not
    only by the implementations.
-2. Controller: emit after `ws.auth`, and on resolved-config change.
+2. ~~Controller: emit after `ws.auth`, and on resolved-config change.~~ **Done.**
+   `wire.SignCtlReport` signs it, `command.ResolvedConfig` decides what may
+   honestly be in it, and `Runner.reportConfig` sends it — on every connect, and
+   again after a command whose RESOLVED values changed, compared on value AND
+   source so re-sending a value already in effect reports nothing new. Sending is
+   best-effort: a failed report must not cost a connection that can still open a
+   gate, and the next connect sends a fresh one.
    **Unblocked, and the precondition is pinned.** A controller can send this
    unconditionally because a hub that predates the message ignores it rather than
    dropping the session: `handleControllerUplink`'s switch has no default branch,

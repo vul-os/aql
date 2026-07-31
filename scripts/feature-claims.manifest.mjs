@@ -79,17 +79,35 @@ export const FEATURES = [
   // imply the hub can show a controller's live pulse_ms/hold_max, and the day
   // ctl.report lands the check fails until ROADMAP's open item and the console's
   // honest placeholder are updated.
+  // Split, because only one half is built and one claim cannot say that
+  // honestly. The controller SENDS; the hub does not yet store or show.
   {
-    id: 'controller-config-report',
-    label: 'A controller reports its resolved actuation config back (ctl.report) so the hub can show what is in effect',
+    id: 'controller-config-report-sender',
+    label: 'The controller signs and sends ctl.report on connect and on resolved-config change, carrying only keys it actually resolves',
+    docStatus: 'shipped',
+    docRefs: [
+      'docs/CONTROLLER-CONFIG-REPORT.md § 6 step 2',
+      'proto/commands.md § Configuration report',
+    ],
+    evidence: [
+      [{ root: 'controller/internal/wire', pattern: 'func SignCtlReport' }],
+      [{ root: 'controller/internal/command', pattern: 'func ResolvedConfig' }],
+      [{ root: 'controller/internal/transport', pattern: 'func \\(r \\*Runner\\) reportConfig' }],
+    ],
+  },
+  {
+    id: 'controller-config-report-hub-side',
+    label: 'The hub stores a reported controller configuration and shows an operator what is in effect',
     docStatus: 'planned',
     docRefs: [
-      'docs/CONTROLLER-CONFIG-REPORT.md — the design, and why the carrier is a session report rather than the ack',
+      'docs/CONTROLLER-CONFIG-REPORT.md § 6 steps 3 and 4',
       'ROADMAP.md — "A controller never reports its configuration back"',
     ],
+    // The hub still has no case for ctl.report and no table for it. When either
+    // appears this fails until ROADMAP and the console placeholder are corrected.
     evidence: [[
-      { root: 'controller/internal', pattern: 'ctl\\.report' },
       { root: 'hub/internal', pattern: 'ctl\\.report' },
+      { root: 'hub/internal/store/migrations', pattern: 'controller_config_reports' },
     ]],
   },
   // ── planned / not implemented — the nine (ten, by plain count) 2026-07-20

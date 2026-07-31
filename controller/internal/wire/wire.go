@@ -338,3 +338,39 @@ func VerifyWSAuth(pub ed25519.PublicKey, raw []byte, deviceID string, ch *WSChal
 	}
 	return nil
 }
+
+// ---- Configuration report (proto/commands.md "Configuration report") ----
+
+// ConfigEntry is one resolved actuation setting: the value the controller will
+// actually apply, and where it came from.
+type ConfigEntry struct {
+	Value  int64  `json:"value"`
+	Source string `json:"source"`
+}
+
+// Where a resolved value came from.
+const (
+	SourceConfig  = "config"  // a `config` command set it
+	SourceDefault = "default" // the firmware's compiled-in value
+)
+
+// CtlReportSignable renders a ctl.report as the JCS map its signature covers.
+func CtlReportSignable(deviceID, firmware string, ts int64, cfg map[string]ConfigEntry) map[string]any {
+	config := make(map[string]any, len(cfg))
+	for k, e := range cfg {
+		config[k] = map[string]any{"value": e.Value, "source": e.Source}
+	}
+	return map[string]any{
+		"v":         0,
+		"typ":       "ctl.report",
+		"device_id": deviceID,
+		"ts":        ts,
+		"firmware":  firmware,
+		"config":    config,
+	}
+}
+
+// SignCtlReport signs a configuration report and returns its wire JSON.
+func SignCtlReport(priv ed25519.PrivateKey, deviceID, firmware string, ts int64, cfg map[string]ConfigEntry) ([]byte, error) {
+	return SignMap(priv, CtlReportSignable(deviceID, firmware, ts, cfg))
+}
