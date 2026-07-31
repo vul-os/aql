@@ -508,6 +508,13 @@ func (e *Engine) evalConditions(ctx context.Context, r Rule) (bool, error) {
 		if err != nil {
 			return false, refuse(ReasonAmbiguousState, "condition device %s: %v", c.DeviceKey, err)
 		}
+		if c.IsState() {
+			held, err := e.stateHolds(ctx, c, readings)
+			if err != nil || !held {
+				return held, err
+			}
+			continue
+		}
 		val, err := numericReading(readings, c.DeviceKey, c.Metric)
 		if err != nil {
 			return false, err
@@ -663,4 +670,39 @@ func (e *Engine) RecordMissedOccurrence(ctx context.Context, r Rule, occurrenceA
 		Cause: CauseSchedule, OccurrenceAt: occurrenceAt, Outcome: OutcomeSkipped,
 		Reason: ReasonStaleOccurrence, StartedAt: now, FinishedAt: now,
 	})
+}
+
+// stateHolds evaluates a state condition against a device's readings.
+//
+// An UNKNOWN state is a REFUSAL, not a false. The distinction decides whether a
+// rule silently stops firing or tells somebody why:
+//
+//   - false means the device reported and the condition does not hold. The rule
+//     simply does not run this tick, which is ordinary.
+//   - a refusal means the device did not report, or nobody mapped its metric,
+//     or its capability declares no state at all. The rule cannot be evaluated,
+//     and ReasonAmbiguousState is how that reaches an operator.
+//
+// Treating unknown as false would make "turn the porch light on when it is off"
+// fire against a light whose driver has gone silent — acting on an absence as
+// though it were an observation. numericReading already refuses a metric nobody
+// sent, for exactly this reason; this is the same rule for the state form.
+func (e *Engine) stateHolds(ctx context.Context, c Condition, readings []devices.Reading) (bool, error) {
+	dev, ok := e.reg.Get(c.DeviceKey)
+	if !ok {
+		return false, refuse(ReasonAmbiguousState, "condition device %s is not in the fleet", c.DeviceKey)
+	}
+	if !devices.HasDeclaredState(dev.Device.Capabilities) {
+		return false, refuse(ReasonAmbiguousState,
+			"condition device %s declares no state to test — see docs/DEVICE-STATE.md", c.DeviceKey)
+	}
+	st := devices.ActiveFrom(dev.Device.Capabilities, readings)
+	if !st.Known() {
+		return false, refuse(ReasonAmbiguousState,
+			"condition device %s did not report its state", c.DeviceKey)
+	}
+	if c.State == StateRequireActive {
+		return st == devices.StateActive, nil
+	}
+	return st == devices.StateInactive, nil
 }

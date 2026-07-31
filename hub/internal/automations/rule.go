@@ -176,16 +176,68 @@ func (t Trigger) Validate() error {
 // cannot be read, or that reads as text where a number was asked for, is
 // AMBIGUOUS and refuses the run. It never passes by default.
 type Condition struct {
-	DeviceKey string    `json:"device_key"`
-	Metric    string    `json:"metric"`
-	Op        CompareOp `json:"op"`
-	Value     float64   `json:"value"`
+	DeviceKey string `json:"device_key"`
+	// Metric names the reading to compare, for a NUMERIC condition. Empty
+	// means this is a STATE condition instead, judged by the catalogue's
+	// declaration rather than by a number the author had to know.
+	Metric string    `json:"metric,omitempty"`
+	Op     CompareOp `json:"op,omitempty"`
+	Value  float64   `json:"value,omitempty"`
+
+	// State, when set, requires the device to be active or inactive.
+	//
+	// This exists because a numeric comparison cannot express a text state at
+	// all. "The mower is docked" and "the porch light is on" are the two
+	// commonest things a rule wants to check, and for a device whose driver
+	// reports `state: "docked"` there was no way to say either — numericReading
+	// refuses a text reading, correctly, and the author had no other tool.
+	//
+	// It is also more robust than the numeric form where both work. A rule
+	// saying `level above 0` breaks if the operator renames their metric; one
+	// saying `active` is resolved through the capability's declaration
+	// (docs/DEVICE-STATE.md), so it keeps meaning the same thing.
+	State ConditionState `json:"state,omitempty"`
 }
 
+// ConditionState is the semantic state a condition requires.
+type ConditionState string
+
+const (
+	// StateRequireActive — the device must report itself active.
+	StateRequireActive ConditionState = "active"
+	// StateRequireInactive — the device must report itself INACTIVE, which is
+	// not the same as failing to report. A device whose state is unknown
+	// satisfies neither, and the rule refuses rather than guessing — the same
+	// rule numericReading follows for a metric nobody sent.
+	StateRequireInactive ConditionState = "inactive"
+)
+
+func (c ConditionState) valid() bool {
+	return c == StateRequireActive || c == StateRequireInactive
+}
+
+// IsState reports whether this is a state condition rather than a numeric one.
+func (c Condition) IsState() bool { return c.State != "" }
+
 // Validate checks one condition's shape.
+//
+// The two forms are mutually exclusive, and saying so is worth a refusal: a
+// condition carrying both a metric and a state has two possible meanings, and
+// picking one would make a rule do something its author did not write.
 func (c Condition) Validate() error {
 	if c.DeviceKey == "" {
 		return refuse(ReasonInvalidRule, "condition names no device")
+	}
+	if c.IsState() {
+		if !c.State.valid() {
+			return refuse(ReasonInvalidRule, "condition has an unknown state %q", string(c.State))
+		}
+		if c.Metric != "" || c.Op != "" {
+			return refuse(ReasonInvalidRule,
+				"condition asks for state %q AND a metric comparison — it can only mean one",
+				string(c.State))
+		}
+		return nil
 	}
 	if c.Metric == "" {
 		return refuse(ReasonInvalidRule, "condition names no metric")
