@@ -882,9 +882,21 @@ rather than quietly answered with the adjacent fact — "who closed the gate"
 contains "closed" and would otherwise have been answered with the last close
 time, which is an evasion dressed as an answer.
 
-"Which lights are on" remains unbuilt: it is an occupancy proxy, blocked on
-rule 6's per-location opt-in, which does not exist — so it stays off rather than
-shipping without its switch.
+"Which lights are on" is still not ANSWERED — the device engine does not serve
+per-device state to chat. What exists now is rule 6's switch, which had to come
+first: a household is asked before anything about the people in it can be
+disclosed, and the absence of consent is the answer until then.
+
+The switch is a table with no `enabled` column. A location that has never opted
+in has NO ROW, and a missing row reads as off — so the safe state needs no
+default to be correct and no backfill to get right, and turning it off DELETES
+the row rather than writing a 0, because "off" with two representations is two
+chances to read one of them wrong. Consent is per location and does not travel:
+a household consenting for the main house has not consented for the cottage.
+
+A member asking an occupancy question of a location that has not opted in is
+TOLD so, and told where the switch is. Silence would leave them unable to tell a
+question the hub declines to answer from one it cannot.
 
 Solar is built, and is permitted under rule 3 for a specific reason. The answer
 is ONE NUMBER PER SOURCE over one day: a curve would be the appliance
@@ -927,7 +939,7 @@ leaves"* (`src/lib/demoData.ts`), and reporting its state reports occupancy.
 | 3 — no raw telemetry | `channels.GateFact` carries four fields; elapsed time is coarse |
 | 4 — separate counter | `query_1h` scope, `store.NoteChatQuery`, `QueriesPerHour` |
 | 5 — audited | `store.LogGateRead`, `access_logs` with command `read` |
-| 6 — occupancy opt-in | NOT built; nothing that needs it is exposed |
+| 6 — occupancy opt-in | **built** — `location_disclosure` (migration 0028), off unless an admin opts a location in |
 
 Every rail serves it: WhatsApp and DMTAP resolve free text, and Telegram, Slack
 and Discord match command words exactly, so all five reach one shared branch

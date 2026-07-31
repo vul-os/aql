@@ -127,6 +127,12 @@ func (s *Server) answerProfileGateQuestion(ctx contextT, body, profileID, source
 	if reply := s.answerEnergyQuestion(ctx, body, profileID, source); reply != "" {
 		return reply
 	}
+	// Occupancy, which §4.4 rule 6 puts behind a per-location opt-in. Answered
+	// before the gate path for the same reason energy is, and refused rather
+	// than ignored so a member learns the switch exists.
+	if reply := s.answerOccupancyQuestion(ctx, body, profileID); reply != "" {
+		return reply
+	}
 	verb, intent := channels.TextGateIntent(body)
 	if intent != channels.IntentQuestion {
 		return ""
@@ -262,4 +268,58 @@ func (s *Server) answerEnergyQuestion(ctx contextT, body, profileID, source stri
 		})
 	}
 	return channels.EnergyAnswer(facts, mix.UnattributedKWh, s.channelPublicURL())
+}
+
+// answerOccupancyQuestion answers, or declines to answer, a question that would
+// disclose occupancy — docs/CHAT-COMMANDS.md §4.4 rule 6.
+//
+// Returns "" when the body is not asking about occupancy at all, so the rail
+// falls through. Every other path returns something: a household that has not
+// opted in is TOLD so, because a question the hub could answer and chose not to
+// is a different fact from one it cannot answer, and silence would leave a
+// member unable to tell them apart.
+//
+// # Consent is per LOCATION and the answer is the intersection
+//
+// A member may reach several locations. Consent is not transitive across them
+// — a household consenting for the main house has not consented for the
+// cottage — so this answers only for the locations that opted in, and says how
+// many it left out rather than quietly narrowing.
+func (s *Server) answerOccupancyQuestion(ctx contextT, body, profileID string) string {
+	if !channels.ClassifyOccupancyQuestion(body) {
+		return ""
+	}
+	gates, err := s.store.AvailableAccessPointsByProfile(ctx, profileID)
+	if err != nil {
+		s.log.Error("occupancy scope", "err", err)
+		return channels.OccupancyDisclosureOff(s.channelPublicURL())
+	}
+	ids := make([]string, 0, len(gates))
+	seen := map[string]bool{}
+	for _, g := range gates {
+		if !seen[g.LocID] {
+			seen[g.LocID] = true
+			ids = append(ids, g.LocID)
+		}
+	}
+	allowed, err := s.store.OccupancyDisclosureLocations(ctx, ids)
+	if err != nil {
+		s.log.Error("occupancy consent", "err", err)
+		return channels.OccupancyDisclosureOff(s.channelPublicURL())
+	}
+	consented := 0
+	for _, id := range ids {
+		if allowed[id] {
+			consented++
+		}
+	}
+	if consented == 0 {
+		return channels.OccupancyDisclosureOff(s.channelPublicURL())
+	}
+
+	// Consent exists, and there is still nothing to report: the engine's
+	// per-device state is not exposed to chat yet. Saying that plainly is the
+	// honest end of this path — the alternative is a member who enabled a
+	// setting and cannot tell whether it worked.
+	return channels.OccupancyEnabledButUnbuilt(consented, len(ids), s.channelPublicURL())
 }

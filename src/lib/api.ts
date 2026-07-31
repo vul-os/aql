@@ -887,6 +887,27 @@ export const api = {
    * than filling in the firmware defaults, which would be numbers nobody
    * confirmed.
    */
+  /**
+   * Whether this location has consented to occupancy answers over chat —
+   * docs/CHAT-COMMANDS.md §4.4 rule 6.
+   *
+   * Off unless an admin turned it on. `enabled_by`/`enabled_at` are present
+   * only when it is on, so the console can show who took the decision rather
+   * than a bare switch position: a privacy control nobody can attribute is not
+   * one anybody can audit.
+   */
+  locationDisclosure: (locationId: string) =>
+    apiFetch<{ occupancy: boolean; enabled_by?: string; enabled_at?: UnixSeconds }>(
+      `/locations/${encodeURIComponent(locationId)}/disclosure`,
+    ),
+
+  /** Turn occupancy answers on or off for one location. Admin only, audited. */
+  setLocationDisclosure: (locationId: string, occupancy: boolean) =>
+    apiFetch<{ occupancy: boolean }>(`/locations/${encodeURIComponent(locationId)}/disclosure`, {
+      method: 'PATCH',
+      body: JSON.stringify({ occupancy }),
+    }),
+
   deviceConfigReport: (deviceId: string) =>
     apiFetch<ConfigReportResponse>(`/devices/${encodeURIComponent(deviceId)}/config-report`),
 

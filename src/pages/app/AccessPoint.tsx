@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ArchMark } from '@/components/illustrations/ArchMark';
 import { LocationLimitsPanel } from '@/components/locations/LocationLimitsPanel';
+import { OccupancyDisclosurePanel } from '@/components/locations/OccupancyDisclosurePanel';
 import { RateLimitNotice } from '@/components/access/RateLimitNotice';
 import { useAuth } from '@/lib/auth';
 import {
@@ -419,6 +420,12 @@ export default function AccessPointPage() {
             />
           </DefList>
         </Card>
+      </section>
+
+      {/* Whether a chat rail may answer occupancy questions for this location
+          (docs/CHAT-COMMANDS.md §4.4 rule 6). Off by default; admins decide. */}
+      <section data-shot="occupancy-disclosure">
+        <OccupancyDisclosurePanel locationId={ap.location_id} locationName={location?.name} />
       </section>
 
       {/* Location usage & abuse-protection limits (member view; admins edit) */}

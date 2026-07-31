@@ -127,6 +127,66 @@ var energyWords = map[string]bool{
 	"consumed": true, "consumption": true, "used": true, "usage": true,
 }
 
+// occupancyWords ask what is on, or who is in. §4.3: "which lights are on" is
+// an occupancy question, and so is anything that reports an away-state.
+var occupancyWords = map[string]bool{
+	"lights": true, "light": true, "lamps": true, "occupied": true,
+	"home": true, "away": true, "anyone": true, "anybody": true, "presence": true,
+}
+
+// ClassifyOccupancyQuestion reports whether a body asks something that
+// discloses occupancy — the class §4.4 rule 6 puts behind a per-location
+// opt-in.
+//
+// Deliberately broad. The cost of a false positive is a member being told the
+// disclosure is off for their location, which is accurate and harmless; the
+// cost of a false negative is answering an occupancy question for a household
+// that never consented. Those are not symmetric, so this errs toward the
+// refusal.
+func ClassifyOccupancyQuestion(body string) bool {
+	for _, w := range fields(body) {
+		if occupancyWords[w] {
+			return true
+		}
+	}
+	return false
+}
+
+// OccupancyDisclosureOff explains why a question about lights or presence went
+// unanswered, and where the switch is.
+//
+// It names the setting rather than saying "I can't". A member asking which
+// lights are on has asked something the hub could answer, and being told the
+// household has not turned that on is a different fact from being told the
+// feature does not exist — the same distinction §4.1 draws for the gate sensor.
+func OccupancyDisclosureOff(publicURL string) string {
+	return "This home has not turned on occupancy answers over chat, so I won't say " +
+		"which lights are on or whether anyone is in. An admin can enable it per " +
+		"location in the console" + portalSuffix(publicURL)
+}
+
+// OccupancyEnabledButUnbuilt is the reply when a household HAS consented and
+// the hub still cannot answer.
+//
+// This is the honest end of a half-built path, and it is deliberately not
+// silence. A member who turned the setting on and then got nothing would
+// reasonably conclude the switch is broken; telling them the consent is
+// recorded and the answer is not built yet distinguishes "you did it wrong"
+// from "we have not finished". The same distinction §4.1 makes about the gate
+// sensor, applied to a feature rather than to hardware.
+func OccupancyEnabledButUnbuilt(consented, total int, publicURL string) string {
+	var b strings.Builder
+	b.WriteString("Occupancy answers are enabled for ")
+	if consented == total {
+		b.WriteString("this home")
+	} else {
+		fmt.Fprintf(&b, "%d of your %d locations", consented, total)
+	}
+	b.WriteString(", but I can't report which lights are on yet — the device engine " +
+		"does not serve that to chat. It is in the console" + portalSuffix(publicURL))
+	return b.String()
+}
+
 // ClassifyEnergyQuestion reports whether a body is asking about energy at all.
 //
 // Separate from ClassifyGateQuestion because the two are answered from

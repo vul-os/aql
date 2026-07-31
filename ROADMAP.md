@@ -32,7 +32,7 @@ reference for how every other device kind should eventually work: a versioned wi
 contract, a device that verifies rather than trusts, and an audit trail you can check
 after the fact.
 
-**The hub** (`hub/`) — one Go binary, SQLite inside, **127 HTTP routes over 26
+**The hub** (`hub/`) — one Go binary, SQLite inside, **129 HTTP routes over 27
 migrations, and more than 1,000 tests green** across 18 packages:
 
 - [x] Accounts, locations, access points, members with roles, invites
@@ -490,8 +490,8 @@ and none has met physical hardware.
 
 ## Phase 2 — Local persistence & secrets (partly real)
 
-- [x] SQLite for state, history and configuration — shipped with the hub (26 migrations,
-      50 tables), one file to back up, pure-Go driver so it cross-compiles to a Pi
+- [x] SQLite for state, history and configuration — shipped with the hub (27 migrations,
+      51 tables), one file to back up, pure-Go driver so it cross-compiles to a Pi
 - [ ] Extend that schema to device state, telemetry and history once Phase 1 exists
 - [ ] **OS-keychain-backed credential vault** for device and service secrets, scoped per
       device, so nothing sits in plaintext in the SQLite file or a config file. Not built:

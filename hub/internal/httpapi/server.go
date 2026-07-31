@@ -328,6 +328,10 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("DELETE /v1/locations/{id}", s.requireAuth(s.handleLocationDelete))
 	mux.Handle("GET /v1/locations/{id}/limits", s.requireAuth(s.handleLocationLimitsGet))
 	mux.Handle("PATCH /v1/locations/{id}/limits", s.requireAuth(s.handleLocationLimitsPatch))
+	// §4.4 rule 6's switch: whether a chat rail may disclose occupancy for this
+	// location. Off unless an operator says otherwise.
+	mux.Handle("GET /v1/locations/{id}/disclosure", s.requireAuth(s.handleLocationDisclosureGet))
+	mux.Handle("PATCH /v1/locations/{id}/disclosure", s.requireAuth(s.handleLocationDisclosurePatch))
 
 	// access points
 	//
