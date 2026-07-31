@@ -69,17 +69,33 @@ one the controller works hardest to record — with no trace on the hub at all.
 
 ## Kinds
 
-| `kind` | `data` | Drives |
-| --- | --- | --- |
-| `opened` / `closed` | `{cause: "cmd"\|"grant"\|"button", ref}` | audit log, notifications, time & attendance |
-| `denied` | `{reason, ref}` — `reason` = any cmd.ack `detail` value (commands.md), or any `grant.result` detail (grants.md); `ref` = the command nonce or the refused `grant_id` | security alerting |
-| `grant_redeemed` | full offline-redemption record (grant_id, cnonce, proof) | audit continuity for offline opens |
-| `button` | `{button_id}` | **intercom-lite**: the hub notifies the resident's chat — "Someone is at the gate. Reply OPEN." |
-| `held_open` | `{seconds}` | gate-left-open alerts (needs position sensor) |
-| `tamper` | `{sensor}` | enclosure opened / supply cut alerts |
-| `power` | `{source: "mains"\|"battery", level}` | battery/outage telemetry (load-shedding reality) |
-| `net` | `{iface: "wifi"\|"gsm", rssi}` | connectivity telemetry, `last_seen_at` |
-| `boot` | `{fw, reason}` | fleet health, update tracking |
+The **Status** column says whether the reference controller actually sends the
+kind. It is not decoration: five of these are RESERVED — the envelope, the
+queue, the signature and the hub's store-and-ignore rule all handle them, and
+nothing emits one. A hub built against this table without that column would
+grow a `button` handler that never fires, and its author would have no way to
+tell that from a quiet gate.
+
+Reserved kinds are specified rather than deleted because the point of this
+document is that retrofitting event flow into deployed hardware is the painful
+change. Reserving the shape now is cheap; renaming a kind after a thousand
+controllers ship is not.
+
+| `kind` | `data` | Drives | Status |
+| --- | --- | --- | --- |
+| `opened` / `closed` | `{cause: "cmd"\|"grant"\|"button", ref}` | audit log, notifications, time & attendance | **sent** |
+| `denied` | `{reason, ref}` — `reason` = any cmd.ack `detail` value (commands.md), or any `grant.result` detail (grants.md); `ref` = the command nonce or the refused `grant_id` | security alerting | **sent** |
+| `grant_redeemed` | full offline-redemption record (grant_id, cnonce, proof) | audit continuity for offline opens | **sent** |
+| `boot` | `{fw, reason}` | fleet health, update tracking | **sent** |
+| `button` | `{button_id}` | **intercom-lite**: the hub notifies the resident's chat — "Someone is at the gate. Reply OPEN." | reserved — no button input exists |
+| `held_open` | `{seconds}` | gate-left-open alerts | reserved — needs a position sensor |
+| `tamper` | `{sensor}` | enclosure opened / supply cut alerts | reserved — no tamper sensing exists |
+| `power` | `{source: "mains"\|"battery", level}` | battery/outage telemetry (load-shedding reality) | reserved — no power monitoring exists |
+| `net` | `{iface: "wifi"\|"gsm", rssi}` | connectivity telemetry, `last_seen_at` | reserved — no radio telemetry exists |
+
+`eventKinds.test.ts` holds the column against the reference controller's
+source, in both directions: a **sent** kind nothing emits, and a **reserved**
+kind something has started emitting, both fail.
 
 Additive: new kinds may appear; hubs must store-and-ignore unknown kinds (they
 still land in the raw audit log).

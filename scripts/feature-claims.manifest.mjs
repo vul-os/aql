@@ -283,6 +283,20 @@ export const FEATURES = [
     ],
   },
   {
+    id: 'event-kinds-say-which-are-sent',
+    label:
+      'proto/events.md marks which event kinds the reference controller actually sends, ' +
+      'and the marking is held against its source in both directions',
+    docStatus: 'shipped',
+    docRefs: [
+      'proto/events.md § Kinds — "five of these are RESERVED"',
+    ],
+    evidence: [
+      [{ file: 'proto/events.md', pattern: 'reserved — no button input exists' }],
+      [{ file: 'src/lib/__tests__/eventKinds.test.ts', pattern: 'no kind the table calls reserved is already being emitted' }],
+    ],
+  },
+  {
     id: 'refused-redemptions-are-recorded',
     label:
       'A grant refused at the gate emits a `denied` event naming it — but only when its ' +

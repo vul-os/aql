@@ -848,9 +848,10 @@ the one the system genuinely cannot answer.
   (`store/accesspoints.go:30-35`);
 - `last_seen_at` for the controller (`store/devices.go:150-155`).
 
-Real position requires controller I/O — the `held_open` event, which explicitly
-*"needs position sensor"* (`proto/events.md:42`), and which the roadmap lists as
-protocol-supported but unshipped (`../ARCHITECTURE.md:271`).
+Real position requires controller I/O — the `held_open` event, which
+`proto/events.md`'s Kinds table marks *"reserved — needs a position sensor"*
+(`proto/events.md`), and which the roadmap lists as protocol-supported but
+unshipped (`../ARCHITECTURE.md`).
 
 **BUILT, in that shape.** Never "The gate is closed." What it says is *"Main
 gate: last open command acked about 3 h ago"* followed by *"I can't confirm
