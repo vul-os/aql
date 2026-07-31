@@ -656,6 +656,15 @@ and none has met physical hardware.
       using a plain `httptest` request HANGS on a regression — the handler streams and the
       request context never ends — so it ran for ten minutes instead of reporting that an
       owner had watched a camera without permission; the refusal tests now carry deadlines
+- [x] **The camera permission routes are tested** — grant, revoke, list, and the
+      access log. Every camera test issued its grant by calling the store directly, so the
+      routes carrying §2.4's and §2.5's claims had never been exercised. Now pinned: a
+      non-admin cannot grant, granting lands in the hash-chained `admin_audit_log` (not the
+      camera-access log, which deliberately selects only the WATCHING actions), revoking
+      stops access and is audited, a revoked grant stays in the listing because it is the
+      record of who once could watch, and — the claim most worth pinning because it breaks
+      the pattern of the rest of the product — EVERY member can read the camera-access log,
+      not just admins. Found by asking which handlers a coverage run never enters
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
 - [ ] Rate-limiting and scoping on movement commands, so a compromised client cannot drive
