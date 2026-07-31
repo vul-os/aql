@@ -705,10 +705,25 @@ role-gated, because the point is that a chat rail is not a control plane for the
 control plane.
 
 **ENFORCED**, by `httpapi/chatexposure_test.go`, which denies the store
-operations and handlers implementing each row to every chat entry point. It is
-a source test rather than a behavioural one because the property is "a rail
-cannot reach these" and behavioural tests can only show that particular
-phrasings do not — the phrasings are infinite, the entry points are not.
+operations and handlers implementing each row. It is a source test rather than a
+behavioural one because the property is "a rail cannot reach these" and
+behavioural tests can only show that particular phrasings do not — the phrasings
+are infinite, the entry points are not.
+
+That sentence was broader than the test for a long time, and this is what it
+looked like. FOUR of the rows below had no denied symbol at all — `config`,
+`repair`, offline-grant issuance, and rate-limit changes. Three of them cite the
+wire contract or a route in their "where it lives" column rather than a Go
+symbol, so transcribing the table produced no entry; the fourth was added by a
+later change in a category the table already named.
+
+The cause was mechanical and worth recording, because it made the omission look
+deliberate. The guard-on-the-guard that requires every denied symbol to be
+DEFINED somewhere only recognised `func (s *Store) X(` and plain `func X(`. The
+operations behind those four rows are HTTP handlers and `*Keys` methods, so
+adding any of them failed that check — which reads as "your entry is wrong"
+rather than "this check is too narrow". It now matches a method on any
+receiver.
 
 Nothing violates it today. That is when it was worth writing: the chat surface
 grew three times in short order — a hold verb, a question classifier, a read

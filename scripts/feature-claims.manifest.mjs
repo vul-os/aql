@@ -287,6 +287,25 @@ export const FEATURES = [
     ],
   },
   {
+    id: 'chat-rails-cannot-reach-forbidden-operations',
+    label:
+      "Every §3.6 row has a denied symbol, including the four that had none — config, " +
+      'repair, offline-grant issuance and rate-limit changes',
+    docStatus: 'shipped',
+    docRefs: ['docs/CHAT-COMMANDS.md § 3.6 — "FOUR of the rows below had no denied symbol at all"'],
+    evidence: [
+      // The rows that were uncovered. Named individually because a count would
+      // pass while any one of them silently dropped out.
+      [{ file: 'hub/internal/httpapi/chatexposure_test.go', pattern: '"SignGrant":' }],
+      [{ file: 'hub/internal/httpapi/chatexposure_test.go', pattern: '"handleDeviceConfig":' }],
+      [{ file: 'hub/internal/httpapi/chatexposure_test.go', pattern: '"handleKeyRotationStart":' }],
+      [{ file: 'hub/internal/httpapi/chatexposure_test.go', pattern: '"handleAdminLimitsPatch":' }],
+      [{ file: 'hub/internal/httpapi/chatexposure_test.go', pattern: '"RevokeOfflineGrant":' }],
+      // And the narrowness that made them impossible to add.
+      [{ file: 'hub/internal/httpapi/chatexposure_test.go', pattern: 'func defines\\(src, sym string\\)' }],
+    ],
+  },
+  {
     id: 'clock-proof-requires-a-successful-ack',
     label:
       'A controller clock proof is recorded only when the ping ack reports success, and ' +

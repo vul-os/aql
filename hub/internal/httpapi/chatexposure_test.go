@@ -62,6 +62,33 @@ var forbidden = map[string]string{
 	// authorizable through the thing they authorize".
 	"CreateGrant": "§3.6 grant issuance",
 	"RevokeGrant": "§3.6 grant revocation",
+	// The OFFLINE grant path, which had no entry here at all. Its own §3.6 row
+	// exists ("Offline-grant issuance — mints an offline-verifiable
+	// capability") and nothing implemented it, so the strictest capability the
+	// product issues was the one row the guard did not cover. The revocation
+	// half was added later still, by me, in a category this table already
+	// named — which is exactly the drift §3.6's own comment predicts: "a line
+	// nobody checks is a line that moves".
+	"SignGrant":                "§3.6 offline-grant issuance",
+	"RecordOfflineGrant":       "§3.6 offline-grant issuance",
+	"handleOfflineGrantIssue":  "§3.6 offline-grant issuance",
+	"RevokeOfflineGrant":       "§3.6 grant revocation",
+	"handleOfflineGrantRevoke": "§3.6 grant revocation",
+	"OfflineGrantsForMember":   "§3.6 grant revocation",
+
+	// `config` — actuation parameters. Changes what "open" physically means,
+	// and the row cites proto/commands.md rather than a hub symbol, so the
+	// symbol that actually sends one was never denied.
+	"handleDeviceConfig": "§3.6 config (actuation parameters)",
+
+	// `repair` — re-roots the entire trust chain. Same shape: the row cited
+	// the wire contract and not the handler that starts a rotation.
+	"handleKeyRotationStart": "§3.6 repair (gateway key rotation)",
+	"handleKeyRotationRetry": "§3.6 repair (gateway key rotation)",
+
+	// Rate-limit / quota changes — disables the abuse controls.
+	"handleAdminLimitsPatch":    "§3.6 rate-limit / quota changes",
+	"handleLocationLimitsPatch": "§3.6 rate-limit / quota changes",
 
 	// Device pairing / claim-token issuance — enrolls a new actuator.
 	"CreateDeviceWithClaim": "§3.6 device pairing / claim tokens",
@@ -179,9 +206,16 @@ func TestEveryForbiddenSymbolIsARealOperation(t *testing.T) {
 		if err != nil {
 			return nil
 		}
+		src := string(b)
 		for sym := range forbidden {
-			if strings.Contains(string(b), "func (s *Store) "+sym+"(") ||
-				strings.Contains(string(b), "func "+sym+"(") {
+			// Any receiver, not just *Store. This used to accept only
+			// `func (s *Store) X(` and `func X(`, which quietly constrained
+			// the map to store methods — and is the likeliest reason four
+			// §3.6 rows (config, repair, offline-grant issuance, rate limits)
+			// had no entry at all: their operations are HANDLERS and *Keys
+			// methods, so adding one would have failed this check and looked
+			// like the entry was wrong rather than this test being narrow.
+			if defines(src, sym) {
 				found[sym] = true
 			}
 		}
@@ -242,4 +276,31 @@ func stripComments(s string) string {
 		b.WriteString("\n")
 	}
 	return b.String()
+}
+
+// defines reports whether src declares sym as a function or a method on any
+// receiver.
+func defines(src, sym string) bool {
+	if strings.Contains(src, "func "+sym+"(") {
+		return true
+	}
+	// `func (x *T) sym(` — scan each `func (` and check what follows the
+	// receiver's closing paren. Cheaper and clearer than a regex, and it
+	// cannot be fooled by a receiver type containing a paren, which Go does
+	// not permit.
+	for i := 0; ; {
+		j := strings.Index(src[i:], "func (")
+		if j < 0 {
+			return false
+		}
+		i += j + len("func (")
+		close := strings.Index(src[i:], ")")
+		if close < 0 {
+			return false
+		}
+		rest := src[i+close+1:]
+		if strings.HasPrefix(rest, " "+sym+"(") {
+			return true
+		}
+	}
 }
