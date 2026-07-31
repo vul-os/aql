@@ -68,10 +68,35 @@ beforeAll(() => {
   const migrationDir = path.join(repo, 'hub/internal/store/migrations');
   const migrations = readdirSync(migrationDir).filter((f) => f.endsWith('.sql'));
   measured.migrations = migrations.length;
-  measured.tables = migrations.reduce(
-    (n, f) => n + (readFileSync(path.join(migrationDir, f), 'utf8').match(/CREATE TABLE/gi) ?? []).length,
-    0,
-  );
+  // The LIVE table count, not the number of CREATE TABLE statements ever
+  // written. Those were the same number until 0029, which widens a CHECK the
+  // only way SQLite allows — build a replacement, copy, drop, rename — and so
+  // is the first migration whose CREATE does not leave a table behind. Summing
+  // CREATEs counted the scratch table and reported 52 for a schema with 51.
+  // Replaying create/drop/rename in apply order is what the database does.
+  //
+  // Note on the DROP branch: with today's migrations it is not load-bearing.
+  // 0029 drops `automation_rules` and immediately renames the replacement onto
+  // that same name, and adding a name already in the set is a no-op — so
+  // deleting the DROP handling leaves the count at 51 either way. It is here
+  // for a drop that is NOT half of a rebuild, which nothing does yet. Said out
+  // loud so nobody later "proves" this branch with a tamper that cannot move
+  // the number and concludes the guard is watching more than it is.
+  const live = new Set<string>();
+  for (const f of [...migrations].sort()) {
+    const sql = readFileSync(path.join(migrationDir, f), 'utf8');
+    for (const m of sql.matchAll(/CREATE TABLE(?:\s+IF NOT EXISTS)?\s+([A-Za-z_][\w]*)/gi)) {
+      live.add(m[1]);
+    }
+    for (const m of sql.matchAll(/DROP TABLE(?:\s+IF EXISTS)?\s+([A-Za-z_][\w]*)/gi)) {
+      live.delete(m[1]);
+    }
+    for (const m of sql.matchAll(/ALTER TABLE\s+([A-Za-z_][\w]*)\s+RENAME TO\s+([A-Za-z_][\w]*)/gi)) {
+      live.delete(m[1]);
+      live.add(m[2]);
+    }
+  }
+  measured.tables = live.size;
 
   // The same AST-based source of truth routeParity uses. Not a regex over
   // server.go: a commented-out registration would count.

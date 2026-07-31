@@ -1980,8 +1980,14 @@ export type MaintenanceCreateInput = {
 // refusals; it does not re-derive any of it.
 
 /** Trigger kinds the hub understands. A closed set; an unknown one is a hub
- *  newer than this console, not a rule to guess at. */
-export type AutomationTriggerKind = 'schedule' | 'threshold' | 'event' | string;
+ *  newer than this console, not a rule to guess at.
+ *
+ *  The union used to end in `| string`, which collapsed it to `string` and made
+ *  the literals decoration — the comment claimed closed while the type checked
+ *  nothing. Kept closed so a kind the hub gained and the console has not
+ *  handled fails to compile; callers rendering an unknown kind off the wire
+ *  narrow at the boundary instead. */
+export type AutomationTriggerKind = 'schedule' | 'threshold' | 'event' | 'clip';
 
 /** The state a condition can require of a device. Deliberately only two: a
  *  device whose state the hub does NOT know satisfies neither, and the rule
@@ -1998,6 +2004,9 @@ export type AutomationRule = {
     schedule?: { minute_of_day: number; days: number; tz?: string };
     threshold?: { device_key: string; metric: string; op: string; value: number };
     event?: { device_key: string; name: string };
+    /** A camera wrote a clip. The hub writes clips itself, so this is a fact
+     *  it knows first-hand rather than a reading it interpreted. */
+    clip?: { device_key: string };
   };
   /** A condition is one of two shapes, never both — the hub refuses a
    *  condition carrying a metric AND a state, because it would have two

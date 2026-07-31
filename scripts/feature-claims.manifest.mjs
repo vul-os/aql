@@ -96,6 +96,34 @@ export const FEATURES = [
     ],
   },
   {
+    id: 'automation-clip-trigger',
+    label:
+      'A rule can fire when a camera records: trigger kind "clip" (migration 0029), ' +
+      'polled against the clip index, creatable and readable in the console',
+    docStatus: 'shipped',
+    docRefs: ['ROADMAP.md § "A clip was written" now fires a rule'],
+    evidence: [
+      // The DB half. 0029 widens a CHECK by rebuilding the table, so the claim
+      // names the constraint rather than the file: a migration that dropped
+      // the vocabulary instead of widening it would still be a file.
+      [
+        {
+          file: 'hub/internal/store/migrations/0029_automation_clip_trigger.sql',
+          pattern: "trigger_kind IN \\('schedule','threshold','event','clip'\\)",
+        },
+      ],
+      [{ root: 'hub/internal/store', pattern: 'func \\(s \\*Store\\) NewestClipAt' }],
+      [{ root: 'hub/internal/automations', pattern: 'TriggerClip TriggerKind = "clip"' }],
+      // The runner half. Without this the kind saves and nothing ever polls it.
+      [{ root: 'hub/internal/automations', pattern: 'func \\(rn \\*Runner\\) tickClip' }],
+      // Wired at the one construction site, or every clip rule is inert.
+      [{ file: 'hub/cmd/hub/main.go', pattern: 'Clips: h.store' }],
+      // The console half, both directions: create and render.
+      [{ file: 'src/components/automations/RuleEditor.tsx', pattern: "kind: 'clip'" }],
+      [{ file: 'src/pages/app/Automations.tsx', pattern: "case 'clip'" }],
+    ],
+  },
+  {
     id: 'controller-config-report-hub-side',
     label: 'The hub verifies, stores (migration 0026) and serves a reported controller configuration at GET /v1/devices/{id}/config-report',
     docStatus: 'shipped',

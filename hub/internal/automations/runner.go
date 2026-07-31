@@ -47,7 +47,17 @@ type Runner struct {
 	now        func() time.Time
 	log        *slog.Logger
 
+	clips ClipIndex
+
 	mu sync.Mutex
+	// clipAt is the newest clip instant last seen per rule. Per RULE rather
+	// than per device, because two rules watching one camera must each get
+	// their own first-observation seed — sharing it would let the second rule
+	// inherit the first's memory and never fire on a clip it had not seen.
+	clipAt map[string]int64
+	// Which clip rules have already reported that this hub cannot see clips.
+	// Per rule, so the notice lands once per outage rather than every tick.
+	clipBlind map[string]bool
 	// level is the threshold edge memo, keyed by rule id.
 	level map[string]levelState
 	// avail is the last observed availability per device key, shared by every
@@ -86,6 +96,18 @@ type RunnerConfig struct {
 	MaxCatchup int
 	Now        func() time.Time
 	Log        *slog.Logger
+	// Clips answers "when did this camera last record", for clip triggers. Nil
+	// disables them: the rules still load, and each records a skip saying the
+	// hub cannot see its clip index, rather than never firing in silence.
+	Clips ClipIndex
+}
+
+// ClipIndex is the clip half of the store, as the runner needs it.
+//
+// An interface rather than the store itself, so this package keeps depending on
+// nothing but the registry and its own tables — the same reason Notifier is one.
+type ClipIndex interface {
+	NewestClipAt(ctx context.Context, accountID, deviceKey string) (int64, bool, error)
 }
 
 // NewRunner builds a runner. Interval/grace/catchup fall back to the defaults.
@@ -96,8 +118,11 @@ func NewRunner(cfg RunnerConfig) (*Runner, error) {
 	rn := &Runner{
 		eng: cfg.Engine, interval: cfg.Interval, grace: cfg.MissedGrace,
 		maxCatchup: cfg.MaxCatchup, now: cfg.Now, log: cfg.Log,
-		level: map[string]levelState{},
-		avail: map[string]devices.Availability{},
+		clips:     cfg.Clips,
+		level:     map[string]levelState{},
+		avail:     map[string]devices.Availability{},
+		clipAt:    map[string]int64{},
+		clipBlind: map[string]bool{},
 	}
 	if rn.interval <= 0 {
 		rn.interval = DefaultInterval
@@ -186,6 +211,8 @@ func (rn *Runner) Tick(ctx context.Context) error {
 			err = rn.tickThreshold(ctx, r, cache)
 		case TriggerEvent:
 			err = rn.tickEvent(ctx, r, prev, cur, seeded)
+		case TriggerClip:
+			err = rn.tickClip(ctx, r)
 		default:
 			// A stored rule with an unknown kind cannot be evaluated. Fire it
 			// so the engine refuses it, records why, and disables it, rather
@@ -375,4 +402,65 @@ func (c *readCache) read(ctx context.Context, key string) ([]devices.Reading, er
 	}
 	c.vals[key] = v
 	return v, nil
+}
+
+// tickClip fires when a camera has recorded since the last time this rule
+// looked.
+//
+// The first observation SEEDS and does not fire, the same discipline
+// tickThreshold and tickEvent follow: a hub restarting beside a week of footage
+// must not alert about all of it, and "there are clips" is not the event —
+// "there is a NEW clip" is.
+//
+// The memo is the newest clip's start instant rather than a count. A count
+// falls when the retention sweep deletes an old clip, and a rule watching a
+// count would fire on a DELETION — an alert saying a camera recorded, sent
+// because footage was thrown away.
+func (rn *Runner) tickClip(ctx context.Context, r Rule) error {
+	cl := r.Trigger.Clip
+	if cl == nil {
+		_, err := rn.eng.Fire(ctx, r, CauseEvent, 0)
+		return err
+	}
+	if rn.clips == nil {
+		// No clip index wired, so the hub cannot see whether this camera
+		// recorded. That is an unreadable input, NOT a malformed rule: the
+		// distinction matters because Fire EXECUTES: routing this through it
+		// would run the rule's action on every tick precisely because the hub
+		// could not tell whether the trigger happened. So it takes
+		// tickThreshold's path for an unreadable sensor — a recorded skip,
+		// once per outage, that actuates nothing and still says why.
+		rn.mu.Lock()
+		reported := rn.clipBlind[r.ID]
+		rn.clipBlind[r.ID] = true
+		rn.mu.Unlock()
+		if reported {
+			return nil
+		}
+		now := rn.eng.nowUnix()
+		return rn.eng.store.InsertRun(ctx, Run{
+			ID: newID(), RuleID: r.ID, RuleName: r.Name, AccountID: r.AccountID,
+			Cause: CauseEvent, Outcome: OutcomeSkipped,
+			Reason:    "this hub has no clip index, so it cannot tell when the camera recorded",
+			DeviceKey: cl.DeviceKey, StartedAt: now, FinishedAt: now,
+		})
+	}
+	at, ok, err := rn.clips.NewestClipAt(ctx, r.AccountID, cl.DeviceKey)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return nil // this camera has never recorded; nothing to compare against
+	}
+
+	rn.mu.Lock()
+	seen, known := rn.clipAt[r.ID]
+	rn.clipAt[r.ID] = at
+	rn.mu.Unlock()
+
+	if !known || at <= seen {
+		return nil
+	}
+	_, err = rn.eng.Fire(ctx, r, CauseEvent, at)
+	return err
 }

@@ -88,6 +88,31 @@ function declaresKey(src: string, name: string): boolean {
   return new RegExp(`(^|[\\s{,(])${name}\\??\\s*:`, 'm').test(src);
 }
 
+/**
+ * The body of one function, by brace matching from its declaration.
+ *
+ * Needed because searching the WHOLE editor for `clip:` found
+ * `TRIGGER_LABELS = { …, clip: 'Recording' }` — a label, not a builder. The
+ * guard went green while the editor was incapable of producing the trigger,
+ * which is precisely the failure it was written to catch. A form counts as
+ * expressible only if the function that BUILDS rules builds it.
+ */
+function functionBody(src: string, name: string): string {
+  const decl = src.indexOf(`function ${name}(`);
+  expect(decl, `${name} is no longer declared — update this test`).toBeGreaterThan(-1);
+  const open = src.indexOf('{', src.indexOf(')', decl));
+  expect(open, `${name} has no body`).toBeGreaterThan(-1);
+  let depth = 0;
+  for (let i = open; i < src.length; i++) {
+    if (src[i] === '{') depth++;
+    else if (src[i] === '}') {
+      depth--;
+      if (depth === 0) return src.slice(open, i + 1);
+    }
+  }
+  throw new Error(`${name} is unterminated`);
+}
+
 describe('automation rule shapes', () => {
   it('every field the hub sends is named in the client type', () => {
     const client = code(readFileSync(resolve(root, 'src/lib/api.ts'), 'utf8'));
@@ -124,6 +149,7 @@ describe('automation rule shapes', () => {
     const editor = code(
       readFileSync(resolve(root, 'src/components/automations/RuleEditor.tsx'), 'utf8'),
     );
+    const builder = functionBody(editor, 'buildAction');
     const forms = jsonTags(go, 'Action').filter((t) => t !== 'args' && t !== 'verb');
     expect(forms.length, 'no action forms found').toBeGreaterThan(2);
 
@@ -132,8 +158,33 @@ describe('automation rule shapes', () => {
       // `notify` is offered as "Just alert me" — so what is required is that it
       // builds the field, not that it repeats the word in prose.
       expect(
-        declaresKey(editor, form),
+        declaresKey(builder, form),
         `the editor never builds an action with "${form}", so a rule using that form ` +
+          `cannot be created from the console`,
+      ).toBe(true);
+    }
+  });
+
+  // The same check one field over. When the hub gained a `clip` trigger, the
+  // action check above passed — it only reads Action's tags — so an entire
+  // trigger kind could ship creatable by the API and unreachable from the only
+  // screen that creates rules. A kind nobody can select is a feature that
+  // exists in the changelog and not in the product.
+  it('the console can express every trigger kind the hub accepts', () => {
+    const go = readFileSync(resolve(root, 'hub/internal/automations/rule.go'), 'utf8');
+    const editor = code(
+      readFileSync(resolve(root, 'src/components/automations/RuleEditor.tsx'), 'utf8'),
+    );
+    // `kind` is the discriminator, not a form; every other tag on Trigger is a
+    // payload the editor has to be able to build.
+    const builder = functionBody(editor, 'buildTrigger');
+    const forms = jsonTags(go, 'Trigger').filter((t) => t !== 'kind');
+    expect(forms.length, 'no trigger forms found').toBeGreaterThan(2);
+
+    for (const form of forms) {
+      expect(
+        declaresKey(builder, form),
+        `the editor never builds a trigger with "${form}", so that trigger kind ` +
           `cannot be created from the console`,
       ).toBe(true);
     }

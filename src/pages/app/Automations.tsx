@@ -102,6 +102,11 @@ function triggerLine(trigger: AutomationRule['trigger']): string {
       if (!e) return 'event (no detail sent)';
       return `${e.device_key} → ${e.name}`;
     }
+    case 'clip': {
+      const c = trigger.clip;
+      if (!c) return 'recording (no detail sent)';
+      return `${c.device_key} records`;
+    }
     default:
       // A trigger kind this console doesn't recognise means a hub newer than
       // this build — say so rather than rendering nothing.

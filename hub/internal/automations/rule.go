@@ -24,6 +24,14 @@ const (
 	// derived from the registry's own index rather than from a bus that does
 	// not exist, and it is named narrowly so nobody mistakes it for one.
 	TriggerEvent TriggerKind = "event"
+	// TriggerClip — a camera wrote a new clip.
+	//
+	// Separate from TriggerEvent because that one is a closed set of
+	// AVAILABILITY transitions read from the registry, and this is a fact the
+	// hub knows first-hand: its own recording worker indexed a clip. It needs
+	// no camera feature and no event bus — the clip index carries a timestamp,
+	// so the runner polls it exactly as it polls a threshold.
+	TriggerClip TriggerKind = "clip"
 )
 
 // CompareOp is the comparison a threshold or condition makes. Closed set; the
@@ -107,6 +115,20 @@ type Trigger struct {
 	Schedule  *Schedule   `json:"schedule,omitempty"`
 	Threshold *Threshold  `json:"threshold,omitempty"`
 	Event     *Event      `json:"event,omitempty"`
+	Clip      *Clip       `json:"clip,omitempty"`
+}
+
+// Clip is the payload of a clip trigger: which camera to watch.
+type Clip struct {
+	DeviceKey string `json:"device_key"`
+}
+
+// Validate checks a clip trigger's shape.
+func (c Clip) Validate() error {
+	if c.DeviceKey == "" {
+		return refuse(ReasonInvalidRule, "clip trigger names no camera")
+	}
+	return nil
 }
 
 // DeviceKey returns the device this trigger watches, or "" for a schedule.
@@ -120,6 +142,10 @@ func (t Trigger) DeviceKey() string {
 		if t.Event != nil {
 			return t.Event.DeviceKey
 		}
+	case TriggerClip:
+		if t.Clip != nil {
+			return t.Clip.DeviceKey
+		}
 	}
 	return ""
 }
@@ -132,7 +158,7 @@ func (t Trigger) Validate() error {
 		if t.Schedule == nil {
 			return refuse(ReasonInvalidRule, "schedule trigger has no schedule")
 		}
-		if t.Threshold != nil || t.Event != nil {
+		if t.Threshold != nil || t.Event != nil || t.Clip != nil {
 			return refuse(ReasonInvalidRule, "schedule trigger carries another kind's payload")
 		}
 		return t.Schedule.Validate()
@@ -140,7 +166,7 @@ func (t Trigger) Validate() error {
 		if t.Threshold == nil {
 			return refuse(ReasonInvalidRule, "threshold trigger has no threshold")
 		}
-		if t.Schedule != nil || t.Event != nil {
+		if t.Schedule != nil || t.Event != nil || t.Clip != nil {
 			return refuse(ReasonInvalidRule, "threshold trigger carries another kind's payload")
 		}
 		if t.Threshold.DeviceKey == "" {
@@ -157,7 +183,7 @@ func (t Trigger) Validate() error {
 		if t.Event == nil {
 			return refuse(ReasonInvalidRule, "event trigger has no event")
 		}
-		if t.Schedule != nil || t.Threshold != nil {
+		if t.Schedule != nil || t.Threshold != nil || t.Clip != nil {
 			return refuse(ReasonInvalidRule, "event trigger carries another kind's payload")
 		}
 		if t.Event.DeviceKey == "" {
@@ -167,6 +193,14 @@ func (t Trigger) Validate() error {
 			return refuse(ReasonInvalidRule, "event trigger has an unknown event %q", string(t.Event.Name))
 		}
 		return nil
+	case TriggerClip:
+		if t.Clip == nil {
+			return refuse(ReasonInvalidRule, "clip trigger has no clip")
+		}
+		if t.Schedule != nil || t.Threshold != nil || t.Event != nil {
+			return refuse(ReasonInvalidRule, "clip trigger carries another kind's payload")
+		}
+		return t.Clip.Validate()
 	}
 	return refuse(ReasonInvalidRule, "unknown trigger kind %q", string(t.Kind))
 }

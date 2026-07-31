@@ -4,7 +4,10 @@ package store
 // migrations/0024_camera_clips.sql for why the bytes are not in here, and
 // docs/CAMERA-RETENTION.md for the policy these queries implement.
 
-import "context"
+import (
+	"context"
+	"database/sql"
+)
 
 // The clip LISTING lives in cameraview.go, beside the permission that gates it —
 // it was removed from here when nothing called it, and came back with its
@@ -165,4 +168,28 @@ func (s *Store) LiveClipPaths(ctx context.Context) (map[string]bool, error) {
 		out[p] = true
 	}
 	return out, rows.Err()
+}
+
+// NewestClipAt returns when the most recent surviving clip for a camera
+// started, and whether there is one.
+//
+// Deleted clips are excluded. A retention sweep removing the last clip must not
+// look like a camera that never recorded — but it must also not look like a NEW
+// recording, which is why this reads started_at rather than a row count: a
+// count falls when the sweep runs, and a rule watching a count would fire on
+// deletion.
+//
+// Exists for the automations runner, which polls it: the hub writes clips
+// itself, so "a clip was written" is something it knows first-hand and does not
+// need a camera to report.
+func (s *Store) NewestClipAt(ctx context.Context, accountID, deviceKey string) (int64, bool, error) {
+	var at sql.NullInt64
+	err := s.db.QueryRowContext(ctx,
+		`SELECT max(started_at) FROM camera_clips
+		  WHERE account_id = ? AND device_key = ? AND deleted_at IS NULL`,
+		accountID, deviceKey).Scan(&at)
+	if err != nil {
+		return 0, false, err
+	}
+	return at.Int64, at.Valid, nil
 }

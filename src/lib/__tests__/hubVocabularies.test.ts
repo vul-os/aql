@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -32,6 +32,28 @@ const repo = path.resolve(here, '../../..');
 
 function read(rel: string): string {
   return readFileSync(path.join(repo, rel), 'utf-8');
+}
+
+/**
+ * The trigger_kind vocabulary a migrated database actually enforces.
+ *
+ * Scans every migration in apply order and keeps the last CHECK it finds, so a
+ * rebuilt table supersedes the original declaration exactly as SQLite sees it.
+ */
+function effectiveTriggerKinds(): string[] {
+  const dir = path.join(repo, 'hub/internal/store/migrations');
+  const re = /trigger_kind TEXT NOT NULL CHECK \(trigger_kind IN \(([^)]+)\)\)/;
+  let last: string[] | null = null;
+  let declarations = 0;
+  for (const f of readdirSync(dir).sort()) {
+    if (!f.endsWith('.sql')) continue;
+    const m = re.exec(readFileSync(path.join(dir, f), 'utf-8'));
+    if (!m) continue;
+    declarations++;
+    last = [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]).sort();
+  }
+  expect(declarations, 'no migration declares a trigger_kind CHECK').toBeGreaterThan(0);
+  return last!;
 }
 
 /**
@@ -103,9 +125,9 @@ describe('closed vocabularies match the hub', () => {
   it('automation trigger kinds match automations/rule.go and the schema', () => {
     const go = goConstValues('hub/internal/automations/rule.go', 'TriggerKind');
 
-    // The console widens this with `| string` on purpose — it renders whatever
-    // a rule carries — so the check is that every KNOWN kind is present, not
-    // that the sets are identical.
+    // The console's union is closed and must match exactly. It used to end in
+    // `| string`, which collapsed it to `string` and let the literals drift
+    // from the engine without anything noticing.
     const ts = read('src/lib/api.ts');
     const m = /type AutomationTriggerKind\s*=\s*([^;]+);/.exec(ts);
     expect(m, 'AutomationTriggerKind not found').not.toBeNull();
@@ -115,10 +137,14 @@ describe('closed vocabularies match the hub', () => {
     // The schema closes the same vocabulary with a CHECK. A kind the engine
     // accepts and the table refuses is a rule that validates and cannot be
     // saved.
-    const sql = read('hub/internal/store/migrations/0010_automations.sql');
-    const check = /trigger_kind TEXT NOT NULL CHECK \(trigger_kind IN \(([^)]+)\)\)/.exec(sql);
-    expect(check, 'the trigger_kind CHECK constraint was not found').not.toBeNull();
-    const allowed = [...check![1].matchAll(/'([^']+)'/g)].map((x) => x[1]).sort();
+    //
+    // Read from the LAST migration that declares the constraint, not from a
+    // named file. This test pointed at 0010 and broke the moment 0029 widened
+    // the vocabulary by rebuilding the table — it was comparing the engine
+    // against a constraint no database has had since. Migrations apply in
+    // sorted order, so the final declaration is the effective one, and a
+    // future widening needs no edit here.
+    const allowed = effectiveTriggerKinds();
     expect(
       allowed,
       'the engine and the database disagree about which trigger kinds exist',

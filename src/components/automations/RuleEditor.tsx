@@ -50,7 +50,16 @@ import {
 } from '@/lib/automationConditions';
 import { controlsFor, type EngineControl } from '@/components/device/engineState';
 
-type TriggerKind = 'schedule' | 'threshold' | 'event';
+type TriggerKind = 'schedule' | 'threshold' | 'event' | 'clip';
+
+const TRIGGER_LABELS: Record<TriggerKind, string> = {
+  schedule: 'Schedule',
+  threshold: 'Threshold',
+  event: 'Event',
+  // Named for what a resident would say, not for the wire word. "Clip" is the
+  // hub's noun for a recording file; nobody creating a rule thinks in those.
+  clip: 'Recording',
+};
 type CompareOp = 'above' | 'below' | 'at_least' | 'at_most';
 type EventName = 'online' | 'offline' | 'degraded';
 
@@ -195,7 +204,11 @@ export default function RuleEditor({
 
   // ── trigger ────────────────────────────────────────────────────────────
   const [triggerKind, setTriggerKind] = useState<TriggerKind>(
-    rule && (rule.trigger.kind === 'schedule' || rule.trigger.kind === 'threshold' || rule.trigger.kind === 'event')
+    rule &&
+      (rule.trigger.kind === 'schedule' ||
+        rule.trigger.kind === 'threshold' ||
+        rule.trigger.kind === 'event' ||
+        rule.trigger.kind === 'clip')
       ? rule.trigger.kind
       : 'schedule',
   );
@@ -207,6 +220,8 @@ export default function RuleEditor({
     rule?.trigger.schedule ? maskToDays(rule.trigger.schedule.days) : new Set([1, 2, 3, 4, 5]),
   );
   const [scheduleTz, setScheduleTz] = useState(rule?.trigger.schedule?.tz || defaultTz());
+
+  const [clipDeviceKey, setClipDeviceKey] = useState(rule?.trigger.clip?.device_key ?? '');
 
   const [thresholdDeviceKey, setThresholdDeviceKey] = useState(rule?.trigger.threshold?.device_key ?? '');
   const [thresholdMetric, setThresholdMetric] = useState(rule?.trigger.threshold?.metric ?? '');
@@ -229,6 +244,9 @@ export default function RuleEditor({
   function updateCondition(id: number, patch: Partial<ConditionRow>) {
     setConditions((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
+
+  // Only cameras write clips, so only cameras can carry a clip trigger.
+  const cameras = useMemo(() => devices.filter((d) => d.kind === 'camera'), [devices]);
 
   // ── metric hints, from what the devices in this rule actually report ────
   //
@@ -390,6 +408,13 @@ export default function RuleEditor({
         }
         return { kind: 'event', event: { device_key: eventDeviceKey.trim(), name: eventName } };
       }
+      case 'clip': {
+        if (!clipDeviceKey.trim()) {
+          setFormError('A recording trigger needs a camera.');
+          return null;
+        }
+        return { kind: 'clip', clip: { device_key: clipDeviceKey.trim() } };
+      }
     }
     return null;
   }
@@ -519,6 +544,15 @@ export default function RuleEditor({
           </option>
         ))}
       </datalist>
+      {/* Cameras only. A clip trigger on a lamp can never fire, and offering
+          every device as a candidate invites exactly that rule. */}
+      <datalist id="rule-editor-camera-options">
+        {cameras.map((d) => (
+          <option key={d.key} value={d.key}>
+            {d.name}
+          </option>
+        ))}
+      </datalist>
       <datalist id="rule-editor-metric-options">
         {metricHints.map((m) => (
           <option key={m} value={m} />
@@ -571,9 +605,9 @@ export default function RuleEditor({
         <div>
           <span className="text-sm font-medium text-ink/85">When</span>
           <div className="flex gap-2 mt-1.5">
-            {(['schedule', 'threshold', 'event'] as TriggerKind[]).map((k) => (
+            {(['schedule', 'threshold', 'event', 'clip'] as TriggerKind[]).map((k) => (
               <button key={k} type="button" onClick={() => setTriggerKind(k)} className={segmentClass(triggerKind === k)}>
-                {k === 'schedule' ? 'Schedule' : k === 'threshold' ? 'Threshold' : 'Event'}
+                {TRIGGER_LABELS[k]}
               </button>
             ))}
           </div>
@@ -718,6 +752,36 @@ export default function RuleEditor({
                   ))}
                 </select>
               </label>
+            </div>
+          )}
+
+          {triggerKind === 'clip' && (
+            <div className="mt-3 space-y-2 rounded-xl border border-ink/15 bg-paper-cool p-3">
+              <label className="block">
+                <span className="text-xs text-ink/60">Camera</span>
+                <input
+                  list="rule-editor-camera-options"
+                  required
+                  value={clipDeviceKey}
+                  onChange={(e) => setClipDeviceKey(e.target.value)}
+                  placeholder="camera device key"
+                  className={inputClass}
+                />
+              </label>
+              {/* What "fires" means here, said plainly. The rule runs when a NEW
+                  clip appears — not while one is being written, and not for the
+                  footage already on disk when the rule was created. Without
+                  this line the first evening would read as the rule failing. */}
+              <p className="text-xs text-ink/55">
+                Runs once for each new recording. Clips already stored when you save this rule do not
+                trigger it, and deleting old footage never does.
+              </p>
+              {cameras.length === 0 && (
+                <p className="text-xs text-terracotta-deep">
+                  No camera is currently visible to the engine. You can still enter a key, but nothing
+                  will fire until that camera is reachable.
+                </p>
+              )}
             </div>
           )}
         </div>

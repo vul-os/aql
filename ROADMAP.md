@@ -32,7 +32,7 @@ reference for how every other device kind should eventually work: a versioned wi
 contract, a device that verifies rather than trusts, and an audit trail you can check
 after the fact.
 
-**The hub** (`hub/`) — one Go binary, SQLite inside, **129 HTTP routes over 27
+**The hub** (`hub/`) — one Go binary, SQLite inside, **129 HTTP routes over 28
 migrations, and more than 1,000 tests green** across 18 packages:
 
 - [x] Accounts, locations, access points, members with roles, invites
@@ -522,7 +522,7 @@ and none has met physical hardware.
 
 ## Phase 2 — Local persistence & secrets (partly real)
 
-- [x] SQLite for state, history and configuration — shipped with the hub (27 migrations,
+- [x] SQLite for state, history and configuration — shipped with the hub (28 migrations,
       51 tables), one file to back up, pure-Go driver so it cross-compiles to a Pi
 - [ ] Extend that schema to device state, telemetry and history once Phase 1 exists
 - [ ] **OS-keychain-backed credential vault** for device and service secrets, scoped per
@@ -826,13 +826,26 @@ and none has met physical hardware.
       `stream_ok` as numeric readings, so the most operationally useful camera alert — THIS
       CAMERA HAS STOPPED STREAMING — is a threshold rule and fires today, as does one on
       packet loss climbing. Proved end to end rather than claimed
-- [ ] "Motion seen" and "a clip was written" specifically. The camera driver emits neither as
-      a reading, and the event vocabulary is a closed set of availability transitions, so
-      neither is expressible. A threshold on a metric nobody publishes SAVES and never fires
-      — the runner records that as a skip once per outage rather than silently, which is the
-      difference between a rule an operator can debug and one they wrongly believe covers
-      them. Clip-written is the more tractable of the two: clips are already indexed with a
-      timestamp, so it fits the runner's polling model without an event bus yet
+- [x] **"A clip was written" now fires a rule** — trigger kind `clip`, migration 0029. The
+      hub WRITES clips, so a new one is a fact it knows first-hand rather than a reading it
+      had to interpret; the runner polls the clip index per rule and fires on a newer
+      timestamp. Three decisions worth naming. It compares the newest clip's INSTANT, never a
+      count — a count falls when the retention sweep runs, so a rule watching one would alert
+      that a camera recorded BECAUSE footage was deleted. The first observation SEEDS and does
+      not fire, so a hub restarting beside a week of footage does not alert about all of it.
+      And the memo is per RULE, not per camera, so a second rule on the same camera gets its
+      own seed instead of inheriting the first's memory and never firing. A hub with no clip
+      index records a skip rather than acting: the first version routed that through `Fire`,
+      which EXECUTES, so a rule would have run its action on every tick precisely because
+      nothing could tell whether it should. 0029 widens a CHECK by rebuilding the table, which
+      is this repo's first migration that COPIES rows — the copy is exercised against a
+      populated table, because on a fresh database the source is empty and a wrong column
+      mapping moves nothing wrongly by moving nothing at all
+- [ ] "Motion seen" specifically. The camera driver emits no such reading, and the event
+      vocabulary is a closed set of availability transitions, so it is not expressible. A
+      threshold on a metric nobody publishes SAVES and never fires — the runner records that
+      as a skip once per outage rather than silently, which is the difference between a rule
+      an operator can debug and one they wrongly believe covers them
 - [x] **Rate-limiting and scoping on movement commands.** The scoping half existed
       (`engineScope`); there was NO rate limit on `POST /v1/engine/devices/{key}/execute` at
       all, so a stolen token could loop `start` on a mower and nothing on that path would

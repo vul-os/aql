@@ -1346,6 +1346,9 @@ func (h *hub) wireAutomations(cfg config) {
 		Engine:   eng,
 		Interval: cfg.automationsInterval,
 		Log:      h.log,
+		// Clip triggers ask the clip index when a camera last recorded. The
+		// store is always present here, so clip rules are never silently inert.
+		Clips: h.store,
 	})
 	if err != nil {
 		h.log.Error("rule scheduler not started", "err", err)
