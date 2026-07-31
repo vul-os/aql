@@ -481,10 +481,15 @@ and none has met physical hardware.
       raw token
 - [ ] Extend it further, to the other device classes. `set`, groups and T4 remain in the
       console. T4 needs step-up on a second rail (§3.4) and an operator-armed time window;
-      neither exists, and a confirmation is not a substitute for either. §4.2's two unbuilt queries
-      are "how much solar today" (needs the energy engine on a rail) and "which lights are
-      on" (an occupancy proxy, blocked on §4.4 rule 6's per-location opt-in, which does not
-      exist — so it stays off rather than shipping without its switch)
+      neither exists, and a confirmation is not a substitute for either. Of §4.2's two
+      once-unbuilt queries, **"how much solar today" is built** — one number per source for
+      one day, which rule 3 permits where a curve would be the appliance fingerprint §4.3
+      warns about; a meter that was down makes the figure a floor and says so. **"Which
+      lights are on" is still not answered**, but §4.4 rule 6's per-location opt-in that has
+      to precede it IS built (`location_disclosure`, migration 0028): off unless an admin
+      turns it on, per location, recorded with who and when, audited both ways, and a member
+      asking a location that has not opted in is told the switch exists rather than met
+      with silence
 
 ---
 
