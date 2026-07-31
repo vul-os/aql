@@ -496,7 +496,11 @@ and none has met physical hardware.
       does not know it means brightness rather than a water tank. The decision is that a
       capability declares a SEMANTIC state and a driver MAPS its metric onto it — stated in
       configuration, never inferred — and that devices with no mapping are excluded from any
-      count and said to be. §4.4 rule 6's per-location opt-in that has to precede it IS
+      count and said to be. **The catalogue half is now built**: `StateSpec` declared for
+      lighting and jobs, read by `devices.ActiveFrom`, whose three-valued answer makes
+      UNKNOWN distinct from off — a device that was never polled, or whose driver emits an
+      undeclared metric, is not counted as off. The driver-side mapping is still open, so
+      an unmapped device resolves to unknown, which is the safe direction. §4.4 rule 6's per-location opt-in that has to precede it IS
       built (`location_disclosure`, migration 0028): off unless an admin
       turns it on, per location, recorded with who and when, audited both ways, and a member
       asking a location that has not opted in is told the switch exists rather than met

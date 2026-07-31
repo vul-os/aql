@@ -147,7 +147,43 @@ type VerbSpec struct {
 type Capability struct {
 	ID    CapabilityID
 	Verbs []VerbSpec
+	// State declares the reading that answers "what is this device doing", for
+	// capabilities where that question has an answer. nil means it does not:
+	// a thermostat setpoint is not on or off, and a lock's "active" is
+	// ambiguous in a way no caller should have to resolve.
+	//
+	// docs/DEVICE-STATE.md decides the shape and, more importantly, the limit:
+	// this declares a SEMANTIC name, and a driver has to say that its metric
+	// IS that state. Three of the five in-tree drivers take the metric name
+	// from operator configuration, so a hub seeing "level" on an MQTT topic
+	// does not know it means brightness rather than a water tank. Declaring
+	// the name here is not a licence to assume any reading carrying it means
+	// this.
+	State *StateSpec
 }
+
+// StateSpec says how to read "is this device active" out of a Reading.
+//
+// ACTIVE, not "on", and the distinction is load-bearing: `on` is a verb in this
+// catalogue. Reusing the word invites code that assumes sending `on` makes the
+// state true, or that a true state proves the verb succeeded. Active is an
+// OBSERVATION; on is a COMMAND. They are related by physics, not identity —
+// the same gap docs/CHAT-COMMANDS.md §4.1 keeps between an acknowledged open
+// and a barrier that actually moved.
+type StateSpec struct {
+	// Metric is the semantic reading name this capability's state lives in.
+	Metric string
+	// ActiveAbove makes a NUMERIC state answerable: a reading strictly above
+	// it is active. nil means the state is carried in Reading.Text instead.
+	ActiveAbove *float64
+	// ActiveText lists the Text values that mean active, for text states.
+	// Compared case-insensitively; a value not in this list and not empty is
+	// INACTIVE rather than unknown, because a device that reported a state the
+	// catalogue does not list is still reporting one.
+	ActiveText []string
+}
+
+func floatPtr(f float64) *float64 { return &f }
 
 // catalogue is the closed registry. Adding a row here is the reviewed change
 // that admits a new verb, and the tier is chosen at that moment rather than
@@ -164,13 +200,19 @@ var catalogue = map[CapabilityID]Capability{
 		{Verb: VerbLock, Tier: TierReversible},
 		{Verb: VerbStatus, Tier: TierRead},
 	}},
-	CapSwitch: {ID: CapSwitch, Verbs: []VerbSpec{
+	CapSwitch: {ID: CapSwitch, State: &StateSpec{
+		Metric: "state", ActiveText: []string{"on"},
+	}, Verbs: []VerbSpec{
 		{Verb: VerbOn, Tier: TierReversible, Inverse: VerbOff},
 		{Verb: VerbOff, Tier: TierReversible},
 		{Verb: VerbToggle, Tier: TierReversible},
 		{Verb: VerbStatus, Tier: TierRead},
 	}},
-	CapDimmable: {ID: CapDimmable, Verbs: []VerbSpec{
+	// Brightness above zero is on. A dimmable at 0 is off however it got there,
+	// which is why this is a threshold rather than a separate on/off metric.
+	CapDimmable: {ID: CapDimmable, State: &StateSpec{
+		Metric: "level", ActiveAbove: floatPtr(0),
+	}, Verbs: []VerbSpec{
 		{Verb: VerbOn, Tier: TierReversible, Inverse: VerbOff},
 		{Verb: VerbOff, Tier: TierReversible},
 		{Verb: VerbSet, Arg: "level", Min: 0, Max: 100, Tier: TierReversible},
@@ -180,7 +222,13 @@ var catalogue = map[CapabilityID]Capability{
 		{Verb: VerbSet, Arg: "celsius", Min: 5, Max: 35, Tier: TierConsequential},
 		{Verb: VerbStatus, Tier: TierRead},
 	}},
-	CapJob: {ID: CapJob, Verbs: []VerbSpec{
+	// A job is active when it is doing the job. "docked" and "idle" are the
+	// states these drivers report at rest; anything else they report is taken
+	// as running rather than unknown, because a machine reporting a state the
+	// catalogue has not seen is still telling us it is doing something.
+	CapJob: {ID: CapJob, State: &StateSpec{
+		Metric: "state", ActiveText: []string{"cleaning", "running", "mowing", "returning"},
+	}, Verbs: []VerbSpec{
 		{Verb: VerbStart, Tier: TierConsequential, Inverse: VerbStop},
 		{Verb: VerbStop, Tier: TierReversible},
 		{Verb: VerbPause, Tier: TierReversible},
@@ -189,7 +237,9 @@ var catalogue = map[CapabilityID]Capability{
 		{Verb: VerbStatus, Tier: TierRead},
 	}},
 	// A mower's blades are the reason TierHazardousMotion exists.
-	CapBladeJob: {ID: CapBladeJob, Verbs: []VerbSpec{
+	CapBladeJob: {ID: CapBladeJob, State: &StateSpec{
+		Metric: "state", ActiveText: []string{"mowing", "running", "returning"},
+	}, Verbs: []VerbSpec{
 		{Verb: VerbStart, Tier: TierHazardousMotion, Inverse: VerbStop},
 		{Verb: VerbStop, Tier: TierReversible},
 		{Verb: VerbPause, Tier: TierReversible},

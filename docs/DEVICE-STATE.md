@@ -1,9 +1,16 @@
 # Machine-readable device state
 
-**Status: designed, not built.** Nothing in this document is code yet. It exists
-because the question it answers came up as a blocker on a shipped feature, and
-answering it in a commit message would have decided a wire-ish contract in a
-place nobody re-reads.
+**Status: the catalogue half is built; the driver mapping is not.** §3's
+declaration is code — `StateSpec` on `Capability`, declared for lighting and
+jobs, read by `devices.ActiveFrom` with UNKNOWN as a first-class answer. What is
+not built is §5's first open question: how a driver says "my configured metric
+IS that state". Until it does, a device whose driver emits an undeclared metric
+name resolves to unknown, which §3.3 requires to be excluded from any count and
+said — so the missing half fails in the safe direction rather than silently.
+
+This document exists because the question came up as a blocker on a shipped
+feature, and answering it in a commit message would have decided a contract
+every driver participates in, in a place nobody re-reads.
 
 The blocker: `docs/CHAT-COMMANDS.md` §4.2 wants "which lights are on" answered,
 and the hub cannot answer it honestly. That is not plumbing — the machinery to
@@ -64,14 +71,22 @@ its state means:
 ```go
 // StateSpec declares the reading that answers "what is this device doing".
 type StateSpec struct {
-    Metric  string   // the semantic name, e.g. "level" for light.dimmable
-    Numeric bool     // true: Value carries it. false: Text does.
-    // ActiveAbove makes "is it on" answerable for numeric states: a reading
-    // strictly above this is active. Absent for states where "active" is not
-    // a meaningful question (a thermostat setpoint is not on or off).
+    Metric string // the semantic name, e.g. "level" for light.dimmable
+    // ActiveAbove makes a NUMERIC state answerable: a reading strictly above
+    // it is active. nil means the state is carried in Reading.Text instead,
+    // and ActiveText lists the values that mean active.
     ActiveAbove *float64
-    ActiveText  []string // for text states: which values mean active
+    ActiveText  []string
 }
+
+// Absent entirely for capabilities where "active" is not a meaningful
+// question: a thermostat setpoint is not on or off.
+
+// The AS-BUILT shape dropped the separate `Numeric bool` the first draft
+// carried. Two fields that must disagree with each other are two chances for a
+// capability to declare a state nothing can resolve; ActiveAbove being nil
+// carries the same information and cannot contradict itself.
+// TestEveryDeclaredStateIsUsable holds that: exactly one of the two must be set.
 ```
 
 and a driver's configuration gains a way to say *this topic is that semantic
