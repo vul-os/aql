@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 /**
  * routeParity, run backwards.
@@ -66,19 +66,27 @@ const NO_CLIENT_NEEDED = new Map<string, string>([
 
 type Route = { method: string; path: string };
 
-/** Every route the gateway registers, via its own routegen tool. */
+/** Every route the gateway registers, via its own routegen tool.
+ *
+ * Memoised: this shells out to a full Go compile and three tests here want the
+ * same answer, which is enough to put each of them near vitest's 5s budget. A
+ * test that times out reports a timeout, not the defect it was written for. */
+let routesCache: Route[] | null = null;
+
 function gatewayRoutes(): Route[] {
+  if (routesCache) return routesCache;
   const raw = execFileSync('go', ['run', './cmd/routegen'], {
     cwd: path.join(repo, 'hub'),
     encoding: 'utf-8',
     maxBuffer: 8 * 1024 * 1024,
   });
   const parsed = JSON.parse(raw) as Array<{ method: string; path: string }>;
-  return parsed.map((r) => ({
+  routesCache = parsed.map((r) => ({
     method: r.method,
     // Collapse Go's named params to one placeholder, as routeParity does.
     path: r.path.replace(/\{[^/]+\}/g, '{param}'),
   }));
+  return routesCache;
 }
 
 /**
@@ -131,6 +139,16 @@ function normalize(p: string): string {
   }
   return out.replace(/\/+$/, '') || '/';
 }
+
+// Pay the `go run ./cmd/routegen` compile ONCE, in a hook.
+//
+// Memoising alone was not enough: the FIRST caller still bore the whole
+// compile, and that alone exceeded vitest's 5s per-test budget — the test
+// then reports "Test timed out" instead of whatever it was checking. A hook
+// has its own, separate budget, which is where setup this expensive belongs.
+beforeAll(() => {
+  gatewayRoutes();
+});
 
 describe('route coverage', () => {
   it('every route the hub serves has a client, or a stated reason not to', () => {

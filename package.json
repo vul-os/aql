@@ -23,7 +23,8 @@
     "check:claims": "node scripts/check-feature-claims.mjs",
     "tauri": "tauri",
     "app:dev": "tauri dev",
-    "app:build": "tauri build"
+    "app:build": "tauri build",
+    "check": "bash scripts/check.sh"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

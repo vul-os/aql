@@ -22,7 +22,7 @@
 //     doesn't implement yet, where the frontend is expected to degrade
 //     gracefully — see api.ts's per-function doc comments for why each one
 //     is there). Anything else unmatched is a real drift bug and fails loudly.
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import ts from 'typescript';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -143,13 +143,22 @@ function extractFrontendCalls(source: string): FrontendCall[] {
 
 // ── gateway extraction (shells out to the Go source of truth) ──────────────
 
+// Memoised: `go run ./cmd/routegen` is a full Go compile, and five tests in this
+// file need the same answer. Called per test it lands each of them on vitest's
+// 5s budget — measured at 3.2s, 4.8s and one outright timeout — which reports
+// "Test timed out" rather than naming any defect. Same shape already fixed twice
+// in this repo, in naming.test.ts and in docCounts' exception check.
+let gatewayRoutesCache: GatewayRoute[] | null = null;
+
 function loadGatewayRoutes(): GatewayRoute[] {
+  if (gatewayRoutesCache) return gatewayRoutesCache;
   const out = execFileSync('go', ['run', './cmd/routegen'], {
     cwd: hubDir,
     encoding: 'utf-8',
   });
   const routes = JSON.parse(out) as GatewayRoute[];
-  return routes.map((r) => ({ method: r.method, path: normalizePath(r.path) }));
+  gatewayRoutesCache = routes.map((r) => ({ method: r.method, path: normalizePath(r.path) }));
+  return gatewayRoutesCache;
 }
 
 function normalizeGoPath(p: string): string {
@@ -255,6 +264,16 @@ const NON_CONSOLE_ROUTES: Array<{ method: string; path: string; reason: string }
 // This list is a RATCHET, not a parking lot. An addition means a route shipped
 // that no user can reach, which is the bug this file exists to catch.
 const UNREACHABLE_TODAY: Array<{ method: string; path: string }> = [];
+
+// Pay the `go run ./cmd/routegen` compile ONCE, in a hook.
+//
+// Memoising alone was not enough: the FIRST caller still bore the whole
+// compile, and that alone exceeded vitest's 5s per-test budget — the test
+// then reports "Test timed out" instead of whatever it was checking. A hook
+// has its own, separate budget, which is where setup this expensive belongs.
+beforeAll(() => {
+  loadGatewayRoutes();
+});
 
 describe('frontend/gateway route parity', () => {
   it('every apiFetch() call in src/lib/api.ts targets a route the gateway serves (or is an acknowledged gap)', () => {

@@ -247,6 +247,22 @@ unset, the hub reads `LINTEL_DATA_DIR` instead and logs a `WARN` naming both, on
 startup (`lookupEnv`/`warnLegacyEnv` in `cmd/hub/env.go`). The old names are deprecated —
 no removal date has been decided — so an install still typing `LINTEL_*` keeps working.
 
+### Running the gates
+
+```bash
+npm run check      # every local gate, one command
+```
+
+Fourteen of them across four modules — gofmt, vet, build and tests for `hub/`,
+`controller/` (including the `gpio` and `ble` tagged builds) and `e2e/`, the wire
+vector verifier, plus tsc, vitest and the feature-claims check. Each prints a
+line whether it passes or fails, because a gate that silently does not run is the
+failure this exists to prevent.
+
+It is not everything CI runs. The race detector across all three modules, fuzz
+seeds, the cross-platform builds, Playwright and the container image are CI-only
+— they are too slow to sit in front of every commit.
+
 ### Subcommands
 
 ```
