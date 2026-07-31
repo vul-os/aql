@@ -814,7 +814,12 @@ and none has met physical hardware.
       told is a peer of doing something rather than a lesser option. The client's action
       type declared `verb` as required, so every alert rule the hub returned rendered as
       "undefined unnamed target" — the type is honest now, which makes the compiler catch
-      the next one, and a test holds the ORDER (notify before verb), which it cannot
+      the next one, and a test holds the ORDER (notify before verb), which it cannot.
+      **And the class is now guarded**: `automationShapes.test.ts` reads the `json:` tags off
+      the hub's rule model and requires each to be DECLARED as a key in the client type and,
+      for action forms, built by the editor. None of the existing reachability guards could
+      have caught this — an action form adds no route and no client method, so it was
+      unreachable in a way nothing measured
 - [ ] Camera-event alerting specifically — the trigger vocabulary covers device availability
       and sensor thresholds, not "motion seen" or "a clip was written", because the camera
       driver emits neither as an engine event yet
