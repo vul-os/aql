@@ -38,6 +38,12 @@ type fakeRTSP struct {
 	// consume-path test so the bytes leaving this server are something the
 	// depacketizer can actually read.
 	rtpNAL []byte
+	// rtpNALs, when set, gives packet i the NAL at rtpNALs[i]. rtpNAL sends the
+	// SAME unit in every packet, which cannot express a stream that carries its
+	// parameter sets in-band ahead of the slices — the case a camera that
+	// advertises no sprop-parameter-sets actually produces, and the one where
+	// recording writes nothing at all if the assembler misses them.
+	rtpNALs [][]byte
 	// rtpDropEvery makes the fake SKIP a sequence number every N packets
 	// without sending it — a stream that is flowing and lossy, which is what a
 	// camera on a weak link produces and what a packet counter alone reports
@@ -433,6 +439,7 @@ func TestSDPParsingIgnoresWhatItDoesNotKnow(t *testing.T) {
 func (f *fakeRTSP) serveMedia(c net.Conn, method, cseq string) {
 	f.mu.Lock()
 	n, pt, nal := f.rtpPackets, f.rtpPayload, f.rtpNAL
+	nals := f.rtpNALs
 	dropEvery, startSeq := f.rtpDropEvery, f.rtpStartSeq
 	setupStatus, playStatus := f.setupStatus, f.playStatus
 	switch method {
@@ -472,13 +479,17 @@ func (f *fakeRTSP) serveMedia(c net.Conn, method, cseq string) {
 			if dropEvery > 0 && i%dropEvery == 0 && i != 0 {
 				continue
 			}
+			unit := nal
+			if len(nals) > 0 && i < len(nals) {
+				unit = nals[i]
+			}
 			body := 20
-			if len(nal) > 0 {
-				body = len(nal)
+			if len(unit) > 0 {
+				body = len(unit)
 			}
 			payload := make([]byte, 12+body)
-			if len(nal) > 0 {
-				copy(payload[12:], nal)
+			if len(unit) > 0 {
+				copy(payload[12:], unit)
 			}
 			payload[0] = 0x80 // version 2
 			payload[1] = pt   // marker clear, payload type
@@ -800,5 +811,68 @@ func TestConsumeMediaSeparatesPacketsArrivingFromPicturesAssembling(t *testing.T
 	}
 	if len(units) != 0 {
 		t.Errorf("assembled %d access units from orphan fragments, want 0", len(units))
+	}
+}
+
+// In-band parameter sets must survive ConsumeMedia, because recording writes
+// nothing without them.
+//
+// recording.CaptureOnce takes asm.SPS() and asm.PPS() straight off the assembler
+// this returns, and when either is empty it SKIPS the window — logged as "no
+// parameter sets yet", explicitly not an error, because a stream legitimately
+// sends them periodically. That is the right call for a transient. It is also
+// exactly what a permanent failure would look like: a camera advertising no
+// sprop-parameter-sets, sending SPS and PPS in-band, records nothing, forever,
+// and says so in a line that reads benign.
+//
+// Nothing joined those two halves. ConsumeMedia is tested here against a real
+// server but only with slice NALs, and CaptureOnce is tested in internal/recording
+// against a FetchFunc fake — so the fake decided what the assembler returns, and
+// a fake agreeing with the code under test is what this repository keeps warning
+// about. This is the producer side of that contract, pinned where the wire is.
+func TestConsumeMediaCapturesInBandParameterSets(t *testing.T) {
+	// Minimal NAL units: the type is the low 5 bits of the first byte, which is
+	// what the assembler dispatches on. Bodies are filler — this test is about
+	// capture and routing, not about parsing an SPS, which sps_test.go covers
+	// against real encoder bytes.
+	sps := []byte{0x67, 0x42, 0x00, 0x1e, 0xAA, 0xBB}
+	pps := []byte{0x68, 0xCE, 0x3C, 0x80}
+	slice1 := []byte{0x61, 0x11, 0x11}
+	slice2 := []byte{0x61, 0x22, 0x22}
+
+	// newFakeRTSP registers its own t.Cleanup to close the listener.
+	srv := newFakeRTSP(t)
+	srv.mu.Lock()
+	srv.rtpPackets = 4
+	srv.rtpPayload = 96
+	srv.rtpNALs = [][]byte{sps, pps, slice1, slice2}
+	srv.mu.Unlock()
+
+	_, _, units, asm, err := ConsumeMedia(context.Background(), srv.url("/cam"),
+		Credential{}, 3*time.Second, 2*time.Second)
+	if err != nil {
+		t.Fatalf("ConsumeMedia: %v", err)
+	}
+
+	if got := asm.SPS(); !bytes.Equal(got, sps) {
+		t.Errorf(`assembler SPS = % x, want % x.
+
+recording.CaptureOnce reads exactly this. Empty means every capture window is
+skipped with "no parameter sets yet" — which is correct for a stream that sends
+them periodically, and indistinguishable from a camera that records nothing at
+all because its in-band sets never made it off the wire.`, got, sps)
+	}
+	if got := asm.PPS(); !bytes.Equal(got, pps) {
+		t.Errorf("assembler PPS = % x, want % x", got, pps)
+	}
+
+	// And the parameter sets must NOT be delivered as pictures. A clip whose
+	// samples included an SPS would carry a non-picture where a frame belongs.
+	for i, au := range units {
+		for _, n := range au.NALUnits {
+			if len(n) > 0 && (n[0]&0x1f == 7 || n[0]&0x1f == 8) {
+				t.Errorf("access unit %d carries a parameter set as a sample (% x)", i, n)
+			}
+		}
 	}
 }
