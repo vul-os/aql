@@ -260,3 +260,73 @@ func TestAHubThatMetersNothingSaysSo(t *testing.T) {
 		t.Errorf("an unmetered hub reported zeros: %q", got)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// "Which lights are on" — §4.2's last row
+// ---------------------------------------------------------------------------
+//
+// Three rules meet in this reply and all three are about admitting edges:
+// DEVICE-STATE.md §3.3 (count only what is known, say what is not), §4.4 rule 2
+// (cap and state the truncation), §4.3 (names and on/off, nothing more).
+
+func TestTheLightsAnswerCountsOnlyWhatItKnows(t *testing.T) {
+	got := LightsAnswer([]LightFact{
+		{Name: "Porch", Active: true, Known: true},
+		{Name: "Hall", Active: false, Known: true},
+		{Name: "Shed", Known: false},
+	}, 3, "")
+
+	// The count denominator is the KNOWN devices, not the fleet. "1 of 3" would
+	// be counting the shed as off.
+	if !strings.Contains(got, "1 of 2") {
+		t.Errorf("count is not over known devices: %q", got)
+	}
+	if !strings.Contains(got, "Porch") {
+		t.Errorf("the light that is on is not named: %q", got)
+	}
+	// And the unreported one is named, because an operator whose light never
+	// answers needs to know which.
+	if !strings.Contains(got, "Shed") || !strings.Contains(got, "don't report") {
+		t.Errorf("the unreported light is not disclosed: %q", got)
+	}
+}
+
+// A fleet nothing reports for is not a fleet that is off.
+func TestAFleetThatReportsNothingSaysSoRatherThanNone(t *testing.T) {
+	got := LightsAnswer([]LightFact{{Name: "A"}, {Name: "B"}}, 2, "")
+	if !strings.Contains(got, "None of these lights report") {
+		t.Errorf("a silent fleet was reported as all-off: %q", got)
+	}
+	// Distinct from a fleet that reported and is genuinely all off.
+	off := LightsAnswer([]LightFact{{Name: "A", Known: true}, {Name: "B", Known: true}}, 2, "")
+	if !strings.Contains(off, "None of the 2 lights I can read are on") {
+		t.Errorf("an all-off fleet: %q", off)
+	}
+	if off == got {
+		t.Error("a silent fleet and an all-off fleet render identically")
+	}
+}
+
+// §4.4 rule 2, and §4.3: the reply names lights and their state, and nothing
+// that would build a floor plan or an appliance fingerprint.
+func TestTheLightsAnswerStatesTruncationAndLeaksNothingElse(t *testing.T) {
+	facts := make([]LightFact, 0, 10)
+	for i := 0; i < 10; i++ {
+		facts = append(facts, LightFact{Name: "Light " + string(rune('A'+i)), Known: true})
+	}
+	got := LightsAnswer(facts, 34, testPortal)
+	if !strings.Contains(got, "Showing 10 of 34") {
+		t.Errorf("truncation not stated: %q", got)
+	}
+	for _, leak := range []string{"%", "zone", "Zone", "kWh", ":00", "level"} {
+		if strings.Contains(got, leak) {
+			t.Errorf("reply leaks %q: %q", leak, got)
+		}
+	}
+}
+
+func TestNoLightsAtAllIsSaidPlainly(t *testing.T) {
+	if got := LightsAnswer(nil, 0, ""); !strings.Contains(got, "don't have any lights") {
+		t.Errorf("an empty fleet: %q", got)
+	}
+}

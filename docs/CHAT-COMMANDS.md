@@ -871,7 +871,7 @@ command to the controller.
 | "is the gate closed" | needs a position sensor (`proto/events.md:42`) | **built as a refusal** — §4.1 |
 | "who opened the gate" | `access_logs` has it | **refused on purpose** — see below |
 | "how much solar today" | energy engine, via `SourceMix` | **built** |
-| "which lights are on" | device state store | not built, and gated on rule 6 |
+| "which lights are on" | engine readings + `devices.ActiveFrom` | **built**, behind rule 6 |
 
 **"Who opened the gate" is refused although the hub knows.** It is the one query
 in this table the data could answer and the product should not. A member of a
@@ -882,8 +882,24 @@ rather than quietly answered with the adjacent fact — "who closed the gate"
 contains "closed" and would otherwise have been answered with the last close
 time, which is an evasion dressed as an answer.
 
-"Which lights are on" is still not ANSWERED, and the reason is worth stating
-precisely because it is not plumbing. A device's state exists only as
+**"Which lights are on" is answered**, over `devices.ActiveFrom` and behind rule
+6's consent. Three rules meet in the reply and all three are about admitting
+edges: the count is over the lights whose state the hub KNOWS and names the ones
+it cannot speak for (DEVICE-STATE.md §3.3 — "2 of 10" when seven never reported
+is a partial answer that reads as complete); it is capped and says so (rule 2);
+and it carries names and on/off and nothing else — no zones, no levels, no times,
+because a brightness curve is an appliance fingerprint and a room-by-room list is
+a floor plan (§4.3).
+
+Consent must cover EVERY location the caller's account holds. Engine devices are
+owned per account and carry no location, so there is no way to report only the
+consenting household's lights; partial consent is therefore no consent, and the
+reply names the switch rather than a subset it cannot delimit.
+
+The paragraph below is kept because the reasoning still holds for any driver
+whose metric nobody has mapped — such a device is UNKNOWN, not off.
+
+Historically: this was not plumbing. A device's state exists only as
 `Device.Summary`: free text a driver wrote for a human — "62% · warm", "warm
 white", "on" — which `devices/model.go` documents as "presentational; never
 parsed". Counting lights would mean guessing at each driver's vocabulary and

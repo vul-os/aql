@@ -130,7 +130,7 @@ func (s *Server) answerProfileGateQuestion(ctx contextT, body, profileID, source
 	// Occupancy, which §4.4 rule 6 puts behind a per-location opt-in. Answered
 	// before the gate path for the same reason energy is, and refused rather
 	// than ignored so a member learns the switch exists.
-	if reply := s.answerOccupancyQuestion(ctx, body, profileID); reply != "" {
+	if reply := s.answerOccupancyQuestion(ctx, body, profileID, source); reply != "" {
 		return reply
 	}
 	verb, intent := channels.TextGateIntent(body)
@@ -285,22 +285,33 @@ func (s *Server) answerEnergyQuestion(ctx contextT, body, profileID, source stri
 // — a household consenting for the main house has not consented for the
 // cottage — so this answers only for the locations that opted in, and says how
 // many it left out rather than quietly narrowing.
-func (s *Server) answerOccupancyQuestion(ctx contextT, body, profileID string) string {
+func (s *Server) answerOccupancyQuestion(ctx contextT, body, profileID, source string) string {
 	if !channels.ClassifyOccupancyQuestion(body) {
 		return ""
 	}
-	gates, err := s.store.AvailableAccessPointsByProfile(ctx, profileID)
+	// The caller's LOCATIONS, from their account — not the locations of gates
+	// they can open.
+	//
+	// Deriving them from access points was wrong and an end-to-end test caught
+	// it: a household with lights and no gate has no access points, so it had
+	// no locations, so its consent could never apply and the switch did nothing
+	// however many times an admin pressed it. Occupancy consent is a property
+	// of a place, and a member reaches a place by belonging to its account.
+	accountID := s.soleAccountFor(ctx, profileID)
+	if accountID == "" {
+		return channels.OccupancyDisclosureOff(s.channelPublicURL())
+	}
+	locs, err := s.store.LocationsByAccountDetailed(ctx, accountID)
 	if err != nil {
 		s.log.Error("occupancy scope", "err", err)
 		return channels.OccupancyDisclosureOff(s.channelPublicURL())
 	}
-	ids := make([]string, 0, len(gates))
-	seen := map[string]bool{}
-	for _, g := range gates {
-		if !seen[g.LocID] {
-			seen[g.LocID] = true
-			ids = append(ids, g.LocID)
-		}
+	ids := make([]string, 0, len(locs))
+	for _, l := range locs {
+		ids = append(ids, l.ID)
+	}
+	if len(ids) == 0 {
+		return channels.OccupancyDisclosureOff(s.channelPublicURL())
 	}
 	allowed, err := s.store.OccupancyDisclosureLocations(ctx, ids)
 	if err != nil {
@@ -313,13 +324,79 @@ func (s *Server) answerOccupancyQuestion(ctx contextT, body, profileID string) s
 			consented++
 		}
 	}
-	if consented == 0 {
+	// EVERY location must have consented, and this one condition covers both
+	// "none did" and "only some did".
+	//
+	// There was a separate `consented == 0` check above it. It could never fire
+	// on its own — with at least one location, zero consented always satisfies
+	// this — and tampering proved it: removing it changed nothing any test could
+	// see, because this line caught the case regardless. Two conditions where
+	// one is unreachable is a guard that looks doubly held and is not, so the
+	// dead one is gone rather than given a test it cannot fail.
+	//
+	// Partial consent refuses because engine devices are owned per ACCOUNT and
+	// carry no location, while consent is per LOCATION: there is no way to
+	// report only the consenting household's lights, so reporting any of them
+	// would mix in a household that said no.
+	if consented < len(ids) {
 		return channels.OccupancyDisclosureOff(s.channelPublicURL())
 	}
 
-	// Consent exists, and there is still nothing to report: the engine's
-	// per-device state is not exposed to chat yet. Saying that plainly is the
-	// honest end of this path — the alternative is a member who enabled a
-	// setting and cannot tell whether it worked.
-	return channels.OccupancyEnabledButUnbuilt(consented, len(ids), s.channelPublicURL())
+	return s.answerLightsQuestion(ctx, profileID, source)
+}
+
+// answerLightsQuestion reports which lights are on, for a caller whose every
+// location has consented.
+//
+// Reads are BOUNDED to PickerCapacity devices. Registry.Read polls a driver, so
+// an unbounded fleet would put an arbitrary number of network round trips
+// behind one chat message; §4.4 rule 2 caps the answer anyway, and reading more
+// than is reported would be paying for disclosures nobody sees.
+func (s *Server) answerLightsQuestion(ctx contextT, profileID, source string) string {
+	reg := s.registry()
+	fleet := s.chatFleetFor(ctx, profileID)
+	if reg == nil || len(fleet) == 0 {
+		return channels.LightsAnswer(nil, 0, s.channelPublicURL())
+	}
+
+	var lights []devices.IndexedDevice
+	for _, d := range fleet {
+		// Kind, not capability: a member asking about "lights" means the
+		// lighting in their home, and a switch that happens to drive a pump
+		// declares the same capability. Kind is what the operator classified
+		// it as.
+		if d.Device.Kind == devices.KindLighting && devices.HasDeclaredState(d.Device.Capabilities) {
+			lights = append(lights, d)
+		}
+	}
+	// Resolved ONCE. Inside the loop below this was a database round trip per
+	// light, for a value that cannot change between them.
+	accountID := s.soleAccountFor(ctx, profileID)
+
+	total := len(lights)
+	if len(lights) > channels.PickerCapacity {
+		lights = lights[:channels.PickerCapacity]
+	}
+
+	facts := make([]channels.LightFact, 0, len(lights))
+	for _, d := range lights {
+		f := channels.LightFact{Name: d.Device.Name}
+		readings, err := reg.Read(ctx, d.Key)
+		if err == nil {
+			// A read that failed leaves Known false. A device the hub could
+			// not reach is not a device that is off, and the answer says so
+			// rather than counting it either way.
+			st := devices.ActiveFrom(d.Device.Capabilities, readings)
+			f.Known, f.Active = st.Known(), st == devices.StateActive
+		}
+		facts = append(facts, f)
+		// §4.4 rule 5: reads of a security system are security-relevant events.
+		// One row per device whose state was disclosed, carrying the rail it
+		// was disclosed on — the source must be the REAL channel, for the
+		// reason channels_open.go gives about a system that opens gates.
+		if err := s.store.LogGateRead(ctx, "", "", accountID, profileID, source); err != nil {
+			s.log.Error("log lights read", "err", err)
+		}
+	}
+	return channels.LightsAnswer(facts, total, s.channelPublicURL())
 }

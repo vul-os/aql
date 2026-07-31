@@ -484,8 +484,14 @@ and none has met physical hardware.
       neither exists, and a confirmation is not a substitute for either. Of §4.2's two
       once-unbuilt queries, **"how much solar today" is built** — one number per source for
       one day, which rule 3 permits where a curve would be the appliance fingerprint §4.3
-      warns about; a meter that was down makes the figure a floor and says so. **"Which
-      lights are on" is still not answered, and not for want of plumbing**: a device's state
+      warns about; a meter that was down makes the figure a floor and says so. **"Which lights are on" is
+      ANSWERED**, over `devices.ActiveFrom` and behind rule 6's consent — the count is over
+      the lights whose state the hub knows and names the ones it cannot speak for, capped
+      and stated, with names and on/off and nothing else. Consent must cover EVERY location
+      the account holds: engine devices are owned per account and carry no location, so
+      partial consent is no consent. The reasoning that blocked it is kept below because it
+      still holds for any unmapped driver — such a device is unknown, not off.
+      Historically: a device's state
       exists only as `Device.Summary`, free text a driver wrote for a human, which the model
       documents as "presentational; never parsed". Counting lights would mean guessing each
       driver's vocabulary and reporting the guess as a fact about someone's home; it needs a

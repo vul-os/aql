@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/vul-os/aql/hub/internal/devices"
@@ -133,4 +134,141 @@ func userIDFor(t *testing.T, st *store.Store, username string) string {
 		t.Fatal(err)
 	}
 	return u.ID
+}
+
+// "Which lights are on", end to end: consent, fleet, catalogue state, reply.
+//
+// The unit tests cover each rule in isolation. This is the one that shows they
+// are all reached from a real caller — the reachability lesson this package has
+// paid for twice.
+func TestWhichLightsAreOnRequiresConsentThenAnswers(t *testing.T) {
+	dir := t.TempDir()
+	st, err := store.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { st.Close() })
+	ks, err := keys.Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg := devices.NewRegistry()
+	if err := reg.Register(devices.NewMockDriver("mock")); err != nil {
+		t.Fatal(err)
+	}
+	if err := reg.Refresh(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	srv := New(Config{Version: "test", PublicURL: "https://gate.example",
+		JWTSecret: []byte("0123456789abcdef0123456789abcdef"), Devices: reg},
+		st, ks, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)))
+	h := srv.Router()
+	ctx := context.Background()
+
+	access, _ := register(t, h, "lights@x.test")
+	_, locID := tenantIDs(t, h, access)
+	u := userIDFor(t, st, "lights@x.test")
+
+	// Without consent, the question is refused and the switch is named.
+	before := srv.answerOccupancyQuestion(ctx, "which lights are on", u, "whatsapp")
+	if !strings.Contains(before, "has not turned on occupancy answers") {
+		t.Fatalf("answered without consent: %q", before)
+	}
+
+	if err := st.SetOccupancyDisclosure(ctx, locID, u, true); err != nil {
+		t.Fatal(err)
+	}
+	after := srv.answerOccupancyQuestion(ctx, "which lights are on", u, "whatsapp")
+	if strings.Contains(after, "has not turned on occupancy answers") {
+		t.Fatalf("still refused after consent: %q", after)
+	}
+	// The mock fleet's one light declares CapDimmable and reports a level, so
+	// the hub can speak for it — the whole chain from driver reading through
+	// the catalogue's declaration to the reply.
+	if !strings.Contains(after, "Garden Lights") {
+		t.Errorf("the answer does not name the light: %q", after)
+	}
+
+	// §4.4 rule 5: the disclosure is audited, on the rail it happened on.
+	logs, err := st.AccessLogsByAccount(ctx, accountOf(t, st, u), 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reads := 0
+	for _, l := range logs {
+		if l.Command == "read" && l.Source == "whatsapp" {
+			reads++
+		}
+	}
+	if reads == 0 {
+		t.Error("a lights disclosure was not audited")
+	}
+}
+
+func accountOf(t *testing.T, st *store.Store, userID string) string {
+	t.Helper()
+	accounts, err := st.AccountsForUser(context.Background(), userID)
+	if err != nil || len(accounts) == 0 {
+		t.Fatalf("no account for %s: %v", userID, err)
+	}
+	return accounts[0].ID
+}
+
+// Partial consent is no consent, and it needs TWO locations to be visible.
+//
+// Found by tampering: the "nothing consented" gate and the "not everything
+// consented" gate both fire for a one-location household, so removing either
+// alone left the other holding and both tampers passed. Two guards masking each
+// other is the same shape as the camera scoping earlier in this package, and
+// the fix is the same — a fixture where only one of them can be responsible.
+//
+// Why partial consent refuses at all: engine devices are owned per ACCOUNT and
+// carry no location, while consent is per LOCATION. There is no way to report
+// only the consenting household's lights, so reporting any of them would mix in
+// a household that said no.
+func TestPartialConsentAnswersNothing(t *testing.T) {
+	dir := t.TempDir()
+	st, err := store.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { st.Close() })
+	ks, _ := keys.Load(dir)
+	reg := devices.NewRegistry()
+	if err := reg.Register(devices.NewMockDriver("mock")); err != nil {
+		t.Fatal(err)
+	}
+	if err := reg.Refresh(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	srv := New(Config{Version: "test", JWTSecret: []byte("0123456789abcdef0123456789abcdef"), Devices: reg},
+		st, ks, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)))
+	h := srv.Router()
+	ctx := context.Background()
+
+	access, _ := register(t, h, "partial@x.test")
+	acct, locA := tenantIDs(t, h, access)
+	u := userIDFor(t, st, "partial@x.test")
+	locB, err := st.CreateLocationFull(ctx, acct, store.CreateLocationArgs{Name: "Cottage", Type: "house"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// One of two consents. The "nothing consented" gate cannot be what refuses.
+	if err := st.SetOccupancyDisclosure(ctx, locA, u, true); err != nil {
+		t.Fatal(err)
+	}
+	got := srv.answerOccupancyQuestion(ctx, "which lights are on", u, "whatsapp")
+	if !strings.Contains(got, "has not turned on occupancy answers") {
+		t.Fatalf("partial consent answered: %q", got)
+	}
+
+	// Both consented: now it answers.
+	if err := st.SetOccupancyDisclosure(ctx, locB, u, true); err != nil {
+		t.Fatal(err)
+	}
+	full := srv.answerOccupancyQuestion(ctx, "which lights are on", u, "whatsapp")
+	if strings.Contains(full, "has not turned on occupancy answers") {
+		t.Fatalf("full consent still refused: %q", full)
+	}
 }

@@ -165,6 +165,68 @@ func OccupancyDisclosureOff(publicURL string) string {
 		"location in the console" + portalSuffix(publicURL)
 }
 
+// LightFact is one light the hub can speak for, or admit it cannot.
+type LightFact struct {
+	Name string
+	// Active is meaningful only when Known is true. A caller that treats
+	// !Active as "off" folds every unreported device into off, which is the
+	// failure docs/DEVICE-STATE.md §3.3 exists to prevent.
+	Active bool
+	Known  bool
+}
+
+// LightsAnswer reports which lights are on.
+//
+// docs/CHAT-COMMANDS.md §4.2, behind §4.4 rule 6's consent, over
+// DEVICE-STATE.md's declared states. Three rules meet here and all three are
+// about admitting edges:
+//
+//   - §3.3: the count is over devices whose state the hub KNOWS, and it says
+//     how many it could not speak for. "2 of 10 are on" when seven never
+//     reported is a partial answer that reads as complete.
+//   - §4.4 rule 2: capped, and the truncation is stated.
+//   - §4.3: names and on/off, nothing else. No zones, no levels, no times — a
+//     brightness curve is an appliance fingerprint and a room-by-room list is
+//     a floor plan.
+func LightsAnswer(facts []LightFact, total int, publicURL string) string {
+	if len(facts) == 0 {
+		return "You don't have any lights I can see, so there's nothing to report."
+	}
+	var on, unknown []string
+	for _, f := range facts {
+		switch {
+		case !f.Known:
+			unknown = append(unknown, f.Name)
+		case f.Active:
+			on = append(on, f.Name)
+		}
+	}
+	known := len(facts) - len(unknown)
+
+	var b strings.Builder
+	switch {
+	case known == 0:
+		b.WriteString("None of these lights report whether they are on.")
+	case len(on) == 0:
+		fmt.Fprintf(&b, "None of the %d lights I can read are on.", known)
+	default:
+		fmt.Fprintf(&b, "%d of %d: %s.", len(on), known, strings.Join(on, ", "))
+	}
+	if len(unknown) > 0 {
+		// Named rather than counted. An operator whose light never answers
+		// needs to know WHICH one, and the name is what they configured.
+		fmt.Fprintf(&b, "\n\n%d don't report their state: %s.",
+			len(unknown), strings.Join(unknown, ", "))
+	}
+	if total > len(facts) {
+		fmt.Fprintf(&b, "\n\nShowing %d of %d lights.", len(facts), total)
+	}
+	if publicURL != "" {
+		b.WriteString(" All of them are in the console" + portalSuffix(publicURL))
+	}
+	return b.String()
+}
+
 // OccupancyEnabledButUnbuilt is the reply when a household HAS consented and
 // the hub still cannot answer.
 //
