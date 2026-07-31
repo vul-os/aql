@@ -3,8 +3,12 @@ package devices
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 // The catalogue's own invariant: "stopping is never riskier than starting".
@@ -342,5 +346,155 @@ func TestASecondDriverNeedsNoInterfaceChange(t *testing.T) {
 	// A sensor offers only read; actuating it must be refused.
 	if err := r.Execute(context.Background(), "minimal:d1", VerbOn, nil); err == nil {
 		t.Fatal("a read-only device must refuse an actuation verb")
+	}
+}
+
+// slowDriver discovers deliberately slowly, so a Refresh is genuinely in flight
+// while other registry calls run. A driver whose Discover returns instantly
+// would let the swap finish before any reader arrives, and the test would prove
+// nothing about concurrency.
+type slowDriver struct {
+	id      string
+	mu      sync.Mutex
+	round   int
+	execs   int64
+	discovs int64
+}
+
+func (d *slowDriver) ID() string { return d.id }
+
+func (d *slowDriver) Discover(ctx context.Context) ([]Device, error) {
+	atomic.AddInt64(&d.discovs, 1)
+	d.mu.Lock()
+	d.round++
+	round := d.round
+	d.mu.Unlock()
+	time.Sleep(2 * time.Millisecond)
+	// The fleet changes shape between rounds, so a reader can catch a swap.
+	n := 2 + round%3
+	out := make([]Device, 0, n)
+	for i := 0; i < n; i++ {
+		out = append(out, Device{
+			ID: fmt.Sprintf("lamp-%d", i), Kind: KindLighting, Name: "Lamp",
+			Capabilities: []CapabilityID{CapSwitch}, Availability: AvailOnline,
+		})
+	}
+	return out, nil
+}
+
+func (d *slowDriver) Execute(ctx context.Context, deviceID string, v Verb, args map[string]float64) error {
+	atomic.AddInt64(&d.execs, 1)
+	return nil
+}
+
+func (d *slowDriver) Read(ctx context.Context, deviceID string) ([]Reading, error) { return nil, nil }
+func (d *slowDriver) Health(context.Context) Health                                { return Health{OK: true} }
+
+// The registry under concurrent use, which its own contract requires.
+//
+// driver.go states it plainly: "Its methods are called concurrently. The
+// registry does not serialise them." That is a claim about an index being
+// rebuilt by Refresh while HTTP handlers read and actuate through it, and
+// nothing had ever put two goroutines on it — so `go test -race` here was
+// reporting on single-threaded runs.
+//
+// The hazard is the swap. Refresh deletes a driver's entries and re-adds them,
+// and if a reader could observe the gap it would see a device vanish and come
+// back — a console showing an empty fleet for a moment, or worse, an Execute
+// refused as unknown for a device that never went away.
+func TestRegistryIsSafeForConcurrentUse(t *testing.T) {
+	reg := NewRegistry()
+	d := &slowDriver{id: "slow"}
+	if err := reg.Register(d); err != nil {
+		t.Fatal(err)
+	}
+	if err := reg.Refresh(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	var wg sync.WaitGroup
+	stop := make(chan struct{})
+	var vanished int64
+
+	// Refreshers, swapping the index continuously.
+	//
+	// A SEPARATE WaitGroup, deliberately. These exit only when `stop` closes,
+	// and `stop` closes only after the readers are done — so putting them in the
+	// same group deadlocks the test against itself. I made exactly that mistake
+	// in internal/recording's broadcaster test and then made it again here; the
+	// failure reads "the registry deadlocked", which is a claim about the
+	// registry that happens to be false.
+	var refreshers sync.WaitGroup
+	for i := 0; i < 3; i++ {
+		refreshers.Add(1)
+		go func() {
+			defer refreshers.Done()
+			for {
+				select {
+				case <-stop:
+					return
+				default:
+					_ = reg.Refresh(ctx)
+				}
+			}
+		}()
+	}
+
+	// Readers and actuators, hammering the index while it is being rebuilt.
+	for i := 0; i < 12; i++ {
+		i := i
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			// Wall-clock bounded, not iteration bounded. A fixed count of
+			// reads finishes in microseconds and can miss the swap entirely —
+			// the first version of this test did, and passed against a
+			// deliberately broken Refresh. The window has to be sampled for
+			// long enough to be hit.
+			deadline := time.Now().Add(750 * time.Millisecond)
+			for time.Now().Before(deadline) {
+				select {
+				case <-stop:
+					return
+				default:
+				}
+				switch i % 4 {
+				case 0:
+					// lamp-0 and lamp-1 exist in EVERY round, so a miss is the
+					// swap being observable, not the fleet legitimately changing.
+					if _, ok := reg.Get("slow:lamp-0"); !ok {
+						atomic.AddInt64(&vanished, 1)
+					}
+				case 1:
+					_ = reg.Devices()
+				case 2:
+					_ = reg.Execute(ctx, "slow:lamp-1", VerbOn, nil)
+				case 3:
+					_ = reg.DriverHealth(ctx)
+				}
+			}
+		}()
+	}
+
+	done := make(chan struct{})
+	go func() { wg.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(30 * time.Second):
+		close(stop)
+		refreshers.Wait()
+		t.Fatal("the registry deadlocked under concurrent refresh and read")
+	}
+	close(stop)
+	refreshers.Wait()
+
+	if n := atomic.LoadInt64(&vanished); n > 0 {
+		t.Errorf(`slow:lamp-0 was missing from the index %d times while Refresh ran.
+
+It is present in every discovery round, so it never actually left. Refresh
+deletes a driver's entries and re-adds them; if that is observable, a device
+disappears from the console mid-refresh and an Execute against it is refused as
+unknown for a device that is right there.`, n)
 	}
 }

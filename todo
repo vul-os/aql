@@ -158,11 +158,13 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       only runs after the WebSocket session returns. The point is that the store's
       correctness rested on a property of a DIFFERENT package that nothing stated and
       nothing enforced, and it would be lost the day command handling is parallelised.
-- [ ] STILL UNCOVERED, measured: 13 more packages have concurrent production code
+- [x] hub/internal/devices — the registry, whose Driver contract says methods are called
+      concurrently and are NOT serialised. Refresh swaps the index while handlers read
+      and actuate through it. Came through clean; the test catches a released write lock
+      between the delete and the re-add (654k observed disappearances under that tamper).
+- [ ] STILL UNCOVERED, measured: 12 more packages have concurrent production code
       (goroutines or a mutex) and zero `go func` in their tests. The highest-consequence
-      remaining are controller/internal/transport,
-      and hub/internal/devices (the registry, whose Driver contract explicitly says
-      methods are called concurrently and not serialised).
+      remaining are controller/internal/transport and controller/internal/agent.
       Each needs a test shaped around ITS hazard, not a generic hammer — a shallow sweep
       Checked and found NOT to need one: controller/internal/state returns a copy from
       every reader under its lock (Pairing, Config and AccessPoints all copy), so there is

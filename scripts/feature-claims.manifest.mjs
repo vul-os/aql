@@ -660,7 +660,11 @@ export const FEATURES = [
     docRefs: ['controller/internal/noncestore/noncestore.go — "cannot be durably recorded is treated as unusable"'],
     evidence: [
       { file: 'controller/internal/command/command_vectors_test.go', pattern: 'TestACommandWhoseNonceCannotBePersistedNeverActuates' },
-      { file: 'controller/internal/command/command.go', pattern: 'ctx\\.Nonces\\.Mark\\(' },
+      { file: 'controller/internal/command/command.go', pattern: 'ctx\\.Nonces\\.MarkIfUnseen\\(' },
+      // The atomic form specifically. Mark() alone still exists and is still
+      // correct, but verification must use the check-and-record: across two lock
+      // acquisitions two verifications of one envelope both pass and both actuate.
+      { file: 'controller/internal/noncestore/noncestore.go', pattern: 'func \\(s \\*Store\\) MarkIfUnseen' },
     ],
   },
   {
