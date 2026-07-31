@@ -113,14 +113,21 @@ export const FEATURES = [
   {
     id: 'controller-config-report-console',
     label: 'The console shows what a controller reported, marking firmware defaults as defaults instead of the honest placeholder',
-    docStatus: 'planned',
+    docStatus: 'shipped',
     docRefs: [
       'docs/CONTROLLER-CONFIG-REPORT.md § 6 step 4',
       'ROADMAP.md — "A controller never reports its configuration back"',
     ],
     // src/ is UI copy and never evidence elsewhere in this file; here the claim
-    // IS about the UI, so the evidence is the api client gaining the call.
-    evidence: [[{ file: 'src/lib/api.ts', pattern: 'config-report' }]],
+    // IS about the UI. The client CALL alone would not be enough — a route that
+    // is fetched and not rendered is the same screen it was — so the component
+    // has to distinguish a firmware default too, which is the half of the claim
+    // that says "marking firmware defaults as defaults".
+    evidence: [
+      [{ file: 'src/lib/api.ts', pattern: 'config-report' }],
+      [{ file: 'src/components/device/ControllerConfig.tsx', pattern: 'deviceConfigReport' }],
+      [{ file: 'src/components/device/ControllerConfig.tsx', pattern: "source === 'default'" }],
+    ],
   },
   // ── planned / not implemented — the nine (ten, by plain count) 2026-07-20
   // overclaims, now correctly marked in the docs. This check's job is to

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { ApiError, api } from '@/lib/api';
+import { ApiError, api, type ConfigReportResponse, type ReportedConfigEntry } from '@/lib/api';
 import { describeDelivery } from '@/components/access/delivery';
 
 /**
@@ -49,16 +49,42 @@ const FIELDS: Field[] = [
     unit: 's',
     help: 'The longest a hold may last before the controller releases it anyway. This is a safety limit, not a preference — it is what stops a barrier being left up overnight.',
   },
-  {
-    key: 'sensor_debounce_ms',
-    label: 'Sensor debounce',
-    unit: 'ms',
-    help: 'How long a position or tamper input must settle before it is believed.',
-  },
 ];
+
+// `sensor_debounce_ms` was here, and was removed rather than captioned.
+//
+// The controller accepts it, stores it, and never reads it — the debounce that
+// applies is part of the relay wiring (`-relay …,sensor-debounce=20ms`), set
+// where the controller runs. So the form took a number, the hub signed a
+// command, the controller acked it, and the gate behaved exactly as before. A
+// warning beside a working input would not have helped: the affordance itself
+// is the claim. The hub no longer accepts the key either, and says where the
+// setting really lives if something sends it anyway.
 
 export function ControllerConfig({ deviceId }: { deviceId: string }) {
   const [values, setValues] = useState<Record<string, string>>({});
+  const [report, setReport] = useState<ConfigReportResponse | null>(null);
+  // Distinct from `report === null`: a hub too old to serve this route is not
+  // the same as a controller that has not reported, and neither is an error
+  // worth alarming about on a screen whose job is sending changes.
+  const [reportUnavailable, setReportUnavailable] = useState(false);
+
+  const loadReport = useCallback(
+    (live: () => boolean) =>
+      api
+        .deviceConfigReport(deviceId)
+        .then((r) => live() && setReport(r))
+        .catch(() => live() && setReportUnavailable(true)),
+    [deviceId],
+  );
+
+  useEffect(() => {
+    let alive = true;
+    void loadReport(() => alive);
+    return () => {
+      alive = false;
+    };
+  }, [loadReport]);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ kind: 'ok' | 'queued' | 'error'; message: string } | null>(
     null,
@@ -94,7 +120,15 @@ export function ControllerConfig({ deviceId }: { deviceId: string }) {
       // Only cleared on a confirmed apply. Wiping the fields after a queued or
       // unconfirmed send would leave an operator with no record of what they
       // asked for and no way to retype it.
-      if (outcome.confirmed) setValues({});
+      if (outcome.confirmed) {
+        setValues({});
+        // The controller sends a fresh ctl.report when its RESOLVED config
+        // changes, so re-reading is how "did my change land" gets answered by
+        // the device rather than by this form assuming its own success. A
+        // report that has not arrived yet leaves the old values on screen,
+        // which is true — they are what was last reported.
+        void loadReport(() => true);
+      }
     } catch (err) {
       // The hub's refusals carry the bound and the reason. Showing our own
       // wording instead would drop the one number the operator needs.
@@ -123,16 +157,22 @@ export function ControllerConfig({ deviceId }: { deviceId: string }) {
         Changes are signed by this hub and applied by the controller. Leave a field blank to
         leave it as it is — the controller merges rather than replaces.
       </p>
-      {/* Said plainly rather than implied by empty inputs. A controller never
-          reports its configuration back: the ack carries a result and a detail
-          and nothing else, so the hub genuinely does not know what these are
-          set to. Blank boxes on their own would read as "unset" or "zero" to a
-          reasonable person, which is a different and wrong thing. */}
-      <p className="mt-2 text-xs text-ink/55">
-        This console cannot show the current values. A controller does not report its
-        configuration back to the hub, so these boxes start empty whatever the device is
-        set to — they are changes to send, not a reflection of what it holds now.
-      </p>
+      {/* The boxes are still changes-to-send and start empty. What is in
+          effect is stated per field below, from the controller's own signed
+          `ctl.report` — never inferred, because a hub that fills in the
+          firmware defaults is showing numbers nobody confirmed. */}
+      {!reportUnavailable && report && !report.reported && (
+        <p className="mt-2 text-xs text-ink/55">
+          This controller has not reported its configuration. That is expected of firmware
+          predating the report message — it does not mean the values below are unset. It is
+          running something; this hub has not been told what.
+        </p>
+      )}
+      {reportUnavailable && (
+        <p className="mt-2 text-xs text-ink/55">
+          Could not read what this controller is running. The boxes below still send changes.
+        </p>
+      )}
       <div className="mt-4 space-y-4">
         {FIELDS.map((f) => (
           <label key={f.key} className="block">
@@ -148,6 +188,7 @@ export function ControllerConfig({ deviceId }: { deviceId: string }) {
               className="mt-1.5 w-full h-11 rounded-xl bg-paper-cool border border-ink/15 px-4 text-[15px] focus:outline-none focus:ring-2 focus:ring-ink"
             />
             <p className="text-[11px] text-ink/50 mt-1">{f.help}</p>
+            <InEffect entry={report?.reported ? report.config?.[f.key] : undefined} field={f} />
           </label>
         ))}
       </div>
@@ -160,11 +201,71 @@ export function ControllerConfig({ deviceId }: { deviceId: string }) {
           {result.message}
         </p>
       )}
+      <UnknownReported report={report} />
+      <p className="mt-4 text-[11px] text-ink/45">
+        Sensor debounce is not set from here. It belongs to the relay wiring and is configured
+        where the controller runs.
+      </p>
       <div className="mt-4">
         <Button variant="ink" disabled={busy || changed.length === 0} onClick={() => void submit()}>
           {busy ? 'Sending…' : 'Send to controller'}
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * What one field is actually set to on the device.
+ *
+ * Three distinct states, kept distinct because collapsing any two of them is the
+ * failure this whole message exists to stop:
+ *
+ *   - reported, from a config command  → "now 900 ms"
+ *   - reported, from the firmware      → "now 700 ms (firmware default)"
+ *   - no report at all                 → say nothing here; the panel says why
+ *
+ * The second is the one worth the words. 700 and "700, because nobody set it"
+ * answer different questions, and an operator debugging a gate needs the second.
+ */
+function InEffect({ entry, field }: { entry?: ReportedConfigEntry; field: Field }) {
+  if (!entry) return null;
+  return (
+    <p className="text-[11px] text-ink/65 mt-1">
+      Now {entry.value} {field.unit}
+      {entry.source === 'default' && (
+        <span className="text-ink/45"> (firmware default — never configured)</span>
+      )}
+    </p>
+  );
+}
+
+/**
+ * Keys the controller reports that this console has no field for.
+ *
+ * The hub stores the report verbatim precisely so a controller that learns a
+ * tunable is not silenced by an older console. Dropping them here would undo
+ * that at the last step, and the operator would have no way to see a setting
+ * that is genuinely in effect on their gate.
+ */
+function UnknownReported({ report }: { report: ConfigReportResponse | null }) {
+  const known = new Set(FIELDS.map((f) => f.key));
+  const extra = Object.entries(report?.config ?? {}).filter(([k]) => !known.has(k));
+  if (!report?.reported || extra.length === 0) return null;
+  return (
+    <div className="mt-4 pt-3 border-t border-ink/10">
+      <p className="text-[11px] text-ink/55">
+        This controller also reports settings this console does not know how to edit
+        {report.firmware ? ` (firmware ${report.firmware})` : ''}:
+      </p>
+      <ul className="mt-1 space-y-0.5">
+        {extra.map(([k, v]) => (
+          <li key={k} className="text-[11px] text-ink/65">
+            {k}: {v.value}
+            {v.source === 'default' && <span className="text-ink/45"> (firmware default)</span>}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

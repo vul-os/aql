@@ -315,7 +315,7 @@ console.log('wrote keys.json');
   });
   vectors.push({
     name: 'cmd-config-valid',
-    desc: 'config params ride in payload, covered by sig.',
+    desc: 'config params ride in payload, covered by sig. The third key is deliberately one the controller stores and never reads: at the wire level payload is an open map and an implementation must accept keys it does not resolve. The reference hub refuses to SEND that key, which is a hub policy and not a wire rule.',
     expect: 'accept',
     check: baseCheck,
     ...signedVec('gateway', env({ cmd: 'config', payload: { pulse_ms: 700, hold_max: 1800, sensor_debounce_ms: 50 } })),

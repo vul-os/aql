@@ -12,6 +12,7 @@ package httpapi
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -199,4 +200,54 @@ func contains(hay, needle string) bool {
 		}
 		return false
 	})()
+}
+
+// A key nothing reads is refused, and the refusal says where the setting really
+// lives.
+//
+// sensor_debounce_ms was in the accepted set. The controller stores it and no
+// code path resolves it — the debounce that applies comes from the relay wiring
+// — so sending it produced an ack, which reads as "applied" for a change that
+// never occurred. The generic unknown-key refusal would be wrong here in a way
+// that matters: the key is not a typo and not unknown, and an operator told
+// "this hub does not know that key" would go looking for a spelling mistake
+// instead of at the controller's -relay flag.
+func TestConfigRefusesAKeyTheControllerNeverReads(t *testing.T) {
+	h := newTestServer(t, "")
+	access, _ := register(t, h, "admin@cfgdead.com")
+	_, locID := tenantIDs(t, h, access)
+	dev := configDevice(t, h, access, locID)
+
+	rec, out := doJSON(t, h, "PATCH", "/v1/devices/"+dev+"/config", access,
+		map[string]any{"config": map[string]any{"sensor_debounce_ms": 50}})
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("sensor_debounce_ms was sent to a controller that ignores it: %d %v", rec.Code, out)
+	}
+	if out["error"] != "config_key_not_configurable" {
+		t.Errorf("error = %v, want config_key_not_configurable — it is not an unknown key", out["error"])
+	}
+	msg, _ := out["message"].(string)
+	if !strings.Contains(msg, "-relay") {
+		t.Errorf("refusal does not point at where the debounce is actually set: %q", msg)
+	}
+
+	// It must not be listed as accepted anywhere, or the console will offer it
+	// again from the hub's own answer.
+	accepted, _ := out["accepted"].([]any)
+	if len(accepted) == 0 {
+		t.Fatalf("refusal lists no accepted keys: %v", out)
+	}
+	for _, k := range accepted {
+		if k == "sensor_debounce_ms" {
+			t.Errorf("refused key is still advertised as accepted: %v", accepted)
+		}
+	}
+
+	// A mixed request is refused whole. Sending the half that works would leave
+	// the operator with a partial apply reported as an error.
+	rec, _ = doJSON(t, h, "PATCH", "/v1/devices/"+dev+"/config", access,
+		map[string]any{"config": map[string]any{"pulse_ms": 900, "sensor_debounce_ms": 50}})
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("a request mixing a good key with a dead one was partly applied: %d", rec.Code)
+	}
 }

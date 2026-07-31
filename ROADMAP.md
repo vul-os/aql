@@ -212,8 +212,14 @@ hub's issuance endpoint):
       "700 ms (default)" are distinguishable; the hub stores it (migration 0026) and serves
       `GET /v1/devices/{id}/config-report`. A controller that has never reported answers
       `reported:false` rather than the defaults, because inferring them would show numbers
-      nobody confirmed. STILL OPEN: the console renders the placeholder, not the values.
-      The original note follows, for the record.
+      nobody confirmed. The console shows those values per field and labels a firmware
+      default as one, so "did my change land" is answered by the device rather than by the
+      form assuming its own success; a key the console has no field for is listed rather
+      than dropped, so a controller that learns a tunable is not silenced by an older
+      console. `sensor_debounce_ms` was removed from the console AND from the hub's
+      accepted set in the same pass: the controller stores it and reads it nowhere, so the
+      form took a number, the hub signed a command and the controller acked it while the
+      gate behaved exactly as before. The original note follows, for the record.
 - [ ] ~~**A controller never reports its configuration back.**~~ `cmd.ack` carries a result
       and a detail and nothing else, so the hub cannot show an operator what `pulse_ms`,
       `hold_max` are currently set to — only send new ones. (`sensor_debounce_ms` is not

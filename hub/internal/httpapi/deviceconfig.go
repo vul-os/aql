@@ -73,8 +73,27 @@ var configBounds = map[string]configBound{
 	// and a barrier left up overnight.
 	"hold_max": {min: 30, max: 4 * 3600,
 		why: "the longest a hold may last before the controller releases it anyway, in seconds"},
-	"sensor_debounce_ms": {min: 0, max: 5000,
-		why: "how long a position/tamper input must settle before it is believed, in milliseconds"},
+}
+
+// refusedConfigKeys are keys the hub deliberately will NOT send, with the
+// reason, because a generic "unknown key" is wrong for a key that is perfectly
+// well known and simply does nothing.
+//
+// sensor_debounce_ms was in configBounds and should not have been. It is
+// accepted by the controller, stored by the controller, and read by nothing:
+// the debounce that actually applies is part of the relay wiring
+// (`-relay …,sensor-debounce=20ms`), set where the controller runs. Sending it
+// produced an ack, which an operator reasonably reads as "applied", for a
+// change that never happened.
+//
+// That is precisely the failure configBounds exists to prevent — a key that
+// "would sit looking like configuration and doing nothing" — so the set was
+// contradicting its own stated purpose by carrying it. If a controller ever
+// resolves it, it moves back and the bound comes with it.
+var refusedConfigKeys = map[string]string{
+	"sensor_debounce_ms": "A controller stores this and never reads it. The debounce that " +
+		"applies is part of the relay wiring, set with -relay …,sensor-debounce= where the " +
+		"controller runs, so a value sent from here would be acknowledged and change nothing.",
 }
 
 type deviceConfigReq struct {
@@ -120,6 +139,14 @@ func (s *Server) handleDeviceConfig(w http.ResponseWriter, r *http.Request) {
 	for k, v := range req.Config {
 		b, ok := configBounds[k]
 		if !ok {
+			if why, refused := refusedConfigKeys[k]; refused {
+				writeErrDetail(w, http.StatusBadRequest, "config_key_not_configurable", map[string]any{
+					"key":      k,
+					"message":  why,
+					"accepted": acceptedConfigKeys(),
+				})
+				return
+			}
 			writeErrDetail(w, http.StatusBadRequest, "unknown_config_key", map[string]any{
 				"key": k,
 				"message": "This hub will not send that key. A controller stores whatever it is " +

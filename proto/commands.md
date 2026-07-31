@@ -136,11 +136,16 @@ controller predating this message sends none.
 The report carries only keys the controller actually reads when it actuates.
 That is narrower than what the `config` command ACCEPTS, and deliberately so.
 
-`config`'s payload is an open map, so the hub can send anything and the
-controller stores it. Today it resolves `pulse_ms` and `hold_max` and nothing
-else — `sensor_debounce_ms` is accepted, stored, and never read, because the
-debounce that actually applies is a property of the relay wiring
-(`-relay …,sensor-debounce=20ms`) rather than of configuration.
+`config`'s payload is an open map at the WIRE level: a controller stores
+whatever it is sent, so an implementation must assume unknown keys arrive. The
+reference hub deliberately does not exploit that — it sends only from a closed
+set, because a key nothing reads persists forever looking like configuration.
+
+Today the controller resolves `pulse_ms` and `hold_max` and nothing else.
+`sensor_debounce_ms` is the worked example: the controller accepts and stores
+it, nothing reads it — the debounce that actually applies is a property of the
+relay wiring (`-relay …,sensor-debounce=20ms`) — and so the hub refuses to send
+it rather than signing a command that would be acked and change nothing.
 
 Reporting a stored-but-unread key would be the exact failure this message exists
 to prevent: an operator seeing `sensor_debounce_ms: {source: "config"}` would

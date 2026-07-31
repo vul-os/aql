@@ -877,6 +877,19 @@ export const api = {
    * decorative. Admin-only; a device the caller cannot see 404s rather than
    * 403s, so a guessed device id confirms nothing.
    */
+  /**
+   * What a controller last reported it is actually RUNNING
+   * (proto/commands.md "Configuration report").
+   *
+   * Distinct from anything the hub SENT. `reported:false` means the controller
+   * has never told us — which is every controller predating `ctl.report`, and is
+   * NOT the same as running nothing. Callers must render that as unknown rather
+   * than filling in the firmware defaults, which would be numbers nobody
+   * confirmed.
+   */
+  deviceConfigReport: (deviceId: string) =>
+    apiFetch<ConfigReportResponse>(`/devices/${encodeURIComponent(deviceId)}/config-report`),
+
   deviceEvents: (deviceId: string, limit?: number) =>
     apiFetch<{ events: ControllerEventRow[] }>(
       `/devices/${encodeURIComponent(deviceId)}/events` +
@@ -2224,6 +2237,24 @@ export type GeofenceRule = {
  * imply more.
  */
 /** One controller-signed event as stored by the hub (migration 0019). */
+/** One resolved setting: what the controller will use, and where it came from. */
+export type ReportedConfigEntry = {
+  value: number;
+  /** `config` — a config command set it. `default` — the firmware supplied it. */
+  source: 'config' | 'default';
+};
+
+export type ConfigReportResponse = {
+  device_id: string;
+  reported: boolean;
+  /** Absent when `reported` is false. Never inferred. */
+  config?: Record<string, ReportedConfigEntry>;
+  firmware?: string;
+  reported_at?: number;
+  received_at?: number;
+  detail?: string;
+};
+
 export type ControllerEventRow = {
   event_id: string;
   kind: string;

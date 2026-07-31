@@ -76,7 +76,9 @@ Physical wiring (relay board, normally-open contact, position sensor, power)
 lives with the hardware/enclosure docs under the project `site/`. On a real
 Pi you implement `internal/relay` behind `-tags gpio`:
 
-- honor `pulse_ms` / `hold_max` / `sensor_debounce_ms` from the config store,
+- honor `pulse_ms` / `hold_max` from the config store (`sensor_debounce_ms` is
+  NOT one of them — debounce belongs to the relay spec below, and the hub
+  refuses to send that key for exactly that reason),
 - drive a normally-open relay on one output line (active high),
 - **fail-safe**: on process exit or panic the line must drop (gate closed).
 

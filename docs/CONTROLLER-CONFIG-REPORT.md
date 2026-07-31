@@ -1,9 +1,10 @@
 # A controller reporting its configuration back
 
-**Status: sent, stored and served. Not yet shown.** A controller signs and sends
-`ctl.report`; the hub verifies it, stores it under migration 0026 and serves it
-at `GET /v1/devices/{id}/config-report`. What remains is step 4 — the console
-still shows its honest placeholder rather than the reported values.
+**Status: built end to end. Never run against a controller on real hardware.** A
+controller signs and sends `ctl.report`; the hub verifies it, stores it under
+migration 0026, serves it at `GET /v1/devices/{id}/config-report`, and the
+console shows it per field. Every part of that is exercised by tests and by the
+conformance vectors, and none of it has received a report from a gate.
 
 ROADMAP has carried this since the controller gained tunable actuation: `cmd.ack`
 carries a result and a detail and nothing else, so the hub can send `pulse_ms`,
@@ -145,9 +146,12 @@ is the answer, and `report-omits-an-unresolved-key` pins it.
   could display — a gate that acks every open and moves nothing. It is not
   configuration, though, and hanging it here because there is a message going
   spare is how a protocol turns into a junk drawer.
-- **What does the console do with `source: "default"`?** Showing 700 ms and
-  showing "700 ms (default)" are different claims, and the second is the true
-  one. That is a console decision and this is not that document.
+- ~~**What does the console do with `source: "default"`?**~~ **Decided: it says
+  so.** "Now 700 ms (firmware default — never configured)" beside the field,
+  versus "Now 900 ms" for a value a command set. The two are different claims and
+  only the longer one is true of an unconfigured gate. Three states are kept
+  apart and none of them is inferred: configured, defaulted, and never reported
+  at all — the last says why rather than filling in the defaults.
 
 ---
 
@@ -183,8 +187,23 @@ is the answer, and `report-omits-an-unresolved-key` pins it.
    `GET /v1/devices/{id}/config-report` serves it, answering 200 with
    `reported:false` — not 404, and not the defaults — for a controller that has
    never sent one, which is every controller predating the message.
-4. Console: replace the honest placeholder with the reported values, marking
-   defaults as defaults.
+4. ~~Console: replace the honest placeholder with the reported values, marking
+   defaults as defaults.~~ **Done.** `api.deviceConfigReport` reads it and
+   `ControllerConfig.tsx` renders it per field. The input boxes are still
+   changes-to-send and still start empty; what is IN EFFECT is stated beneath
+   each one. A confirmed apply re-reads the report rather than assuming its own
+   success, which is the whole "did my change land" question, answered by the
+   device. Keys the console has no field for are listed rather than dropped —
+   the hub stores the report verbatim for exactly that reason, and discarding
+   them at the last step would undo it.
 
-Steps 2 and 3 are small and independent once step 1 exists. Step 4 is the one
-that has to decide §5's last question.
+   It also removed a field. `sensor_debounce_ms` sat in the form and in the
+   hub's accepted set; the controller stores it and nothing reads it, so an
+   operator could set it, see an acknowledgement, and have changed nothing. A
+   warning beside a working input would not have fixed that — the affordance is
+   the claim — so the field is gone and the hub refuses the key, naming the
+   `-relay` flag where the debounce actually lives.
+   `TestConfigRefusesAKeyTheControllerNeverReads` holds it.
+
+Steps 2 and 3 were small and independent once step 1 existed. Step 4 was the one
+that had to decide §5's last question, and did.
