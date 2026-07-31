@@ -206,6 +206,29 @@ func (a *Agent) GrantEnv() grants.Env {
 // outcome here than a stranded resident. If this tradeoff is ever
 // revisited, treat it as a product decision (see proto/events.md), not
 // something to silently flip in code.
+// OnDenied records a refusal of a grant whose signature verified.
+//
+// proto/events.md lists `denied` as the kind that drives security alerting, and
+// until this existed the grant path emitted one only for a hardware failure
+// AFTER verification passed. A refusal — wrong gate, outside its window,
+// expired, and now revoked — left no trace anywhere. The person whose access
+// was taken away stands at the gate, is refused, and an operator has no record
+// it happened, which is precisely the event they would most want.
+//
+// Best-effort, like the config report and for the same reason: a refusal has
+// already been returned to the caller and the gate is already shut. Failing to
+// record it must not change that.
+//
+// Only ATTRIBUTABLE refusals reach here — the exchange sets no grant id until
+// the signature has verified — so this cannot be used to flood the audit ring
+// from outside. See grants.HandleProof's header.
+func (a *Agent) OnDenied(grantID, reason string) {
+	if a.Recorder == nil {
+		return
+	}
+	a.Recorder.Record("denied", map[string]any{"reason": reason, "ref": grantID})
+}
+
 func (a *Agent) OnRedeemed(g *grants.Grant, p *grants.Proof) {
 	if err := a.Recorder.RecordGrantRedeemed(map[string]any{
 		"grant_id":     g.GrantID,
@@ -258,7 +281,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		}
 		lan := &lanserver.Server{
 			DeviceID: a.Recorder.DeviceID, Exchange: a.Exchange,
-			Env: a.GrantEnv, OnRedeemed: a.OnRedeemed, Log: a.Log,
+			Env: a.GrantEnv, OnRedeemed: a.OnRedeemed, OnDenied: a.OnDenied, Log: a.Log,
 			AllowOrigin: allowOrigin,
 		}
 		go func() { errc <- lan.Serve(ctx, a.Opts.LANAddr) }()
@@ -272,6 +295,7 @@ func (a *Agent) Run(ctx context.Context) error {
 			err := bleperiph.Start(ctx, bleperiph.Config{
 				DeviceID: a.Recorder.DeviceID, Exchange: a.Exchange,
 				Env: a.GrantEnv, OnRedeemed: blesession.Redeemed(a.OnRedeemed),
+				OnDenied: blesession.Denied(a.OnDenied),
 			})
 			if errors.Is(err, bleperiph.ErrUnsupported) {
 				a.Log.Warn("ble peripheral unavailable", "err", err)

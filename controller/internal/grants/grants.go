@@ -78,7 +78,11 @@ type Result struct {
 	V      int    `json:"v"`
 	Typ    string `json:"typ"`    // "grant.result"
 	Result string `json:"result"` // "opened" | "denied"
-	Detail string `json:"detail,omitempty"`
+	// GrantID names the grant a REFUSAL applies to, when the refusal came after
+	// the signature check. Never serialised: the wire object is defined by
+	// proto/grants.md and this is local plumbing for the audit path.
+	GrantID string `json:"-"`
+	Detail  string `json:"detail,omitempty"`
 }
 
 // Env is the controller-side context for a redemption decision.
@@ -169,6 +173,25 @@ func (x *Exchange) InjectChallenge(o *Open, ch Challenge) {
 // the pending exchange and returns the grant.result. On success the pending
 // entry is consumed (single-use) and the verified grant is returned for
 // actuation/audit.
+//
+// # A denial names its grant, without returning one
+//
+// On a refusal the *Grant stays nil, always. That is not an oversight to tidy
+// up: it is what makes actuating on a denial structurally impossible, so a
+// caller that wrote `if g != nil { open() }` cannot open a gate on a refusal.
+// TestGrantVectorsThroughExchange holds it for every reject vector.
+//
+// Auditing a refusal still needs to know WHICH grant was refused, so the id
+// rides on Result.GrantID, which is never serialised. It is set only for a
+// refusal made AFTER the signature check passed — wrong device, outside its
+// window, expired, revoked — because only then are the bytes hub-signed and the
+// id therefore a grant this hub really issued.
+//
+// The asymmetry is deliberate. The audit queue is a bounded ring that evicts
+// the oldest normal event when full, so recording every denial would hand
+// anyone within reach of the gate an unauthenticated write into it: flood it
+// with garbage proofs and real events fall out the back. Requiring a valid
+// signature first bounds who can write to holders of grants this hub signed.
 func (x *Exchange) HandleProof(raw []byte, env Env) (*Result, *Grant, *Proof) {
 	deny := func(reason string) (*Result, *Grant, *Proof) {
 		return &Result{V: wire.Version, Typ: "grant.result", Result: "denied", Detail: reason}, nil, nil
@@ -220,6 +243,13 @@ func (x *Exchange) HandleProof(raw []byte, env Env) (*Result, *Grant, *Proof) {
 	// 3. grant.sig against the pinned gateway key.
 	if err := wire.VerifyRaw(env.GatewayKey, grantRaw); err != nil {
 		return deny(wire.ReasonBadSig)
+	}
+	// From here the bytes are authenticated, so a refusal is attributable and
+	// worth recording. The grant is NOT returned — see the header for why that
+	// invariant stays — so the id rides on the result instead.
+	deny = func(reason string) (*Result, *Grant, *Proof) {
+		return &Result{V: wire.Version, Typ: "grant.result", Result: "denied",
+			Detail: reason, GrantID: g.GrantID}, nil, nil
 	}
 	// 3a. Not on the cached deny-list (docs/GRANT-REVOCATION.md).
 	//

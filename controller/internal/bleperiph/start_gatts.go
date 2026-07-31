@@ -114,6 +114,12 @@ func Start(ctx context.Context, cfg Config) error {
 					mu.Lock()
 					if sess == nil {
 						sess = blesession.New(cfg.Exchange, cfg.Env, conn, cfg.OnRedeemed, slog.Default())
+						// Set rather than passed: New's signature is positional
+						// and eight call sites deep in tests. What protects this
+						// from being forgotten is not the signature but
+						// TestBothTransportsRecordAnAttributableRefusal, which
+						// fails if either transport stops recording.
+						sess.OnDenied = cfg.OnDenied
 						sess.AbortPartial()
 					}
 					s := sess

@@ -100,6 +100,13 @@ chat/portal paths still work when connectivity returns.
 Every offline open is queued as an audit event and uploaded on reconnect (events.md),
 including the full grant_id + proof material, so the audit trail has no offline hole.
 
+Refusals are queued too, as `denied` with the refused `grant_id` — but only when
+the grant's signature verified, because the audit queue is bounded and an
+unauthenticated write into it is a way to push real events out. See events.md
+§ "Refused offline redemptions are recorded". This sentence used to say only
+"every offline OPEN", and that was accurate: a member refused at the gate left
+no trace at all.
+
 ## Revocation vs. in-flight grants
 
 The whole point of this path is "no hub involvement" — which means a

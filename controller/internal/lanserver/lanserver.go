@@ -31,7 +31,9 @@ type Server struct {
 	Exchange   *grants.Exchange
 	Env        func() grants.Env
 	OnRedeemed blesession.Redeemed
-	Log        *slog.Logger
+	// OnDenied records an attributable refusal (see blesession.Denied).
+	OnDenied blesession.Denied
+	Log      *slog.Logger
 	// AllowOrigin is the ONE browser origin permitted to read these
 	// responses — the console of the hub this controller is paired to. Empty
 	// disables browser access entirely, which is correct for an unpaired
@@ -74,6 +76,9 @@ func (s *Server) handleProof(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	res, g, p := s.Exchange.HandleProof(body, s.Env())
+	if res.Result == "denied" && res.GrantID != "" && s.OnDenied != nil {
+		s.OnDenied(res.GrantID, res.Detail)
+	}
 	if res.Result == "opened" && s.OnRedeemed != nil {
 		s.OnRedeemed(g, p)
 	}

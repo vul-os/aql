@@ -215,9 +215,25 @@ ceiling `docs/THREAT-MODEL.md` §5 names for every signed object.
   all, rather than being given a default. A missing row says "revoked before the
   hub tracked this"; a backfilled 0 would claim every controller holds a
   revocation none of them may have.
-- **Should a revoked redemption be an audited event kind of its own?** A refusal
-  is already queued as an audit event with its denial reason, so this may be
-  nothing more than a new reason string.
+- ~~**Should a revoked redemption be an audited event kind of its own?**~~
+  **Answered: no new kind, but the existing one was not being emitted.** The
+  premise of this question was wrong. It assumed "a refusal is already queued as
+  an audit event with its denial reason" — that was true of the COMMAND path and
+  false of the grant path, which emitted `denied` only for a hardware failure
+  after verification had already passed. A member whose access was revoked was
+  turned away at the gate with no trace anywhere.
+
+  So the answer is the existing `denied` kind with the refused `grant_id` as
+  `ref`, and the work was emitting it at all rather than inventing a kind.
+
+  One rule came out of building it and is now in `proto/events.md`: **only
+  refusals whose signature verified are recorded.** The audit queue is a bounded
+  ring that evicts the oldest normal event when full, so recording every refusal
+  would give anyone within reach of the gate an unauthenticated write into it.
+  An attacker can always obtain a challenge — the controller issues one to
+  anyone who asks — so the signature check is the only thing between the gate
+  and the audit ring.
+
 
 ## 6. The order of work
 

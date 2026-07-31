@@ -49,7 +49,12 @@ type Config struct {
 	Exchange   *grants.Exchange
 	Env        func() grants.Env
 	OnRedeemed blesession.Redeemed
-	MTU        int // 0 = DefaultMTU
+	// OnDenied records an attributable refusal. Carried through to the session
+	// alongside OnRedeemed: a grant refused over BLE is refused in the one
+	// place where there is no hub to notice, so it is the LAST place that
+	// should record nothing.
+	OnDenied blesession.Denied
+	MTU      int // 0 = DefaultMTU
 }
 
 // LocalName returns the advertised name "lintel-<first 8 hex of device_id>".

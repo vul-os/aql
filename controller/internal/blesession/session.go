@@ -33,13 +33,23 @@ type Conn interface {
 // relay and queue the grant_redeemed audit event.
 type Redeemed func(g *grants.Grant, p *grants.Proof)
 
+// Denied records an attributable refusal: a grant id and the reason it was
+// refused. Takes the ID rather than the grant, because HandleProof
+// deliberately returns no grant on a denial — that is what makes actuating on
+// one structurally impossible, and this must not weaken it.
+type Denied func(grantID, reason string)
+
 // Session is one BLE central's redemption exchange.
 type Session struct {
 	X          *grants.Exchange
 	Env        func() grants.Env // controller context at message time
 	Conn       Conn
 	OnRedeemed Redeemed
-	Log        *slog.Logger
+	// OnDenied records an ATTRIBUTABLE refusal — one made after the grant's
+	// signature verified, so the id names a grant this hub issued. Nil
+	// disables recording; a refusal is still returned to the caller either way.
+	OnDenied Denied
+	Log      *slog.Logger
 
 	reasm   *framing.Reassembler
 	sawOpen bool
@@ -106,6 +116,9 @@ func (s *Session) handleMessage(msg []byte) bool {
 			return s.finish()
 		}
 		res, g, p := s.X.HandleProof(msg, s.Env())
+		if res.Result == "denied" && res.GrantID != "" && s.OnDenied != nil {
+			s.OnDenied(res.GrantID, res.Detail)
+		}
 		if res.Result == "opened" && s.OnRedeemed != nil {
 			s.OnRedeemed(g, p)
 		}

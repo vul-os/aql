@@ -283,6 +283,28 @@ export const FEATURES = [
     ],
   },
   {
+    id: 'refused-redemptions-are-recorded',
+    label:
+      'A grant refused at the gate emits a `denied` event naming it — but only when its ' +
+      'signature verified, so the bounded audit ring cannot be flooded from outside',
+    docStatus: 'shipped',
+    docRefs: [
+      'proto/events.md § Refused offline redemptions are recorded, and only the attributable ones',
+      'proto/grants.md § "a member refused at the gate left\nno trace at all"',
+    ],
+    evidence: [
+      // The id is set only after the signature check. Matched on the field the
+      // wire never carries, because that is what makes it local plumbing.
+      [{ file: 'controller/internal/grants/grants.go', pattern: 'GrantID string `json:"-"`' }],
+      [{ file: 'controller/internal/agent/agent.go', pattern: 'func \\(a \\*Agent\\) OnDenied' }],
+      // BOTH transports, wired separately — a hook set on one and forgotten on
+      // the other is exactly the shape that ships.
+      [{ file: 'controller/internal/lanserver/lanserver.go', pattern: 's.OnDenied\\(res.GrantID' }],
+      [{ file: 'controller/internal/blesession/session.go', pattern: 's.OnDenied\\(res.GrantID' }],
+      [{ file: 'controller/internal/bleperiph/start_gatts.go', pattern: 'sess.OnDenied = cfg.OnDenied' }],
+    ],
+  },
+  {
     id: 'revocation-per-gate-convergence',
     label:
       'The grants screen says which of a revoked grant\'s gates are actually refusing it, ' +

@@ -41,6 +41,26 @@ access point from the *device* rather than from the event payload — a
 controller must not be able to write audit rows against a gate it does not
 drive. `boot` is stored but is not an access event and stays out of that view.
 
+### Refused offline redemptions are recorded, and only the attributable ones
+
+A `denied` event is emitted for an offline grant refused at the gate — wrong
+gate, outside its window, expired, revoked — with the refused `grant_id` as
+`ref`. This did not exist until the deny-list did: the grant path emitted
+`denied` only for a hardware failure AFTER verification had already passed, so
+a member whose access was taken away was turned away with no trace anywhere.
+For a `revoked` refusal in particular, that is the single event an operator
+would most want.
+
+**Only refusals made after the grant's signature verifies are recorded.** That
+is a security rule, not an optimisation. The queue above is a bounded ring that
+evicts the oldest undelivered normal event when full, so recording every
+refusal would give anyone within reach of the gate an unauthenticated write into
+it: present forged grants in a loop and real events fall out the back. A valid
+signature bounds who can write to holders of grants this hub issued. Note that
+an attacker can always obtain a *challenge* — the controller issues one to
+anyone who asks — so the signature check is the only thing standing between the
+gate and the audit ring.
+
 This paragraph describes behaviour that did not exist until migration 0019.
 Before it, the hub verified each event and then discarded it (the handler was
 a single log line), which made the dedupe sentence above false and left an
@@ -52,7 +72,7 @@ one the controller works hardest to record — with no trace on the hub at all.
 | `kind` | `data` | Drives |
 | --- | --- | --- |
 | `opened` / `closed` | `{cause: "cmd"\|"grant"\|"button", ref}` | audit log, notifications, time & attendance |
-| `denied` | `{reason, ref}` — `reason` = any cmd.ack `detail` value (commands.md) | security alerting |
+| `denied` | `{reason, ref}` — `reason` = any cmd.ack `detail` value (commands.md), or any `grant.result` detail (grants.md); `ref` = the command nonce or the refused `grant_id` | security alerting |
 | `grant_redeemed` | full offline-redemption record (grant_id, cnonce, proof) | audit continuity for offline opens |
 | `button` | `{button_id}` | **intercom-lite**: the hub notifies the resident's chat — "Someone is at the gate. Reply OPEN." |
 | `held_open` | `{seconds}` | gate-left-open alerts (needs position sensor) |
