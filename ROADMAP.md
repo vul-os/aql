@@ -675,6 +675,15 @@ and none has met physical hardware.
       resets the count so a flaky receiver is never retired. The backoff became an
       injectable field so those paths cost milliseconds instead of fifteen real seconds —
       production still installs the linear one, and nothing else sets it
+- [x] **Key-rotation repair dispatch is tested.** The store's half was already thorough;
+      the ORCHESTRATION — `dispatchRepairs`, `noteRepairAck`, the sweep — was at zero. The
+      property that matters is one line of comment: a repair is signed with the key the
+      controller PINS, never the new one it has never seen. Getting that wrong compiles,
+      signs, dispatches and looks healthy while every controller rejects its repair, no
+      rotation ever completes, and the fleet runs on the retained key until someone removes
+      it — at which point nothing opens. Also pinned: the nonce is recorded BEFORE dispatch
+      (an ack can arrive faster than the write), a repaired controller is not sent another,
+      and a rotation completes only once every controller has moved
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
 - [ ] Rate-limiting and scoping on movement commands, so a compromised client cannot drive
