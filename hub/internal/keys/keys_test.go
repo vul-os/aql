@@ -1,6 +1,11 @@
 package keys
 
 import (
+	"crypto/ed25519"
+	"encoding/base64"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -144,5 +149,77 @@ func TestCanonicalizeJSONNormalizes(t *testing.T) {
 	}
 	if string(got) != `{"a":"x","b":1}` {
 		t.Errorf("got %s", got)
+	}
+}
+
+// A corrupt gateway seed must refuse, and must not regenerate.
+//
+// Load generates a key when the file is ABSENT — correct, that is first boot.
+// The branch next to it handles a file that exists and does not decode, and the
+// difference between them is the whole safety of pairing: every controller pins
+// this hub's public key at pairing and verifies every command against it. A hub
+// that responded to a damaged seed by minting a fresh one would come up looking
+// healthy, sign with a key nobody trusts, and have every controller reject every
+// command — including the offline path, which verifies against the same pin.
+//
+// The retained (previous) key's corrupt path is covered in rotation_test.go.
+// This one was not, and it is the one that decides whether the hub can be
+// trusted to be the same hub after a restart.
+func TestACorruptGatewaySeedRefusesAndDoesNotRegenerate(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		content string
+	}{
+		{"not hex", "this is not a seed"},
+		{"hex but too short", "aabbcc"},
+		{"hex but too long", strings.Repeat("ab", ed25519.SeedSize+4)},
+		{"empty", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "gateway_ed25519.seed")
+			if err := os.WriteFile(path, []byte(tc.content), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			k, err := Load(dir)
+			if err == nil {
+				t.Fatalf(`Load accepted a corrupt seed and returned a key (%s).
+
+If that key was GENERATED rather than read, the hub is now signing with something
+no paired controller has ever seen. Every command is rejected, the offline grant
+path fails the same way, and nothing about the hub looks wrong.`,
+					base64.RawURLEncoding.EncodeToString(k.Public()))
+			}
+
+			// And the file must be untouched. Refusing but rewriting would
+			// destroy the damaged bytes — the only evidence of what happened,
+			// and the only chance of recovering the original seed by hand.
+			after, readErr := os.ReadFile(path)
+			if readErr != nil {
+				t.Fatalf("the seed file is gone after a refused load: %v", readErr)
+			}
+			if string(after) != tc.content {
+				t.Errorf("the seed file was rewritten on a refused load: %q became %q",
+					tc.content, string(after))
+			}
+		})
+	}
+}
+
+// The other half of that branch: an ABSENT file is first boot and must generate.
+// Asserted beside the refusal so a change that made corruption regenerate cannot
+// be justified as "matching the absent case".
+func TestAnAbsentSeedIsFirstBootAndGenerates(t *testing.T) {
+	dir := t.TempDir()
+	k, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load on an empty directory failed: %v", err)
+	}
+	if len(k.Public()) != ed25519.PublicKeySize {
+		t.Fatalf("generated public key is %d bytes, want %d", len(k.Public()), ed25519.PublicKeySize)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "gateway_ed25519.seed")); err != nil {
+		t.Errorf("first boot did not persist the seed: %v", err)
 	}
 }
