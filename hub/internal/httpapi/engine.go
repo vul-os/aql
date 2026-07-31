@@ -84,6 +84,25 @@ const (
 	// engineConfirmAbove is the tier above which an explicit confirm is
 	// required in addition to authentication.
 	engineConfirmAbove = devices.TierPhysicalAccess
+
+	// engineConsequentialCooldownS and engineHazardousCooldownS bound how often
+	// ONE caller may repeat ONE verb on ONE device.
+	//
+	// The gap this closes: authentication and the tier ceiling both answer "may
+	// this caller do this at all", and neither answers "may they do it two
+	// hundred times a second". A holder of a valid session — a stolen token, a
+	// script left running, a compromised client — could loop `start` on a mower
+	// and nothing here would slow it. ROADMAP has carried that as "rate-limiting
+	// and scoping on movement commands, so a compromised client cannot drive a
+	// machine into a person"; the scoping half was built (engineScope), this is
+	// the other half.
+	//
+	// Nothing at or below TierReversible is cooled down. A dimmer slider
+	// legitimately sends a stream of `set`, and a lamp cannot injure anyone —
+	// throttling it would break ordinary use to defend against nothing. The
+	// cooldown starts where undoing costs something.
+	engineConsequentialCooldownS = 3
+	engineHazardousCooldownS     = 10
 )
 
 // engineScope is what one caller may see and drive, resolved once per request.
@@ -406,6 +425,29 @@ func (s *Server) handleEngineExecute(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusConflict, "confirm_required")
 		return
 	}
+	// Cooldown LAST among the checks, so a refused command never restarts
+	// anyone's cooldown — the same ordering openpath.go uses, for the same
+	// reason: a caller who was going to be told no should not also be told to
+	// wait next time.
+	if cd := engineCooldownFor(plan.Tier); cd > 0 {
+		subject := "engine:" + claimsFrom(r).Sub + ":" + key + ":" + string(plan.Verb)
+		claimed, err := s.store.ClaimActuationCooldown(r.Context(), subject, time.Now().Unix(), cd)
+		if err != nil {
+			// Fail CLOSED. openpath.go's limiter fails open by a reviewed
+			// decision about a member standing at their own gate; there is no
+			// equivalent argument for a machine with blades, and §3.5 of
+			// docs/CHAT-COMMANDS.md names refusal as the direction the
+			// generalised path diverges in.
+			s.log.Error("engine cooldown", "err", err, "device", key)
+			writeErr(w, http.StatusServiceUnavailable, "rate_limit_unavailable")
+			return
+		}
+		if !claimed {
+			w.Header().Set("Retry-After", strconv.FormatInt(cd, 10))
+			writeErr(w, http.StatusTooManyRequests, "too_soon")
+			return
+		}
+	}
 	if err := reg.ExecutePlan(r.Context(), plan); err != nil {
 		writeEngineErr(w, err)
 		return
@@ -459,4 +501,21 @@ func writeEngineErr(w http.ResponseWriter, err error) {
 	default:
 		writeErr(w, http.StatusBadGateway, "device_error")
 	}
+}
+
+// engineCooldownFor is how long one caller must wait before repeating one verb
+// on one device, by tier. Zero means no cooldown.
+//
+// Scaled rather than flat because the cost of the limit differs as much as the
+// cost of the command. Three seconds on a cleaning bot is invisible to a person
+// and ruinous to a script; ten on anything that moves under its own power is
+// the difference between a mistake and a sequence of them.
+func engineCooldownFor(t devices.Tier) int64 {
+	switch {
+	case t >= devices.TierPhysicalAccess:
+		return engineHazardousCooldownS
+	case t >= devices.TierConsequential:
+		return engineConsequentialCooldownS
+	}
+	return 0
 }

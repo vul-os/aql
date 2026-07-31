@@ -1983,6 +1983,12 @@ export type MaintenanceCreateInput = {
  *  newer than this console, not a rule to guess at. */
 export type AutomationTriggerKind = 'schedule' | 'threshold' | 'event' | string;
 
+/** The state a condition can require of a device. Deliberately only two: a
+ *  device whose state the hub does NOT know satisfies neither, and the rule
+ *  refuses rather than guessing — so there is no third value to express here.
+ *  Mirrors ConditionState in hub/internal/automations/rule.go. */
+export type AutomationConditionState = 'active' | 'inactive';
+
 export type AutomationRule = {
   id: string;
   name: string;
@@ -1993,7 +1999,20 @@ export type AutomationRule = {
     threshold?: { device_key: string; metric: string; op: string; value: number };
     event?: { device_key: string; name: string };
   };
-  conditions: Array<{ device_key: string; metric: string; op: string; value: number }>;
+  /** A condition is one of two shapes, never both — the hub refuses a
+   *  condition carrying a metric AND a state, because it would have two
+   *  possible meanings. NUMERIC compares a reading (`metric`/`op`/`value`);
+   *  STATE requires the device to be active or inactive, resolved through the
+   *  capability's own declaration rather than a metric name the author had to
+   *  know. Anything reading these must branch on `state` being present, not
+   *  assume the numeric triple is there. */
+  conditions: Array<{
+    device_key: string;
+    metric?: string;
+    op?: string;
+    value?: number;
+    state?: AutomationConditionState;
+  }>;
   action: {
     device_key?: string;
     zone?: string;

@@ -36,10 +36,18 @@ import {
   ApiError,
   api,
   friendlyApiError,
+  type AutomationConditionState,
   type AutomationRule,
   type AutomationRuleInput,
   type EngineDevice,
 } from '@/lib/api';
+import {
+  buildConditions as buildConditionRows,
+  newConditionRow,
+  toConditionRow,
+  type ConditionKind,
+  type ConditionRow,
+} from '@/lib/automationConditions';
 import { controlsFor, type EngineControl } from '@/components/device/engineState';
 
 type TriggerKind = 'schedule' | 'threshold' | 'event';
@@ -148,23 +156,6 @@ const REFUSAL_CONTEXT: Record<string, string> = {
   no_targets:
     'The zone named here currently has no member devices for the engine to resolve — a zone action needs at least one device carrying that zone.',
 };
-
-type ConditionRow = { id: number; deviceKey: string; metric: string; op: CompareOp; value: string };
-let conditionRowSeq = 0;
-function newConditionRow(): ConditionRow {
-  conditionRowSeq += 1;
-  return { id: conditionRowSeq, deviceKey: '', metric: '', op: 'below', value: '' };
-}
-function toConditionRow(c: AutomationRule['conditions'][number]): ConditionRow {
-  conditionRowSeq += 1;
-  return {
-    id: conditionRowSeq,
-    deviceKey: c.device_key,
-    metric: c.metric,
-    op: (c.op as CompareOp) || 'below',
-    value: String(c.value),
-  };
-}
 
 type ArgRow = { id: number; name: string; value: string };
 let argRowSeq = 0;
@@ -401,24 +392,12 @@ export default function RuleEditor({
   }
 
   function buildConditions(): AutomationRule['conditions'] | null {
-    if (conditions.length > 8) {
-      setFormError('At most 8 conditions per rule.');
+    const built = buildConditionRows(conditions);
+    if (!built.ok) {
+      setFormError(built.error);
       return null;
     }
-    const out: AutomationRule['conditions'] = [];
-    for (const c of conditions) {
-      if (!c.deviceKey.trim() || !c.metric.trim()) {
-        setFormError("Every condition needs both a device and a metric — remove the row if you don't need it.");
-        return null;
-      }
-      const value = Number(c.value);
-      if (!Number.isFinite(value)) {
-        setFormError('Every condition needs a numeric value.');
-        return null;
-      }
-      out.push({ device_key: c.deviceKey.trim(), metric: c.metric.trim(), op: c.op, value });
-    }
-    return out;
+    return built.conditions;
   }
 
   function buildAction(): AutomationRule['action'] | null {
@@ -746,44 +725,73 @@ export default function RuleEditor({
               {conditions.map((c) => (
                 <div
                   key={c.id}
-                  className="rounded-xl border border-ink/15 bg-paper-cool p-3 grid sm:grid-cols-[1fr_1fr_auto_1fr_auto] gap-2 items-center"
+                  className="rounded-xl border border-ink/15 bg-paper-cool p-3 grid sm:grid-cols-[auto_1fr_1fr_auto_1fr_auto] gap-2 items-center"
                 >
+                  <select
+                    value={c.kind}
+                    onChange={(e) => updateCondition(c.id, { kind: e.target.value as ConditionKind })}
+                    aria-label="Condition kind"
+                    className="h-9 rounded-lg bg-paper border border-ink/15 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ink"
+                  >
+                    <option value="numeric">reading</option>
+                    <option value="state">is on / is off</option>
+                  </select>
                   <input
                     list="rule-editor-device-options"
                     required
                     value={c.deviceKey}
                     onChange={(e) => updateCondition(c.id, { deviceKey: e.target.value })}
                     placeholder="device key"
+                    aria-label="Condition device"
                     className="h-9 rounded-lg bg-paper border border-ink/15 px-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ink"
                   />
-                  <input
-                    list="rule-editor-metric-options"
-                    required
-                    value={c.metric}
-                    onChange={(e) => updateCondition(c.id, { metric: e.target.value })}
-                    placeholder="metric"
-                    className="h-9 rounded-lg bg-paper border border-ink/15 px-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ink"
-                  />
-                  <select
-                    value={c.op}
-                    onChange={(e) => updateCondition(c.id, { op: e.target.value as CompareOp })}
-                    className="h-9 rounded-lg bg-paper border border-ink/15 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ink"
-                  >
-                    {COMPARE_OPS.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    step="any"
-                    required
-                    value={c.value}
-                    onChange={(e) => updateCondition(c.id, { value: e.target.value })}
-                    placeholder="value"
-                    className="h-9 rounded-lg bg-paper border border-ink/15 px-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ink"
-                  />
+                  {c.kind === 'state' ? (
+                    <select
+                      value={c.state}
+                      onChange={(e) =>
+                        updateCondition(c.id, { state: e.target.value as AutomationConditionState })
+                      }
+                      aria-label="Required state"
+                      className="h-9 rounded-lg bg-paper border border-ink/15 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ink sm:col-span-3"
+                    >
+                      <option value="active">is on / running</option>
+                      <option value="inactive">is off / idle</option>
+                    </select>
+                  ) : (
+                    <>
+                      <input
+                        list="rule-editor-metric-options"
+                        required
+                        value={c.metric}
+                        onChange={(e) => updateCondition(c.id, { metric: e.target.value })}
+                        placeholder="metric"
+                        aria-label="Condition metric"
+                        className="h-9 rounded-lg bg-paper border border-ink/15 px-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ink"
+                      />
+                      <select
+                        value={c.op}
+                        onChange={(e) => updateCondition(c.id, { op: e.target.value as CompareOp })}
+                        aria-label="Comparison"
+                        className="h-9 rounded-lg bg-paper border border-ink/15 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ink"
+                      >
+                        {COMPARE_OPS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        step="any"
+                        required
+                        value={c.value}
+                        onChange={(e) => updateCondition(c.id, { value: e.target.value })}
+                        placeholder="value"
+                        aria-label="Condition value"
+                        className="h-9 rounded-lg bg-paper border border-ink/15 px-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ink"
+                      />
+                    </>
+                  )}
                   <button
                     type="button"
                     onClick={() => setConditions((prev) => prev.filter((r) => r.id !== c.id))}
@@ -800,6 +808,12 @@ export default function RuleEditor({
             Checked again at the moment the rule fires, against a fresh reading — not the sample
             that triggered it. A reading that can't be read, or reads as text where a number was
             asked for, refuses the run rather than passing by default.
+          </p>
+          <p className="text-[11px] text-ink/50 mt-1">
+            <b>is on / is off</b> asks the device what it is doing, using its own capability's
+            definition — so the rule keeps meaning the same thing if you later rename a metric.
+            A device that has not reported, or that declares no state at all, satisfies neither:
+            the run is refused rather than treated as off.
           </p>
         </div>
 
