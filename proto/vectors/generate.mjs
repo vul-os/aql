@@ -924,6 +924,14 @@ console.log('wrote keys.json');
   );
   vectors.push(
     wh(
+      'automation-alert',
+      'A rule whose action is an ALERT rather than an actuation. The only event a member composes: `message` is their own words, and everything around it is the hub saying which rule spoke and when. A schedule-triggered alert omits trigger_device_key entirely rather than sending an empty one, which would read as a device whose key is blank.',
+      'automation.alert',
+      '{"at":1789000000,"cause":"threshold","event":"automation.alert","message":"the tank is low","rule_id":"rule_000000000001","rule_name":"Tank warning","trigger_device_key":"mock:tank-1"}'
+    )
+  );
+  vectors.push(
+    wh(
       'same-body-different-timestamp',
       'The timestamp is INSIDE the preimage: the same body one second later signs differently. This is what makes a captured delivery non-replayable at a receiver that checks skew.',
       'access.opened',

@@ -51,6 +51,22 @@
       }
     },
     {
+      "name": "automation-alert",
+      "desc": "A rule whose action is an ALERT rather than an actuation. The only event a member composes: `message` is their own words, and everything around it is the hub saying which rule spoke and when. A schedule-triggered alert omits trigger_device_key entirely rather than sending an empty one, which would read as a device whose key is blank.",
+      "secret": "whsec_aql_test_vector_secret_do_not_use",
+      "event": "automation.alert",
+      "body": "{\"at\":1789000000,\"cause\":\"threshold\",\"event\":\"automation.alert\",\"message\":\"the tank is low\",\"rule_id\":\"rule_000000000001\",\"rule_name\":\"Tank warning\",\"trigger_device_key\":\"mock:tank-1\"}",
+      "preimage": "1789000000.{\"at\":1789000000,\"cause\":\"threshold\",\"event\":\"automation.alert\",\"message\":\"the tank is low\",\"rule_id\":\"rule_000000000001\",\"rule_name\":\"Tank warning\",\"trigger_device_key\":\"mock:tank-1\"}",
+      "signature_hex": "f77563113eaa5b7355fc8a062784da1788204fd1ba580b27ff8bd9f7714055df",
+      "headers": {
+        "Content-Type": "application/json",
+        "User-Agent": "aql-hub",
+        "X-Aql-Event": "automation.alert",
+        "X-Aql-Timestamp": "1789000000",
+        "X-Aql-Signature-256": "f77563113eaa5b7355fc8a062784da1788204fd1ba580b27ff8bd9f7714055df"
+      }
+    },
+    {
       "name": "same-body-different-timestamp",
       "desc": "The timestamp is INSIDE the preimage: the same body one second later signs differently. This is what makes a captured delivery non-replayable at a receiver that checks skew.",
       "secret": "whsec_aql_test_vector_secret_do_not_use",

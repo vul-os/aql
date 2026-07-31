@@ -70,11 +70,11 @@ last path is only three-quarters built; see [Emergency access](emergency-access.
 
 | Component | What it is | Status | Stack |
 | --- | --- | --- | --- |
-| **hub** (`hub/`) | The entire server: the open path, console, API, device hub, audit | **Shipped** — 129 routes, 1,245 test functions green | Go · SQLite (`modernc.org/sqlite`, no CGO) · embedded console |
+| **hub** (`hub/`) | The entire server: the open path, console, API, device hub, audit | **Shipped** — 129 routes, 1,250 test functions green | Go · SQLite (`modernc.org/sqlite`, no CGO) · embedded console |
 | **controller** (`controller/`) | The unit wired to the gate relay; verifies signatures, drives the motor | **Shipped** — 171 test functions green; GPIO relay and BLE radio still unvalidated | Go, std-lib first, own module |
 | **e2e** (`e2e/`) | Cross-module harness: boots the real hub + controller binaries and proves the open path over the wire | **Shipped** | Go, subprocess-driven |
 | **console / app** (`src/`, `src-tauri/`) | Web console embedded in the hub, plus a Tauri v2 desktop shell with a hub picker | **Shipped** (admin surfaces) | React 19 · Vite · Tauri v2 |
-| **proto** (`proto/`) | The versioned wire contracts + conformance vectors | **Shipped** — 75 vectors, 110 checks | Markdown + JSON fixtures |
+| **proto** (`proto/`) | The versioned wire contracts + conformance vectors | **Shipped** — 76 vectors, 111 checks | Markdown + JSON fixtures |
 | **device engine** (`hub/internal/devices/`) | Registry behind a driver seam; `http`, `modbus` (TCP), `mqtt`, `camera` (ONVIF), `access` (gates, read-only) | **Shipped, default off** — no registry unless `-device-drivers` names one. No radio in the hub — Zigbee and Z-Wave arrive over a bridge. No Matter and no dedicated robot driver. The camera pipeline records and plays back but has never met real hardware | Go |
 
 ### One implementation, no second server

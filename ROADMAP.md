@@ -798,7 +798,21 @@ and none has met physical hardware.
       support it" and "this device did not report". The device page shows On / Off / **Not
       reporting** — never assuming the third is the second
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
-- [ ] Alerting tied to real sensor and camera events
+- [x] **Alerting tied to sensor and availability events.** Triggers already covered
+      schedules, thresholds and availability changes; the ACTION side could only actuate, so
+      "tell me when the tank is low" was inexpressible — the nearest an operator could write
+      was a rule that moved a device they did not want moved, purely to make a run happen. A
+      rule may now alert instead: it resolves no device, so it skips the tier gate, the
+      ownership check and execution, all of which exist to govern moving something, and it
+      keeps the run record and audit row so an alert that did NOT arrive is still visible as
+      a run that happened. Delivered through the existing webhook dispatcher rather than a
+      second path — that one already signs, retries, records every delivery and retires a
+      dead endpoint, and the retirement is the part most likely to be got wrong twice.
+      `automation.alert` is in the closed event set with a published conformance vector,
+      because a dispatchable event without one fails the repo's own guard
+- [ ] Camera-event alerting specifically — the trigger vocabulary covers device availability
+      and sensor thresholds, not "motion seen" or "a clip was written", because the camera
+      driver emits neither as an engine event yet
 - [x] **Rate-limiting and scoping on movement commands.** The scoping half existed
       (`engineScope`); there was NO rate limit on `POST /v1/engine/devices/{key}/execute` at
       all, so a stolen token could loop `start` on a mower and nothing on that path would

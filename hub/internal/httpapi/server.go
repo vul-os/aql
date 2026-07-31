@@ -167,6 +167,13 @@ func New(cfg Config, st *store.Store, ks *keys.Keys, log *slog.Logger) *Server {
 	}
 	s := &Server{cfg: cfg, store: st, keys: ks, hub: hub.New(), log: log, devices: cfg.Devices, energy: cfg.Energy, automations: cfg.Automations}
 	s.webhooks = newWebhookDispatcher(st, log)
+	// The automations engine raises alerts through the same dispatcher. Wired
+	// HERE rather than at the engine's construction because the engine is built
+	// before this server exists, and a second dispatcher for alerts would mean
+	// two retirement counters and two delivery logs for one endpoint.
+	if cfg.Automations != nil {
+		cfg.Automations.SetNotifier(s.webhooks)
+	}
 	ch := cfg.Channels
 	s.wa = channels.WhatsApp{AppSecret: ch.WhatsAppAppSecret, VerifyToken: ch.WhatsAppVerifyToken, PublicURL: ch.PublicURL}
 	s.slack = channels.Slack{SigningSecret: ch.SlackSigningSecret}

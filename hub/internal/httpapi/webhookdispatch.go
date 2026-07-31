@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/vul-os/aql/hub/internal/automations"
 	"log/slog"
 	"net"
 	"net/http"
@@ -66,11 +67,16 @@ const (
 const (
 	EventAccessOpened = "access.opened"
 	EventAccessDenied = "access.denied"
+	// EventAutomationAlert is raised by a rule whose action is an alert rather
+	// than an actuation. It is the only event here that a member composes: the
+	// hub supplies the rule, the trigger and the time, and the operator's own
+	// message rides alongside.
+	EventAutomationAlert = "automation.alert"
 )
 
 // KnownWebhookEvents is the closed set.
 func KnownWebhookEvents() []string {
-	return []string{EventAccessOpened, EventAccessDenied}
+	return []string{EventAccessOpened, EventAccessDenied, EventAutomationAlert}
 }
 
 func knownWebhookEvent(e string) bool {
@@ -292,4 +298,34 @@ func isDNSErr(err error) bool {
 		err = u.Unwrap()
 	}
 	return false
+}
+
+// Alert implements automations.Notifier, turning a rule's alert into a webhook
+// event.
+//
+// The dispatcher is reused rather than given a second path: it already signs
+// over the exact bytes, retries three times, records every delivery and retires
+// an endpoint that keeps failing. An alert route that reimplemented any of that
+// would be a second thing to get wrong, and the one most likely to be wrong is
+// the retirement — a notification endpoint that fails silently forever is worse
+// than one that stops.
+//
+// Delivery is best-effort by construction: Dispatch queues and returns. A rule
+// run is already recorded before this is called, so an alert that never arrives
+// is still visible as a run that happened — which is the difference between "no
+// alert was raised" and "one was raised and did not reach you".
+func (d *webhookDispatcher) Alert(ctx context.Context, a automations.Alert) {
+	payload := map[string]any{
+		"rule_id":   a.RuleID,
+		"rule_name": a.RuleName,
+		"message":   a.Message,
+		"cause":     string(a.Cause),
+		"at":        a.At,
+	}
+	// Only when there is one. A schedule-triggered alert has no device, and an
+	// empty string in the payload would read as a device whose key is blank.
+	if a.TriggerDeviceKey != "" {
+		payload["trigger_device_key"] = a.TriggerDeviceKey
+	}
+	d.Dispatch(a.AccountID, EventAutomationAlert, payload)
 }

@@ -26,8 +26,8 @@ way down to the metal:
 - An operator seat above every account, with runtime limit overrides and a cross-account
   audit view.
 
-The hub is 129 HTTP routes and 1,245 Go test functions; the controller agent is 171
-more; the wire contracts have 75 conformance vectors (110 checks) that both sides are
+The hub is 129 HTTP routes and 1,250 Go test functions; the controller agent is 171
+more; the wire contracts have 76 conformance vectors (111 checks) that both sides are
 tested against.
 
 ### What can't it do?

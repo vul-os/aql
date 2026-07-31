@@ -258,19 +258,71 @@ func (c Condition) Validate() error {
 // than doing the safe part of it. Doing most of an automation is not a safe
 // state; it is a state nobody wrote down.
 type Action struct {
-	// Exactly one of DeviceKey and Zone is set.
+	// Exactly one of DeviceKey, Zone and Notify is set.
 	DeviceKey string       `json:"device_key,omitempty"`
 	Zone      string       `json:"zone,omitempty"`
-	Verb      devices.Verb `json:"verb"`
+	Verb      devices.Verb `json:"verb,omitempty"`
+
+	// Notify raises an alert instead of actuating anything.
+	//
+	// Until this existed a rule could only respond to its trigger by DRIVING
+	// something, so "tell me when the tank is low" was inexpressible — the
+	// nearest thing an operator could write was a rule that actuated a device
+	// they did not want moved, purely to make a run happen. That is a
+	// workaround that moves a physical thing to send a message.
+	//
+	// It actuates nothing, which is why it needs no tier ceiling, no ownership
+	// check and no cooldown: there is no device on the other end of it. What it
+	// does need is the same run record and audit row as any other rule, so an
+	// alert that did not arrive is still visible as a run that happened.
+	Notify *Notify `json:"notify,omitempty"`
+
 	// Args carries the verb's single numeric argument when its VerbSpec
 	// declares one. The registry validates presence and range; anything it did
 	// not ask for is dropped before a driver sees it.
 	Args map[string]float64 `json:"args,omitempty"`
 }
 
+// Notify is an alert raised by a rule.
+type Notify struct {
+	// Message is the operator's own words. The hub adds the rule name, the
+	// trigger and the time; it does not compose the sentence, because a
+	// generated one would be about the DEVICE and the useful sentence is about
+	// what the operator wants done.
+	Message string `json:"message"`
+}
+
+// Validate checks an alert's shape.
+func (n Notify) Validate() error {
+	if strings.TrimSpace(n.Message) == "" {
+		return refuse(ReasonInvalidRule, "notify action has no message")
+	}
+	if len(n.Message) > NotifyMaxMessage {
+		return refuse(ReasonInvalidRule,
+			"notify message is %d characters, over the %d limit", len(n.Message), NotifyMaxMessage)
+	}
+	return nil
+}
+
+// NotifyMaxMessage bounds an alert's text. Generous for a sentence and far
+// short of anything that would make a webhook body worth attacking with.
+const NotifyMaxMessage = 500
+
+// IsNotify reports whether this action alerts rather than actuating.
+func (a Action) IsNotify() bool { return a.Notify != nil }
+
 // Validate checks the action's shape. It does NOT check the tier — that needs
 // the registry, and it happens in Engine.
 func (a Action) Validate() error {
+	// The three forms are mutually exclusive, and an action carrying two has
+	// two meanings — picking one would make a rule do something its author did
+	// not write. Same rule Condition applies to its two forms.
+	if a.IsNotify() {
+		if a.DeviceKey != "" || a.Zone != "" || a.Verb != "" {
+			return refuse(ReasonInvalidRule, "action both alerts and drives a device")
+		}
+		return a.Notify.Validate()
+	}
 	if a.DeviceKey == "" && a.Zone == "" {
 		return refuse(ReasonInvalidRule, "action names neither a device nor a zone")
 	}

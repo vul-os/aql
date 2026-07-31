@@ -47,6 +47,11 @@ type Config struct {
 	Audit Auditor
 	// Now is swappable for tests; nil means time.Now.
 	Now func() time.Time
+	// Notifier receives alerts raised by notify actions. Nil means alerts are
+	// recorded as runs and delivered nowhere, which is the honest behaviour for
+	// a hub with no webhook configured — the rule still ran, and its record
+	// says so.
+	Notifier Notifier
 	// FailureBudget overrides DefaultFailureBudget when > 0.
 	FailureBudget int
 
@@ -78,12 +83,48 @@ type OwnerFunc func(ctx context.Context, deviceKey string) (accountID string, cl
 // Engine evaluates rules, applies the tier policy, actuates through the
 // registry, and records what happened.
 type Engine struct {
-	reg    *devices.Registry
-	store  *Store
-	audit  Auditor
-	owner  OwnerFunc
-	now    func() time.Time
-	budget int
+	reg      *devices.Registry
+	store    *Store
+	audit    Auditor
+	owner    OwnerFunc
+	notifier Notifier
+	now      func() time.Time
+	budget   int
+}
+
+// SetNotifier installs the alert sink after construction.
+//
+// After, not at construction, because the engine is built before the HTTP
+// server that owns the webhook dispatcher — and giving alerts their own
+// dispatcher instead would mean two retirement counters and two delivery logs
+// for one endpoint. An engine with no notifier records its alert runs and
+// delivers nowhere, which is the honest state for a hub with no webhook.
+func (e *Engine) SetNotifier(n Notifier) { e.notifier = n }
+
+// Alert is what a notify action raises.
+//
+// It carries the rule and the trigger's device alongside the operator's own
+// words, because a message on its own ("tank is low") is not actionable when
+// three rules could have sent it. The hub adds the context and does not compose
+// the sentence — a generated one would be about the device, and the useful
+// sentence is about what the operator wants done.
+type Alert struct {
+	AccountID string
+	RuleID    string
+	RuleName  string
+	Message   string
+	Cause     Cause
+	At        int64
+	// TriggerDeviceKey is the device that made the rule ask to run, or "" for a
+	// schedule.
+	TriggerDeviceKey string
+}
+
+// Notifier delivers alerts. Implemented outside this package so the engine does
+// not learn about webhooks, chat rails or anything else a delivery mechanism
+// might become.
+type Notifier interface {
+	Alert(ctx context.Context, a Alert)
 }
 
 // NewEngine validates its dependencies. Every one of them is required: an
@@ -99,7 +140,7 @@ func NewEngine(cfg Config) (*Engine, error) {
 	if cfg.Audit == nil {
 		return nil, errors.New("automations: no auditor")
 	}
-	e := &Engine{reg: cfg.Registry, store: cfg.Store, audit: cfg.Audit,
+	e := &Engine{reg: cfg.Registry, store: cfg.Store, audit: cfg.Audit, notifier: cfg.Notifier,
 		owner: cfg.DeviceOwner, now: cfg.Now, budget: cfg.FailureBudget}
 	if e.now == nil {
 		e.now = time.Now
@@ -256,25 +297,33 @@ func (e *Engine) SaveRule(ctx context.Context, r Rule) (Rule, error) {
 			return fail(refuse(ReasonUnresolvable, "no such device %q", key))
 		}
 	}
-	plans, err := e.resolvePlans(r.Action)
-	if err != nil {
-		return fail(err)
-	}
-	tier := devices.TierUnset
-	for _, p := range plans {
-		if err := checkActionTier(p.Tier); err != nil {
+	// An alert resolves to no device, so there is nothing to resolve, tier or
+	// own — and it falls through to the SAME persistence below rather than
+	// getting a second save path. Its tier is TierRead: it observes and changes
+	// nothing, and leaving the field unset would make a saved alert
+	// indistinguishable from a rule whose tier nobody worked out.
+	tier := devices.TierRead
+	if !r.Action.IsNotify() {
+		tier = devices.TierUnset
+		plans, err := e.resolvePlans(r.Action)
+		if err != nil {
 			return fail(err)
 		}
-		// A courtesy, not the boundary. Refusing here means an admin naming
-		// another account's device is told immediately, instead of saving a
-		// rule that looks fine and is refused every time it fires. The check
-		// that actually protects the device is the one in the run path, which
-		// re-asks because ownership can change under a stored rule.
-		if err := e.checkDeviceOwnership(ctx, r.AccountID, p.Key); err != nil {
-			return fail(err)
-		}
-		if p.Tier > tier {
-			tier = p.Tier
+		for _, p := range plans {
+			if err := checkActionTier(p.Tier); err != nil {
+				return fail(err)
+			}
+			// A courtesy, not the boundary. Refusing here means an admin naming
+			// another account's device is told immediately, instead of saving a
+			// rule that looks fine and is refused every time it fires. The check
+			// that actually protects the device is the one in the run path, which
+			// re-asks because ownership can change under a stored rule.
+			if err := e.checkDeviceOwnership(ctx, r.AccountID, p.Key); err != nil {
+				return fail(err)
+			}
+			if p.Tier > tier {
+				tier = p.Tier
+			}
 		}
 	}
 	r.ActionTier = tier
@@ -428,6 +477,24 @@ func (e *Engine) Fire(ctx context.Context, r Rule, cause Cause, occurrenceAt int
 	}
 	if !met {
 		return e.settle(ctx, r, run, OutcomeSkipped, ReasonConditionUnmet, nil)
+	}
+
+	// An alert has no device on the other end, so it skips resolution, the tier
+	// gate, the ownership check and execution — every one of which exists to
+	// govern moving something. It keeps the run record and the audit row,
+	// because an alert that did not arrive still has to be visible as a run
+	// that happened.
+	if r.Action.IsNotify() {
+		run.TargetCount = 1
+		run.Tier = devices.TierRead
+		if e.notifier != nil {
+			e.notifier.Alert(ctx, Alert{
+				AccountID: r.AccountID, RuleID: r.ID, RuleName: r.Name,
+				Message: r.Action.Notify.Message, Cause: cause, At: start,
+				TriggerDeviceKey: r.Trigger.DeviceKey(),
+			})
+		}
+		return e.settle(ctx, r, run, OutcomeExecuted, "", nil)
 	}
 
 	plans, err := e.resolvePlans(r.Action)
