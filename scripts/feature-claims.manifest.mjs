@@ -275,7 +275,7 @@ export const FEATURES = [
       [{ root: 'hub/internal/store', pattern: 'func \\(s \\*Store\\) DenyListForDevice' }],
       // Delivery, both times it happens. Reconnect is the one that makes
       // "converges when the controller next hears from the hub" true.
-      [{ file: 'hub/internal/httpapi/offline_grant_revoke.go', pattern: 'SignCommandWithPayload\\("revoke"' }],
+      [{ file: 'hub/internal/httpapi/offline_grant_revoke.go', pattern: 'signForDevice\\(ctx, "revoke"' }],
       [{ file: 'hub/internal/httpapi/devices.go', pattern: 'pushDenyListOnConnect' }],
       // Reachable from a screen, not just from a route.
       [{ file: 'src/components/access/IssuedGrantsPanel.tsx', pattern: 'offlineGrantRevoke' }],

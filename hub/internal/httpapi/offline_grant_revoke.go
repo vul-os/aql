@@ -149,7 +149,18 @@ func (s *Server) pushDenyLists(ctx context.Context, devices []string, seq int64)
 			"issued_at": now,
 			"entries":   denyListPayload(entries),
 		}
-		env, err := s.keys.SignCommandWithPayload("revoke", dev, "", payload, revokeDispatchTTL,
+		// signForDevice, NOT keys.SignCommandWithPayload. During a key rotation
+		// the hub's current key is the NEW one while an unrepaired controller
+		// still pins the old, so signing with the current key produces a
+		// badsig at that gate — and this command silently reaching nothing is
+		// the worst case available, because a rotation is exactly when an
+		// operator is revoking things.
+		//
+		// This called the current-key signer for two commits. The rule is
+		// stated on signForDevice — "every command to a controller must go
+		// through here" — and prose did not stop me; TestEveryControllerCommandIsSignedForItsPin
+		// does.
+		env, err := s.signForDevice(ctx, "revoke", dev, "", payload, revokeDispatchTTL,
 			map[string]any{"source": "gateway", "reason": "grant_revocation"})
 		if err != nil {
 			s.log.Error("sign revoke", "device_id", dev, "err", err)
