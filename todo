@@ -151,6 +151,25 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       disproportionate to the residual risk. Recorded as a decision, not an oversight —
       it had been deferred twice without one.
 
+## damage paths on critical state files (complete)
+- NOTE: every file the hub or controller loads at boot has an ABSENT case (create it) and
+      a DAMAGED case (refuse, or fail closed). The two must not be confused: generating on
+      damage is silent, and what it costs depends entirely on the file.
+- [x] gateway_ed25519.seed — refuses, does not re-key, does not rewrite the damaged bytes.
+      Regenerating would break PAIRING: every controller pins this key, so every command
+      and every offline grant would be rejected while the hub looked healthy.
+- [x] gateway_ed25519.prev (retained key) — already covered in keys/rotation_test.go.
+- [x] jwt_secret — refuses, and the absent case persists so the next boot reads it rather
+      than minting another. Regenerating only invalidates SESSIONS: everyone logged out,
+      silently, on an otherwise clean restart. Less severe than the signing key and worth
+      distinguishing rather than treating as the same problem.
+- [x] controller state.json — two DIFFERENT deliberate answers, both already tested:
+      malformed JSON refuses to start (`state: corrupt state.json`), while a malformed
+      pinned KEY inside valid JSON starts and fails closed on verification, so the device
+      can still be reached and repaired rather than being bricked at a gate.
+- NOTE: verified end to end on the shipped container as well — a corrupt seed exits 1 with
+      a message naming the file, and the signing key is stable across restarts.
+
 ## concurrency coverage (partial)
 - NOTE: `go test -race` only reports races on paths that ACTUALLY run in parallel during
       the test. A package whose tests are single-threaded gets a green race run that means
