@@ -283,6 +283,26 @@ export const FEATURES = [
     ],
   },
   {
+    id: 'go-test-gates-cannot-serve-a-cached-pass',
+    label:
+      'Every go test gate runs with -count=1, so a change to the shared conformance ' +
+      'corpus cannot leave a stale PASS standing',
+    docStatus: 'shipped',
+    docRefs: ['ARCHITECTURE.md § Conformance vectors'],
+    evidence: [
+      [{ file: 'scripts/check.sh', pattern: 'hub go test -count=1' }],
+      [{ file: '.github/workflows/ci.yml', pattern: 'go test -count=1' }],
+      // The guard, which is the half that survives someone tidying the flag
+      // away as noise.
+      [
+        {
+          file: 'src/lib/__tests__/testGatesAreFresh.test.ts',
+          pattern: 'every go test invocation re-runs instead of trusting the cache',
+        },
+      ],
+    ],
+  },
+  {
     id: 'event-kinds-say-which-are-sent',
     label:
       'proto/events.md marks which event kinds the reference controller actually sends, ' +
