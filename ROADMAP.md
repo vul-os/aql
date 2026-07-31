@@ -808,7 +808,11 @@ and none has met physical hardware.
       dimmer slider legitimately streams `set` and a lamp cannot injure anyone, 3s at
       consequential, 10s at physical-access and above. It fails CLOSED, unlike the gate
       path's reviewed fail-open — there is no member-standing-at-their-own-gate argument
-      for blades. Reuses `rate_limit_cooldowns`, so no migration
+      for blades. Reuses `rate_limit_cooldowns`, so no migration. The console reads both new
+      codes rather than falling through to "did not go through", which would have read as
+      though a cooled-down command might have half-happened: `too_soon` says nothing was
+      sent and when to retry, and `rate_limit_unavailable` names it as the operator's
+      problem rather than one a member can retry past
 
 ---
 

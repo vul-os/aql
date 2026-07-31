@@ -152,6 +152,40 @@ describe('execute outcomes', () => {
     expect(out.message).toContain('check the device');
   });
 
+  // The engine gained a cooldown; this is the console half of it. A 429 that
+  // fell through to the generic "did not go through" would read as though the
+  // command may have half-happened, when in fact it was never sent and will
+  // work shortly. Those are different things to tell someone standing in front
+  // of a machine.
+  it('says a cooled-down command was NOT sent, and when to try again', () => {
+    const err = new ApiError(429, { error: 'too_soon' });
+    err.retryAfterS = 10;
+    const out = describeExecuteError(err, 'Start');
+
+    expect(out.kind).toBe('refused');
+    expect(out.message).toContain('Nothing was sent');
+    expect(out.message).toContain('10s');
+    // The wording that would be wrong: it did not fail, and it did not
+    // half-happen.
+    expect(out.message.toLowerCase()).not.toContain('did not go through');
+    expect(out.message.toLowerCase()).not.toContain('failed');
+  });
+
+  it('still says nothing was sent when the hub gives no retry hint', () => {
+    const out = describeExecuteError(new ApiError(429, { error: 'too_soon' }), 'Start');
+    expect(out.message).toContain('Nothing was sent');
+    expect(out.message).not.toContain('undefined');
+  });
+
+  // A hub that cannot check its own limit refuses. That is an operator's
+  // problem, and saying so stops a member retrying into a wall.
+  it('names a broken rate limiter as a hub problem', () => {
+    const out = describeExecuteError(new ApiError(503, { error: 'rate_limit_unavailable' }), 'Start');
+    expect(out.kind).toBe('failed');
+    expect(out.message).toContain('not sent');
+    expect(out.message.toLowerCase()).toContain('hub problem');
+  });
+
   it('says nothing was sent when the device was unreachable', () => {
     const out = describeExecuteError(new ApiError(502, { error: 'unreachable' }), 'Open');
     expect(out.kind).toBe('unreachable');

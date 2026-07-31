@@ -356,6 +356,28 @@ export function describeExecuteError(err: unknown, label: string): ExecuteOutcom
           kind: 'refused',
           message: `“${label}” was refused: on a hub serving several accounts, only the instance admin can drive devices. Nothing was sent.`,
         };
+      case 'too_soon': {
+        // NOT a failure, and the wording has to make that clear. The generic
+        // fallback said "did not go through", which reads as though the command
+        // may have half-happened; this one was never sent, and it will work
+        // shortly. The hub sends Retry-After and the client already parses it,
+        // so the wait is stated rather than left to guesswork.
+        const wait = err.retryAfterS;
+        return {
+          kind: 'refused',
+          message: wait
+            ? `“${label}” was sent moments ago. Nothing was sent this time — try again in ${wait}s.`
+            : `“${label}” was sent moments ago. Nothing was sent this time — give it a few seconds.`,
+        };
+      }
+      case 'rate_limit_unavailable':
+        // The hub could not check its own limit and refused rather than
+        // guessing. Named separately because the fix is an operator's, not the
+        // member's — retrying will not help until the hub is healthy.
+        return {
+          kind: 'failed',
+          message: `The hub couldn't check its rate limit, so “${label}” was not sent. This is a hub problem — contact whoever runs it.`,
+        };
     }
   }
   return { kind: 'failed', message: friendlyApiError(err, `“${label}” did not go through.`) };
