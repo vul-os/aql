@@ -59,6 +59,13 @@ const (
 	// refuse specifically rather than generically, because a generic refusal
 	// reads as "I did not understand" when the truth is "no sensor exists".
 	QueryPosition
+	// QueryEnergy — "how much solar today". §4.2's remaining answerable row.
+	//
+	// Permitted under §4.4 rule 3 ("no raw telemetry: no series, no
+	// per-circuit breakdowns") because the answer is a single aggregate per
+	// source over one day. A curve would be an appliance fingerprint and a
+	// schedule (§4.3); a day's total is neither.
+	QueryEnergy
 )
 
 func (k QueryKind) String() string {
@@ -69,6 +76,8 @@ func (k QueryKind) String() string {
 		return "online"
 	case QueryPosition:
 		return "position"
+	case QueryEnergy:
+		return "energy"
 	}
 	return "unknown"
 }
@@ -106,6 +115,32 @@ var whoWords = map[string]bool{"who": true, "whom": true, "whose": true}
 // QueryUnknown, whose reply states what CAN be answered ("when a gate was last
 // opened") without ever offering the who. That is a refusal by omission, so it
 // is written down here rather than left to be re-derived as a missing word.
+
+// energyWords ask about generation or consumption. Checked FIRST, ahead of the
+// gate vocabulary, because "how much solar have we made today" carries "how"
+// and would otherwise be a gate question the hub cannot answer — and because an
+// energy question names no gate, so the gate classifications would all miss and
+// it would fall to QueryUnknown.
+var energyWords = map[string]bool{
+	"solar": true, "generated": true, "generation": true, "kwh": true,
+	"grid": true, "battery": true, "energy": true, "power": true,
+	"consumed": true, "consumption": true, "used": true, "usage": true,
+}
+
+// ClassifyEnergyQuestion reports whether a body is asking about energy at all.
+//
+// Separate from ClassifyGateQuestion because the two are answered from
+// different stores and scoped differently — energy is per ACCOUNT, gates are
+// per authorized access point — and folding them into one classifier would mean
+// one function whose result the caller has to demultiplex anyway.
+func ClassifyEnergyQuestion(body string) bool {
+	for _, w := range fields(body) {
+		if energyWords[w] {
+			return true
+		}
+	}
+	return false
+}
 
 // ClassifyGateQuestion resolves what a gate question is asking.
 //
@@ -288,4 +323,55 @@ func agoPhrase(elapsed int64) string {
 	default:
 		return fmt.Sprintf("about %d days ago", (elapsed+43200)/86400)
 	}
+}
+
+// EnergyFact is a day's energy, in the shape §4.4 rule 3 permits: one number
+// per source, no series, no per-circuit breakdown.
+type EnergyFact struct {
+	Source string
+	KWh    float64
+	// Complete is false when a meter was down for part of the window. The
+	// number is still reported — a floor is more useful than silence — but it
+	// is marked, because "we generated 12 kWh" and "at least 12 kWh, one meter
+	// was down" are different claims.
+	Complete bool
+}
+
+// EnergyAnswer renders a day's energy.
+//
+// Unattributed energy is stated rather than folded in. energy/mix.go keeps it
+// out of every source deliberately, and a reply that quietly added it to
+// "grid" would be inventing an attribution the meter never made — the same
+// discipline the rest of this file applies to gates.
+func EnergyAnswer(facts []EnergyFact, unattributedKWh float64, publicURL string) string {
+	if len(facts) == 0 {
+		return "This hub is not metering anything, so there is nothing to report. " +
+			"Energy monitoring is set up in the console" + portalSuffix(publicURL)
+	}
+	var b strings.Builder
+	b.WriteString("Today so far:")
+	anyIncomplete := false
+	for _, f := range facts {
+		fmt.Fprintf(&b, "\n%s: %.1f kWh", f.Source, f.KWh)
+		if !f.Complete {
+			b.WriteString(" (at least — a meter was down for part of the day)")
+			anyIncomplete = true
+		}
+	}
+	if unattributedKWh > 0 {
+		fmt.Fprintf(&b, "\n\n%.1f kWh is on channels nobody has classified, so it is not "+
+			"counted under any source.", unattributedKWh)
+	}
+	if anyIncomplete {
+		b.WriteString("\n\nWhere a meter was down the figure is a floor, not a total.")
+	}
+	b.WriteString("\n\nThe breakdown is in the console" + portalSuffix(publicURL))
+	return b.String()
+}
+
+func portalSuffix(publicURL string) string {
+	if publicURL == "" {
+		return "."
+	}
+	return ": " + trimURL(publicURL) + "/app"
 }

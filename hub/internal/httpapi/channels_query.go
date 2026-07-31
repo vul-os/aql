@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/vul-os/aql/hub/internal/devices"
+	"github.com/vul-os/aql/hub/internal/energy"
 
 	"github.com/vul-os/aql/hub/internal/channels"
 	"github.com/vul-os/aql/hub/internal/store"
@@ -119,6 +120,13 @@ func (s *Server) answerGateQuestion(ctx contextT, body string, verb channels.Gat
 // that passed the WRONG set would leak another member's gates with nothing to
 // catch it — §4.4 rule 1 is that a query resolves only over the caller's own.
 func (s *Server) answerProfileGateQuestion(ctx contextT, body, profileID, source string) string {
+	// Energy first. An energy question names no gate, so every gate
+	// classification below would miss it and it would reach the welcome menu —
+	// and "how much solar have we made today" carries "how", which the gate
+	// classifier reads as an interrogative it cannot answer.
+	if reply := s.answerEnergyQuestion(ctx, body, profileID, source); reply != "" {
+		return reply
+	}
 	verb, intent := channels.TextGateIntent(body)
 	if intent != channels.IntentQuestion {
 		return ""
@@ -197,4 +205,61 @@ func (s *Server) unsupportedVerbReply(ctx contextT, body, profileID string, v de
 		return channels.UnsupportedVerbReply(v, s.channelPublicURL())
 	}
 	return channels.UnsupportedVerbReplyFor(channels.ResolveDevice(body, v, fleet), s.channelPublicURL())
+}
+
+// answerEnergyQuestion answers "how much solar today" — docs/CHAT-COMMANDS.md
+// §4.2's remaining answerable row.
+//
+// Returns "" when this is not an energy question, or the hub does not meter, or
+// the caller has no single account to answer for. All three collapse into
+// "nothing to say here" so the rail falls through to its existing behaviour;
+// none of them is an error worth alarming a member about.
+//
+// Scoped to the caller's account, and only when they have EXACTLY one. Energy
+// is an account-wide aggregate rather than a per-device fact, so a member of
+// several accounts gives no basis for choosing which site to report — and
+// reporting the wrong household's consumption is a disclosure, not a
+// mis-answer. The console, where an account can be selected, is the right
+// surface for that case.
+func (s *Server) answerEnergyQuestion(ctx contextT, body, profileID, source string) string {
+	if s.cfg.Energy == nil || !channels.ClassifyEnergyQuestion(body) {
+		return ""
+	}
+	accountID := s.soleAccountFor(ctx, profileID)
+	if accountID == "" {
+		return ""
+	}
+	if s.store.NoteChatQuery(ctx, "profile:"+profileID, QueriesPerHour, time.Now().Unix()) {
+		return "" // over the query cap: go quiet, as the gate read path does
+	}
+
+	// Midnight to now, in the hub's configured zone — "today" is a local-time
+	// question and the rollups are keyed by zone, so asking in UTC would answer
+	// a different day for most of the world.
+	loc := s.cfg.Energy.Location()
+	now := time.Now().In(loc)
+	from := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+
+	mix, err := s.cfg.Energy.SourceMix(ctx, accountID, from, now)
+	if err != nil {
+		s.log.Error("chat energy mix", "err", err, "source", source)
+		return "I could not read the meters just now — try again in a moment."
+	}
+
+	facts := make([]channels.EnergyFact, 0, len(mix.Totals))
+	for _, t := range mix.Totals {
+		// Sinks (export, battery charge) are deliberately omitted: the question
+		// asked is what was generated or used, and listing "exported" beside
+		// "solar" invites reading one as a share of the other when they are
+		// different directions.
+		if t.Flow != energy.FlowSupply {
+			continue
+		}
+		facts = append(facts, channels.EnergyFact{
+			Source:   string(t.Source),
+			KWh:      t.KWh,
+			Complete: t.Complete(),
+		})
+	}
+	return channels.EnergyAnswer(facts, mix.UnattributedKWh, s.channelPublicURL())
 }

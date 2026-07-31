@@ -175,3 +175,88 @@ func TestTheUnknownAnswerNeverOffersToNameAPerson(t *testing.T) {
 		}
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Energy — docs/CHAT-COMMANDS.md §4.2's remaining answerable row
+// ---------------------------------------------------------------------------
+
+func TestEnergyQuestionsAreRecognisedWithoutNamingAGate(t *testing.T) {
+	for _, body := range []string{
+		"how much solar today", "how much solar have we generated today",
+		"what's the grid usage", "how much energy did we use",
+		"battery today", "how many kwh",
+	} {
+		if !ClassifyEnergyQuestion(NormalizeText(body)) {
+			t.Errorf("%q not recognised as an energy question", body)
+		}
+	}
+	// And gate questions are not energy questions, or the energy path would
+	// swallow them before the gate classifier ran.
+	for _, body := range []string{
+		"when was the gate last opened?", "is the gate closed", "open the gate",
+		"turn on the porch light", "thanks",
+	} {
+		if ClassifyEnergyQuestion(NormalizeText(body)) {
+			t.Errorf("%q read as an energy question", body)
+		}
+	}
+}
+
+// §4.4 rule 3: no series, no per-circuit breakdown. The answer is one number
+// per source and says nothing about when any of it happened.
+func TestTheEnergyAnswerIsAnAggregateNotACurve(t *testing.T) {
+	got := EnergyAnswer([]EnergyFact{
+		{Source: "solar", KWh: 12.4, Complete: true},
+		{Source: "grid", KWh: 3.2, Complete: true},
+	}, 0, testPortal)
+
+	if !strings.Contains(got, "solar: 12.4 kWh") || !strings.Contains(got, "grid: 3.2 kWh") {
+		t.Errorf("answer does not carry the totals: %q", got)
+	}
+	// A time-of-day breakdown would be the appliance fingerprint §4.3 warns
+	// about. Nothing in the reply may look like one.
+	for _, leak := range []string{":00", "hourly", "per hour", "peak at"} {
+		if strings.Contains(got, leak) {
+			t.Errorf("answer leaks a curve (%q): %q", leak, got)
+		}
+	}
+}
+
+// A meter that was down makes the figure a FLOOR, and the reply says so. A
+// number presented as a total when a meter was dark is the same class of
+// falsehood as an acked open presented as a gate that moved.
+func TestAnIncompleteEnergyFigureIsMarkedAsAFloor(t *testing.T) {
+	got := EnergyAnswer([]EnergyFact{{Source: "solar", KWh: 9, Complete: false}}, 0, "")
+	if !strings.Contains(got, "at least") || !strings.Contains(got, "floor") {
+		t.Errorf("an incomplete figure is presented as a total: %q", got)
+	}
+	// A complete one carries no such hedge.
+	if full := EnergyAnswer([]EnergyFact{{Source: "solar", KWh: 9, Complete: true}}, 0, ""); strings.Contains(full, "at least") {
+		t.Errorf("a complete figure was hedged: %q", full)
+	}
+}
+
+// Unattributed energy is stated, never folded into a source. energy/mix.go
+// keeps it out of every total deliberately; a reply that added it to "grid"
+// would invent an attribution the meter never made.
+func TestUnattributedEnergyIsStatedNotFoldedIn(t *testing.T) {
+	got := EnergyAnswer([]EnergyFact{{Source: "solar", KWh: 10, Complete: true}}, 2.5, "")
+	if !strings.Contains(got, "2.5 kWh") || !strings.Contains(got, "not") {
+		t.Errorf("unattributed energy is not reported: %q", got)
+	}
+	if !strings.Contains(got, "solar: 10.0 kWh") {
+		t.Errorf("unattributed energy was folded into a source: %q", got)
+	}
+}
+
+// A hub that meters nothing says so, rather than reporting zeros that would
+// read as "we generated nothing today".
+func TestAHubThatMetersNothingSaysSo(t *testing.T) {
+	got := EnergyAnswer(nil, 0, testPortal)
+	if !strings.Contains(got, "not metering anything") {
+		t.Errorf("an unmetered hub answered: %q", got)
+	}
+	if strings.Contains(got, "0.0 kWh") {
+		t.Errorf("an unmetered hub reported zeros: %q", got)
+	}
+}

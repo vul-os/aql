@@ -870,7 +870,7 @@ command to the controller.
 | "is the controller online" | `devices.last_seen_at` | **built** |
 | "is the gate closed" | needs a position sensor (`proto/events.md:42`) | **built as a refusal** — §4.1 |
 | "who opened the gate" | `access_logs` has it | **refused on purpose** — see below |
-| "how much solar today" | energy engine | not built |
+| "how much solar today" | energy engine, via `SourceMix` | **built** |
 | "which lights are on" | device state store | not built, and gated on rule 6 |
 
 **"Who opened the gate" is refused although the hub knows.** It is the one query
@@ -882,10 +882,28 @@ rather than quietly answered with the adjacent fact — "who closed the gate"
 contains "closed" and would otherwise have been answered with the last close
 time, which is an evasion dressed as an answer.
 
-The two unbuilt rows are unbuilt for different reasons. Solar needs the energy
-engine wired to a rail. "Which lights are on" is an occupancy proxy and is
-blocked on rule 6's per-location opt-in, which does not exist yet — so it stays
-off rather than shipping without its switch.
+"Which lights are on" remains unbuilt: it is an occupancy proxy, blocked on
+rule 6's per-location opt-in, which does not exist — so it stays off rather than
+shipping without its switch.
+
+Solar is built, and is permitted under rule 3 for a specific reason. The answer
+is ONE NUMBER PER SOURCE over one day: a curve would be the appliance
+fingerprint and schedule §4.3 warns about, and a day's total is neither. Three
+things the reply does that the number alone would not:
+
+- A source whose meter was down for part of the day is reported as a FLOOR and
+  says so. A figure presented as a total when a meter was dark is the same class
+  of falsehood as an acked open presented as a gate that moved.
+- Unattributed energy is stated separately, never folded into a source.
+  `energy/mix.go` keeps it out of every total deliberately, and adding it to
+  "grid" would invent an attribution the meter never made.
+- A hub that meters nothing says so rather than reporting zeros, which would
+  read as "we generated nothing today".
+
+It answers only for a member with exactly ONE account. Energy is an account-wide
+aggregate, so several accounts give no basis for choosing which site to report,
+and reporting the wrong household's consumption is a disclosure rather than a
+mis-answer.
 
 ### 4.3 Reads leak more than commands do
 

@@ -158,6 +158,22 @@ func (s *Server) waHandleText(ctx contextT, msg *channels.WAMessage, from, chatI
 	// as the second. Falling through to the welcome menu instead would hand the
 	// member an offer to open the gate they just asked a question about, which
 	// is the misdirection unsupported.go exists to avoid.
+	// Energy questions name no gate, so they are answered before the gate
+	// classification — the same ordering the profile rails use.
+	//
+	// The CLASSIFIER runs first and the profile lookup only after it matches.
+	// The other way round put a database round trip on every inbound message
+	// on this rail, for the ~0% of them that ask about energy; it took the
+	// httpapi suite from 11 seconds to 84 and would have cost every member a
+	// query per message in production.
+	if channels.ClassifyEnergyQuestion(body) && s.cfg.Energy != nil {
+		if profileID, _, err := s.store.VerifiedProfileIDByPhone(ctx, from); err == nil && profileID != "" {
+			if reply := s.answerEnergyQuestion(ctx, body, profileID, channels.KindWhatsApp); reply != "" {
+				return text(to, chatID, reply)
+			}
+		}
+	}
+
 	if intent == channels.IntentQuestion {
 		reply := s.answerGateQuestion(ctx, body, verb, allGrants, queryCaller{
 			subject: "phone:" + from,
