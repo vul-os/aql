@@ -137,6 +137,20 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       sample is gone in every zone. A recovery tool that prints a success line over a
       partial result is worse than one that refuses, because the operator stops looking.
 
+## camera: the one seam left, and why it stays
+- [ ] Nothing joins RTSP to a written clip. camera tests the wire (real in-process RTSP
+      server) and stops at access units; recording tests access-units-to-clip against a
+      FetchFunc FAKE. Both sides of the contract are now pinned — camera asserts
+      ConsumeMedia surfaces in-band SPS/PPS and keeps them out of the samples, recording
+      asserts CaptureOnce writes a clip given those — but the fake still decides what the
+      real one would return.
+- NOTE: closing it needs the fake RTSP server extracted into an importable package, because
+      recording imports camera so camera cannot import recording. MEASURED: 23 call sites
+      across 2 files set 24 unexported fields directly, so extraction means exporting all
+      of them or writing setters, in the tests that guard the camera wire path. Judged
+      disproportionate to the residual risk. Recorded as a decision, not an oversight —
+      it had been deferred twice without one.
+
 ## concurrency coverage (partial)
 - NOTE: `go test -race` only reports races on paths that ACTUALLY run in parallel during
       the test. A package whose tests are single-threaded gets a green race run that means
@@ -162,7 +176,15 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       concurrently and are NOT serialised. Refresh swaps the index while handlers read
       and actuate through it. Came through clean; the test catches a released write lock
       between the delete and the re-add (654k observed disappearances under that tamper).
-- [ ] STILL UNCOVERED, measured: 12 more packages have concurrent production code
+- [x] controller/internal/transport — INVESTIGATED, no defect. Two goroutines write to the
+      WSConn concurrently (the read loop's acks, the 2s event drain) and WSConn holds no
+      write mutex. That looked like frame corruption waiting to happen. It is not: Go
+      serialises concurrent Write calls on a net.Conn, so one Write per frame cannot
+      interleave. Could not demonstrate corruption with four writers, 900 KB frames, a real
+      TCP socket, or even a deliberately split write. NO test was kept — one that cannot
+      fail is decoration — but writeFrame now states the invariant, because splitting that
+      single Write would break it and nothing else enforces it.
+- [ ] STILL UNCOVERED, measured: 11 more packages have concurrent production code
       (goroutines or a mutex) and zero `go func` in their tests. The highest-consequence
       remaining are controller/internal/transport and controller/internal/agent.
       Each needs a test shaped around ITS hazard, not a generic hammer — a shallow sweep

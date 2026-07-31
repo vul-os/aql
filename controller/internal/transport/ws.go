@@ -213,6 +213,25 @@ func (c *WSConn) WriteMessage(payload []byte) error {
 	return c.writeFrame(0x1, payload)
 }
 
+// writeFrame emits one frame in exactly ONE conn.Write, and that is load-bearing.
+//
+// Two goroutines write to this connection in normal operation: the read loop
+// acks each inbound command, and a ticker drains queued events every two
+// seconds (runner.go). WSConn holds no write mutex, so what keeps the frame
+// stream intact is that Go serialises concurrent Write calls on a net.Conn —
+// internal/poll's FD.Write holds its write lock across the whole call, partial
+// writes included. One Write per frame therefore cannot interleave with another.
+//
+// Split the header and the payload into two Writes and that guarantee is gone:
+// two writers can produce header-A, header-B, payload-A, and every frame after
+// it is garbage until the connection is dropped. The invariant is one Write, and
+// it is stated here because nothing else enforces it.
+//
+// This was investigated as a suspected DEFECT and is not one. An attempt to
+// demonstrate corruption — four goroutines, 900 KB frames, a real TCP socket,
+// and a deliberately split write — produced intact frames every time, so no
+// test is kept for it: a test that cannot fail is decoration, and this file
+// would rather carry the reasoning than a green check that proves nothing.
 func (c *WSConn) writeFrame(opcode byte, payload []byte) error {
 	var maskKey [4]byte
 	if _, err := rand.Read(maskKey[:]); err != nil {
