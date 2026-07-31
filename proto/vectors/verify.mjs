@@ -78,6 +78,9 @@ const SKEW = CONSTANTS.skew_seconds;
 const MAX_CMD_WINDOW = CONSTANTS.max_cmd_window_seconds;
 const STALE_CLOCK_LIMIT = CONSTANTS.stale_clock_limit_seconds;
 
+// commands.md §Verification step 5.
+const LOCKDOWN_ALLOWED = ['lift', 'ping', 'config', 'repair', 'revoke'];
+
 // Every Ed25519 contract document repeats the block. If two disagree, "the
 // vectors say" is not a well-formed statement and this verifier is enforcing
 // whichever file it happened to read first, so refuse rather than pick.
@@ -155,8 +158,11 @@ function evalCommand(env, check, nonceStore) {
   if (check.now > env.exp + SKEW) return rej('expired');
   if (nonceStore.has(env.nonce)) return rej('replay');
   nonceStore.add(env.nonce);
-  if (check.lockdown && !['lift', 'ping', 'config', 'repair'].includes(env.cmd))
-    return rej('lockdown');
+  // commands.md §Verification step 5. This is a FOURTH copy of the matrix —
+  // contract, controller, hub verifier, and here — and it was the one that got
+  // missed when `revoke` was added: a three-way guard covered the other three.
+  // Kept as a named constant so the guard can read it.
+  if (check.lockdown && !LOCKDOWN_ALLOWED.includes(env.cmd)) return rej('lockdown');
   return acc();
 }
 
@@ -186,6 +192,14 @@ function evalGrantRedemption({ check, grant, open, challenge, proof }, usedCnonc
   if (check.now - check.last_gateway_sync > STALE_CLOCK_LIMIT) return rej('stale_clock');
   if (check.lockdown) return rej('lockdown');
   if (!verifyObject(grant, KEYS.gateway.pub)) return rej('badsig');
+  // Step 3a — the cached deny-list (docs/GRANT-REVOCATION.md). After the
+  // signature, because an id read from unverified bytes is not an id; before
+  // the validity window, because a dead grant needs no further evaluation.
+  // A vector with no `revoked` list denies nothing, which is the same
+  // "absence is never denial" rule the controller implements.
+  if ((check.revoked ?? []).some((e) => e.grant_id === grant.grant_id &&
+      (!e.exp || e.exp >= check.now)))
+    return rej('revoked');
   if (check.now < grant.iat - SKEW) return rej('not_yet_valid');
   if (check.now > grant.exp + SKEW) return rej('expired');
   if (!grant.devices.includes(check.device_id)) return rej('wrong_device');

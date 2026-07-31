@@ -182,16 +182,24 @@ describe('route coverage', () => {
       // same path was called. The console could list, toggle and delete rules
       // and could not create or edit one.
       //
-      // Method-level checking was tried and NOT kept: extracting a call's HTTP
-      // method reliably needs a TypeScript AST, and the regex version reported
-      // twenty-five pairs of which most were false — `GET /accounts/{id}/members`
-      // among them, which plainly has a client. An inventory that cries wolf is
-      // one people learn to silence, which would cost more than the gap it
-      // closes.
+      // Method-level checking was tried and NOT kept HERE: extracting a call's
+      // HTTP method reliably needs a TypeScript AST, and the regex version
+      // reported twenty-five pairs of which most were false — `GET
+      // /accounts/{id}/members` among them, which plainly has a client. An
+      // inventory that cries wolf is one people learn to silence.
       //
-      // So the limitation stands, and is written down instead: this test proves
-      // a route FAMILY is reachable, never that every verb on it is. A new
-      // method on an existing path is not covered by anything here.
+      // The limitation is therefore real for THIS test — it proves a route
+      // FAMILY is reachable, never that every verb on it is — but it is NOT a
+      // hole in the suite. routeParity.test.ts built the AST extractor this
+      // comment says was abandoned, and its "every gateway route is reachable
+      // from the console" check keys on `${method} ${path}`. A new method on an
+      // existing path fails THERE.
+      //
+      // Verified rather than assumed, because the previous version of this
+      // comment led to almost duplicating that check: deleting the
+      // `GET /v1/offline-grants` client makes routeParity report
+      // `✗ GET /v1/offline-grants` while this test stays green. Two guards, one
+      // strictly stronger; do not add a third.
       if (called.has(r.path)) continue;
       unreachable.push(`  ✗ ${key}`);
     }

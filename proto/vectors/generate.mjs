@@ -527,6 +527,11 @@ console.log('wrote keys.json');
         device_id: DEVICE_ID,
         last_gateway_sync: opts.lastSync ?? now - 3600,
         lockdown: opts.lockdown ?? false,
+        // Only emitted when a vector sets one. Every vector written before
+        // step 3a existed therefore carries NO list, which is the shape that
+        // exercises "absence is never denial" as the default across the whole
+        // corpus (docs/GRANT-REVOCATION.md §3.3).
+        ...(opts.revoked ? { revoked: opts.revoked(grant) } : {}),
       },
       grant,
       transcript: { open, challenge, proof },
@@ -551,6 +556,42 @@ console.log('wrote keys.json');
       expect: 'reject',
       reason: 'lockdown',
     }, { lockdown: true })
+  );
+  // Step 3a — the cached deny-list (docs/GRANT-REVOCATION.md).
+  vectors.push(
+    transcriptVec(
+      'grant-revoked',
+      'Grant is on the controller\'s cached deny-list: refused before its validity window is even considered.',
+      { expect: 'reject', reason: 'revoked' },
+      { revoked: (g) => [{ grant_id: g.object.grant_id, exp: g.object.exp }] }
+    )
+  );
+  vectors.push(
+    transcriptVec(
+      'grant-deny-list-other-grant',
+      'A deny-list that names a DIFFERENT grant changes nothing: the list refuses what it names and no more.',
+      { expect: 'accept' },
+      { revoked: () => [{ grant_id: 'ffffffff-0000-4000-8000-00000000dead', exp: 0 }] }
+    )
+  );
+  vectors.push(
+    transcriptVec(
+      'grant-deny-list-entry-expired',
+      'A deny-list entry past its own exp is inert — the validity step already refuses that grant, so the entry is not a second opinion.',
+      { expect: 'accept' },
+      { revoked: (g) => [{ grant_id: g.object.grant_id, exp: NOW - 1 }] }
+    )
+  );
+  vectors.push(
+    transcriptVec(
+      'grant-revoked-under-badsig',
+      'A forged grant on the deny-list is reported as FORGED, not as revoked: an id from unverified bytes is not an id.',
+      { expect: 'reject', reason: 'badsig' },
+      {
+        grantSigner: 'attacker',
+        revoked: (g) => [{ grant_id: g.object.grant_id, exp: g.object.exp }],
+      }
+    )
   );
   vectors.push(
     transcriptVec('grant-badsig', 'Grant signed by a key that is not the pinned gateway key.', {

@@ -59,7 +59,7 @@ describe('JCS canonicalisation matches the conformance corpus', () => {
       }
     }
     // Sanity: the loop actually ran against real content.
-    expect(vectors.length).toBe(14);
+    expect(vectors.length).toBe(18);
     expect(compared).toBeGreaterThanOrEqual(28);
   });
 

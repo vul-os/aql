@@ -44,6 +44,16 @@ type Check struct {
 	Lockdown        bool            `json:"lockdown"`
 	LastGatewaySync int64           `json:"last_gateway_sync"`
 	Challenge       json.RawMessage `json:"challenge"`
+	// Revoked is the controller's cached deny-list at verification time
+	// (docs/GRANT-REVOCATION.md). Absent means no list, which denies nothing —
+	// so every vector written before this field existed keeps its verdict.
+	Revoked []RevokedGrant `json:"revoked,omitempty"`
+}
+
+// RevokedGrant is one deny-list entry in a vector's check block.
+type RevokedGrant struct {
+	GrantID string `json:"grant_id"`
+	EXP     int64  `json:"exp,omitempty"`
 }
 
 // Step is one step of a multi-message flow (replay / cnonce reuse).

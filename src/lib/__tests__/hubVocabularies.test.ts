@@ -181,7 +181,30 @@ describe('closed vocabularies match the hub', () => {
     const controller = mapKeys(read('controller/internal/wire/wire.go'), 'LockdownAllowed');
     const hub = mapKeys(read('hub/internal/keys/envelope.go'), 'lockdownAllowed');
 
+    // The FOURTH copy, and the one this guard missed on its first outing: the
+    // conformance verifier had the matrix inline as a JS array literal, so
+    // adding `revoke` to the contract and both Go implementations still left a
+    // verifier that would reject it. A guard that counts the copies it knows
+    // about is only as good as that count.
+    const verifier = read('proto/vectors/verify.mjs');
+    const declared = /const LOCKDOWN_ALLOWED = \[([^\]]*)\]/.exec(verifier);
+    expect(declared, 'verify.mjs no longer declares LOCKDOWN_ALLOWED').not.toBeNull();
+    const js = [...declared![1].matchAll(/'([^']+)'/g)].map((m) => m[1]).sort();
+    // Inline literals ELSEWHERE in the verifier would reintroduce exactly the
+    // drift this catches, so there must be only the one declaration. Counted
+    // with the declaration itself removed, or this matches its own fix.
+    const withoutDeclaration = verifier.replace(/const LOCKDOWN_ALLOWED = \[[^\]]*\]/, '');
+    expect(
+      (withoutDeclaration.match(/\['lift'/g) ?? []).length,
+      'verify.mjs has an inline lockdown matrix again — it must use LOCKDOWN_ALLOWED',
+    ).toBe(0);
+
     expect(controller.length, 'the matrix parsed empty').toBeGreaterThan(3);
+    expect(
+      js,
+      'the conformance verifier and the controller disagree about which commands survive ' +
+        'a lockdown — the verifier is what proves an independent implementation would agree',
+    ).toEqual(controller);
     expect(
       hub,
       'the hub and the controller disagree about which commands survive a lockdown — ' +

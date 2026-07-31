@@ -37,7 +37,7 @@ exist and which are design intent. The condensed operator-facing tour is
 | Hub (`hub/`) — open path, console, API, device hub, audit | **Built.** 131 HTTP routes, 1,275 Go test functions green across 18 packages |
 | **Access module** — the first device kind wired end to end | **Built.** Signed commands, pinned-key controller, offline grants, tamper-evident audit |
 | Controller agent (`controller/`) — pairing, signed commands, grants, events | **Built.** 189 Go test functions green. GPIO relay driver and BLE radio are **not** |
-| Wire contracts (`proto/`) | **Built.** 76 conformance vectors, 111 checks, consumed by both sides |
+| Wire contracts (`proto/`) | **Built.** 80 conformance vectors, 115 checks, consumed by both sides |
 | Cross-module harness (`e2e/`) | **Built.** Boots real binaries and drives the open path over the wire |
 | Web console + desktop shell (`src/`, `src-tauri/`) | **Built.** Admin surfaces, the device / energy / automations screens over the real engine, and an emergency-access screen that requests and stores an offline grant |
 | **Device engine** — drivers, discovery, telemetry, automations, energy | **Built, default off.** Registry behind a driver seam; `http`, `modbus` (TCP), `mqtt` and `camera` (ONVIF) drivers; automations and energy on top. No radio in the hub — Zigbee and Z-Wave arrive over a bridge. No Matter and no dedicated robot driver; the camera driver records and plays back but has never received a frame from real hardware |
@@ -360,9 +360,9 @@ they are painful to retrofit:
    semantics
 4. **Controller events** — upstream: button pressed, gate held open, tamper
 
-Backed by **76 conformance vectors** across seven fixture files, and a `verify.mjs`
+Backed by **80 conformance vectors** across seven fixture files, and a `verify.mjs`
 self-checker that independently re-canonicalizes, re-signs and re-evaluates each one —
-**111 checks**, because multi-step transcripts contribute more than one. Both the hub and
+**115 checks**, because multi-step transcripts contribute more than one. Both the hub and
 the controller consume these fixtures in their own test suites. Binaries can churn; these
 can only be extended.
 

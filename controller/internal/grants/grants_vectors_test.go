@@ -29,13 +29,29 @@ func gatewayPub(t *testing.T) (string, ed25519.PublicKey) {
 }
 
 func envFrom(c vectorfile.Check, pub ed25519.PublicKey) grants.Env {
-	return grants.Env{
+	env := grants.Env{
 		Now:             c.Now,
 		LastGatewaySync: c.LastGatewaySync,
 		DeviceID:        c.DeviceID,
 		Lockdown:        c.Lockdown,
 		GatewayKey:      pub,
 	}
+	// Only when the vector carries a list. Leaving Revoked nil otherwise is
+	// what makes "absence is never denial" the DEFAULT the corpus exercises:
+	// every vector written before this field existed still runs against a
+	// controller that has never received a deny-list.
+	if len(c.Revoked) > 0 {
+		revoked := make(map[string]int64, len(c.Revoked))
+		for _, e := range c.Revoked {
+			revoked[e.GrantID] = e.EXP
+		}
+		now := c.Now
+		env.Revoked = func(id string) bool {
+			exp, ok := revoked[id]
+			return ok && (exp == 0 || exp >= now)
+		}
+	}
+	return env
 }
 
 // TestGrantVectorsThroughExchange replays every grants.json transcript
@@ -94,8 +110,10 @@ func TestGrantVectorsThroughExchange(t *testing.T) {
 			ran++
 		})
 	}
-	if ran != 14 {
-		t.Errorf("expected 14 grant vectors, ran %d", ran)
+	// Exact, not a floor: a vector silently dropped from the corpus is the
+	// failure this counts against, and a floor would not see it.
+	if ran != 18 {
+		t.Errorf("expected 18 grant vectors, ran %d", ran)
 	}
 }
 

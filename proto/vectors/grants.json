@@ -297,18 +297,24 @@
       }
     },
     {
-      "name": "grant-badsig",
-      "desc": "Grant signed by a key that is not the pinned gateway key.",
+      "name": "grant-revoked",
+      "desc": "Grant is on the controller's cached deny-list: refused before its validity window is even considered.",
       "expect": "reject",
-      "reason": "badsig",
+      "reason": "revoked",
       "check": {
         "now": 1789030800,
         "device_id": "de71ce00-0000-4000-8000-000000000001",
         "last_gateway_sync": 1789027200,
-        "lockdown": false
+        "lockdown": false,
+        "revoked": [
+          {
+            "grant_id": "9aa70000-0000-4000-8000-000000000004",
+            "exp": 1789518400
+          }
+        ]
       },
       "grant": {
-        "signer": "attacker",
+        "signer": "gateway",
         "object": {
           "v": 0,
           "typ": "grant",
@@ -331,7 +337,7 @@
           ],
           "iat": 1788913600,
           "exp": 1789518400,
-          "sig": "_BX_t3lShb2HvYLtvaUF968Y1-NFWT0zvar9Ly5zu07-Ei0bbyct9JY38YXaICyKxBtz0edm6hVFlwZ1DAazDQ"
+          "sig": "NdTFkdzRM35ZjoXN--a41kwI0bh-BeGs5iE-R7MjlnftTY7E9E2YttyAPqlws0CiHCjUw3w2w3DpvunQktcVAg"
         },
         "canonical": "{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000004\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]}"
       },
@@ -364,11 +370,11 @@
               ],
               "iat": 1788913600,
               "exp": 1789518400,
-              "sig": "_BX_t3lShb2HvYLtvaUF968Y1-NFWT0zvar9Ly5zu07-Ei0bbyct9JY38YXaICyKxBtz0edm6hVFlwZ1DAazDQ"
+              "sig": "NdTFkdzRM35ZjoXN--a41kwI0bh-BeGs5iE-R7MjlnftTY7E9E2YttyAPqlws0CiHCjUw3w2w3DpvunQktcVAg"
             },
             "access_point": "main"
           },
-          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000004\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"_BX_t3lShb2HvYLtvaUF968Y1-NFWT0zvar9Ly5zu07-Ei0bbyct9JY38YXaICyKxBtz0edm6hVFlwZ1DAazDQ\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
+          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000004\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"NdTFkdzRM35ZjoXN--a41kwI0bh-BeGs5iE-R7MjlnftTY7E9E2YttyAPqlws0CiHCjUw3w2w3DpvunQktcVAg\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
         },
         "challenge": {
           "v": 0,
@@ -393,15 +399,20 @@
       }
     },
     {
-      "name": "grant-expired",
-      "desc": "Grant exp + 90 s is in the past.",
-      "expect": "reject",
-      "reason": "expired",
+      "name": "grant-deny-list-other-grant",
+      "desc": "A deny-list that names a DIFFERENT grant changes nothing: the list refuses what it names and no more.",
+      "expect": "accept",
       "check": {
         "now": 1789030800,
         "device_id": "de71ce00-0000-4000-8000-000000000001",
         "last_gateway_sync": 1789027200,
-        "lockdown": false
+        "lockdown": false,
+        "revoked": [
+          {
+            "grant_id": "ffffffff-0000-4000-8000-00000000dead",
+            "exp": 0
+          }
+        ]
       },
       "grant": {
         "signer": "gateway",
@@ -425,11 +436,11 @@
               "to": "24:00"
             }
           ],
-          "iat": 1787790400,
-          "exp": 1788395200,
-          "sig": "cnVKbo4Z6vMuBxYaZ45euGdCRv-IHbkPuz4B3qzySFoZHTgFzkZgauAGShlUqpD7alPoWgrWtqdbOfB08N2uAA"
+          "iat": 1788913600,
+          "exp": 1789518400,
+          "sig": "RxiaaxV21BcIpLQt7hoa3p-QAjsYjoFWYYI8me6j7PQ_Bh9tvrH6KHqe86P4jDyHzzsaXUVKGVzWN6wfSa7FDg"
         },
-        "canonical": "{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1788395200,\"grant_id\":\"9aa70000-0000-4000-8000-000000000005\",\"iat\":1787790400,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]}"
+        "canonical": "{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000005\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]}"
       },
       "transcript": {
         "open": {
@@ -458,13 +469,13 @@
                   "to": "24:00"
                 }
               ],
-              "iat": 1787790400,
-              "exp": 1788395200,
-              "sig": "cnVKbo4Z6vMuBxYaZ45euGdCRv-IHbkPuz4B3qzySFoZHTgFzkZgauAGShlUqpD7alPoWgrWtqdbOfB08N2uAA"
+              "iat": 1788913600,
+              "exp": 1789518400,
+              "sig": "RxiaaxV21BcIpLQt7hoa3p-QAjsYjoFWYYI8me6j7PQ_Bh9tvrH6KHqe86P4jDyHzzsaXUVKGVzWN6wfSa7FDg"
             },
             "access_point": "main"
           },
-          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1788395200,\"grant_id\":\"9aa70000-0000-4000-8000-000000000005\",\"iat\":1787790400,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"cnVKbo4Z6vMuBxYaZ45euGdCRv-IHbkPuz4B3qzySFoZHTgFzkZgauAGShlUqpD7alPoWgrWtqdbOfB08N2uAA\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
+          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000005\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"RxiaaxV21BcIpLQt7hoa3p-QAjsYjoFWYYI8me6j7PQ_Bh9tvrH6KHqe86P4jDyHzzsaXUVKGVzWN6wfSa7FDg\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
         },
         "challenge": {
           "v": 0,
@@ -489,15 +500,20 @@
       }
     },
     {
-      "name": "grant-wrong-device",
-      "desc": "This controller is not in grant.devices.",
-      "expect": "reject",
-      "reason": "wrong_device",
+      "name": "grant-deny-list-entry-expired",
+      "desc": "A deny-list entry past its own exp is inert — the validity step already refuses that grant, so the entry is not a second opinion.",
+      "expect": "accept",
       "check": {
         "now": 1789030800,
         "device_id": "de71ce00-0000-4000-8000-000000000001",
         "last_gateway_sync": 1789027200,
-        "lockdown": false
+        "lockdown": false,
+        "revoked": [
+          {
+            "grant_id": "9aa70000-0000-4000-8000-000000000006",
+            "exp": 1789030799
+          }
+        ]
       },
       "grant": {
         "signer": "gateway",
@@ -508,7 +524,7 @@
           "member": "3e3be500-0000-4000-8000-000000000001",
           "app_pubkey": "08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek",
           "devices": [
-            "de71ce00-0000-4000-8000-000000000002"
+            "de71ce00-0000-4000-8000-000000000001"
           ],
           "access_points": [
             "main",
@@ -523,9 +539,9 @@
           ],
           "iat": 1788913600,
           "exp": 1789518400,
-          "sig": "rFErm5Njjy5En5p-kNdm5s4dHwLrNkLYpIhTu1oCo5wDnxJlcIb4FgPV_sl9oSTdY_xOy2OV-7nMnxOQ_8i-CQ"
+          "sig": "2J2jrH8-8kcbSGksss7mo3KhtInlsPw7JzsliP8JGjzS6BjVtJjAw8UaDebvmJYFfPNN41s_I7gYuwO12y5gCg"
         },
-        "canonical": "{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000002\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000006\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]}"
+        "canonical": "{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000006\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]}"
       },
       "transcript": {
         "open": {
@@ -541,7 +557,7 @@
               "member": "3e3be500-0000-4000-8000-000000000001",
               "app_pubkey": "08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek",
               "devices": [
-                "de71ce00-0000-4000-8000-000000000002"
+                "de71ce00-0000-4000-8000-000000000001"
               ],
               "access_points": [
                 "main",
@@ -556,11 +572,11 @@
               ],
               "iat": 1788913600,
               "exp": 1789518400,
-              "sig": "rFErm5Njjy5En5p-kNdm5s4dHwLrNkLYpIhTu1oCo5wDnxJlcIb4FgPV_sl9oSTdY_xOy2OV-7nMnxOQ_8i-CQ"
+              "sig": "2J2jrH8-8kcbSGksss7mo3KhtInlsPw7JzsliP8JGjzS6BjVtJjAw8UaDebvmJYFfPNN41s_I7gYuwO12y5gCg"
             },
             "access_point": "main"
           },
-          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000002\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000006\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"rFErm5Njjy5En5p-kNdm5s4dHwLrNkLYpIhTu1oCo5wDnxJlcIb4FgPV_sl9oSTdY_xOy2OV-7nMnxOQ_8i-CQ\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
+          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000006\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"2J2jrH8-8kcbSGksss7mo3KhtInlsPw7JzsliP8JGjzS6BjVtJjAw8UaDebvmJYFfPNN41s_I7gYuwO12y5gCg\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
         },
         "challenge": {
           "v": 0,
@@ -585,18 +601,24 @@
       }
     },
     {
-      "name": "grant-wrong-access-point",
-      "desc": "Requested access point is not in grant.access_points.",
+      "name": "grant-revoked-under-badsig",
+      "desc": "A forged grant on the deny-list is reported as FORGED, not as revoked: an id from unverified bytes is not an id.",
       "expect": "reject",
-      "reason": "wrong_access_point",
+      "reason": "badsig",
       "check": {
         "now": 1789030800,
         "device_id": "de71ce00-0000-4000-8000-000000000001",
         "last_gateway_sync": 1789027200,
-        "lockdown": false
+        "lockdown": false,
+        "revoked": [
+          {
+            "grant_id": "9aa70000-0000-4000-8000-000000000007",
+            "exp": 1789518400
+          }
+        ]
       },
       "grant": {
-        "signer": "gateway",
+        "signer": "attacker",
         "object": {
           "v": 0,
           "typ": "grant",
@@ -619,7 +641,7 @@
           ],
           "iat": 1788913600,
           "exp": 1789518400,
-          "sig": "3ibdSNVnIRhJfiZN_nRTCid3nHr2dey4Fr8Vh8vFxMV3I8xCNU86n-6CDyuG0YIQ60iUDtvwuOyBG1hwXDGKCA"
+          "sig": "9kz1b-qJ2aGeso_UJJhE-dlJp78Hy0HMtVQJO-98lsDzR7nHHPPqSnwt8VyimI8vVrPdEHhkEivoGeH6352QCw"
         },
         "canonical": "{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000007\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]}"
       },
@@ -652,11 +674,11 @@
               ],
               "iat": 1788913600,
               "exp": 1789518400,
-              "sig": "3ibdSNVnIRhJfiZN_nRTCid3nHr2dey4Fr8Vh8vFxMV3I8xCNU86n-6CDyuG0YIQ60iUDtvwuOyBG1hwXDGKCA"
+              "sig": "9kz1b-qJ2aGeso_UJJhE-dlJp78Hy0HMtVQJO-98lsDzR7nHHPPqSnwt8VyimI8vVrPdEHhkEivoGeH6352QCw"
             },
-            "access_point": "vehicle"
+            "access_point": "main"
           },
-          "canonical": "{\"access_point\":\"vehicle\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000007\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"3ibdSNVnIRhJfiZN_nRTCid3nHr2dey4Fr8Vh8vFxMV3I8xCNU86n-6CDyuG0YIQ60iUDtvwuOyBG1hwXDGKCA\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
+          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000007\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"9kz1b-qJ2aGeso_UJJhE-dlJp78Hy0HMtVQJO-98lsDzR7nHHPPqSnwt8VyimI8vVrPdEHhkEivoGeH6352QCw\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
         },
         "challenge": {
           "v": 0,
@@ -672,27 +694,27 @@
             "typ": "grant.proof",
             "grant_id": "9aa70000-0000-4000-8000-000000000007",
             "cnonce": "ZmZmZmZmZmZmZmZmZmZmZg",
-            "access_point": "vehicle",
+            "access_point": "main",
             "ts": 1789030799,
-            "sig": "QLFyFEeRoK0bePIqvrriQdy2rk7cwT2i6-b8eIAqTOHGoSCFQJwIxULfbWVwMfyV-sSoDssKCjKyJ5Dq82JICA"
+            "sig": "PRbuX1Uii2tJpPNW-GUaZETH0CX2xloqEJkLY8BmN8FXdsNwGkMaHQx23GDSzLSgZR6TbNWpzpWzJF1ezqlUCw"
           },
-          "canonical": "{\"access_point\":\"vehicle\",\"cnonce\":\"ZmZmZmZmZmZmZmZmZmZmZg\",\"grant_id\":\"9aa70000-0000-4000-8000-000000000007\",\"ts\":1789030799,\"typ\":\"grant.proof\",\"v\":0}"
+          "canonical": "{\"access_point\":\"main\",\"cnonce\":\"ZmZmZmZmZmZmZmZmZmZmZg\",\"grant_id\":\"9aa70000-0000-4000-8000-000000000007\",\"ts\":1789030799,\"typ\":\"grant.proof\",\"v\":0}"
         }
       }
     },
     {
-      "name": "grant-window-denied",
-      "desc": "Grant limited to mon-fri 08:00-17:00 (UTC); redemption attempted Sunday 10:00 UTC.",
+      "name": "grant-badsig",
+      "desc": "Grant signed by a key that is not the pinned gateway key.",
       "expect": "reject",
-      "reason": "window",
+      "reason": "badsig",
       "check": {
-        "now": 1789293600,
+        "now": 1789030800,
         "device_id": "de71ce00-0000-4000-8000-000000000001",
-        "last_gateway_sync": 1789290000,
+        "last_gateway_sync": 1789027200,
         "lockdown": false
       },
       "grant": {
-        "signer": "gateway",
+        "signer": "attacker",
         "object": {
           "v": 0,
           "typ": "grant",
@@ -708,16 +730,16 @@
           ],
           "windows": [
             {
-              "days": "mon-fri",
-              "from": "08:00",
-              "to": "17:00"
+              "days": "mon-sun",
+              "from": "00:00",
+              "to": "24:00"
             }
           ],
           "iat": 1788913600,
           "exp": 1789518400,
-          "sig": "Ds4nC_MRDOl6MeJOxm87-6DRISDn-x5dvLmW7RTjl9Mv_8NORn2brp1I6DGUDwYWn7IVNcLYzMqVJaho6OF9DQ"
+          "sig": "m-gubeWdXm_C5fyjLB8gekTQZF0WAzTkx56BGpOJzOUUmjlbEt2gM5HIWegggQHAT5jS-qPv0-RO2qsLx4HBBg"
         },
-        "canonical": "{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000008\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-fri\",\"from\":\"08:00\",\"to\":\"17:00\"}]}"
+        "canonical": "{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000008\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]}"
       },
       "transcript": {
         "open": {
@@ -741,25 +763,25 @@
               ],
               "windows": [
                 {
-                  "days": "mon-fri",
-                  "from": "08:00",
-                  "to": "17:00"
+                  "days": "mon-sun",
+                  "from": "00:00",
+                  "to": "24:00"
                 }
               ],
               "iat": 1788913600,
               "exp": 1789518400,
-              "sig": "Ds4nC_MRDOl6MeJOxm87-6DRISDn-x5dvLmW7RTjl9Mv_8NORn2brp1I6DGUDwYWn7IVNcLYzMqVJaho6OF9DQ"
+              "sig": "m-gubeWdXm_C5fyjLB8gekTQZF0WAzTkx56BGpOJzOUUmjlbEt2gM5HIWegggQHAT5jS-qPv0-RO2qsLx4HBBg"
             },
             "access_point": "main"
           },
-          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000008\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"Ds4nC_MRDOl6MeJOxm87-6DRISDn-x5dvLmW7RTjl9Mv_8NORn2brp1I6DGUDwYWn7IVNcLYzMqVJaho6OF9DQ\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-fri\",\"from\":\"08:00\",\"to\":\"17:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
+          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000008\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"m-gubeWdXm_C5fyjLB8gekTQZF0WAzTkx56BGpOJzOUUmjlbEt2gM5HIWegggQHAT5jS-qPv0-RO2qsLx4HBBg\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
         },
         "challenge": {
           "v": 0,
           "typ": "grant.challenge",
           "cnonce": "Z2dnZ2dnZ2dnZ2dnZ2dnZw",
-          "iat": 1789293598,
-          "exp": 1789293628
+          "iat": 1789030798,
+          "exp": 1789030828
         },
         "proof": {
           "signer": "app",
@@ -769,17 +791,18 @@
             "grant_id": "9aa70000-0000-4000-8000-000000000008",
             "cnonce": "Z2dnZ2dnZ2dnZ2dnZ2dnZw",
             "access_point": "main",
-            "ts": 1789293599,
-            "sig": "OnknkPLxW1SVWSn16SlwuXDcha6i3ZrZfpsC5Zz11UkaYTiLzxEs2uMVGp9rDOUzEg6XMMZoB7Z5KEtrv5HjAw"
+            "ts": 1789030799,
+            "sig": "v-2KGWDG0NWsWl7Rq0Xx_VIkssgvPMSZ3ok_a6lMuhMvOdix4b1c7iSxjUTHSCzBDUd21oQKsFLmySzbDEvdAA"
           },
-          "canonical": "{\"access_point\":\"main\",\"cnonce\":\"Z2dnZ2dnZ2dnZ2dnZ2dnZw\",\"grant_id\":\"9aa70000-0000-4000-8000-000000000008\",\"ts\":1789293599,\"typ\":\"grant.proof\",\"v\":0}"
+          "canonical": "{\"access_point\":\"main\",\"cnonce\":\"Z2dnZ2dnZ2dnZ2dnZ2dnZw\",\"grant_id\":\"9aa70000-0000-4000-8000-000000000008\",\"ts\":1789030799,\"typ\":\"grant.proof\",\"v\":0}"
         }
       }
     },
     {
-      "name": "grant-window-accepted",
-      "desc": "Same mon-fri 08:00-17:00 window, redeemed Thursday 09:00 UTC: inside.",
-      "expect": "accept",
+      "name": "grant-expired",
+      "desc": "Grant exp + 90 s is in the past.",
+      "expect": "reject",
+      "reason": "expired",
       "check": {
         "now": 1789030800,
         "device_id": "de71ce00-0000-4000-8000-000000000001",
@@ -803,16 +826,16 @@
           ],
           "windows": [
             {
-              "days": "mon-fri",
-              "from": "08:00",
-              "to": "17:00"
+              "days": "mon-sun",
+              "from": "00:00",
+              "to": "24:00"
             }
           ],
-          "iat": 1788913600,
-          "exp": 1789518400,
-          "sig": "gNwxMYX0qq4oGXNHW6HWKKIHZbfIISuwC0NsT6rsiZiYCUfSZrRXTvsBkNdukxJFw4ybjVLuykRkK8dozAHbBQ"
+          "iat": 1787790400,
+          "exp": 1788395200,
+          "sig": "hTXHDwGTJNSDCcqfWqnbrAUHqPGkP0MQfldtEEMNOrcbG-gd4k_4K8PDsE5HYNy1Dz6ywvw-qOoBDVTkdnjgCg"
         },
-        "canonical": "{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000009\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-fri\",\"from\":\"08:00\",\"to\":\"17:00\"}]}"
+        "canonical": "{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1788395200,\"grant_id\":\"9aa70000-0000-4000-8000-000000000009\",\"iat\":1787790400,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]}"
       },
       "transcript": {
         "open": {
@@ -836,18 +859,18 @@
               ],
               "windows": [
                 {
-                  "days": "mon-fri",
-                  "from": "08:00",
-                  "to": "17:00"
+                  "days": "mon-sun",
+                  "from": "00:00",
+                  "to": "24:00"
                 }
               ],
-              "iat": 1788913600,
-              "exp": 1789518400,
-              "sig": "gNwxMYX0qq4oGXNHW6HWKKIHZbfIISuwC0NsT6rsiZiYCUfSZrRXTvsBkNdukxJFw4ybjVLuykRkK8dozAHbBQ"
+              "iat": 1787790400,
+              "exp": 1788395200,
+              "sig": "hTXHDwGTJNSDCcqfWqnbrAUHqPGkP0MQfldtEEMNOrcbG-gd4k_4K8PDsE5HYNy1Dz6ywvw-qOoBDVTkdnjgCg"
             },
             "access_point": "main"
           },
-          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000009\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"gNwxMYX0qq4oGXNHW6HWKKIHZbfIISuwC0NsT6rsiZiYCUfSZrRXTvsBkNdukxJFw4ybjVLuykRkK8dozAHbBQ\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-fri\",\"from\":\"08:00\",\"to\":\"17:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
+          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1788395200,\"grant_id\":\"9aa70000-0000-4000-8000-000000000009\",\"iat\":1787790400,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"hTXHDwGTJNSDCcqfWqnbrAUHqPGkP0MQfldtEEMNOrcbG-gd4k_4K8PDsE5HYNy1Dz6ywvw-qOoBDVTkdnjgCg\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
         },
         "challenge": {
           "v": 0,
@@ -872,10 +895,10 @@
       }
     },
     {
-      "name": "grant-proof-badsig",
-      "desc": "Proof signed by a key other than grant.app_pubkey.",
+      "name": "grant-wrong-device",
+      "desc": "This controller is not in grant.devices.",
       "expect": "reject",
-      "reason": "badsig",
+      "reason": "wrong_device",
       "check": {
         "now": 1789030800,
         "device_id": "de71ce00-0000-4000-8000-000000000001",
@@ -891,7 +914,7 @@
           "member": "3e3be500-0000-4000-8000-000000000001",
           "app_pubkey": "08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek",
           "devices": [
-            "de71ce00-0000-4000-8000-000000000001"
+            "de71ce00-0000-4000-8000-000000000002"
           ],
           "access_points": [
             "main",
@@ -906,9 +929,9 @@
           ],
           "iat": 1788913600,
           "exp": 1789518400,
-          "sig": "P631_UTRijAeWhDf9wtfdcIl3SoVmBZC5m4G86Exh2Q6G9i5O2ZNUyYZGzEeGHMsWeWABz2gDpDzi69jS-__Bw"
+          "sig": "ZxYiIZ73A4lMrPxPbtRgWgwOIzb06P2gdWwG-vpQFWebzR72H4fHgVJzaa19Mp_QfacF14wSgrhcFc_LVjY8Bw"
         },
-        "canonical": "{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000010\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]}"
+        "canonical": "{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000002\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000010\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]}"
       },
       "transcript": {
         "open": {
@@ -924,7 +947,7 @@
               "member": "3e3be500-0000-4000-8000-000000000001",
               "app_pubkey": "08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek",
               "devices": [
-                "de71ce00-0000-4000-8000-000000000001"
+                "de71ce00-0000-4000-8000-000000000002"
               ],
               "access_points": [
                 "main",
@@ -939,11 +962,11 @@
               ],
               "iat": 1788913600,
               "exp": 1789518400,
-              "sig": "P631_UTRijAeWhDf9wtfdcIl3SoVmBZC5m4G86Exh2Q6G9i5O2ZNUyYZGzEeGHMsWeWABz2gDpDzi69jS-__Bw"
+              "sig": "ZxYiIZ73A4lMrPxPbtRgWgwOIzb06P2gdWwG-vpQFWebzR72H4fHgVJzaa19Mp_QfacF14wSgrhcFc_LVjY8Bw"
             },
             "access_point": "main"
           },
-          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000010\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"P631_UTRijAeWhDf9wtfdcIl3SoVmBZC5m4G86Exh2Q6G9i5O2ZNUyYZGzEeGHMsWeWABz2gDpDzi69jS-__Bw\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
+          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000002\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000010\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"ZxYiIZ73A4lMrPxPbtRgWgwOIzb06P2gdWwG-vpQFWebzR72H4fHgVJzaa19Mp_QfacF14wSgrhcFc_LVjY8Bw\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
         },
         "challenge": {
           "v": 0,
@@ -953,7 +976,7 @@
           "exp": 1789030828
         },
         "proof": {
-          "signer": "attacker",
+          "signer": "app",
           "object": {
             "v": 0,
             "typ": "grant.proof",
@@ -961,17 +984,17 @@
             "cnonce": "aWlpaWlpaWlpaWlpaWlpaQ",
             "access_point": "main",
             "ts": 1789030799,
-            "sig": "hGeWAreOacqWiWqIQmZPVmBne6p8Hked60HSKStANHGnBgwAzmSUZghJgSexSvLpFrfF1Xa9_yJsZx6x-F3FBA"
+            "sig": "tk9RXN0qWeVESq876kAuZJjzts5RaB4uATMh6nbWeXcTRtWH3yJiS7e-ITiZBZC-0GPELD3cjN7rl20P05aACQ"
           },
           "canonical": "{\"access_point\":\"main\",\"cnonce\":\"aWlpaWlpaWlpaWlpaWlpaQ\",\"grant_id\":\"9aa70000-0000-4000-8000-000000000010\",\"ts\":1789030799,\"typ\":\"grant.proof\",\"v\":0}"
         }
       }
     },
     {
-      "name": "grant-proof-wrong-grant",
-      "desc": "proof.grant_id does not match the presented grant.",
+      "name": "grant-wrong-access-point",
+      "desc": "Requested access point is not in grant.access_points.",
       "expect": "reject",
-      "reason": "wrong_grant",
+      "reason": "wrong_access_point",
       "check": {
         "now": 1789030800,
         "device_id": "de71ce00-0000-4000-8000-000000000001",
@@ -1037,9 +1060,9 @@
               "exp": 1789518400,
               "sig": "A7Lv4x_Dx9U1GXEdL5Qal9C_WFKlcIbJ_0vQoCViWvwa-_vygXd-iDx7ebsNogzMai_AXzsVOfR4J2BQbJbCCA"
             },
-            "access_point": "main"
+            "access_point": "vehicle"
           },
-          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000011\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"A7Lv4x_Dx9U1GXEdL5Qal9C_WFKlcIbJ_0vQoCViWvwa-_vygXd-iDx7ebsNogzMai_AXzsVOfR4J2BQbJbCCA\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
+          "canonical": "{\"access_point\":\"vehicle\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000011\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"A7Lv4x_Dx9U1GXEdL5Qal9C_WFKlcIbJ_0vQoCViWvwa-_vygXd-iDx7ebsNogzMai_AXzsVOfR4J2BQbJbCCA\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
         },
         "challenge": {
           "v": 0,
@@ -1053,25 +1076,25 @@
           "object": {
             "v": 0,
             "typ": "grant.proof",
-            "grant_id": "9aa70000-0000-4000-8000-000000000999",
+            "grant_id": "9aa70000-0000-4000-8000-000000000011",
             "cnonce": "ampqampqampqampqampqag",
-            "access_point": "main",
+            "access_point": "vehicle",
             "ts": 1789030799,
-            "sig": "zO13FhLYxDH5ey9O-IECKi7tz3ZZf-EK74lHFbpcAaW3A9mRJXZtIK3oWOTUKoDSG5OGBodKgql59oZUozxkDw"
+            "sig": "2JMxo_QoIT1ehZmnPA7KoIkyen-v500PLb6axRPul-ocmMhe5dDojzqZ7G_PaEvq2lHIWVQ-BuQUJsvv62y9Cg"
           },
-          "canonical": "{\"access_point\":\"main\",\"cnonce\":\"ampqampqampqampqampqag\",\"grant_id\":\"9aa70000-0000-4000-8000-000000000999\",\"ts\":1789030799,\"typ\":\"grant.proof\",\"v\":0}"
+          "canonical": "{\"access_point\":\"vehicle\",\"cnonce\":\"ampqampqampqampqampqag\",\"grant_id\":\"9aa70000-0000-4000-8000-000000000011\",\"ts\":1789030799,\"typ\":\"grant.proof\",\"v\":0}"
         }
       }
     },
     {
-      "name": "grant-cnonce-expired",
-      "desc": "Proof arrives after the 30 s challenge validity.",
+      "name": "grant-window-denied",
+      "desc": "Grant limited to mon-fri 08:00-17:00 (UTC); redemption attempted Sunday 10:00 UTC.",
       "expect": "reject",
-      "reason": "cnonce_expired",
+      "reason": "window",
       "check": {
-        "now": 1789030840,
+        "now": 1789293600,
         "device_id": "de71ce00-0000-4000-8000-000000000001",
-        "last_gateway_sync": 1789027200,
+        "last_gateway_sync": 1789290000,
         "lockdown": false
       },
       "grant": {
@@ -1091,16 +1114,16 @@
           ],
           "windows": [
             {
-              "days": "mon-sun",
-              "from": "00:00",
-              "to": "24:00"
+              "days": "mon-fri",
+              "from": "08:00",
+              "to": "17:00"
             }
           ],
           "iat": 1788913600,
           "exp": 1789518400,
-          "sig": "-fBedgCxBPZc8u2TGpx0mg9m7m7kk2XMrC68SVzwejtvbBJY2Qb828DY3pYNGbvnix3QnQveu44zc0VgJQCdDQ"
+          "sig": "B3lf3q1ChDQWCoExCIzRBoNLAEsfnQWDBfjxN2bDeLAzzHEuv725hF_k45yJ0MLuWLL4Y215n23-aIuWwnIaBQ"
         },
-        "canonical": "{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000012\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]}"
+        "canonical": "{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000012\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-fri\",\"from\":\"08:00\",\"to\":\"17:00\"}]}"
       },
       "transcript": {
         "open": {
@@ -1124,25 +1147,25 @@
               ],
               "windows": [
                 {
-                  "days": "mon-sun",
-                  "from": "00:00",
-                  "to": "24:00"
+                  "days": "mon-fri",
+                  "from": "08:00",
+                  "to": "17:00"
                 }
               ],
               "iat": 1788913600,
               "exp": 1789518400,
-              "sig": "-fBedgCxBPZc8u2TGpx0mg9m7m7kk2XMrC68SVzwejtvbBJY2Qb828DY3pYNGbvnix3QnQveu44zc0VgJQCdDQ"
+              "sig": "B3lf3q1ChDQWCoExCIzRBoNLAEsfnQWDBfjxN2bDeLAzzHEuv725hF_k45yJ0MLuWLL4Y215n23-aIuWwnIaBQ"
             },
             "access_point": "main"
           },
-          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000012\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"-fBedgCxBPZc8u2TGpx0mg9m7m7kk2XMrC68SVzwejtvbBJY2Qb828DY3pYNGbvnix3QnQveu44zc0VgJQCdDQ\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
+          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000012\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"B3lf3q1ChDQWCoExCIzRBoNLAEsfnQWDBfjxN2bDeLAzzHEuv725hF_k45yJ0MLuWLL4Y215n23-aIuWwnIaBQ\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-fri\",\"from\":\"08:00\",\"to\":\"17:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
         },
         "challenge": {
           "v": 0,
           "typ": "grant.challenge",
           "cnonce": "a2tra2tra2tra2tra2traw",
-          "iat": 1789030798,
-          "exp": 1789030828
+          "iat": 1789293598,
+          "exp": 1789293628
         },
         "proof": {
           "signer": "app",
@@ -1152,18 +1175,17 @@
             "grant_id": "9aa70000-0000-4000-8000-000000000012",
             "cnonce": "a2tra2tra2tra2tra2traw",
             "access_point": "main",
-            "ts": 1789030840,
-            "sig": "qAsRTgUROLlA4tPKiNokFiTl41WBoe5w6e-hnuwi8sf-ELQ8hzgbE3CK6AC-gchnLQWgDdG2kND74KaPsYCCBw"
+            "ts": 1789293599,
+            "sig": "6t_nrv6a6TccapF7mX5Leuli4No8xXL00bnAuxg5a2l2uZmhs8BcGa76bqRQXVKCA5lT_syrO1sf3j6YKb0bBQ"
           },
-          "canonical": "{\"access_point\":\"main\",\"cnonce\":\"a2tra2tra2tra2tra2traw\",\"grant_id\":\"9aa70000-0000-4000-8000-000000000012\",\"ts\":1789030840,\"typ\":\"grant.proof\",\"v\":0}"
+          "canonical": "{\"access_point\":\"main\",\"cnonce\":\"a2tra2tra2tra2tra2traw\",\"grant_id\":\"9aa70000-0000-4000-8000-000000000012\",\"ts\":1789293599,\"typ\":\"grant.proof\",\"v\":0}"
         }
       }
     },
     {
-      "name": "grant-proof-stale-ts",
-      "desc": "proof.ts more than 90 s behind the controller clock.",
-      "expect": "reject",
-      "reason": "expired",
+      "name": "grant-window-accepted",
+      "desc": "Same mon-fri 08:00-17:00 window, redeemed Thursday 09:00 UTC: inside.",
+      "expect": "accept",
       "check": {
         "now": 1789030800,
         "device_id": "de71ce00-0000-4000-8000-000000000001",
@@ -1187,16 +1209,16 @@
           ],
           "windows": [
             {
-              "days": "mon-sun",
-              "from": "00:00",
-              "to": "24:00"
+              "days": "mon-fri",
+              "from": "08:00",
+              "to": "17:00"
             }
           ],
           "iat": 1788913600,
           "exp": 1789518400,
-          "sig": "xF32czowf51mSP89Yoa_xd4MOQMsIzr6UlK-2_iv845rpVbZi9lhP1nOfWzTpVhwk0XgXQgOhlG2i08MjVmACg"
+          "sig": "nxnGA5dwhn9dixe8X-Pxdc4svIc2CFlgqLTIMhwMtKv1fk3ShicWzBXHSI8D4yv9FJ1jsTbl4l-ZNJa02nixBQ"
         },
-        "canonical": "{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000013\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]}"
+        "canonical": "{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000013\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-fri\",\"from\":\"08:00\",\"to\":\"17:00\"}]}"
       },
       "transcript": {
         "open": {
@@ -1220,18 +1242,18 @@
               ],
               "windows": [
                 {
-                  "days": "mon-sun",
-                  "from": "00:00",
-                  "to": "24:00"
+                  "days": "mon-fri",
+                  "from": "08:00",
+                  "to": "17:00"
                 }
               ],
               "iat": 1788913600,
               "exp": 1789518400,
-              "sig": "xF32czowf51mSP89Yoa_xd4MOQMsIzr6UlK-2_iv845rpVbZi9lhP1nOfWzTpVhwk0XgXQgOhlG2i08MjVmACg"
+              "sig": "nxnGA5dwhn9dixe8X-Pxdc4svIc2CFlgqLTIMhwMtKv1fk3ShicWzBXHSI8D4yv9FJ1jsTbl4l-ZNJa02nixBQ"
             },
             "access_point": "main"
           },
-          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000013\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"xF32czowf51mSP89Yoa_xd4MOQMsIzr6UlK-2_iv845rpVbZi9lhP1nOfWzTpVhwk0XgXQgOhlG2i08MjVmACg\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
+          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000013\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"nxnGA5dwhn9dixe8X-Pxdc4svIc2CFlgqLTIMhwMtKv1fk3ShicWzBXHSI8D4yv9FJ1jsTbl4l-ZNJa02nixBQ\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-fri\",\"from\":\"08:00\",\"to\":\"17:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
         },
         "challenge": {
           "v": 0,
@@ -1248,16 +1270,18 @@
             "grant_id": "9aa70000-0000-4000-8000-000000000013",
             "cnonce": "bGxsbGxsbGxsbGxsbGxsbA",
             "access_point": "main",
-            "ts": 1789030600,
-            "sig": "VK8ZL9vXjwYMFh4XU-0H3uD7r4AF9zUCYqsNVjigZFmNt1a3N-8vLEcL_wyDZUXLcx2qUJCKq1gVWaZFA84nAQ"
+            "ts": 1789030799,
+            "sig": "RXnIg1HoThfgjz8VcKHaVtn5O8CD5SNPVFHN3InRiloqxpuVWfFTFGTI2xyqx0BeEKRMI2nn7Y__BXEgoD5oDQ"
           },
-          "canonical": "{\"access_point\":\"main\",\"cnonce\":\"bGxsbGxsbGxsbGxsbGxsbA\",\"grant_id\":\"9aa70000-0000-4000-8000-000000000013\",\"ts\":1789030600,\"typ\":\"grant.proof\",\"v\":0}"
+          "canonical": "{\"access_point\":\"main\",\"cnonce\":\"bGxsbGxsbGxsbGxsbGxsbA\",\"grant_id\":\"9aa70000-0000-4000-8000-000000000013\",\"ts\":1789030799,\"typ\":\"grant.proof\",\"v\":0}"
         }
       }
     },
     {
-      "name": "grant-cnonce-replay",
-      "desc": "Same proof presented twice for one issued cnonce; second attempt rejected.",
+      "name": "grant-proof-badsig",
+      "desc": "Proof signed by a key other than grant.app_pubkey.",
+      "expect": "reject",
+      "reason": "badsig",
       "check": {
         "now": 1789030800,
         "device_id": "de71ce00-0000-4000-8000-000000000001",
@@ -1333,6 +1357,388 @@
           "cnonce": "bW1tbW1tbW1tbW1tbW1tbQ",
           "iat": 1789030798,
           "exp": 1789030828
+        },
+        "proof": {
+          "signer": "attacker",
+          "object": {
+            "v": 0,
+            "typ": "grant.proof",
+            "grant_id": "9aa70000-0000-4000-8000-000000000014",
+            "cnonce": "bW1tbW1tbW1tbW1tbW1tbQ",
+            "access_point": "main",
+            "ts": 1789030799,
+            "sig": "RnR2eVBLLIOHkEDs_krctfqzADILhZBkedMm_Dk998pwGuplohXAZhlCqceq3pq5uWJyDA87oQXOsphzrwLmAw"
+          },
+          "canonical": "{\"access_point\":\"main\",\"cnonce\":\"bW1tbW1tbW1tbW1tbW1tbQ\",\"grant_id\":\"9aa70000-0000-4000-8000-000000000014\",\"ts\":1789030799,\"typ\":\"grant.proof\",\"v\":0}"
+        }
+      }
+    },
+    {
+      "name": "grant-proof-wrong-grant",
+      "desc": "proof.grant_id does not match the presented grant.",
+      "expect": "reject",
+      "reason": "wrong_grant",
+      "check": {
+        "now": 1789030800,
+        "device_id": "de71ce00-0000-4000-8000-000000000001",
+        "last_gateway_sync": 1789027200,
+        "lockdown": false
+      },
+      "grant": {
+        "signer": "gateway",
+        "object": {
+          "v": 0,
+          "typ": "grant",
+          "grant_id": "9aa70000-0000-4000-8000-000000000015",
+          "member": "3e3be500-0000-4000-8000-000000000001",
+          "app_pubkey": "08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek",
+          "devices": [
+            "de71ce00-0000-4000-8000-000000000001"
+          ],
+          "access_points": [
+            "main",
+            "pedestrian"
+          ],
+          "windows": [
+            {
+              "days": "mon-sun",
+              "from": "00:00",
+              "to": "24:00"
+            }
+          ],
+          "iat": 1788913600,
+          "exp": 1789518400,
+          "sig": "cb9T8N3ZUIOxJ5A_ojsGzY8ZlBQDFStpANc6106m0OugDGFe32zUqepCU7vpei91suwCD0k-X_1c7m7I3XM7Cw"
+        },
+        "canonical": "{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000015\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]}"
+      },
+      "transcript": {
+        "open": {
+          "signer": null,
+          "unsigned": true,
+          "object": {
+            "v": 0,
+            "typ": "grant.open",
+            "grant": {
+              "v": 0,
+              "typ": "grant",
+              "grant_id": "9aa70000-0000-4000-8000-000000000015",
+              "member": "3e3be500-0000-4000-8000-000000000001",
+              "app_pubkey": "08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek",
+              "devices": [
+                "de71ce00-0000-4000-8000-000000000001"
+              ],
+              "access_points": [
+                "main",
+                "pedestrian"
+              ],
+              "windows": [
+                {
+                  "days": "mon-sun",
+                  "from": "00:00",
+                  "to": "24:00"
+                }
+              ],
+              "iat": 1788913600,
+              "exp": 1789518400,
+              "sig": "cb9T8N3ZUIOxJ5A_ojsGzY8ZlBQDFStpANc6106m0OugDGFe32zUqepCU7vpei91suwCD0k-X_1c7m7I3XM7Cw"
+            },
+            "access_point": "main"
+          },
+          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000015\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"cb9T8N3ZUIOxJ5A_ojsGzY8ZlBQDFStpANc6106m0OugDGFe32zUqepCU7vpei91suwCD0k-X_1c7m7I3XM7Cw\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
+        },
+        "challenge": {
+          "v": 0,
+          "typ": "grant.challenge",
+          "cnonce": "bm5ubm5ubm5ubm5ubm5ubg",
+          "iat": 1789030798,
+          "exp": 1789030828
+        },
+        "proof": {
+          "signer": "app",
+          "object": {
+            "v": 0,
+            "typ": "grant.proof",
+            "grant_id": "9aa70000-0000-4000-8000-000000000999",
+            "cnonce": "bm5ubm5ubm5ubm5ubm5ubg",
+            "access_point": "main",
+            "ts": 1789030799,
+            "sig": "5AJz0_UMU5Iib-mDiTBEtBgdRENE9UHDiM-LXsn-_VUf8EuR1K-n-Z2NM_WUgjAHKUgheai0msCvly7oUmYJCg"
+          },
+          "canonical": "{\"access_point\":\"main\",\"cnonce\":\"bm5ubm5ubm5ubm5ubm5ubg\",\"grant_id\":\"9aa70000-0000-4000-8000-000000000999\",\"ts\":1789030799,\"typ\":\"grant.proof\",\"v\":0}"
+        }
+      }
+    },
+    {
+      "name": "grant-cnonce-expired",
+      "desc": "Proof arrives after the 30 s challenge validity.",
+      "expect": "reject",
+      "reason": "cnonce_expired",
+      "check": {
+        "now": 1789030840,
+        "device_id": "de71ce00-0000-4000-8000-000000000001",
+        "last_gateway_sync": 1789027200,
+        "lockdown": false
+      },
+      "grant": {
+        "signer": "gateway",
+        "object": {
+          "v": 0,
+          "typ": "grant",
+          "grant_id": "9aa70000-0000-4000-8000-000000000016",
+          "member": "3e3be500-0000-4000-8000-000000000001",
+          "app_pubkey": "08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek",
+          "devices": [
+            "de71ce00-0000-4000-8000-000000000001"
+          ],
+          "access_points": [
+            "main",
+            "pedestrian"
+          ],
+          "windows": [
+            {
+              "days": "mon-sun",
+              "from": "00:00",
+              "to": "24:00"
+            }
+          ],
+          "iat": 1788913600,
+          "exp": 1789518400,
+          "sig": "8Pxko-C-2Vf7-CUBptOZVfoXREuXQCdGSoJhVIS7AN8Ez4QxeErI1Q6GnqGFi05xtvLViuPcvDId-yXC-91FDw"
+        },
+        "canonical": "{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000016\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]}"
+      },
+      "transcript": {
+        "open": {
+          "signer": null,
+          "unsigned": true,
+          "object": {
+            "v": 0,
+            "typ": "grant.open",
+            "grant": {
+              "v": 0,
+              "typ": "grant",
+              "grant_id": "9aa70000-0000-4000-8000-000000000016",
+              "member": "3e3be500-0000-4000-8000-000000000001",
+              "app_pubkey": "08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek",
+              "devices": [
+                "de71ce00-0000-4000-8000-000000000001"
+              ],
+              "access_points": [
+                "main",
+                "pedestrian"
+              ],
+              "windows": [
+                {
+                  "days": "mon-sun",
+                  "from": "00:00",
+                  "to": "24:00"
+                }
+              ],
+              "iat": 1788913600,
+              "exp": 1789518400,
+              "sig": "8Pxko-C-2Vf7-CUBptOZVfoXREuXQCdGSoJhVIS7AN8Ez4QxeErI1Q6GnqGFi05xtvLViuPcvDId-yXC-91FDw"
+            },
+            "access_point": "main"
+          },
+          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000016\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"8Pxko-C-2Vf7-CUBptOZVfoXREuXQCdGSoJhVIS7AN8Ez4QxeErI1Q6GnqGFi05xtvLViuPcvDId-yXC-91FDw\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
+        },
+        "challenge": {
+          "v": 0,
+          "typ": "grant.challenge",
+          "cnonce": "b29vb29vb29vb29vb29vbw",
+          "iat": 1789030798,
+          "exp": 1789030828
+        },
+        "proof": {
+          "signer": "app",
+          "object": {
+            "v": 0,
+            "typ": "grant.proof",
+            "grant_id": "9aa70000-0000-4000-8000-000000000016",
+            "cnonce": "b29vb29vb29vb29vb29vbw",
+            "access_point": "main",
+            "ts": 1789030840,
+            "sig": "R5fMTCiK9R_mF5sm9dlcJ29qjZTYaLa4HzpP0B9SmuWDX3Ppk1UZqbnJ0gAN_R7iU1fh34WGPGQa7QiFJ7XmCA"
+          },
+          "canonical": "{\"access_point\":\"main\",\"cnonce\":\"b29vb29vb29vb29vb29vbw\",\"grant_id\":\"9aa70000-0000-4000-8000-000000000016\",\"ts\":1789030840,\"typ\":\"grant.proof\",\"v\":0}"
+        }
+      }
+    },
+    {
+      "name": "grant-proof-stale-ts",
+      "desc": "proof.ts more than 90 s behind the controller clock.",
+      "expect": "reject",
+      "reason": "expired",
+      "check": {
+        "now": 1789030800,
+        "device_id": "de71ce00-0000-4000-8000-000000000001",
+        "last_gateway_sync": 1789027200,
+        "lockdown": false
+      },
+      "grant": {
+        "signer": "gateway",
+        "object": {
+          "v": 0,
+          "typ": "grant",
+          "grant_id": "9aa70000-0000-4000-8000-000000000017",
+          "member": "3e3be500-0000-4000-8000-000000000001",
+          "app_pubkey": "08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek",
+          "devices": [
+            "de71ce00-0000-4000-8000-000000000001"
+          ],
+          "access_points": [
+            "main",
+            "pedestrian"
+          ],
+          "windows": [
+            {
+              "days": "mon-sun",
+              "from": "00:00",
+              "to": "24:00"
+            }
+          ],
+          "iat": 1788913600,
+          "exp": 1789518400,
+          "sig": "vjACSq_LqPK0XSpCbHaj04GnSZSe73lelJqjw4u9CJ5xJoCuVSQNwbD6MO7ttbIxXSzLTTaugl34coLshNpMAg"
+        },
+        "canonical": "{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000017\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]}"
+      },
+      "transcript": {
+        "open": {
+          "signer": null,
+          "unsigned": true,
+          "object": {
+            "v": 0,
+            "typ": "grant.open",
+            "grant": {
+              "v": 0,
+              "typ": "grant",
+              "grant_id": "9aa70000-0000-4000-8000-000000000017",
+              "member": "3e3be500-0000-4000-8000-000000000001",
+              "app_pubkey": "08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek",
+              "devices": [
+                "de71ce00-0000-4000-8000-000000000001"
+              ],
+              "access_points": [
+                "main",
+                "pedestrian"
+              ],
+              "windows": [
+                {
+                  "days": "mon-sun",
+                  "from": "00:00",
+                  "to": "24:00"
+                }
+              ],
+              "iat": 1788913600,
+              "exp": 1789518400,
+              "sig": "vjACSq_LqPK0XSpCbHaj04GnSZSe73lelJqjw4u9CJ5xJoCuVSQNwbD6MO7ttbIxXSzLTTaugl34coLshNpMAg"
+            },
+            "access_point": "main"
+          },
+          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000017\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"vjACSq_LqPK0XSpCbHaj04GnSZSe73lelJqjw4u9CJ5xJoCuVSQNwbD6MO7ttbIxXSzLTTaugl34coLshNpMAg\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
+        },
+        "challenge": {
+          "v": 0,
+          "typ": "grant.challenge",
+          "cnonce": "cHBwcHBwcHBwcHBwcHBwcA",
+          "iat": 1789030798,
+          "exp": 1789030828
+        },
+        "proof": {
+          "signer": "app",
+          "object": {
+            "v": 0,
+            "typ": "grant.proof",
+            "grant_id": "9aa70000-0000-4000-8000-000000000017",
+            "cnonce": "cHBwcHBwcHBwcHBwcHBwcA",
+            "access_point": "main",
+            "ts": 1789030600,
+            "sig": "AkG-_sjPSuMtqEs4rKhqUlAx_l_SRp-npdNA7pEAeNSYK7QhKIoRsym4uDWQAq0RGq4tDG1BVnB-bIEbnpgvAA"
+          },
+          "canonical": "{\"access_point\":\"main\",\"cnonce\":\"cHBwcHBwcHBwcHBwcHBwcA\",\"grant_id\":\"9aa70000-0000-4000-8000-000000000017\",\"ts\":1789030600,\"typ\":\"grant.proof\",\"v\":0}"
+        }
+      }
+    },
+    {
+      "name": "grant-cnonce-replay",
+      "desc": "Same proof presented twice for one issued cnonce; second attempt rejected.",
+      "check": {
+        "now": 1789030800,
+        "device_id": "de71ce00-0000-4000-8000-000000000001",
+        "last_gateway_sync": 1789027200,
+        "lockdown": false
+      },
+      "grant": {
+        "signer": "gateway",
+        "object": {
+          "v": 0,
+          "typ": "grant",
+          "grant_id": "9aa70000-0000-4000-8000-000000000018",
+          "member": "3e3be500-0000-4000-8000-000000000001",
+          "app_pubkey": "08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek",
+          "devices": [
+            "de71ce00-0000-4000-8000-000000000001"
+          ],
+          "access_points": [
+            "main",
+            "pedestrian"
+          ],
+          "windows": [
+            {
+              "days": "mon-sun",
+              "from": "00:00",
+              "to": "24:00"
+            }
+          ],
+          "iat": 1788913600,
+          "exp": 1789518400,
+          "sig": "IGx-mTyRm0Ch7zdIa_FYdj-L4Q62IRTxsrsgjj4Zfr3Tz_zuLfrMVV3QkeJUFoiwpwqfZvrKapLQ-3BnglH4Cg"
+        },
+        "canonical": "{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000018\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]}"
+      },
+      "transcript": {
+        "open": {
+          "signer": null,
+          "unsigned": true,
+          "object": {
+            "v": 0,
+            "typ": "grant.open",
+            "grant": {
+              "v": 0,
+              "typ": "grant",
+              "grant_id": "9aa70000-0000-4000-8000-000000000018",
+              "member": "3e3be500-0000-4000-8000-000000000001",
+              "app_pubkey": "08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek",
+              "devices": [
+                "de71ce00-0000-4000-8000-000000000001"
+              ],
+              "access_points": [
+                "main",
+                "pedestrian"
+              ],
+              "windows": [
+                {
+                  "days": "mon-sun",
+                  "from": "00:00",
+                  "to": "24:00"
+                }
+              ],
+              "iat": 1788913600,
+              "exp": 1789518400,
+              "sig": "IGx-mTyRm0Ch7zdIa_FYdj-L4Q62IRTxsrsgjj4Zfr3Tz_zuLfrMVV3QkeJUFoiwpwqfZvrKapLQ-3BnglH4Cg"
+            },
+            "access_point": "main"
+          },
+          "canonical": "{\"access_point\":\"main\",\"grant\":{\"access_points\":[\"main\",\"pedestrian\"],\"app_pubkey\":\"08DuO-2TAraz9VS4FBsewaDAeyslqhvqyETIXAX6cek\",\"devices\":[\"de71ce00-0000-4000-8000-000000000001\"],\"exp\":1789518400,\"grant_id\":\"9aa70000-0000-4000-8000-000000000018\",\"iat\":1788913600,\"member\":\"3e3be500-0000-4000-8000-000000000001\",\"sig\":\"IGx-mTyRm0Ch7zdIa_FYdj-L4Q62IRTxsrsgjj4Zfr3Tz_zuLfrMVV3QkeJUFoiwpwqfZvrKapLQ-3BnglH4Cg\",\"typ\":\"grant\",\"v\":0,\"windows\":[{\"days\":\"mon-sun\",\"from\":\"00:00\",\"to\":\"24:00\"}]},\"typ\":\"grant.open\",\"v\":0}"
+        },
+        "challenge": {
+          "v": 0,
+          "typ": "grant.challenge",
+          "cnonce": "cXFxcXFxcXFxcXFxcXFxcQ",
+          "iat": 1789030798,
+          "exp": 1789030828
         }
       },
       "steps": [
@@ -1342,13 +1748,13 @@
             "object": {
               "v": 0,
               "typ": "grant.proof",
-              "grant_id": "9aa70000-0000-4000-8000-000000000014",
-              "cnonce": "bW1tbW1tbW1tbW1tbW1tbQ",
+              "grant_id": "9aa70000-0000-4000-8000-000000000018",
+              "cnonce": "cXFxcXFxcXFxcXFxcXFxcQ",
               "access_point": "main",
               "ts": 1789030799,
-              "sig": "vy1gq4u6jXr16xmHlGf3HX2NJZLJ-0Qkoa1x2cQH_OaKvztjDaVuhNDYSR8PElQ38RPvHhMGQCBUnUwO2XYyBQ"
+              "sig": "r5Nzgq42jwIVf7sZ_qgdWuU4zKJhFLnckSfWGOc2R6JRgSamFMwJ2rk8hD5SnlFBlwejl4ZtqoZETfoTeS7fDw"
             },
-            "canonical": "{\"access_point\":\"main\",\"cnonce\":\"bW1tbW1tbW1tbW1tbW1tbQ\",\"grant_id\":\"9aa70000-0000-4000-8000-000000000014\",\"ts\":1789030799,\"typ\":\"grant.proof\",\"v\":0}"
+            "canonical": "{\"access_point\":\"main\",\"cnonce\":\"cXFxcXFxcXFxcXFxcXFxcQ\",\"grant_id\":\"9aa70000-0000-4000-8000-000000000018\",\"ts\":1789030799,\"typ\":\"grant.proof\",\"v\":0}"
           },
           "expect": "accept"
         },
@@ -1358,13 +1764,13 @@
             "object": {
               "v": 0,
               "typ": "grant.proof",
-              "grant_id": "9aa70000-0000-4000-8000-000000000014",
-              "cnonce": "bW1tbW1tbW1tbW1tbW1tbQ",
+              "grant_id": "9aa70000-0000-4000-8000-000000000018",
+              "cnonce": "cXFxcXFxcXFxcXFxcXFxcQ",
               "access_point": "main",
               "ts": 1789030799,
-              "sig": "vy1gq4u6jXr16xmHlGf3HX2NJZLJ-0Qkoa1x2cQH_OaKvztjDaVuhNDYSR8PElQ38RPvHhMGQCBUnUwO2XYyBQ"
+              "sig": "r5Nzgq42jwIVf7sZ_qgdWuU4zKJhFLnckSfWGOc2R6JRgSamFMwJ2rk8hD5SnlFBlwejl4ZtqoZETfoTeS7fDw"
             },
-            "canonical": "{\"access_point\":\"main\",\"cnonce\":\"bW1tbW1tbW1tbW1tbW1tbQ\",\"grant_id\":\"9aa70000-0000-4000-8000-000000000014\",\"ts\":1789030799,\"typ\":\"grant.proof\",\"v\":0}"
+            "canonical": "{\"access_point\":\"main\",\"cnonce\":\"cXFxcXFxcXFxcXFxcXFxcQ\",\"grant_id\":\"9aa70000-0000-4000-8000-000000000018\",\"ts\":1789030799,\"typ\":\"grant.proof\",\"v\":0}"
           },
           "expect": "reject",
           "reason": "cnonce_replay"

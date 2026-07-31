@@ -7,9 +7,8 @@ migration 0030, the revoke route, and delivery both on revocation and on
 reconnect. An operator can revoke a grant from the emergency-access screen and
 the gates that named it are told.
 
-What is NOT done: conformance vectors (§6 step 4), so the behaviour is proven in
-Go against real signed bytes but is not yet cross-implementable; and §5's open
-questions.
+What is NOT done: §5's open questions, and none of it has run against a
+controller on real hardware.
 
 It answers the question `proto/grants.md` § "Revocation vs. in-flight grants"
 left open. That section used to end "v0: undefined / open question" and named
@@ -206,11 +205,22 @@ ceiling `docs/THREAT-MODEL.md` §5 names for every signed object.
    **Done**, plus the `revoke` command handler, which was not on this list and
    should have been — without it the list is unreachable and every other test
    passes anyway.
-4. **Conformance vectors** for accept, refuse-revoked and refuse-rollback. Not
-   done: `vectorfile.Check` has no revocation field, so this needs the shared
-   schema and `proto/vectors/verify.mjs` to move together. The Go tests replay
-   the SHIPPED transcripts with a mutated `Env`, which exercises the real core
-   against real signed bytes but does not make the behaviour cross-implementable.
+4. ~~**Conformance vectors.**~~ **Done** — four, replayed by three independent
+   implementations (the Go core, `verify.mjs`, and the app's own canonicaliser):
+   a revoked grant refused; a deny-list naming a DIFFERENT grant changing
+   nothing; an entry past its own `exp` inert; and a forged grant on the list
+   reported as `badsig` rather than `revoked`, which is §3.6's ordering rule
+   made cross-implementable rather than merely tested here.
+
+   `check.revoked` is OPTIONAL in the vector schema, so every vector written
+   before step 3a existed still carries no list — which makes "absence is never
+   denial" the default the whole corpus exercises rather than one case.
+
+   Doing this found a FOURTH copy of the lockdown matrix. The guard added with
+   §3.8 compared the contract, the controller and the hub verifier; `verify.mjs`
+   had it inline as a JS array and still refused `revoke`. It is now a named
+   constant, the guard reads all four, and it also fails if an inline literal
+   reappears.
 5. ~~**The hub**: compose the list, send it on revocation and on reconnect.~~
    **Done**, and larger than this line first assumed — building the controller
    half surfaced a prerequisite nobody had written down.
