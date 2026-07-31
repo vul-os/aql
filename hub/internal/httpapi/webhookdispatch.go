@@ -91,7 +91,20 @@ type webhookDispatcher struct {
 	// failures counts consecutive whole-event failures per webhook id, so a
 	// persistently dead endpoint can be retired.
 	failures map[string]int
+	// backoff is how long to wait before retrying attempt n. A field rather
+	// than a constant purely so a test can drive the retry and auto-disable
+	// paths without spending fifteen real seconds on sleeps — those paths were
+	// at 0% coverage precisely because exercising them honestly was slow.
+	//
+	// Production behaviour is unchanged: newWebhookDispatcher installs the
+	// linear backoff, and nothing else sets this.
+	backoff func(attempt int) time.Duration
 }
+
+// linearBackoff waits attempt seconds before the next try. Exponential would be
+// over-engineering for three attempts, and a notification that arrives late is
+// worth less than one that arrives soon.
+func linearBackoff(attempt int) time.Duration { return time.Duration(attempt) * time.Second }
 
 func newWebhookDispatcher(st *store.Store, log *slog.Logger) *webhookDispatcher {
 	return &webhookDispatcher{
@@ -107,6 +120,7 @@ func newWebhookDispatcher(st *store.Store, log *slog.Logger) *webhookDispatcher 
 			},
 		},
 		failures: map[string]int{},
+		backoff:  linearBackoff,
 	}
 }
 
@@ -159,11 +173,8 @@ func (d *webhookDispatcher) deliverOne(ctx context.Context, w store.Webhook, eve
 		}
 		lastErr = err.Error()
 		if attempt < webhookMaxAttempts {
-			// Linear backoff. Exponential would be over-engineering for three
-			// attempts, and a notification that arrives late is worth less than
-			// one that arrives soon.
 			select {
-			case <-time.After(time.Duration(attempt) * time.Second):
+			case <-time.After(d.backoff(attempt)):
 			case <-ctx.Done():
 				return
 			}

@@ -665,6 +665,16 @@ and none has met physical hardware.
       record of who once could watch, and — the claim most worth pinning because it breaks
       the pattern of the rest of the product — EVERY member can read the camera-access log,
       not just admins. Found by asking which handlers a coverage run never enters
+- [x] **Outbound webhooks are actually delivered under test.** The signing helpers, the
+      SSRF checks and the store were all covered; `deliverOne` — the function that performs
+      the POST, retries it, records the outcome and RETIRES an endpoint that keeps failing
+      — was at zero. A real `httptest` receiver now proves a delivery arrives signed with
+      the exact bytes, a failing one is retried to the cap and recorded as `failed`, and
+      the retirement threshold holds in BOTH directions: one failure short leaves the
+      endpoint enabled, reaching it disables it with a reason, and a success in between
+      resets the count so a flaky receiver is never retired. The backoff became an
+      injectable field so those paths cost milliseconds instead of fifteen real seconds —
+      production still installs the linear one, and nothing else sets it
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
 - [ ] Rate-limiting and scoping on movement commands, so a compromised client cannot drive
