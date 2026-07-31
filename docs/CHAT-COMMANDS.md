@@ -153,8 +153,9 @@ The tier is derived, never parsed. A message cannot assert its own risk level.
 
 ### 1.2 Capabilities, not device types
 
-Aql already models a device as *"an ID, a kind, a zone, a state, and a set of
-commands/telemetry"* (`ARCHITECTURE.md`), and the console's shape
+Aql already models a device as *"a single internal device abstraction — an id, a
+kind, a zone, a state, and a set of commands and telemetry"*
+(`site/docs/devices.md`), and the console's shape
 was `{id, name, kind, zone, state, read, detail, seen}` on a demo dataset that
 has since been deleted.
 
@@ -510,10 +511,13 @@ This is the section the rest of the document exists to support.
 ### 3.1 Why tiers
 
 Dimming a light and starting a mower are both "a device command". They are not
-the same event. Aql's own threat model already draws the line: *"Some commands
-don't just show or hide information — they unlock doors, move machinery, or
-arm/disarm security systems. Mistakes there have physical consequences"*
-(`docs/THREAT-MODEL.md:21-23`).
+the same event. Aql's own threat model already draws the line — it opens by
+saying Aql *"actuates physical things"* and gives §7 to the consequence:
+*"Aql actuates the physical world, so some commands need care a dashboard would
+not"* (`docs/THREAT-MODEL.md`). This paragraph used to quote a sentence about
+unlocking doors and moving machinery and attribute it to that document, which
+never contained it — the words were this file's own, cited back to itself
+through another document's name.
 
 A blade-spinning mower starting because a substring matched is an injury, not an
 outage.

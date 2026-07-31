@@ -110,12 +110,21 @@ Where it does not reach KOTVA's row:
   actually calls `repair`"* (`proto/pairing.md:120-127`). Aql's own doc already proposes the fix
   (a small pinned list with `valid_from`, `proto/pairing.md:152-161`) — which is a hand-rolled
   approximation of KOTVA's `KeyRotation`/`MoveRecord` machinery.
-- **Residents/members have no keypair at all.** They are a verified phone number or a channel
-  user id (`hub/internal/store/channels.go:89-102`, `:121-135`). The *only* human-held key
-  anywhere in the system is `app_pubkey` inside an offline grant
-  (`hub/internal/keys/grant.go:36`) — and the app that would hold it does not exist:
-  *"What is **not yet implemented anywhere in this codebase is the app side**"*
-  (`proto/grants.md:169-177`).
+- **Residents/members have no keypair at all** *for identity*. They are a verified phone
+  number or a channel user id (`hub/internal/store/channels.go:89-102`, `:121-135`). The
+  *only* human-held key anywhere in the system is `app_pubkey` inside an offline grant
+  (`hub/internal/keys/grant.go:36`).
+
+  This bullet used to end "and the app that would hold it does not exist", quoting
+  `proto/grants.md`. **That is no longer true and the quote is gone from the source**: the
+  app half ships — `src/lib/offline/vault.ts` generates a non-extractable WebCrypto keypair
+  per device and `src/pages/app/EmergencyAccess.tsx` is a routed screen using it. So a
+  human-held key does exist in a resident's hands today.
+
+  It does not change the verdict below, and the reason is worth keeping: that key is scoped
+  to ONE grant at ONE set of gates for ONE TTL. It is a capability key, not an identity — it
+  answers "may this device open this gate until Tuesday", never "who is this person". KOTVA's
+  Identity row is the second thing, and Aql still has none of it.
 
 **Verdict:** the machine leg is already KOTVA-shaped and would cost little to align. The human
 leg has no identity layer to align, which is exactly what the DMTAP-channel idea was reaching
@@ -227,9 +236,9 @@ anywhere in that file. Its own header says the consequence plainly:
 
 That is exactly the gap a signed, `seq`-chained PUB feed closes: rewriting becomes a *detectable
 equivocation* rather than an undetectable recompute. And it composes with the second audit defect
-Aql already self-discloses — controller events carry no sequence number, so *"a gateway operator
+Aql already self-discloses — controller events carry no sequence number, so *"a hub operator
 looking at a gap in the timeline cannot distinguish 'the gate was quiet' from 'the gate was busy
-and we lost the record'"* (`proto/events.md:113-126`). A feed `seq` is the missing field in both
+and we lost the record,'"* (`proto/events.md:133-136`). A feed `seq` is the missing field in both
 places.
 
 **This is the strongest, cheapest, most under-appreciated item in the whole alignment**, and it
@@ -383,7 +392,7 @@ Not everything is a gap. These are genuinely satisfied, several of them exceedin
   (`hub/internal/httpapi/open.go:4-7`, `:57`, `:101-127`).
 - **The DMTAP scaffold's honesty is exactly right.** `NotImplementedTransport` fails closed on
   every call and is documented as *"never a silent no-op that could be mistaken for 'it works,
-  just quietly does nothing'"* (`hub/internal/channels/dmtap.go:127-141`); `Enabled()` is
+  just quietly does nothing.'"* (`hub/internal/channels/dmtap.go:128-132`); `Enabled()` is
   false without a real transport (`:168`); the contract doc leads with **"v0 DRAFT, NOT
   IMPLEMENTED"** (`proto/dmtap-channel.md:1-11`).
 
@@ -474,14 +483,15 @@ fsync'd overflow log rather than failing outright (`proto/events.md:71-82`).
 **Never silently dropped: NO — and this is the honest failure.** Three documented paths lose the
 record:
 
-1. If both the reserved partition and the overflow log fail to write, *"the controller proceeds
-   with **no** audit record at all. Even then, **the gate still opens**"* (`proto/events.md:82-86`).
+1. If both the reserved partition and the overflow log fail to write, *"does the controller
+   proceed with **no** audit record at all. Even then, **the gate still opens.**"*
+   (`proto/events.md:101-103`).
    Aql argues this is the right tradeoff (a stranded resident is worse than a paperwork gap) and
    that argument is defensible — but the sneakernet test does not grade tradeoffs, it grades
    silence.
 2. Normal events are dropped oldest-first once the ring fills (`proto/events.md:59-64`).
 3. There is no delivery ack at all, so *"the controller believes the event delivered (and drops
-   it from its durable queue) while the gateway never has it"* (`proto/events.md:95-111`), and no
+   it from its durable queue) while the hub never has it"* (`proto/events.md:117-119`), and no
    sequence number makes the resulting gap detectable (`proto/events.md:113-126`).
 
 Against `R-GRADE-2` — *"A `deferred` action MUST carry, and display, its *unsettled* status until

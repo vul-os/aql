@@ -166,15 +166,33 @@ requested access points, then signs the grant with
 file's `grant-redeem-valid` vector. TTL is fixed at the 7-day default above
 and is not caller-extendable.
 
-What is **not yet implemented anywhere in this codebase is the app side**:
-nothing requests, stores or presents a grant on a resident's device, so the
-full end-to-end path — app holds a grant, proves it to a controller with no
-hub involved — does not run today, even though both the hub and
-controller halves are ready for it. The "refreshes on every online launch,
-so revocation converges within the TTL" reasoning above describes the
-intended contract; it is not yet an observable guarantee end to end,
-because there is no app-side refresh loop to observe it with. **v0: hub
-+ controller real and conformance-tested; app client unbuilt.**
+**The app side is now built too**, and this paragraph said the opposite for
+long enough to be worth naming: it went on reading "nothing requests, stores or
+presents a grant on a resident's device" after all three shipped. A wire
+contract that describes a live path as absent is worse than one that is merely
+out of date — it stops a reader from exercising the emergency path at all.
+
+What exists: `src/lib/offline/service.ts` requests and refreshes,
+`vault.ts` stores (IndexedDB, with the device key a **non-extractable**
+WebCrypto `CryptoKey` so copying the database yields no usable key),
+`redeem.ts` presents over LAN, and `src/pages/app/EmergencyAccess.tsx` is a
+routed screen that a resident can actually reach — the library alone would have
+been a path nobody could walk.
+
+One correction to the reasoning above while it is being fixed. "Refreshes on
+every online launch" is not what the code does: `refreshIfDue` runs when the
+emergency screen is OPENED with a connection, not at app start. That does not
+weaken revocation convergence — a grant nobody refreshes simply expires at its
+own `exp`, and the hub declines to mint a replacement for a revoked member — but
+it does mean a legitimate member who never opens the screen finds an expired
+grant rather than a fresh one. Convergence is bounded by `exp` either way, which
+is the property this section is about.
+
+**v0 status: hub, controller and app client all real and tested.** What remains
+unbuilt is BLE presentation and mDNS resolution, which a browser cannot do and
+which therefore need native code (`src-tauri/`); and none of the three halves
+has been run against real hardware, so the end-to-end path is proven in
+isolation and unproven at a gate.
 
 ## Transports
 

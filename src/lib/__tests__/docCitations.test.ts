@@ -117,7 +117,7 @@ function isExternal(path: string): boolean {
  * `internal/store/x.go` means `hub/internal/store/x.go` — module-relative
  * citation is the house style and predates this check.
  */
-function resolves(path: string, doc: string): boolean {
+function resolvedPath(path: string, doc: string): string | null {
   const docDir = doc.includes('/') ? doc.slice(0, doc.lastIndexOf('/')) : '';
   const candidates = [
     path,
@@ -132,7 +132,12 @@ function resolves(path: string, doc: string): boolean {
     `controller/internal/${path}`,
   ];
   if (docDir) candidates.push(`${docDir}/${path}`);
-  return candidates.some((c) => existsSync(resolve(root, c)));
+  return candidates.find((c) => existsSync(resolve(root, c))) ?? null;
+}
+
+/** Whether a cited path resolves at all. */
+function resolves(path: string, doc: string): boolean {
+  return resolvedPath(path, doc) !== null;
 }
 
 describe('documentation citations', () => {
@@ -167,6 +172,104 @@ describe('documentation citations', () => {
         ).toBe(false);
       }
     }
+  });
+
+  /**
+   * A quoted citation must still say what the citing document claims it says.
+   *
+   * # The gap this closes
+   *
+   * Everything above checks that a cited PATH resolves. Nothing checked that a
+   * quoted SENTENCE still exists in the file it is attributed to, and six had
+   * drifted by the time this was written:
+   *
+   *   - Three quotes from `proto/events.md` said "gateway operator" / "the
+   *     gateway never has it" where the file says "hub". The gateway→hub rename
+   *     swept through quoted text along with the prose, so the documents went on
+   *     attributing words to a file that does not contain them.
+   *   - `docs/CHAT-COMMANDS.md` quoted a sentence about unlocking doors and
+   *     moving machinery and credited it to `docs/THREAT-MODEL.md`. The threat
+   *     model never contained it — the words were CHAT-COMMANDS' own, cited back
+   *     to itself through another document's name. That is the worst shape of
+   *     this defect: it manufactures external support for a claim.
+   *   - The same file quoted a device-model definition from `ARCHITECTURE.md`
+   *     that lives in `site/docs/devices.md`.
+   *
+   * # What it tolerates, and why each is not a hole
+   *
+   * A quote is compared after collapsing whitespace (so a reflowed paragraph
+   * still matches), stripping comment and blockquote markers (so a quote from a
+   * Go comment matches), unifying quote marks (documents routinely render a
+   * source's " as ' when nesting), lowercasing (a sentence quoted mid-sentence
+   * legitimately lowercases its first letter), and ignoring trailing commas and
+   * full stops (whether punctuation sits inside or outside a closing quote is a
+   * house-style question, not a claim about the source). `…` splits the quote
+   * into fragments, each of which must appear — an elision is a real quoting
+   * device and forbidding it would push authors to quote less.
+   *
+   * None of that can hide a changed WORD, which is the failure actually seen.
+   *
+   * External repos are skipped: this repository cannot verify a quote from a
+   * tree it does not contain, and pretending otherwise would fail on every
+   * machine that has not cloned the others.
+   */
+  it('every quoted citation still appears in the file it names', () => {
+    // `*"…"*` followed by a backticked path. Emphasised-quote is the house
+    // convention for quoting another document, used 135 times.
+    const QUOTED = /\*"([^"]{12,240})"\*\s*\(`([^`]+)`\)/g;
+
+    const flatten = (t: string) =>
+      t
+        .replace(/^\s*(?:\/\/+|\*|>|--)+\s?/gm, '')
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u201c\u201d]/g, '"')
+        .replace(/"/g, "'")
+        .replace(/\*\*|\*|`|\\/g, '')
+        .replace(/\s+/g, ' ')
+        .toLowerCase();
+
+    const problems: string[] = [];
+    let checked = 0;
+
+    for (const doc of docFiles()) {
+      const body = readFileSync(resolve(root, doc), 'utf8');
+      // Matched against the raw text AND a newline-collapsed copy, because a
+      // quote that wraps across lines is the common case, not the exception.
+      const seen = new Set<string>();
+      for (const source of [body, body.replace(/\n/g, ' ')]) {
+        for (const m of source.matchAll(QUOTED)) {
+          const key = `${m[1]}::${m[2]}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+
+          const cited = m[2].split(':')[0];
+          if (isExternal(cited) || isHistorical(doc, cited)) continue;
+          if (!resolves(cited, doc)) continue; // path checks above own this
+
+          const target = resolvedPath(cited, doc);
+          if (!target) continue;
+          checked++;
+
+          const hay = flatten(readFileSync(resolve(root, target), 'utf8'));
+          const fragments = flatten(m[1])
+            .split(/…|\.\.\./)
+            .map((f) => f.trim().replace(/^[,;.]+|[,;.]+$/g, ''))
+            .filter((f) => f.length >= 10);
+
+          for (const fragment of fragments) {
+            if (!hay.includes(fragment)) {
+              problems.push(`${doc} quotes ${cited} as "${fragment.slice(0, 90)}…" — it does not say that`);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // A regex that matched nothing would pass forever. These documents quote
+    // each other constantly; if this drops near zero the convention changed.
+    expect(checked, 'no quoted citations parsed — the quoting convention moved').toBeGreaterThan(25);
+    expect(problems, 'a document attributes words to a file that does not contain them').toEqual([]);
   });
 
   it('no document cites the pre-fold lintel/ layout as a path', () => {

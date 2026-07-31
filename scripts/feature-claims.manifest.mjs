@@ -220,6 +220,10 @@ export const FEATURES = [
       // document warns against exactly this in its own §8. The quote is what
       // makes the guard bite: reverting the claim breaks the build.
       'docs/THREAT-MODEL.md § 8 — "it requests, holds and presents a grant"',
+      // The wire contract is the document a protocol reader reaches for first,
+      // and it was the one still calling this unbuilt. Pinned the same way the
+      // threat model is, and for the reason the threat model comment gives.
+      'proto/grants.md § Implementation status — "The app side is now built too"',
     ],
     // Both halves: the library AND a routed screen that imports it. Evidence on
     // the library alone would have passed for weeks while no user could reach
@@ -261,7 +265,13 @@ export const FEATURES = [
     docStatus: 'planned',
     docRefs: [
       'site/docs/emergency-access.md § Where the app half stands — the per-build table and the BLE limit',
-      'proto/grants.md § Implementation status',
+      // Quoted, not paraphrased. This ref named the section and nothing else,
+      // so the section went on saying the app side did not exist for as long
+      // as it took someone to read it — a bare section name pins nothing.
+      // The quote is the half that is still genuinely unbuilt, so it breaks
+      // the build in both directions: if BLE ships and the doc is not updated,
+      // and if the doc is reverted to calling the whole app side missing.
+      'proto/grants.md § Implementation status — "What remains unbuilt is BLE presentation and mDNS resolution"',
     ],
     // src/ is deliberately never an evidence root (see this file's header —
     // it's UI copy, the exact layer that lied nine times already), so this
