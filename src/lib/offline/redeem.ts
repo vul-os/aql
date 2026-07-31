@@ -65,12 +65,24 @@ export type RedeemOutcome =
   | { kind: 'transport'; message: string };
 
 /**
- * The cmd.ack `detail` vocabulary (proto/commands.md §Acknowledgement,
- * reused by grants.md and mirrored in controller/internal/wire), rendered
- * for a person standing at a gate. Every reason the 11-step order can
- * produce is here; an unknown code is shown raw rather than smoothed into a
- * generic "something went wrong", because a reason we don't recognise is
- * information, not noise.
+ * Every reason a GRANT REDEMPTION can be refused with, rendered for a person
+ * standing at a gate.
+ *
+ * The vocabulary is `grant.result.detail` (proto/grants.md, mirrored in
+ * controller/internal/wire), which overlaps but is not identical with the
+ * cmd.ack details in commands.md: `window_too_long` and `replay` are envelope
+ * checks on COMMANDS and no redemption can produce them, so they are
+ * deliberately absent rather than missing.
+ *
+ * This comment used to claim "every reason the 11-step order can produce is
+ * here" with nothing checking it, and it stopped being true the moment step 3a
+ * added `revoked` — the refusal that matters most, shown as a raw token.
+ * `denialVocabulary.test.ts` now reads the verification core and the two
+ * transports and fails when a reason has no text.
+ *
+ * An unknown code is still shown raw rather than smoothed into a generic
+ * "something went wrong", because a reason we don't recognise is information,
+ * not noise — the guard makes that a fallback for future hubs, not for us.
  */
 const DENIAL_TEXT: Record<string, string> = {
   stale_clock:
@@ -87,6 +99,11 @@ const DENIAL_TEXT: Record<string, string> = {
   cnonce_expired: 'The challenge expired before the proof arrived (30 seconds). Try again.',
   cnonce_replay: 'That challenge was already used. Challenges are single-use. Try again.',
   frame_too_large: 'The message was too large for the controller to accept.',
+  // Not "expired" and not a mistake: someone withdrew this access deliberately.
+  // Saying so plainly is the point — a person told "the controller refused:
+  // revoked" will try again, and a person told this will not.
+  revoked:
+    'This grant was revoked. Someone with access to your hub withdrew it, and the gate is refusing it on purpose — trying again will not help.',
 };
 
 export function describeDenial(detail: string): string {
