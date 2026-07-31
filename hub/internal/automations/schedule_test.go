@@ -1,6 +1,8 @@
 package automations
 
 import (
+	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -196,5 +198,37 @@ func TestActionValidationFailsClosed(t *testing.T) {
 				t.Fatal("expected a refusal")
 			}
 		})
+	}
+}
+
+// The embedded timezone database must stay embedded.
+//
+// schedule.go blank-imports time/tzdata and pays ~450 KB for it, deliberately:
+// a schedule is written in local time, and time.LoadLocation otherwise depends
+// on the HOST carrying /usr/share/zoneinfo. A self-hoster on a scratch image or
+// a minimal box would get a hub where every timezone-bearing rule refuses to
+// save — failing closed, and useless.
+//
+// That is exactly the kind of cost someone removes to make a binary smaller,
+// and nothing would fail on a developer machine, which has zoneinfo. It would
+// fail in production, on the smallest deployments, for rules that had been
+// working. So the import is asserted rather than trusted.
+func TestTheTimezoneDatabaseIsEmbedded(t *testing.T) {
+	src, err := os.ReadFile("schedule.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(src), `_ "time/tzdata"`) {
+		t.Error(`schedule.go no longer embeds time/tzdata.
+
+LoadLocation now depends on the host having /usr/share/zoneinfo. On a scratch or
+minimal image every schedule with a TZ stops resolving, and the failure lands on
+self-hosters rather than on anyone who would notice here.`)
+	}
+
+	// And it works — for a zone with DST, since that is the case the whole
+	// schedule design turns on.
+	if _, err := time.LoadLocation("America/New_York"); err != nil {
+		t.Errorf("LoadLocation failed for a DST zone: %v", err)
 	}
 }

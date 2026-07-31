@@ -467,6 +467,28 @@ jobs:
           curl -fsS -o /dev/null http://127.0.0.1:18080/
           docker exec aqlci /healthprobe
           docker rm -f aqlci
+      # The image must resolve IANA timezones.
+      #
+      # Schedules and energy rollups are anchored to a named zone, and getting
+      # that wrong is silent: rollup buckets split at the wrong hour and the
+      # numbers still look plausible. schedule.go embeds time/tzdata so this does
+      # not depend on the base image, but the base image is the thing that
+      # changes without anyone thinking about timezones — so it is checked on the
+      # artifact, not on the assumption.
+      #
+      # `energy rebucket` loads the zone before it touches the database, so a
+      # valid zone reaching the "no hub database" refusal proves LoadLocation
+      # worked. The bogus zone is the control: without it, a command that failed
+      # for any reason would read as a pass.
+      - name: the image resolves timezones
+        run: |
+          set -eux
+          docker run --rm --entrypoint /aql-hub aql-hub:ci \
+            energy rebucket -account probe -tz America/New_York -data /data 2>&1 \
+            | grep -q "no hub database"
+          docker run --rm --entrypoint /aql-hub aql-hub:ci \
+            energy rebucket -account probe -tz Not/AZone -data /data 2>&1 \
+            | grep -q "is not a timezone this system knows"
 
   verify-script:
     name: release verifier (lint + failure matrix)
