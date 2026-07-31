@@ -707,6 +707,15 @@ and none has met physical hardware.
       that overwrites the original seed; the seed file is 0600 and holds the seed ALONE,
       with the public key derived; and `PublicKeyB64` is unpadded base64url, the format
       `pair.redeem` carries
+- [x] **The controller's event recorder is tested** — `Record`, `RecordGrantRedeemed` and
+      `NewEventID` were at zero over a well-covered queue. These carry every event a
+      controller emits while the hub is UNREACHABLE, so a fault is discovered late or not
+      at all. Pinned: an event is signed by the controller and stamped with the synced
+      clock rather than the wall clock; `grant_redeemed` lands in the reserved partition
+      and survives a flood that overruns the ordinary ring; and the deliberate asymmetry
+      holds — `Record` logs its errors because recording must never block actuation, while
+      `RecordGrantRedeemed` RETURNS them, because the caller has to know whether the only
+      evidence of an offline emergency open was captured
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
 - [ ] Rate-limiting and scoping on movement commands, so a compromised client cannot drive
