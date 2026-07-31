@@ -6,9 +6,11 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"testing"
 	"time"
 
@@ -291,5 +293,112 @@ func TestDecodePubkey(t *testing.T) {
 		if _, ok := hub.DecodePubkey(bad); ok {
 			t.Errorf("bad key accepted: %q", bad)
 		}
+	}
+}
+
+// The Hub's own contract, exercised.
+//
+// Its doc comment says "All methods are safe for concurrent use". That is a
+// claim about five maps behind one mutex, on the path every signed open command
+// takes to a gate — and nothing had ever put two goroutines on it, so `go test
+// -race` over this package was reporting on single-threaded runs.
+//
+// e2e does not cover it either, and the reason is worth stating: `go test -race`
+// instruments the TEST process. e2e spawns the hub as a subprocess, so races
+// inside that binary are invisible to it however concurrent the traffic is.
+//
+// The hazard this is shaped around is Register displacing a live connection. A
+// controller that reconnects — a flaky link, a restart, a duplicate — closes the
+// previous connection's done channel while that connection's own unregister may
+// be running. A double close panics, and it panics in the goroutine serving a
+// gate's WebSocket.
+func TestHubIsSafeForConcurrentUse(t *testing.T) {
+	h := hub.New()
+	const devices = 4
+	const workers = 24
+	const rounds = 60
+
+	var wg sync.WaitGroup
+	for w := 0; w < workers; w++ {
+		w := w
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			id := fmt.Sprintf("dev-%d", w%devices)
+			for r := 0; r < rounds; r++ {
+				switch w % 4 {
+				case 0:
+					// Reconnect churn: the displacement path.
+					send, done, unregister := h.Register(id)
+					_ = send
+					select {
+					case <-done:
+					default:
+					}
+					unregister()
+					// Unregistering twice must be safe: a WS handler that both
+					// defers it and calls it on error would do exactly this.
+					unregister()
+				case 1:
+					_ = h.Connected(id)
+					_ = h.ConnectedDevices()
+				case 2:
+					_ = h.DrainQueue(id)
+				case 3:
+					ch, err := h.IssuePollChallenge(id, time.Now().Unix())
+					if err == nil {
+						_ = ch.Wire()
+					}
+				}
+			}
+		}()
+	}
+
+	done := make(chan struct{})
+	go func() { wg.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(30 * time.Second):
+		t.Fatal("the hub deadlocked under concurrent use")
+	}
+
+	// Every worker unregistered whatever it registered, so nothing may be left
+	// connected. A leaked entry here is a device the hub believes it can reach.
+	if got := h.ConnectedDevices(); len(got) != 0 {
+		t.Errorf("after every connection was unregistered, the hub still reports %v", got)
+	}
+}
+
+// Displacement, isolated. Two registrations for one device: the first must be
+// told it was displaced, and the second must be the live one.
+func TestASecondRegistrationDisplacesTheFirstExactlyOnce(t *testing.T) {
+	h := hub.New()
+	_, firstDone, firstUnregister := h.Register("dev-1")
+
+	_, secondDone, secondUnregister := h.Register("dev-1")
+
+	select {
+	case <-firstDone:
+	default:
+		t.Fatal("the displaced connection was never told; its writer goroutine would " +
+			"keep serving a controller the hub no longer routes to")
+	}
+	select {
+	case <-secondDone:
+		t.Fatal("the live connection was closed by its own displacement of another")
+	default:
+	}
+
+	// The displaced side still runs its deferred unregister. It must not remove
+	// the connection that replaced it, and must not close an already-closed
+	// channel.
+	firstUnregister()
+	if !h.Connected("dev-1") {
+		t.Error("the displaced connection's unregister removed its replacement, so the " +
+			"hub now believes a connected controller is offline")
+	}
+	secondUnregister()
+	if h.Connected("dev-1") {
+		t.Error("the live connection survived its own unregister")
 	}
 }

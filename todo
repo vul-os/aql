@@ -137,6 +137,26 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       sample is gone in every zone. A recovery tool that prints a success line over a
       partial result is worse than one that refuses, because the operator stops looking.
 
+## concurrency coverage (partial)
+- NOTE: `go test -race` only reports races on paths that ACTUALLY run in parallel during
+      the test. A package whose tests are single-threaded gets a green race run that means
+      nothing, and the race CI job covering all three modules reads as far stronger
+      assurance than it is.
+- NOTE: e2e does not close this. `go test -race` instruments the TEST process; e2e spawns
+      the hub and controller as SUBPROCESSES, so races inside those binaries are invisible
+      to it however concurrent the traffic is.
+- [x] internal/recording (the live-view Broadcaster) and internal/hub (the device
+      registry, on the path every signed open takes to a gate). Both came through clean;
+      both are now pinned by tampers that reproduce the specific hazard.
+- [ ] STILL UNCOVERED, measured: 14 more packages have concurrent production code
+      (goroutines or a mutex) and zero `go func` in their tests. The highest-consequence
+      remaining are controller/internal/state (the pinned gateway key and lockdown flag),
+      controller/internal/noncestore (replay protection), controller/internal/transport,
+      and hub/internal/devices (the registry, whose Driver contract explicitly says
+      methods are called concurrently and not serialised).
+      Each needs a test shaped around ITS hazard, not a generic hammer — a shallow sweep
+      would restore the same false assurance being removed.
+
 ## blocked on something outside this repo
 - [ ] Matter — needs a certified device and a stack.
 - [ ] Modbus RTU (serial). TCP ships; a TCP-to-RTU bridge covers the common case.
