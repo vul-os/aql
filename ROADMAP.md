@@ -212,7 +212,13 @@ hub's issuance endpoint):
       `hold_max` or `sensor_debounce_ms` are currently set to — only send new ones. The
       console says so plainly rather than leaving empty boxes to be read as "unset". Fixing
       it means widening the ack (or adding a report) in `proto/`, which is a wire-contract
-      change across both modules and the conformance vectors
+      change across both modules and the conformance vectors.
+      **Cheaper than that reads, and the reason is now pinned by a test.** Uplink
+      verification canonicalises the bytes it RECEIVED minus `sig`, not a rebuild of the
+      fields it knows, so an older hub accepts an ack carrying a field it has never heard
+      of — and the unknown field is still inside the signature, so nothing on the path can
+      rewrite it. An additive `config` object therefore needs no version bump and no flag
+      day for mixed-version fleets
 - [ ] Controller TAMPER sensing does not exist, and the MOCK relay's position sensor is a
       constant. The GPIO build's `GateClosed` is real — it reads a kernel-debounced input line
       claimed alongside the relay output. This line previously said "sensors return static

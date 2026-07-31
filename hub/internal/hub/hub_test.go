@@ -3,6 +3,7 @@ package hub_test
 import (
 	"context"
 	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -400,5 +401,88 @@ func TestASecondRegistrationDisplacesTheFirstExactlyOnce(t *testing.T) {
 	secondUnregister()
 	if h.Connected("dev-1") {
 		t.Error("the live connection survived its own unregister")
+	}
+}
+
+// An uplink carrying a field this hub does not know must still verify.
+//
+// This is the property every future extension of the controller wire rests on,
+// and it is not obvious from the type: hub.Ack has a fixed set of fields, so the
+// natural reading is that anything else would be dropped and break the
+// signature. It would — if verification rebuilt the message from that struct.
+//
+// It does not. VerifyFromController canonicalises the RAW RECEIVED BYTES minus
+// `sig`, so a field it has never heard of is inside the signature check and the
+// check still passes. The unknown field is then ignored by the struct.
+//
+// That makes an ADDITIVE change forward-compatible by construction: a newer
+// controller can start reporting something — ROADMAP's open item is the
+// controller reporting its pulse_ms/hold_max configuration back — and an older
+// hub keeps accepting its acks instead of rejecting every one as badsig. Without
+// this property that feature needs a version bump and a flag day; with it, it
+// does not. Worth a test rather than a reading, because a well-meant refactor to
+// "verify the parsed struct" would look tidier and would silently make every
+// mixed-version fleet fail closed.
+func TestAnUplinkWithAnUnknownFieldStillVerifies(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const deviceID = "dev-1"
+
+	sign := func(m map[string]any) []byte {
+		t.Helper()
+		canonical, err := keys.Canonicalize(m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		m["sig"] = base64.RawURLEncoding.EncodeToString(ed25519.Sign(priv, canonical))
+		raw, err := json.Marshal(m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return raw
+	}
+
+	// The ack a controller sends today.
+	plain := sign(map[string]any{
+		"v": 0, "typ": "cmd.ack", "device_id": deviceID,
+		"nonce": "n-1", "result": "opened", "ts": 1789000001,
+	})
+	if reason := hub.VerifyFromController(pub, plain, deviceID); reason != "" {
+		t.Fatalf("a plain ack was rejected: %s", reason)
+	}
+
+	// The same ack from a newer controller that also reports its configuration.
+	extended := sign(map[string]any{
+		"v": 0, "typ": "cmd.ack", "device_id": deviceID,
+		"nonce": "n-2", "result": "opened", "ts": 1789000002,
+		"config": map[string]any{"pulse_ms": 700, "hold_max": 30},
+	})
+	if reason := hub.VerifyFromController(pub, extended, deviceID); reason != "" {
+		t.Fatalf(`an ack carrying an unknown "config" field was rejected: %s
+
+Verification must canonicalise what it RECEIVED, not what it can parse. If it
+rebuilds the message from hub.Ack's fields, every controller that adds anything
+to its uplink has all of its acks rejected as badsig by an older hub — a flag day
+for a change that should be additive.`, reason)
+	}
+
+	// And the unknown field is genuinely covered by the signature: altering it
+	// after signing must invalidate the ack, not be ignored.
+	var tampered map[string]any
+	if err := json.Unmarshal(extended, &tampered); err != nil {
+		t.Fatal(err)
+	}
+	tampered["config"] = map[string]any{"pulse_ms": 5000, "hold_max": 600}
+	raw, err := json.Marshal(tampered)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reason := hub.VerifyFromController(pub, raw, deviceID); reason == "" {
+		t.Error(`an unknown field was changed after signing and the ack still verified.
+
+Then it is outside the signature, and a newer controller's reported configuration
+could be rewritten in flight by anything on the path.`)
 	}
 }
