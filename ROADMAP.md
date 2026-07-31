@@ -799,8 +799,16 @@ and none has met physical hardware.
       reporting** — never assuming the third is the second
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
-- [ ] Rate-limiting and scoping on movement commands, so a compromised client cannot drive
-      a machine into a person
+- [x] **Rate-limiting and scoping on movement commands.** The scoping half existed
+      (`engineScope`); there was NO rate limit on `POST /v1/engine/devices/{key}/execute` at
+      all, so a stolen token could loop `start` on a mower and nothing on that path would
+      slow it — authentication and the tier ceiling both answer "may this caller do this",
+      and neither answers "may they do it two hundred times a second". Now a cooldown per
+      (caller, device, verb), scaled by tier: none at or below `TierReversible` because a
+      dimmer slider legitimately streams `set` and a lamp cannot injure anyone, 3s at
+      consequential, 10s at physical-access and above. It fails CLOSED, unlike the gate
+      path's reviewed fail-open — there is no member-standing-at-their-own-gate argument
+      for blades. Reuses `rate_limit_cooldowns`, so no migration
 
 ---
 
