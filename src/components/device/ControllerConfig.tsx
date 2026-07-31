@@ -202,6 +202,7 @@ export function ControllerConfig({ deviceId }: { deviceId: string }) {
         </p>
       )}
       <UnknownReported report={report} />
+      <RevocationState report={report} />
       <p className="mt-4 text-[11px] text-ink/45">
         Sensor debounce is not set from here. It belongs to the relay wiring and is configured
         where the controller runs.
@@ -267,5 +268,55 @@ function UnknownReported({ report }: { report: ConfigReportResponse | null }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+/**
+ * Which revocations this gate is actually enforcing.
+ *
+ * docs/GRANT-REVOCATION.md §5. The revoke button reports which controllers a
+ * deny-list was DISPATCHED to, which is not the same claim: a command queued
+ * for a gate that never reconnects looks identical to one delivered. This is
+ * the gate answering for itself.
+ *
+ * Three states, deliberately worded as three different things. "This gate
+ * cannot tell us" and "this gate confirms it holds nothing" are opposite
+ * answers for someone deciding whether to go and latch lockdown, and rendering
+ * them the same way is the failure this whole report exists to prevent.
+ */
+function RevocationState({ report }: { report: ConfigReportResponse | null }) {
+  const rev = report?.revocation;
+  if (!rev) return null;
+
+  if (!rev.reported) {
+    return (
+      <p className="mt-3 text-sm text-ink/60" data-shot="revocation-state">
+        <span className="font-medium text-ink/75">Revocations: not reported.</span>{' '}
+        {rev.detail ??
+          'This controller has not said which revocations it is enforcing, so nothing here can confirm one reached it.'}
+      </p>
+    );
+  }
+
+  if (rev.up_to_date) {
+    return (
+      <p className="mt-3 text-sm text-ink/70" data-shot="revocation-state">
+        <span className="font-medium text-ink">Revocations: up to date.</span>{' '}
+        {rev.entries === 0
+          ? 'This gate is enforcing no revoked grants, and that is current.'
+          : `This gate is enforcing ${rev.entries} revoked grant${rev.entries === 1 ? '' : 's'}.`}
+      </p>
+    );
+  }
+
+  // Behind. The number is not the point — that this gate would still open for a
+  // grant somebody revoked is the point, so it is said in those words.
+  return (
+    <p className="mt-3 text-sm text-terracotta-deep" data-shot="revocation-state">
+      <span className="font-medium">Revocations: behind.</span> This gate is enforcing list{' '}
+      {rev.seq} and the hub is at {rev.hub_seq}, so a grant revoked since then will still open
+      it. It catches up when it next reaches the hub; latch lockdown if that is not soon
+      enough.
+    </p>
   );
 }

@@ -32,7 +32,7 @@ reference for how every other device kind should eventually work: a versioned wi
 contract, a device that verifies rather than trusts, and an audit trail you can check
 after the fact.
 
-**The hub** (`hub/`) — one Go binary, SQLite inside, **131 HTTP routes over 29
+**The hub** (`hub/`) — one Go binary, SQLite inside, **131 HTTP routes over 30
 migrations, and more than 1,000 tests green** across 18 packages:
 
 - [x] Accounts, locations, access points, members with roles, invites
@@ -147,7 +147,11 @@ hub's issuance endpoint):
 - [x] **Grant revocation beyond "wait for expiry"** — built end to end, never run against
       a controller on real hardware. Migration 0030 remembers what was issued; revoking from
       the emergency-access screen pushes a signed deny-list to every controller the grant
-      named, and a controller that was offline gets it on reconnect. Designed in [`docs/GRANT-REVOCATION.md`](docs/GRANT-REVOCATION.md) settles the question
+      named, and a controller that was offline gets it on reconnect. Each gate then REPORTS
+      which list it is enforcing (`ctl.report`, migration 0031), so "did my revocation land"
+      is answered by the device rather than by the hub assuming its own success — dispatched
+      and applied differ exactly when it matters, because a command queued for a gate that
+      never reconnects looks identical to one delivered. Designed in [`docs/GRANT-REVOCATION.md`](docs/GRANT-REVOCATION.md) settles the question
       `proto/grants.md` leaves open. A signed deny-list of `{grant_id, exp}` pairs, delivered
       as a `revoke` command and cached by the controller, consulted between the signature
       check and the validity window. Two properties do the work: **absence is never denial**,
@@ -536,7 +540,7 @@ and none has met physical hardware.
 
 ## Phase 2 — Local persistence & secrets (partly real)
 
-- [x] SQLite for state, history and configuration — shipped with the hub (29 migrations,
+- [x] SQLite for state, history and configuration — shipped with the hub (30 migrations,
       51 tables), one file to back up, pure-Go driver so it cross-compiles to a Pi
 - [ ] Extend that schema to device state, telemetry and history once Phase 1 exists
 - [ ] **OS-keychain-backed credential vault** for device and service secrets, scoped per

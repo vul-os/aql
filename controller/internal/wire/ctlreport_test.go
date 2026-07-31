@@ -28,7 +28,7 @@ func TestSignedReportMatchesTheContractShape(t *testing.T) {
 	raw, err := wire.SignCtlReport(priv, "dev-1", "0.1.0", 1789000020, map[string]wire.ConfigEntry{
 		"pulse_ms": {Value: 700, Source: wire.SourceDefault},
 		"hold_max": {Value: 45, Source: wire.SourceConfig},
-	})
+	}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

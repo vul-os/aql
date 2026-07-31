@@ -395,6 +395,14 @@ func (s *Server) handleControllerConfigReport(ctx context.Context, deviceID stri
 		Firmware string          `json:"firmware"`
 		TS       int64           `json:"ts"`
 		Config   json.RawMessage `json:"config"`
+		// Absent from a firmware predating the field, which is why it is a
+		// POINTER: a missing block and a reported seq of 0 are different facts
+		// and the console has to be able to show the difference
+		// (docs/GRANT-REVOCATION.md §5, migration 0031).
+		Revocation *struct {
+			Seq     int64 `json:"seq"`
+			Entries int   `json:"entries"`
+		} `json:"revocation"`
 	}
 	if err := jsonUnmarshal(msg, &rep); err != nil {
 		s.log.Warn("controller config report unparseable", "device", deviceID, "err", err)
@@ -409,6 +417,16 @@ func (s *Server) handleControllerConfigReport(ctx context.Context, deviceID stri
 	}
 	if err := s.store.SaveConfigReport(ctx, deviceID, rep.Config, rep.Firmware, rep.TS); err != nil {
 		s.log.Error("record controller config report", "device", deviceID, "err", err)
+	}
+	// Recorded separately, and only when reported. Absence must stay absence:
+	// writing a zero row for a firmware that said nothing would tell an
+	// operator this gate holds no deny-list, when the truth is that it cannot
+	// say.
+	if rep.Revocation != nil {
+		if err := s.store.SaveRevocationReport(ctx, deviceID,
+			rep.Revocation.Seq, rep.Revocation.Entries, rep.TS); err != nil {
+			s.log.Error("record controller revocation report", "device", deviceID, "err", err)
+		}
 	}
 }
 
@@ -717,11 +735,19 @@ func (s *Server) handleDeviceConfigReport(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// The deny-list state travels with the config report because they arrive in
+	// the same message, but it is fetched and reported INDEPENDENTLY: a
+	// controller that has reported one and not the other is a real state, and
+	// collapsing them would make a gate look silent about revocation merely
+	// because its config row is missing (docs/GRANT-REVOCATION.md §5).
+	revocation := s.revocationReportBlock(r.Context(), id)
+
 	rep, err := s.store.ConfigReportFor(r.Context(), id)
 	if errors.Is(err, store.ErrNotFound) {
 		writeJSON(w, http.StatusOK, map[string]any{
-			"device_id": id,
-			"reported":  false,
+			"device_id":  id,
+			"reported":   false,
+			"revocation": revocation,
 			"detail": "This controller has not reported its configuration. It is running " +
 				"something — every controller does — but nothing here knows what, so nothing " +
 				"here will guess.",
@@ -739,5 +765,49 @@ func (s *Server) handleDeviceConfigReport(w http.ResponseWriter, r *http.Request
 		"firmware":    rep.Firmware,
 		"reported_at": rep.ReportedAt,
 		"received_at": rep.ReceivedAt,
+		"revocation":  revocation,
 	})
+}
+
+// revocationReportBlock renders what a controller last said about its deny-list,
+// alongside what the hub currently expects.
+//
+// Both numbers, always. "Seq 7" means nothing on its own; "7, and the hub is at
+// 9" is the answer to "did my revocation land", and computing that comparison
+// here rather than in the console keeps one implementation of it — the console
+// re-deriving it would be a second place to get "caught up" wrong.
+//
+// `reported: false` is NOT seq 0. A controller that has never told us anything
+// (older firmware, or one that has not reconnected) is a different state from
+// one that reported holding no list, and only the first leaves an operator
+// unable to confirm anything at all.
+func (s *Server) revocationReportBlock(ctx context.Context, deviceID string) map[string]any {
+	hubSeq, err := s.store.RevocationSeq(ctx)
+	if err != nil {
+		s.log.Error("read revocation seq", "device", deviceID, "err", err)
+		return map[string]any{"reported": false}
+	}
+	rep, ok, err := s.store.RevocationReportFor(ctx, deviceID)
+	if err != nil {
+		s.log.Error("read revocation report", "device", deviceID, "err", err)
+		return map[string]any{"reported": false, "hub_seq": hubSeq}
+	}
+	if !ok {
+		return map[string]any{
+			"reported": false,
+			"hub_seq":  hubSeq,
+			"detail": "This controller has not said which revocations it is enforcing. Either " +
+				"its firmware predates that report, or it has not connected since. Nothing " +
+				"here can confirm a revocation reached it.",
+		}
+	}
+	return map[string]any{
+		"reported":    true,
+		"seq":         rep.Seq,
+		"entries":     rep.Entries,
+		"hub_seq":     hubSeq,
+		"up_to_date":  rep.Seq >= hubSeq,
+		"reported_at": rep.ReportedAt,
+		"received_at": rep.ReceivedAt,
+	}
 }

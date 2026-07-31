@@ -179,15 +179,29 @@ ceiling `docs/THREAT-MODEL.md` §5 names for every signed object.
 
 ## 5. Open questions this document does not settle
 
-- **Does the controller report which list it holds?** `ctl.report` carries
-  resolved configuration; `seq` and entry count would fit the same shape and
-  would answer "did my revocation land" from the device rather than from the
-  hub assuming its own success. Probably yes, for the reason
-  `CONTROLLER-CONFIG-REPORT.md` gives — but it is a second wire change and this
-  design does not need it to be correct.
-- **What does the console show?** A revoked grant is already a row in the
-  grants screen. Whether it should show per-controller convergence ("3 of 4
-  controllers have this") depends on the question above.
+- ~~**Does the controller report which list it holds?**~~ **Answered: yes, and
+  it was not optional after all.** `ctl.report` now carries
+  `{seq, entries}` (migration 0031). The reason it stopped being a nicety: the
+  revoke button reported which controllers a list was DISPATCHED to, and
+  dispatched is not applied — a command queued for a gate that never reconnects
+  looks identical to one delivered. So the only honest answer to "did my
+  revocation land" was the hub assuming its own success, which is precisely what
+  `CONTROLLER-CONFIG-REPORT.md` exists to refuse for actuation config.
+
+  Three states, and the design is that they never collapse: **no `revocation`
+  key** (older firmware, or not connected since — nothing can be confirmed),
+  **`seq: 0`** (it reported, and has never been sent a list), and **`seq: N`**
+  (compare with the hub's counter). "Cannot tell us" and "confirms it holds
+  nothing" are opposite answers for someone deciding whether to latch lockdown.
+
+  `entries` is display only. The sequence decides whether a revocation landed; a
+  count that disagreed with it would be a second, weaker answer to one question.
+- **What does the console show?** Partly answered by the above: each
+  controller's own page now says whether it is up to date, behind (naming both
+  sequence numbers, and saying in words that a revoked grant would still open
+  it), or unable to say. What is NOT built is the fleet-wide roll-up on the
+  grants screen — "3 of 4 controllers have this" — which needs a query across
+  every controller a grant named rather than one device's report.
 - **Should a revoked redemption be an audited event kind of its own?** A refusal
   is already queued as an audit event with its denial reason, so this may be
   nothing more than a new reason string.

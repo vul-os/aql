@@ -369,13 +369,37 @@ const (
 	SourceDefault = "default" // the firmware's compiled-in value
 )
 
+// RevocationState is what a controller reports about the deny-list it holds.
+//
+// docs/GRANT-REVOCATION.md §5. The hub knows which controllers it DISPATCHED a
+// revocation to; it does not know which have applied one, and those differ
+// exactly when it matters — a queued command for a gate that never came back.
+// Seq is what closes that: the hub compares the reported number with its own.
+//
+// Entries is the count, not the ids. An operator asking "did my revocation
+// land" is answered by the sequence; shipping the revoked ids back up would put
+// a list on the uplink that nothing reads and that the hub already has.
+type RevocationState struct {
+	// Seq is the highest list the controller has ACCEPTED. Zero means it has
+	// never received one, which is a different fact from an empty list and is
+	// reported as such.
+	Seq int64
+	// Entries is how many deny-list rows it currently holds.
+	Entries int
+}
+
 // CtlReportSignable renders a ctl.report as the JCS map its signature covers.
-func CtlReportSignable(deviceID, firmware string, ts int64, cfg map[string]ConfigEntry) map[string]any {
+//
+// `rev` is nil for a controller with nothing to say about revocation, and the
+// key is then omitted entirely. Omission is not "seq 0": a build predating this
+// field sends no key at all, and a hub must be able to tell "this firmware
+// cannot tell me" from "this controller has never been sent a list".
+func CtlReportSignable(deviceID, firmware string, ts int64, cfg map[string]ConfigEntry, rev *RevocationState) map[string]any {
 	config := make(map[string]any, len(cfg))
 	for k, e := range cfg {
 		config[k] = map[string]any{"value": e.Value, "source": e.Source}
 	}
-	return map[string]any{
+	out := map[string]any{
 		"v":         0,
 		"typ":       "ctl.report",
 		"device_id": deviceID,
@@ -383,9 +407,13 @@ func CtlReportSignable(deviceID, firmware string, ts int64, cfg map[string]Confi
 		"firmware":  firmware,
 		"config":    config,
 	}
+	if rev != nil {
+		out["revocation"] = map[string]any{"seq": rev.Seq, "entries": rev.Entries}
+	}
+	return out
 }
 
 // SignCtlReport signs a configuration report and returns its wire JSON.
-func SignCtlReport(priv ed25519.PrivateKey, deviceID, firmware string, ts int64, cfg map[string]ConfigEntry) ([]byte, error) {
-	return SignMap(priv, CtlReportSignable(deviceID, firmware, ts, cfg))
+func SignCtlReport(priv ed25519.PrivateKey, deviceID, firmware string, ts int64, cfg map[string]ConfigEntry, rev *RevocationState) ([]byte, error) {
+	return SignMap(priv, CtlReportSignable(deviceID, firmware, ts, cfg, rev))
 }

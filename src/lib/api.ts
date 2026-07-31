@@ -2362,6 +2362,29 @@ export type ConfigReportResponse = {
   reported_at?: number;
   received_at?: number;
   detail?: string;
+  /** Which deny-list this controller is enforcing (docs/GRANT-REVOCATION.md §5).
+   *  Its own `reported` flag: a controller may have reported its config and not
+   *  this, or the reverse, and collapsing them would make a gate look silent
+   *  about revocation because a different row was missing. */
+  revocation?: RevocationReportBlock;
+};
+
+/** What a controller says about the deny-list it is enforcing, next to what the
+ *  hub expects. `up_to_date` is computed by the hub rather than here: the
+ *  console re-deriving it would be a second place to get "caught up" wrong. */
+export type RevocationReportBlock = {
+  /** false = the controller has told us nothing. NOT the same as `seq: 0`,
+   *  which means it reported and holds no list. The first leaves an operator
+   *  unable to confirm anything; the second is a confirmation. */
+  reported: boolean;
+  seq?: number;
+  entries?: number;
+  /** The hub's own counter, always present when it could be read. */
+  hub_seq?: number;
+  up_to_date?: boolean;
+  reported_at?: number;
+  received_at?: number;
+  detail?: string;
 };
 
 export type ControllerEventRow = {

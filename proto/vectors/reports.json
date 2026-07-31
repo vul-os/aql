@@ -38,6 +38,98 @@
       "canonical": "{\"config\":{\"hold_max\":{\"source\":\"default\",\"value\":1800},\"pulse_ms\":{\"source\":\"default\",\"value\":700}},\"device_id\":\"de71ce00-0000-4000-8000-000000000001\",\"firmware\":\"0.1.0\",\"ts\":1789000020,\"typ\":\"ctl.report\",\"v\":0}"
     },
     {
+      "name": "report-revocation-enforcing",
+      "desc": "A controller reporting the deny-list it is enforcing. seq is what answers \"has this gate applied my revocation\" — dispatched and applied differ exactly when it matters.",
+      "expect": "accept",
+      "check": {
+        "device_id": "de71ce00-0000-4000-8000-000000000001"
+      },
+      "signer": "controller",
+      "object": {
+        "v": 0,
+        "typ": "ctl.report",
+        "device_id": "de71ce00-0000-4000-8000-000000000001",
+        "ts": 1789000020,
+        "firmware": "0.1.0",
+        "config": {
+          "pulse_ms": {
+            "value": 700,
+            "source": "default"
+          },
+          "hold_max": {
+            "value": 1800,
+            "source": "default"
+          }
+        },
+        "revocation": {
+          "seq": 12,
+          "entries": 3
+        },
+        "sig": "4k5etmW264eaPDXPZecA8vJrYH_34rqyzhDwZWWmct90ZPSUD88I-GIPyocsB5I_s_GEIFbVRCxdizoa0XPfBQ"
+      },
+      "canonical": "{\"config\":{\"hold_max\":{\"source\":\"default\",\"value\":1800},\"pulse_ms\":{\"source\":\"default\",\"value\":700}},\"device_id\":\"de71ce00-0000-4000-8000-000000000001\",\"firmware\":\"0.1.0\",\"revocation\":{\"entries\":3,\"seq\":12},\"ts\":1789000020,\"typ\":\"ctl.report\",\"v\":0}"
+    },
+    {
+      "name": "report-revocation-none-received",
+      "desc": "seq 0: the controller reported, and it has never been sent a list. NOT the same as a report carrying no revocation block at all.",
+      "expect": "accept",
+      "check": {
+        "device_id": "de71ce00-0000-4000-8000-000000000001"
+      },
+      "signer": "controller",
+      "object": {
+        "v": 0,
+        "typ": "ctl.report",
+        "device_id": "de71ce00-0000-4000-8000-000000000001",
+        "ts": 1789000020,
+        "firmware": "0.1.0",
+        "config": {
+          "pulse_ms": {
+            "value": 700,
+            "source": "default"
+          },
+          "hold_max": {
+            "value": 1800,
+            "source": "default"
+          }
+        },
+        "revocation": {
+          "seq": 0,
+          "entries": 0
+        },
+        "sig": "vMaNWBRFaiRxIYuV024H4j4edahZtJPy0FK9Vz7AVQcOegq7gmnHx_XknHntxBhPqtaXQdsc7-OlIQLF_s0aCw"
+      },
+      "canonical": "{\"config\":{\"hold_max\":{\"source\":\"default\",\"value\":1800},\"pulse_ms\":{\"source\":\"default\",\"value\":700}},\"device_id\":\"de71ce00-0000-4000-8000-000000000001\",\"firmware\":\"0.1.0\",\"revocation\":{\"entries\":0,\"seq\":0},\"ts\":1789000020,\"typ\":\"ctl.report\",\"v\":0}"
+    },
+    {
+      "name": "report-revocation-absent",
+      "desc": "A firmware predating the field sends no revocation block. Must still verify: unknown-key tolerance runs both ways, and an older controller is not a broken one.",
+      "expect": "accept",
+      "check": {
+        "device_id": "de71ce00-0000-4000-8000-000000000001"
+      },
+      "signer": "controller",
+      "object": {
+        "v": 0,
+        "typ": "ctl.report",
+        "device_id": "de71ce00-0000-4000-8000-000000000001",
+        "ts": 1789000020,
+        "firmware": "0.1.0",
+        "config": {
+          "pulse_ms": {
+            "value": 700,
+            "source": "default"
+          },
+          "hold_max": {
+            "value": 1800,
+            "source": "default"
+          }
+        },
+        "sig": "0FZ7luuIhqweHa6kYlR6s3kyeyMtpByd6ZvhlHX00nBAwPKyiLhh9qACF3owD9LNpn5MNhEBLc_Ge6dRSRf1Bw"
+      },
+      "canonical": "{\"config\":{\"hold_max\":{\"source\":\"default\",\"value\":1800},\"pulse_ms\":{\"source\":\"default\",\"value\":700}},\"device_id\":\"de71ce00-0000-4000-8000-000000000001\",\"firmware\":\"0.1.0\",\"ts\":1789000020,\"typ\":\"ctl.report\",\"v\":0}"
+    },
+    {
       "name": "report-mixed-sources",
       "desc": "A configured controller. hold_max came from a config command, the rest are firmware defaults — the distinction the report exists to carry.",
       "expect": "accept",

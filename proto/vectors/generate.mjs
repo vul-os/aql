@@ -834,6 +834,37 @@ console.log('wrote keys.json');
       },
     })),
   });
+  // The three revocation states, which must not collapse into each other
+  // (docs/GRANT-REVOCATION.md §5).
+  vectors.push({
+    name: 'report-revocation-enforcing',
+    desc: 'A controller reporting the deny-list it is enforcing. seq is what answers "has this gate applied my revocation" — dispatched and applied differ exactly when it matters.',
+    expect: 'accept',
+    check,
+    ...signedVec('controller', report({
+      config: { pulse_ms: entry(700, 'default'), hold_max: entry(1800, 'default') },
+      revocation: { seq: 12, entries: 3 },
+    })),
+  });
+  vectors.push({
+    name: 'report-revocation-none-received',
+    desc: 'seq 0: the controller reported, and it has never been sent a list. NOT the same as a report carrying no revocation block at all.',
+    expect: 'accept',
+    check,
+    ...signedVec('controller', report({
+      config: { pulse_ms: entry(700, 'default'), hold_max: entry(1800, 'default') },
+      revocation: { seq: 0, entries: 0 },
+    })),
+  });
+  vectors.push({
+    name: 'report-revocation-absent',
+    desc: 'A firmware predating the field sends no revocation block. Must still verify: unknown-key tolerance runs both ways, and an older controller is not a broken one.',
+    expect: 'accept',
+    check,
+    ...signedVec('controller', report({
+      config: { pulse_ms: entry(700, 'default'), hold_max: entry(1800, 'default') },
+    })),
+  });
   vectors.push({
     name: 'report-mixed-sources',
     desc: 'A configured controller. hold_max came from a config command, the rest are firmware defaults — the distinction the report exists to carry.',

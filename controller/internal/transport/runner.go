@@ -345,7 +345,13 @@ func pollURL(wsURL string) (*url.URL, error) {
 // more than a report, and the next connect sends a fresh one anyway.
 func (r *Runner) reportConfig(conn *WSConn, deviceID string, log *slog.Logger) {
 	cfg := command.ResolvedConfig(r.St.Config())
-	raw, err := wire.SignCtlReport(r.Priv, deviceID, r.Firmware, r.Clock.Now(), cfg)
+	// The deny-list the controller is actually enforcing, so the hub can tell
+	// "dispatched" from "applied" (docs/GRANT-REVOCATION.md §5). Always sent,
+	// including seq 0 — "I have never been given a list" is the answer an
+	// operator most needs when a revocation looks like it has not landed.
+	list := r.St.Revocations()
+	rev := &wire.RevocationState{Seq: list.Seq, Entries: len(list.Entries)}
+	raw, err := wire.SignCtlReport(r.Priv, deviceID, r.Firmware, r.Clock.Now(), cfg, rev)
 	if err != nil {
 		log.Warn("config report not signed", "err", err)
 		return

@@ -283,6 +283,39 @@ export const FEATURES = [
     ],
   },
   {
+    id: 'revocation-applied-not-just-dispatched',
+    label:
+      'A controller reports which deny-list it is enforcing (ctl.report `revocation`, ' +
+      'migration 0031), so "did my revocation land" is answered by the gate, not assumed',
+    docStatus: 'shipped',
+    docRefs: [
+      'proto/commands.md § `revocation` — which deny-list the controller is enforcing',
+      'docs/GRANT-REVOCATION.md § 5 — "dispatched is not applied"',
+    ],
+    evidence: [
+      [{ file: 'controller/internal/wire/wire.go', pattern: 'type RevocationState struct' }],
+      // The CALL, not the type. `wire.RevocationState` alone is satisfied by
+      // `var rev *wire.RevocationState` — a declaration that sends nothing —
+      // which is how the first version of this claim passed while the report
+      // carried no revocation block at all.
+      [{ file: 'controller/internal/transport/runner.go', pattern: 'Entries: len\\(list.Entries\\)' }],
+      [
+        {
+          file: 'hub/internal/store/migrations/0031_controller_revocation_reports.sql',
+          pattern: 'CREATE TABLE controller_revocation_reports',
+        },
+      ],
+      // The out-of-order guard: without it a late report shows a gate falling
+      // behind a revocation it had already applied.
+      [{ root: 'hub/internal/store', pattern: 'excluded.seq >= controller_revocation_reports.seq' }],
+      // Likewise: the function existing proves nothing, since a handler that
+      // stopped calling it keeps the definition. Matched on the response key
+      // being populated from it.
+      [{ file: 'hub/internal/httpapi/devices.go', pattern: '"revocation":\\s+revocation' }],
+      [{ file: 'src/components/device/ControllerConfig.tsx', pattern: 'function RevocationState' }],
+    ],
+  },
+  {
     id: 'offline-grant-revocation-controller',
     label:
       'The controller half of sub-TTL grant revocation: a `revoke` command caches a ' +

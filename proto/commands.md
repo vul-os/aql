@@ -138,6 +138,7 @@ the hub can show what is in effect rather than only what it last sent.
     "pulse_ms": { "value": 700, "source": "default" },
     "hold_max": { "value": 30,  "source": "config"  }
   },
+  "revocation": { "seq": 12, "entries": 3 },
   "sig": "base64url(ed25519(controller_key, JCS(message minus sig)))" }
 ```
 
@@ -163,6 +164,30 @@ direction is safe because uplink verification canonicalises the bytes it
 received minus `sig`, not a rebuild of known fields — an older hub accepts a
 message carrying a field it has never heard of, and the field is still covered
 by the signature.
+
+### `revocation` — which deny-list the controller is enforcing
+
+`seq` is the highest revocation list the controller has ACCEPTED, and `entries`
+is how many it currently holds. Together with the hub's own counter they answer
+the question the hub could not otherwise answer: **not "was a revocation
+dispatched" but "has this gate applied it"**. Those differ exactly when it
+matters, because a command queued for a controller that never reconnects looks
+identical to one delivered.
+
+`entries` is display only. The sequence decides whether a revocation landed; a
+count that disagreed with it would be a second, weaker answer to the same
+question.
+
+Three states, and they are all different:
+
+| | Meaning |
+|---|---|
+| no `revocation` key | The firmware predates this field, or the controller has not connected since. Nothing can confirm a revocation reached it. |
+| `seq: 0` | It reported, and it holds no list — it has never been sent one. |
+| `seq: N` | It is enforcing list `N`. Compare with the hub's counter. |
+
+The first two must not be collapsed. "Cannot tell us" and "confirmed nothing
+revoked" are opposite answers to an operator deciding whether to latch lockdown.
 
 A device that has sent no report is **"not reported yet"**. It is never rendered
 as the defaults: inferring them would show numbers nobody confirmed, and every
