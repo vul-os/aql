@@ -628,6 +628,29 @@ These are refused before authorization is even consulted. The refusal is not
 role-gated, because the point is that a chat rail is not a control plane for the
 control plane.
 
+**ENFORCED**, by `httpapi/chatexposure_test.go`, which denies the store
+operations and handlers implementing each row to every chat entry point. It is
+a source test rather than a behavioural one because the property is "a rail
+cannot reach these" and behavioural tests can only show that particular
+phrasings do not — the phrasings are infinite, the entry points are not.
+
+Nothing violates it today. That is when it was worth writing: the chat surface
+grew three times in short order — a hold verb, a question classifier, a read
+path — and each time the natural next step was "while we are here, let it
+also…". A line nobody checks is a line that moves.
+
+Three things guard the guard, each added after a tamper showed it was needed.
+Every denied symbol must be defined somewhere, or a typo would be a denial
+matching nothing. Every chat file must be in the scanned list, because deleting
+one entry left the remaining assertions passing while that rail went unread.
+And the comment stripper is checked for eating code rather than comments, since
+this file's own prose names every forbidden symbol and a broken stripper would
+turn each entry point into a violation of itself.
+
+The one deliberate allowance: a rail WRITES to the audit table (§4.4 rule 5
+requires a read to be recorded) and may not read it. Writing evidence is not
+consulting it.
+
 | Refused | Why | Where it lives today |
 |---|---|---|
 | `config` — actuation parameters (pulse ms, debounce, `hold_max`) | Changes what "open" physically means | `proto/commands.md:46` |

@@ -413,6 +413,17 @@ and none has met physical hardware.
       rather than corrected: `AccessPoints.tsx:94` was still IN RANGE and pointed at
       unrelated code, and a citation that looks precise and is not is worse than one that
       does not pretend
+- [x] **"Never over a chat rail" is enforced, not just written down.**
+      `docs/CHAT-COMMANDS.md` §3.6 lists eleven operations a chat message must never
+      reach — grant issuance and revocation, device claim, account suspension, credential
+      entry, audit-log reads, member lists, camera media, anything reconfiguring the audit
+      path — because "a chat rail is not a control plane for the control plane". Nothing
+      violated it; nothing checked it either. `httpapi/chatexposure_test.go` denies each
+      implementing symbol to every chat entry point. Tampering found two holes in the
+      guard itself: a typo'd denial matches nothing and passes, and dropping a file from
+      the scanned list left every other assertion green while that rail went unread — both
+      now have their own check. A rail may still WRITE the audit row §4.4 rule 5 requires,
+      because writing evidence is not consulting it
 - [ ] Extend it further, to the other device classes. Chat still reaches only the access
       module; the engine's verbs (`on`/`off`/`set`/`start`…) are recognised and honestly
       refused (`channels/unsupported.go`) rather than driven. §4.2's two unbuilt queries
