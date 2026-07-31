@@ -287,6 +287,21 @@ export const FEATURES = [
     ],
   },
   {
+    id: 'no-telemetry-is-checked-not-asserted',
+    label:
+      'Every host compiled into the hub and controller binaries is listed with a reason, ' +
+      'so the no-telemetry claim fails when a new destination appears',
+    docStatus: 'shipped',
+    docRefs: ['docs/THREAT-MODEL.md — "The binaries emit no usage data anywhere"'],
+    evidence: [
+      [{ file: 'src/lib/__tests__/noPhoneHome.test.ts', pattern: 'every hard-coded external host' }],
+      // Both directions: an unjustified host fails, and so does an allowlist
+      // entry nothing uses — otherwise the list stops being decisions and
+      // becomes things somebody once typed.
+      [{ file: 'src/lib/__tests__/noPhoneHome.test.ts', pattern: 'every allowed host is still actually used' }],
+    ],
+  },
+  {
     id: 'chat-rails-cannot-reach-forbidden-operations',
     label:
       "Every §3.6 row has a denied symbol, including the four that had none — config, " +

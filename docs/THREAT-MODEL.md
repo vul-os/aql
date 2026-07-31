@@ -139,7 +139,7 @@ no third party at all:
 | Property | Status |
 |---|---|
 | **No account with us.** There is no Aql service to sign up for, no license check, no phone-home. | Shipped |
-| **No telemetry.** The binaries emit no usage data anywhere. | Shipped |
+| **No telemetry.** The binaries emit no usage data anywhere. Held by `noPhoneHome.test.ts`, which lists every host compiled into the hub and controller with a reason — four XML namespace identifiers that are never dialled, and the four chat rails, each of which runs only once an operator configures a credential for it. A new host fails until somebody writes down why it is there. | Shipped |
 | **No cloud broker in the command path.** The hub signs commands itself; controllers dial out to *your* hub and verify against *your* pinned key. | Shipped |
 | **The box is the root of authority.** Nothing off-box can authorise an open. | Shipped |
 | **The audit log lives on your disk**, hash-chained and append-only, verifiable against a cold backup with no server running. | Shipped |
