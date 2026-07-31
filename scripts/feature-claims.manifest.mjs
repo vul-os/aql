@@ -283,6 +283,31 @@ export const FEATURES = [
     ],
   },
   {
+    id: 'revocation-per-gate-convergence',
+    label:
+      'The grants screen says which of a revoked grant\'s gates are actually refusing it, ' +
+      'compared against the sequence THAT grant was revoked at (migration 0032)',
+    docStatus: 'shipped',
+    docRefs: ['docs/GRANT-REVOCATION.md § 5 — "records the sequence each grant\nwas revoked AT"'],
+    evidence: [
+      [
+        {
+          file: 'hub/internal/store/migrations/0032_offline_grant_revoked_at.sql',
+          pattern: 'CREATE TABLE offline_grant_revoked_at',
+        },
+      ],
+      // Recorded in the same transaction as the revocation, or a gate can never
+      // be compared against it.
+      [{ file: 'hub/internal/store/offlinegrants.go', pattern: 'INSERT INTO offline_grant_revoked_at' }],
+      // The comparison itself. Against the grant's own sequence — comparing
+      // with the hub's CURRENT counter is the coarser answer 0032 replaces.
+      [{ file: 'hub/internal/store/offlinegrants.go', pattern: 'seq.Int64 >= at' }],
+      [{ file: 'hub/internal/httpapi/offline_grant_revoke.go', pattern: 'RevocationConvergence' }],
+      [{ file: 'src/components/access/IssuedGrantsPanel.tsx', pattern: 'function GateConvergence' }],
+      [{ file: 'src/components/access/IssuedGrantsPanel.tsx', pattern: '<GateConvergence' }],
+    ],
+  },
+  {
     id: 'revocation-applied-not-just-dispatched',
     label:
       'A controller reports which deny-list it is enforcing (ctl.report `revocation`, ' +

@@ -186,12 +186,20 @@ func denyListPayload(entries []store.RevocationEntry) []any {
 // Scoped to the caller, always. An admin wanting to see somebody else's grants
 // is a different screen with a different authorisation question, and answering
 // both from one route is how the narrower one gets widened by accident.
-func (s *Server) handleOfflineGrantList(w http.ResponseWriter, r *http.Request) {
-	c := claimsFrom(r)
-	grants, err := s.store.OfflineGrantsForMember(r.Context(), c.Sub)
+func (s *Server) handleOfflineGrantList(w http.ResponseWriter, req *http.Request) {
+	c := claimsFrom(req)
+	grants, err := s.store.OfflineGrantsForMember(req.Context(), c.Sub)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "internal")
 		return
+	}
+	type gate struct {
+		DeviceID string `json:"device_id"`
+		// Reported false = this gate has never said which deny-list it holds.
+		// NOT the same as Enforcing false, which is a gate that HAS reported
+		// and is behind. One is unknown, the other is known.
+		Reported  bool `json:"reported"`
+		Enforcing bool `json:"enforcing"`
 	}
 	type row struct {
 		GrantID   string `json:"grant_id"`
@@ -199,13 +207,31 @@ func (s *Server) handleOfflineGrantList(w http.ResponseWriter, r *http.Request) 
 		ExpiresAt int64  `json:"expires_at"`
 		Revoked   bool   `json:"revoked"`
 		RevokedAt int64  `json:"revoked_at,omitempty"`
+		// Which of this grant's gates are actually refusing it. Absent for an
+		// active grant, and for one revoked before the hub recorded the
+		// sequence — in both cases there is no honest comparison to make, and
+		// an empty array would read as "no gates", which is a different claim.
+		Gates []gate `json:"gates,omitempty"`
 	}
 	out := make([]row, 0, len(grants))
 	for _, g := range grants {
-		out = append(out, row{
+		r := row{
 			GrantID: g.GrantID, IssuedAt: g.IssuedAt, ExpiresAt: g.ExpiresAt,
 			Revoked: g.Revoked(), RevokedAt: g.RevokedAt.Int64,
-		})
+		}
+		if g.Revoked() {
+			gates, ok, err := s.store.RevocationConvergence(req.Context(), g.GrantID)
+			if err != nil {
+				s.log.Error("revocation convergence", "grant_id", g.GrantID, "err", err)
+			} else if ok {
+				for _, e := range gates {
+					r.Gates = append(r.Gates, gate{
+						DeviceID: e.DeviceID, Reported: e.Reported, Enforcing: e.Enforcing,
+					})
+				}
+			}
+		}
+		out = append(out, r)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"grants": out})
 }

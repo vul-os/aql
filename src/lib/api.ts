@@ -2018,6 +2018,20 @@ export type OfflineGrantRow = {
   revoked: boolean;
   /** Absent when not revoked. */
   revoked_at?: UnixSeconds;
+  /** Which of this grant's gates are actually refusing it. Absent for an active
+   *  grant, and for one revoked before the hub recorded revocation sequences —
+   *  in both cases there is no honest comparison, and an empty array would read
+   *  as "no gates", which is a different claim. */
+  gates?: GrantGateState[];
+};
+
+/** One gate's state with respect to one revoked grant. `reported: false` means
+ *  the gate has never said which deny-list it holds — unknown, not known-bad,
+ *  and a different thing from `enforcing: false`. */
+export type GrantGateState = {
+  device_id: string;
+  reported: boolean;
+  enforcing: boolean;
 };
 
 export type AutomationTriggerKind = 'schedule' | 'threshold' | 'event' | 'clip';

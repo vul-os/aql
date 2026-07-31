@@ -196,12 +196,25 @@ ceiling `docs/THREAT-MODEL.md` §5 names for every signed object.
 
   `entries` is display only. The sequence decides whether a revocation landed; a
   count that disagreed with it would be a second, weaker answer to one question.
-- **What does the console show?** Partly answered by the above: each
-  controller's own page now says whether it is up to date, behind (naming both
-  sequence numbers, and saying in words that a revoked grant would still open
-  it), or unable to say. What is NOT built is the fleet-wide roll-up on the
-  grants screen — "3 of 4 controllers have this" — which needs a query across
-  every controller a grant named rather than one device's report.
+- ~~**What does the console show?**~~ **Answered.** Each controller's page says
+  whether it is up to date, behind (naming both sequences, and saying in words
+  that a revoked grant would still open it), or unable to say. And the grants
+  screen carries the roll-up: per revoked grant, how many of ITS gates are
+  refusing it, how many have not caught up, and how many cannot say.
+
+  Building that changed one thing in the design. The per-controller view
+  compares against the hub's CURRENT counter, which is the wrong comparison for
+  a specific grant: a gate on list 5, for a grant revoked at 3 while the hub has
+  since reached 9, is refusing that grant and reads as behind. It errs safe — it
+  never falsely reassures — but it sends an operator to latch lockdown on a gate
+  already refusing the person they fired, and a warning that cries wolf is one
+  people learn to ignore. So **migration 0032** records the sequence each grant
+  was revoked AT, and the roll-up compares against that.
+
+  Grants revoked before 0032 have no recorded sequence and report no gates at
+  all, rather than being given a default. A missing row says "revoked before the
+  hub tracked this"; a backfilled 0 would claim every controller holds a
+  revocation none of them may have.
 - **Should a revoked redemption be an audited event kind of its own?** A refusal
   is already queued as an audit event with its denial reason, so this may be
   nothing more than a new reason string.

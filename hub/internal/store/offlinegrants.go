@@ -100,6 +100,17 @@ func (s *Store) RevokeOfflineGrant(ctx context.Context, grantID, byUserID string
 	if err != nil {
 		return 0, err
 	}
+	// The sequence this grant joined the deny-list at (migration 0032), in the
+	// SAME transaction. Recorded apart from the bump because it answers a
+	// different question: the counter says how current a controller is, this
+	// says whether a controller has THIS revocation — and a gate can have one
+	// while being behind on the other.
+	if _, err := tx.ExecContext(ctx,
+		`INSERT INTO offline_grant_revoked_at (grant_id, seq) VALUES (?, ?)
+		 ON CONFLICT (grant_id) DO UPDATE SET seq = excluded.seq`,
+		grantID, seq); err != nil {
+		return 0, err
+	}
 	if err := tx.Commit(); err != nil {
 		return 0, err
 	}
@@ -243,4 +254,70 @@ func (s *Store) OfflineGrantByID(ctx context.Context, grantID string) (OfflineGr
 	}
 	g.Devices = devices
 	return g, devices, nil
+}
+
+// GateEnforcement is one controller's state with respect to ONE revoked grant.
+type GateEnforcement struct {
+	DeviceID string
+	// Reported is false when the controller has never said which deny-list it
+	// holds — older firmware, or one that has not connected since. Distinct
+	// from Enforcing=false, which is a controller that HAS reported and is
+	// behind. The first cannot be confirmed either way; the second is known.
+	Reported bool
+	// Seq is what it reported, meaningful only when Reported.
+	Seq int64
+	// Enforcing is true when its reported sequence is at or above the one this
+	// grant was revoked at — so it is refusing this grant, whatever else it
+	// may be behind on.
+	Enforcing bool
+}
+
+// RevocationConvergence answers "which of this grant's gates are actually
+// refusing it".
+//
+// Compared against the sequence THIS GRANT was revoked at, not the hub's
+// current counter. The difference matters and is the reason migration 0032
+// exists: a gate on list 5, for a grant revoked at 3 while the hub has reached
+// 9, is enforcing this revocation and would read as "behind" under the coarser
+// comparison — sending an operator to latch lockdown on a gate already
+// refusing the person they fired.
+//
+// Returns nothing for a grant that is not revoked, and for one revoked before
+// 0032 existed: with no recorded sequence there is no honest comparison to
+// make, and inventing one would claim gates hold a revocation that may never
+// have reached them.
+func (s *Store) RevocationConvergence(ctx context.Context, grantID string) ([]GateEnforcement, bool, error) {
+	var at int64
+	err := s.db.QueryRowContext(ctx,
+		`SELECT seq FROM offline_grant_revoked_at WHERE grant_id = ?`, grantID).Scan(&at)
+	if err == sql.ErrNoRows {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT d.device_id, r.seq
+		   FROM offline_grant_devices d
+		   LEFT JOIN controller_revocation_reports r ON r.device_id = d.device_id
+		  WHERE d.grant_id = ?
+		  ORDER BY d.device_id`, grantID)
+	if err != nil {
+		return nil, false, err
+	}
+	defer rows.Close()
+	out := []GateEnforcement{}
+	for rows.Next() {
+		var g GateEnforcement
+		var seq sql.NullInt64
+		if err := rows.Scan(&g.DeviceID, &seq); err != nil {
+			return nil, false, err
+		}
+		g.Reported = seq.Valid
+		g.Seq = seq.Int64
+		g.Enforcing = seq.Valid && seq.Int64 >= at
+		out = append(out, g)
+	}
+	return out, true, rows.Err()
 }

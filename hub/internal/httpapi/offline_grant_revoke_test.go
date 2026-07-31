@@ -191,3 +191,64 @@ func TestAPlainMemberCannotRevokeAnotherMembersGrant(t *testing.T) {
 		t.Errorf("a refused revoke still reached the deny-list: %+v", entries)
 	}
 }
+
+// The grant list says which gates are actually refusing a revoked grant.
+//
+// "Revoked" is a fact about the hub. Whether a given gate will still open for
+// the person is a fact about that gate, and before this the only answer was
+// which controllers a command had been SENT to — which says nothing about one
+// that never came back.
+func TestTheGrantListReportsWhichGatesAreRefusingIt(t *testing.T) {
+	f := setupOfflineGrantFixture(t)
+	id := issueGrant(t, f, f.memberAccess)
+
+	list := func() map[string]any {
+		t.Helper()
+		rec, out := doJSON(t, f.h, "GET", "/v1/offline-grants", f.memberAccess, nil)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("list: %d %s", rec.Code, rec.Body)
+		}
+		rows, _ := out["grants"].([]any)
+		if len(rows) != 1 {
+			t.Fatalf("listed %d grants, want 1", len(rows))
+		}
+		return rows[0].(map[string]any)
+	}
+
+	// An ACTIVE grant reports no gates: there is no revocation to have
+	// converged, and an empty array would read as "no gates", a different claim.
+	if g, present := list()["gates"]; present {
+		t.Fatalf("an active grant carries gates: %v", g)
+	}
+
+	if rec, _ := doJSON(t, f.h, "POST", "/v1/offline-grants/"+id+"/revoke", f.memberAccess, map[string]any{}); rec.Code != 200 {
+		t.Fatalf("revoke: %d", rec.Code)
+	}
+
+	// The gate has said nothing, so it is UNREPORTED — not "not enforcing".
+	gates, _ := list()["gates"].([]any)
+	if len(gates) != 1 {
+		t.Fatalf("gates = %v, want one", gates)
+	}
+	g0 := gates[0].(map[string]any)
+	if g0["device_id"] != f.deviceID {
+		t.Errorf("device_id = %v, want %v", g0["device_id"], f.deviceID)
+	}
+	if g0["reported"] != false || g0["enforcing"] != false {
+		t.Errorf("a silent gate = %v, want reported false and enforcing false — nothing "+
+			"confirms it is refusing this grant", g0)
+	}
+
+	// Now the controller reports the list it holds.
+	seq, err := f.st.RevocationSeq(t.Context())
+	if err != nil {
+		t.Fatalf("RevocationSeq: %v", err)
+	}
+	if err := f.st.SaveRevocationReport(t.Context(), f.deviceID, seq, 1, 1000); err != nil {
+		t.Fatalf("SaveRevocationReport: %v", err)
+	}
+	g1 := list()["gates"].([]any)[0].(map[string]any)
+	if g1["reported"] != true || g1["enforcing"] != true {
+		t.Errorf("after the gate reported the current list: %v, want reported and enforcing", g1)
+	}
+}

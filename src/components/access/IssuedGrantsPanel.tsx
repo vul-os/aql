@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { ApiError, api, type OfflineGrantRow } from '@/lib/api';
+import { ApiError, api, type GrantGateState, type OfflineGrantRow } from '@/lib/api';
 import { fromUnix } from '@/lib/time';
 
 function when(ts?: number): string {
@@ -125,6 +125,7 @@ export function IssuedGrantsPanel() {
                   <>Expires {when(g.expires_at)}</>
                 )}
               </p>
+              <GateConvergence gates={g.gates} />
             </div>
             {!g.revoked && (
               <Button
@@ -143,5 +144,49 @@ export function IssuedGrantsPanel() {
       {notice && <p className="mt-3 text-sm text-ink/70">{notice}</p>}
       {error && <p className="mt-3 text-sm text-terracotta-deep">{error}</p>}
     </Card>
+  );
+}
+
+/**
+ * Which gates are actually refusing a revoked grant.
+ *
+ * "Revoked" is a fact about the hub. Whether a particular gate will still open
+ * for the person is a fact about that gate, and until now the only answer was
+ * which controllers a command had been SENT to — which says nothing about a
+ * controller that never came back.
+ *
+ * Three states per gate, and the wording keeps them apart because they lead to
+ * different actions: refusing it (nothing to do), has not caught up (it will,
+ * on reconnect), and has never said (nothing here can confirm anything, so
+ * lockdown is the only certainty available).
+ */
+function GateConvergence({ gates }: { gates?: GrantGateState[] }) {
+  if (!gates || gates.length === 0) return null;
+
+  const enforcing = gates.filter((g) => g.enforcing).length;
+  const silent = gates.filter((g) => !g.reported).length;
+  const behind = gates.length - enforcing - silent;
+
+  if (enforcing === gates.length) {
+    return (
+      <p className="text-xs text-ink/55 mt-0.5" data-shot="grant-gates">
+        Refused at {gates.length === 1 ? 'the gate' : `all ${gates.length} gates`}.
+      </p>
+    );
+  }
+
+  const parts: string[] = [];
+  if (enforcing > 0) parts.push(`${enforcing} refusing it`);
+  if (behind > 0) parts.push(`${behind} not caught up yet`);
+  // Said last and said plainly: this is the one an operator can act on.
+  if (silent > 0) parts.push(`${silent} unable to say`);
+
+  return (
+    <p className="text-xs text-terracotta-deep mt-0.5" data-shot="grant-gates">
+      {parts.join(', ')} of {gates.length} gate{gates.length === 1 ? '' : 's'}.
+      {silent > 0
+        ? ' A gate that cannot say may still open for this grant — latch lockdown there if it matters now.'
+        : ' The rest catch up when they next reach the hub.'}
+    </p>
   );
 }

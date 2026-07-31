@@ -31,6 +31,26 @@ func ogStore(t *testing.T) (*Store, context.Context, string, string) {
 	return st, ctx, holder.ID, admin.ID
 }
 
+// realDevice creates a device row, because controller_revocation_reports keys
+// on one. offline_grant_devices does NOT — a grant can name a controller this
+// hub has never met — so the other tests here pass bare strings deliberately.
+func realDevice(t *testing.T, s *Store, ctx context.Context, label string) string {
+	t.Helper()
+	u, err := s.CreateUser(ctx, label+"-owner@example.test", "x", "Owner", "ZA")
+	if err != nil {
+		t.Fatalf("CreateUser: %v", err)
+	}
+	acct, loc, err := s.CreateAccountWithOwner(ctx, u.ID, label+" Estate", "ZA")
+	if err != nil {
+		t.Fatalf("CreateAccountWithOwner: %v", err)
+	}
+	dev, err := s.CreateDeviceWithClaim(ctx, acct.ID, loc.ID, label, "hash-"+label, 0)
+	if err != nil {
+		t.Fatalf("CreateDeviceWithClaim: %v", err)
+	}
+	return dev.ID
+}
+
 func record(t *testing.T, s *Store, ctx context.Context, holder, id string, exp int64, devices ...string) {
 	t.Helper()
 	if err := s.RecordOfflineGrant(ctx, OfflineGrant{
@@ -222,5 +242,114 @@ func TestAnEmptyDenyListIsEmptyNotNil(t *testing.T) {
 	}
 	if len(list) != 0 {
 		t.Fatalf("deny-list = %+v", list)
+	}
+}
+
+// Convergence: which of a grant's gates are actually refusing it.
+//
+// The comparison is against the sequence THIS grant was revoked at, not the
+// hub's current counter, and these pin the difference — which is the whole
+// reason migration 0032 exists.
+func TestAGateAheadOfThisRevocationIsEnforcingItEvenWhileBehindOverall(t *testing.T) {
+	s, ctx, holder, admin := ogStore(t)
+	dev := realDevice(t, s, ctx, "gate-a")
+	record(t, s, ctx, holder, "g1", 9000, dev)
+
+	seqAt, err := s.RevokeOfflineGrant(ctx, "g1", admin)
+	if err != nil {
+		t.Fatalf("revoke: %v", err)
+	}
+	// The hub moves on: two more revocations of other grants.
+	record(t, s, ctx, holder, "g2", 9000, dev)
+	record(t, s, ctx, holder, "g3", 9000, dev)
+	if _, err := s.RevokeOfflineGrant(ctx, "g2", admin); err != nil {
+		t.Fatalf("revoke g2: %v", err)
+	}
+	if _, err := s.RevokeOfflineGrant(ctx, "g3", admin); err != nil {
+		t.Fatalf("revoke g3: %v", err)
+	}
+	hubSeq, _ := s.RevocationSeq(ctx)
+	if hubSeq <= seqAt {
+		t.Fatalf("fixture did not advance the hub past the grant: %d vs %d", hubSeq, seqAt)
+	}
+
+	// The gate holds the list this grant joined at, and nothing newer.
+	if err := s.SaveRevocationReport(ctx, dev, seqAt, 1, 1000); err != nil {
+		t.Fatalf("SaveRevocationReport: %v", err)
+	}
+
+	gates, ok, err := s.RevocationConvergence(ctx, "g1")
+	if err != nil || !ok {
+		t.Fatalf("ok=%v err=%v", ok, err)
+	}
+	if len(gates) != 1 {
+		t.Fatalf("gates = %+v, want one", gates)
+	}
+	if !gates[0].Enforcing {
+		t.Errorf("a gate on list %d, for a grant revoked at %d, reads as not enforcing it — "+
+			"comparing against the hub's current %d instead would send an operator to latch "+
+			"lockdown on a gate already refusing this grant", gates[0].Seq, seqAt, hubSeq)
+	}
+}
+
+func TestAGateBehindThisRevocationIsNotEnforcingIt(t *testing.T) {
+	s, ctx, holder, admin := ogStore(t)
+	dev := realDevice(t, s, ctx, "gate-a")
+	record(t, s, ctx, holder, "g1", 9000, dev)
+	seqAt, err := s.RevokeOfflineGrant(ctx, "g1", admin)
+	if err != nil {
+		t.Fatalf("revoke: %v", err)
+	}
+	if err := s.SaveRevocationReport(ctx, dev, seqAt-1, 0, 1000); err != nil {
+		t.Fatalf("SaveRevocationReport: %v", err)
+	}
+	gates, _, err := s.RevocationConvergence(ctx, "g1")
+	if err != nil {
+		t.Fatalf("RevocationConvergence: %v", err)
+	}
+	if len(gates) != 1 || gates[0].Enforcing {
+		t.Errorf("gates = %+v, want the gate NOT enforcing", gates)
+	}
+	if !gates[0].Reported {
+		t.Error("a gate that reported reads as not having reported")
+	}
+}
+
+// Silence is its own answer and must not read as "not enforcing": one is
+// unknown, the other is known-bad, and only the second is a fact.
+func TestAGateThatHasReportedNothingIsMarkedUnreported(t *testing.T) {
+	s, ctx, holder, admin := ogStore(t)
+	dev := realDevice(t, s, ctx, "gate-a")
+	record(t, s, ctx, holder, "g1", 9000, dev)
+	if _, err := s.RevokeOfflineGrant(ctx, "g1", admin); err != nil {
+		t.Fatalf("revoke: %v", err)
+	}
+	gates, _, err := s.RevocationConvergence(ctx, "g1")
+	if err != nil {
+		t.Fatalf("RevocationConvergence: %v", err)
+	}
+	if len(gates) != 1 {
+		t.Fatalf("gates = %+v", gates)
+	}
+	if gates[0].Reported {
+		t.Error("a gate that has never reported reads as having reported")
+	}
+	if gates[0].Enforcing {
+		t.Error("a gate that has never reported reads as enforcing — nothing confirms that")
+	}
+}
+
+// An active grant has no revocation sequence, because there is no sequence at
+// which something that has not happened happened.
+func TestAnUnrevokedGrantHasNoConvergenceToReport(t *testing.T) {
+	s, ctx, holder, _ := ogStore(t)
+	dev := realDevice(t, s, ctx, "gate-a")
+	record(t, s, ctx, holder, "g1", 9000, dev)
+	_, ok, err := s.RevocationConvergence(ctx, "g1")
+	if err != nil {
+		t.Fatalf("RevocationConvergence: %v", err)
+	}
+	if ok {
+		t.Error("an active grant reported a revocation sequence")
 	}
 }
