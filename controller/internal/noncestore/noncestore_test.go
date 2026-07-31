@@ -4,6 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
+	"strconv"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/vul-os/aql/controller/internal/noncestore"
@@ -66,4 +70,96 @@ func TestCorruptFileFailsClosed(t *testing.T) {
 	if _, err := noncestore.Open(dir); err == nil {
 		t.Fatal("corrupt nonce store must fail Open (fail-closed)")
 	}
+}
+
+// Concurrent redemption of one nonce must accept exactly one.
+//
+// This store is the controller's replay protection, and its whole job is
+// answering "have I seen this before" for a signed command that opens a gate.
+// Seen() and Mark() lock separately, so a caller that checks then records —
+// which is what verification does, deliberately, so a lockdown refusal does not
+// burn the nonce — has a window where two verifications of the same envelope
+// both pass and both actuate.
+//
+// Not reachable today: the transport runs one goroutine and the long-poll
+// fallback only runs after the WebSocket session returns. But that makes this
+// store's correctness depend on a property of a different package which nothing
+// states and nothing enforces, and it would be lost the moment command handling
+// is parallelised. MarkIfUnseen puts the invariant where it belongs.
+func TestOnlyOneConcurrentRedemptionOfANonceSucceeds(t *testing.T) {
+	const racers = 32
+	for round := 0; round < 20; round++ {
+		s, err := noncestore.Open(t.TempDir())
+		if err != nil {
+			t.Fatal(err)
+		}
+		nonce := "n-" + strconv.Itoa(round)
+
+		var wg sync.WaitGroup
+		var accepted int64
+		start := make(chan struct{})
+		for i := 0; i < racers; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				<-start // release them together, to actually contend
+				fresh, err := s.MarkIfUnseen(nonce, 2_000_000_000, 1_000_000_000)
+				if err != nil {
+					t.Errorf("MarkIfUnseen: %v", err)
+					return
+				}
+				if fresh {
+					atomic.AddInt64(&accepted, 1)
+				}
+			}()
+		}
+		close(start)
+		wg.Wait()
+
+		if got := atomic.LoadInt64(&accepted); got != 1 {
+			t.Fatalf(`%d of %d concurrent redemptions of the same nonce were accepted, want exactly 1.
+
+Every acceptance is a signed command allowed to actuate. More than one is a
+replay getting through the store whose only purpose is stopping replays.`, got, racers)
+		}
+	}
+}
+
+// The check-then-act window this replaces, demonstrated against the old pair so
+// the fix is not taken on faith. Seen() then Mark() lets every racer through.
+func TestTheSeenThenMarkPairIsNotAtomic(t *testing.T) {
+	s, err := noncestore.Open(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	const racers = 32
+	var wg sync.WaitGroup
+	var accepted int64
+	start := make(chan struct{})
+	for i := 0; i < racers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			if s.Seen("shared") {
+				return
+			}
+			// The gap: verification does real work here — lockdown checks —
+			// before recording.
+			runtime.Gosched()
+			if err := s.Mark("shared", 2_000_000_000, 1_000_000_000); err == nil {
+				atomic.AddInt64(&accepted, 1)
+			}
+		}()
+	}
+	close(start)
+	wg.Wait()
+
+	if atomic.LoadInt64(&accepted) <= 1 {
+		t.Skip("the interleaving did not occur on this run; the point stands in " +
+			"TestOnlyOneConcurrentRedemptionOfANonceSucceeds")
+	}
+	// Reaching here IS the demonstration: the old pair admitted more than one.
+	t.Logf("Seen()+Mark() admitted %d of %d concurrent redemptions — this is the window "+
+		"MarkIfUnseen closes", atomic.LoadInt64(&accepted), racers)
 }

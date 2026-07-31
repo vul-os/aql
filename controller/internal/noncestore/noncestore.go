@@ -67,9 +67,42 @@ func (s *Store) Seen(nonce string) bool {
 // (envelope exp + skew). Expired entries (horizon < now) are pruned first.
 // Returns ErrFull when Capacity live nonces are already held, or ErrPersist
 // when the write fails — both must cause command rejection.
+// MarkIfUnseen records a nonce and reports whether THIS call is the one that
+// recorded it. false means another caller got there first — a replay.
+//
+// Mark alone cannot answer that. Verification checks Seen() early, so a command
+// refused for lockdown does not burn its nonce, and records with Mark() only
+// once it is accepted. Those are two separate lock acquisitions, so two
+// verifications of the same envelope can both pass Seen() and both Mark() — and
+// both open the gate. That is a replay defeating the store whose only job is
+// stopping replays.
+//
+// It is not reachable today: the controller's transport runs one goroutine, and
+// the long-poll fallback only runs after the WebSocket session has returned. But
+// the safety of this store then rests on a property of a different package that
+// nothing states and nothing enforces, and it would be lost the day command
+// handling is parallelised or a second caller appears. The invariant belongs
+// here, in the component that owns it.
+func (s *Store) MarkIfUnseen(nonce string, keepUntil, now int64) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.m[nonce]; ok {
+		return false, nil
+	}
+	if err := s.markLocked(nonce, keepUntil, now); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (s *Store) Mark(nonce string, keepUntil, now int64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.markLocked(nonce, keepUntil, now)
+}
+
+// markLocked is Mark's body. Caller holds s.mu.
+func (s *Store) markLocked(nonce string, keepUntil, now int64) error {
 	for n, h := range s.m {
 		if h < now {
 			delete(s.m, n)

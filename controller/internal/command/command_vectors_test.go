@@ -537,9 +537,9 @@ type failingNonceStore struct {
 
 func (f *failingNonceStore) Seen(nonce string) bool { return f.seen[nonce] }
 
-func (f *failingNonceStore) Mark(nonce string, keepUntil, now int64) error {
+func (f *failingNonceStore) MarkIfUnseen(nonce string, keepUntil, now int64) (bool, error) {
 	f.markCalls++
-	return errors.New("simulated: durable write failed")
+	return false, errors.New("simulated: durable write failed")
 }
 
 func TestACommandWhoseNonceCannotBePersistedNeverActuates(t *testing.T) {

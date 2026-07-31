@@ -37,9 +37,15 @@ const (
 // production; a temp-dir store in tests).
 type NonceStore interface {
 	Seen(nonce string) bool
-	// Mark durably records an accepted nonce; any error must cause
-	// rejection (fail-closed).
-	Mark(nonce string, keepUntil, now int64) error
+	// MarkIfUnseen durably records an accepted nonce and reports whether THIS
+	// call recorded it. false means someone else did first — a replay.
+	//
+	// The check and the record have to be one operation. Seen() runs early so a
+	// command refused for lockdown does not burn its nonce, and the record runs
+	// only on acceptance; across two lock acquisitions, two verifications of the
+	// same envelope can both pass Seen() and both record, and both open the
+	// gate. Any error must cause rejection (fail-closed).
+	MarkIfUnseen(nonce string, keepUntil, now int64) (bool, error)
 }
 
 // EventRecorder queues signed audit events (internal/events.Recorder).
@@ -104,8 +110,12 @@ func Verify(pub ed25519.PublicKey, raw []byte, ctx Context) (*wire.Command, erro
 	if ctx.Lockdown && !wire.LockdownAllowed[e.Cmd] {
 		return nil, &wire.Reject{Reason: wire.ReasonLockdown}
 	}
-	// Record the nonce durably; if that fails, reject fail-closed.
-	if err := ctx.Nonces.Mark(e.Nonce, e.EXP+wire.ClockSkewSeconds, ctx.Now); err != nil {
+	// Record the nonce durably, and only if this call is the one that recorded
+	// it. A false here means a concurrent verification of the same envelope got
+	// there first; both would otherwise be accepted and the command would
+	// actuate twice. Any error rejects, fail-closed.
+	fresh, err := ctx.Nonces.MarkIfUnseen(e.Nonce, e.EXP+wire.ClockSkewSeconds, ctx.Now)
+	if err != nil || !fresh {
 		return nil, &wire.Reject{Reason: wire.ReasonReplay}
 	}
 	return &e, nil
