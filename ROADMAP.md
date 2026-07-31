@@ -744,7 +744,13 @@ and none has met physical hardware.
       answered (two advertisers on one LAN would otherwise answer each other indefinitely),
       and `consumed` counts bytes at the ORIGINAL offset rather than wherever a pointer
       chain ended. Two fuzz targets are wired into CI beside the existing four; 900k
-      executions found no crash
+      executions found no crash. The RESPONSE side is checked too — the PTR/SRV/TXT/A a
+      phone's resolver reads to find a controller — by a walker that recomputes every
+      position from the DECLARED lengths and requires the last record to end exactly at the
+      end of the packet, so a wrong answer count or rdlength lands it somewhere else. That
+      is STRUCTURAL, not proof a resolver accepts it: there is no DNS library in the module
+      and the real consumer is Bonjour/NSD, so this is the same built-versus-run-against-
+      hardware distinction `docs/CAMERA-RETENTION.md` draws
 - [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
 - [ ] Alerting tied to real sensor and camera events
 - [ ] Rate-limiting and scoping on movement commands, so a compromised client cannot drive

@@ -233,3 +233,205 @@ func FuzzIsQueryFor(f *testing.F) {
 		_ = isQueryFor(pkt, "_aql._tcp.local.")
 	})
 }
+
+// ---------------------------------------------------------------------------
+// The response the phone's resolver reads
+// ---------------------------------------------------------------------------
+//
+// buildResponse assembles the PTR + SRV + TXT + A that let a phone find this
+// controller on the LAN when the hub is unreachable — the discovery half of
+// offline emergency access.
+//
+// WHAT THIS ESTABLISHES, AND WHAT IT DOES NOT. There is no DNS library in this
+// module, and the real consumer is a phone's platform resolver (Bonjour / NSD),
+// which nothing here can stand in for. So this is a STRUCTURAL check against
+// the wire format, not proof that a resolver accepts it — the same distinction
+// CAMERA-RETENTION.md draws between built and run against hardware.
+//
+// It is still worth having, because the likely regression is structural: a
+// record count that disagrees with the records, or an rdlength that does not
+// cover its rdata. The walk below recomputes every position from the DECLARED
+// lengths and requires the last record to end exactly at the end of the packet,
+// so any one of those disagreements lands the walk somewhere else. It
+// deliberately does not reuse the production append helpers — an encoder
+// checked only by its own encoder proves the two agree, not that either is
+// right.
+
+type rr struct {
+	name  string
+	typ   uint16
+	class uint16
+	ttl   uint32
+	rdata []byte
+}
+
+// walkResponse parses a response header and its answer records, independently
+// of how they were built.
+func walkResponse(t *testing.T, pkt []byte) (id uint16, flags uint16, answers []rr) {
+	t.Helper()
+	if len(pkt) < 12 {
+		t.Fatalf("response is %d bytes, shorter than a DNS header", len(pkt))
+	}
+	id = binary.BigEndian.Uint16(pkt[0:2])
+	flags = binary.BigEndian.Uint16(pkt[2:4])
+	qd := binary.BigEndian.Uint16(pkt[4:6])
+	an := binary.BigEndian.Uint16(pkt[6:8])
+	if qd != 0 {
+		t.Fatalf("QDCOUNT = %d in a response", qd)
+	}
+	off := 12
+	for i := 0; i < int(an); i++ {
+		nm, n := decodeName(pkt, off)
+		if n < 0 {
+			t.Fatalf("answer %d: unreadable name at offset %d", i, off)
+		}
+		off += n
+		if off+10 > len(pkt) {
+			t.Fatalf("answer %d: header runs past the end", i)
+		}
+		var a rr
+		a.name = nm
+		a.typ = binary.BigEndian.Uint16(pkt[off : off+2])
+		a.class = binary.BigEndian.Uint16(pkt[off+2 : off+4])
+		a.ttl = binary.BigEndian.Uint32(pkt[off+4 : off+8])
+		rdlen := int(binary.BigEndian.Uint16(pkt[off+8 : off+10]))
+		off += 10
+		if off+rdlen > len(pkt) {
+			t.Fatalf("answer %d (%s): rdlength %d runs past the end", i, a.name, rdlen)
+		}
+		a.rdata = pkt[off : off+rdlen]
+		off += rdlen
+		answers = append(answers, a)
+	}
+	// The whole point of walking: every declared length has to add up.
+	if off != len(pkt) {
+		t.Fatalf("walked to offset %d of a %d-byte response — a record count or an "+
+			"rdlength disagrees with the bytes", off, len(pkt))
+	}
+	return id, flags, answers
+}
+
+func TestTheAdvertisedResponseIsWellFormed(t *testing.T) {
+	a := &Advertiser{Instance: "lintel-de71ce00", Port: 8737, TXT: []string{"v=1", "id=de71ce00"}}
+	pkt := a.buildResponse(0xBEEF)
+	if pkt == nil {
+		t.Skip("no non-loopback IPv4 on this host, so there is nothing to advertise")
+	}
+
+	id, flags, answers := walkResponse(t, pkt)
+	if id != 0xBEEF {
+		t.Errorf("response id %#x does not echo the query's", id)
+	}
+	// QR=1 (response) and AA=1 (authoritative) — a resolver ignores an answer
+	// that does not claim authority for the name.
+	if flags&0x8000 == 0 || flags&0x0400 == 0 {
+		t.Errorf("flags %#x: want QR and AA set", flags)
+	}
+	if len(answers) != 4 {
+		t.Fatalf("got %d answers, want PTR + SRV + TXT + A", len(answers))
+	}
+
+	const instance = "lintel-de71ce00._lintel._tcp.local."
+	const host = "lintel-de71ce00.local."
+
+	ptr, srv, txt, arec := answers[0], answers[1], answers[2], answers[3]
+
+	if ptr.typ != 12 || ptr.name != serviceName {
+		t.Errorf("first answer is %s type %d, want a PTR for %s", ptr.name, ptr.typ, serviceName)
+	}
+	if got, n := decodeName(ptr.rdata, 0); got != instance || n != len(ptr.rdata) {
+		t.Errorf("PTR points at %q (consumed %d of %d)", got, n, len(ptr.rdata))
+	}
+	// The PTR is shared, so it must NOT set the cache-flush bit: another
+	// controller advertising the same service is not a conflict.
+	if ptr.class&0x8000 != 0 {
+		t.Error("the PTR sets cache-flush — it would evict other controllers' records for this service")
+	}
+
+	if srv.typ != 33 || srv.name != instance {
+		t.Errorf("second answer is %s type %d, want an SRV for the instance", srv.name, srv.typ)
+	}
+	if len(srv.rdata) < 7 {
+		t.Fatalf("SRV rdata is %d bytes", len(srv.rdata))
+	}
+	if port := binary.BigEndian.Uint16(srv.rdata[4:6]); port != 8737 {
+		t.Errorf("SRV advertises port %d, want 8737 — the phone would dial the wrong port", port)
+	}
+	if got, n := decodeName(srv.rdata, 6); got != host || 6+n != len(srv.rdata) {
+		t.Errorf("SRV target %q (consumed %d of %d)", got, n, len(srv.rdata))
+	}
+
+	if txt.typ != 16 || txt.name != instance {
+		t.Errorf("third answer is %s type %d, want a TXT for the instance", txt.name, txt.typ)
+	}
+	// TXT rdata is length-prefixed strings that must exactly fill the record.
+	var strs []string
+	for i := 0; i < len(txt.rdata); {
+		l := int(txt.rdata[i])
+		if i+1+l > len(txt.rdata) {
+			t.Fatalf("TXT string at %d claims %d bytes, past the record", i, l)
+		}
+		strs = append(strs, string(txt.rdata[i+1:i+1+l]))
+		i += 1 + l
+	}
+	if len(strs) != 2 || strs[0] != "v=1" || strs[1] != "id=de71ce00" {
+		t.Errorf("TXT carries %q, want the configured pairs", strs)
+	}
+
+	if arec.typ != 1 || arec.name != host {
+		t.Errorf("fourth answer is %s type %d, want an A for the host", arec.name, arec.typ)
+	}
+	if len(arec.rdata) != 4 {
+		t.Errorf("A record rdata is %d bytes, want 4", len(arec.rdata))
+	}
+
+	// Every unique record carries the cache-flush bit and the service TTL.
+	for _, a := range []rr{srv, txt, arec} {
+		if a.class&0x8000 == 0 {
+			t.Errorf("%s does not set cache-flush — a stale address would linger after a move", a.name)
+		}
+		if a.class&0x7FFF != 1 {
+			t.Errorf("%s class %#x is not IN", a.name, a.class)
+		}
+		if a.ttl != ttlSeconds {
+			t.Errorf("%s ttl %d, want %d", a.name, a.ttl, ttlSeconds)
+		}
+	}
+}
+
+// An advertiser with no TXT pairs still emits a valid TXT record: the format
+// requires at least one (empty) string, and a zero-length rdata is malformed.
+func TestAnEmptyTXTIsStillAValidRecord(t *testing.T) {
+	a := &Advertiser{Instance: "lintel-x", Port: 1}
+	pkt := a.buildResponse(1)
+	if pkt == nil {
+		t.Skip("no non-loopback IPv4 on this host")
+	}
+	_, _, answers := walkResponse(t, pkt)
+	for _, r := range answers {
+		if r.typ == 16 && len(r.rdata) == 0 {
+			t.Error("TXT rdata is empty — the record must carry at least one zero-length string")
+		}
+	}
+}
+
+// A TXT pair longer than a single DNS string is dropped rather than truncated
+// or written with a wrapped length byte, which would corrupt every record after
+// it. The walk is what proves the rest of the packet survived.
+func TestAnOversizedTXTPairIsDroppedNotWrapped(t *testing.T) {
+	a := &Advertiser{Instance: "lintel-x", Port: 1, TXT: []string{strings.Repeat("k", 300), "v=1"}}
+	pkt := a.buildResponse(1)
+	if pkt == nil {
+		t.Skip("no non-loopback IPv4 on this host")
+	}
+	_, _, answers := walkResponse(t, pkt)
+	for _, r := range answers {
+		if r.typ != 16 {
+			continue
+		}
+		if got := int(r.rdata[0]); got != 3 {
+			t.Errorf("first TXT string claims %d bytes, want the 3 of \"v=1\" — the oversized "+
+				"pair was not dropped", got)
+		}
+	}
+}
