@@ -256,9 +256,20 @@ func textGateVerbRaw(body string) (GateVerb, bool) {
 	// contain "open". Checked after open, every hold in plain English would
 	// resolve to a pulse — the gate would swing shut in the face of whoever
 	// was told it would stay open.
-	case strings.Contains(body, "hold"), strings.Contains(body, "keep open"),
-		strings.Contains(body, "keep it open"), strings.Contains(body, "leave open"),
-		strings.Contains(body, "leave it open"), strings.Contains(body, "stay open"):
+	//
+	// The ordering was right and the matching was not. This branch used to list
+	// literal two-word substrings — "keep open", "keep it open", "leave open",
+	// "leave it open", "stay open" — so anything between the two words fell
+	// through to `open` and pulsed:
+	//
+	//	"keep the gate open"                -> open   (a pulse)
+	//	"keep the main gate open for 10 min" -> open  (a pulse)
+	//	"leave the back gate open please"    -> open  (a pulse)
+	//
+	// which is the most natural way to say it, and the member was answered
+	// "Opening Main gate…" before the gate shut behind them. holdOpenPhrasing
+	// reads word ORDER instead of adjacency.
+	case strings.Contains(body, "hold"), holdOpenPhrasing(body):
 		return VerbHold, true
 	case strings.Contains(body, "open"):
 		return VerbOpen, true
@@ -292,4 +303,27 @@ func ActingWord(command string) string {
 		return "Holding open"
 	}
 	return "Working on"
+}
+
+// holdOpenPhrasing reports a "keep/leave/stay … open" request, however many
+// words sit in the middle.
+//
+// Order is the entire rule, and it is what keeps this from swallowing real
+// pulses: the keep-word must come BEFORE the open-word. "Open the gate and keep
+// the dog inside" has them the other way round and is an open, not a hold —
+// adjacency-free matching without the ordering constraint would have turned
+// that into a barrier standing open.
+func holdOpenPhrasing(body string) bool {
+	held := false
+	for _, w := range fields(body) {
+		switch w {
+		case "keep", "leave", "stay", "remain":
+			held = true
+		case "open", "opened":
+			if held {
+				return true
+			}
+		}
+	}
+	return false
 }

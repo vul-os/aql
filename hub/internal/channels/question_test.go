@@ -121,3 +121,50 @@ func TestGateQuestionReplySaysNothingMovedAndHowToMove(t *testing.T) {
 		t.Errorf("reply offers a console with no URL configured: %q", got)
 	}
 }
+
+// "Keep the gate open" asked for a hold and got a pulse.
+//
+// The hold branch was already checked before open — the ordering was correct
+// and is commented at length — but it matched literal two-word substrings, so
+// any words between "keep" and "open" fell through to a pulse. The member was
+// answered "Opening Main gate…" and the gate shut behind them, which is exactly
+// the outcome that ordering was put there to prevent.
+func TestAHoldPhrasedNaturallyIsAHoldNotAPulse(t *testing.T) {
+	for _, body := range []string{
+		"keep the gate open",
+		"keep the main gate open for 10 min",
+		"keep the front gate open",
+		"leave the gate open",
+		"leave the back gate open please",
+		"can you keep the side gate open",
+		"stay open",
+		"keep it open",
+		"leave open",
+		"remain open",
+	} {
+		v, ok := TextGateVerb(NormalizeText(body))
+		if !ok {
+			t.Errorf("%q resolves nothing", body)
+			continue
+		}
+		if v != VerbHold {
+			t.Errorf("%q resolved %q, want hold — a hold became a pulse", body, v)
+		}
+	}
+}
+
+// The control. Word ORDER is what keeps the rule above from swallowing pulses:
+// a keep-word AFTER the open-word is not a hold, and without that constraint
+// this body would leave a barrier standing open.
+func TestAnOpenWithAKeepWordAfterItIsStillAnOpen(t *testing.T) {
+	for _, body := range []string{
+		"open the gate and keep the dog inside",
+		"open the main gate, i'll keep an eye out",
+		"open the gate then leave",
+	} {
+		v, ok := TextGateVerb(NormalizeText(body))
+		if !ok || v != VerbOpen {
+			t.Errorf("%q resolved (%q, %v), want open — a pulse became a hold", body, v, ok)
+		}
+	}
+}

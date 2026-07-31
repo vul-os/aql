@@ -371,6 +371,16 @@ and none has met physical hardware.
       classifier will sometimes be wrong about a real request and a false refusal has to be
       recoverable in one message. Polite requests stay commands — "could you open the
       gate" is not a question — which is the half a one-directional test would miss
+- [x] **"Keep the gate open" asked for a hold and got a pulse.** The hold branch was
+      already checked before `open` — that ordering is commented at length as the thing
+      standing between a hold and a gate swinging shut — but it matched literal two-word
+      substrings (`keep open`, `keep it open`, `leave open`), so any words in between fell
+      through: "keep the gate open", "keep the main gate open for 10 min" and "leave the
+      back gate open please" all pulsed, and the member was answered "Opening Main gate…"
+      before it shut behind them. `holdOpenPhrasing` reads word ORDER instead of adjacency,
+      and the order is what keeps it narrow — "open the gate and keep the dog inside" has
+      the two words the other way round and is still an open, which is the direction that
+      would otherwise leave a barrier standing open
 - [ ] Extend it further, to the other device classes. Chat still reaches only the access
       module; the engine's verbs (`on`/`off`/`set`/`start`…) are recognised and honestly
       refused (`channels/unsupported.go`) rather than driven. The T0 read path
