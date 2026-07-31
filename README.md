@@ -292,6 +292,19 @@ up is the first time anyone finds out whether it's right.
 **Some of it isn't built.** Matter, Modbus RTU, native Zigbee and Z-Wave radios,
 and robot control beyond a status row are open.
 
+**There is no email anywhere, and that is a decision rather than a gap.** A user
+is a local username and a password on your hub — no address, no verification
+link, no reset mail, and no outbound mail server to configure. This was removed
+on purpose: a hub that must send email to let you in is a hub that stops working
+when someone else's SMTP does, and an identity built on an address you rent from
+a company is the opposite of running your own. Password recovery works from a
+phrase you hold, and the chat rails link by a code you carry from the console to
+the app rather than by anything mailed to you.
+
+So "add email verification" is not an open item. If you want it, you are
+changing what the product is, and the place to start is `docs/THREAT-MODEL.md`
+rather than the auth handlers.
+
 **The camera pipeline is built, and has never met a camera.** Both halves of that
 sentence matter. It opens an RTSP stream and keeps the frames, depacketizes them
 into H.264 NAL units, reads the encoder's real cropped resolution out of the

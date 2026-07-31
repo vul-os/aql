@@ -1407,7 +1407,7 @@ export const FEATURES = [
     docStatus: 'planned',
     docRefs: [
       'hub/internal/store/migrations/0001_baseline.sql — users.username, and why it is not an address',
-      'README.md — email verification described as removed, not missing',
+      'README.md — "There is no email anywhere, and that is a decision rather than a gap"',
     ],
     evidence: [
       { file: 'hub/internal/store/migrations/0001_baseline.sql', pattern: 'email\\s+TEXT NOT NULL UNIQUE' },

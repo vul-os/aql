@@ -71,7 +71,25 @@ number formatting is rejected rather than implemented — envelopes only carry
 integers and strings. Full detail, including where the TypeScript and
 JavaScript implementations diverge from Go: [`../proto/JCS-PROFILE.md`](../proto/JCS-PROFILE.md).
 
-**Schema** (folded migrations, `internal/store/migrations/`):
+**Schema** (folded migrations, `internal/store/migrations/`).
+
+**Adding one: new state gets a new TABLE, never a column on a shipped one.** A
+column added to a table that already has rows is a change every existing row
+silently participates in, and the migration has to invent a value for all of
+them — which is a claim about the past. `0028` makes the argument for a consent
+flag, where a backfilled `1` would assert that locations agreed to something
+nobody asked them; `0032` makes it again for a revocation sequence, where a
+backfilled `0` would claim every controller holds a revocation none of them may
+have. A new table starts empty, so there is no default to get wrong.
+
+Changing a CONSTRAINT is the one case that needs more: SQLite cannot widen a
+`CHECK` in place, so `0029` creates a replacement table, copies row by row,
+drops the original and renames. That is the supported shape, and the rename is
+the swap rather than a way to smuggle a column in.
+`TestNoMigrationAltersAShippedTable` holds both halves — the rule was written in
+four migration comments before it was mechanised, which is four places nobody
+reads *before* writing a migration.
+
 
 - `0001_baseline.sql` — users, profiles, accounts, account_members, locations,
   access_points, devices, access_logs, refresh_tokens, instance_settings.
