@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 /**
@@ -74,6 +74,67 @@ describe('go test gates', () => {
       'these can serve a cached PASS. The modules read proto/vectors/ from outside their ' +
         'own tree and Go does not invalidate on it — which is how a broken verifier sat ' +
         'green for two commits. Add -count=1.',
+    ).toEqual([]);
+  });
+});
+
+/**
+ * Every guard that ENUMERATES a corpus must assert it found one.
+ *
+ * # The defect this catches, which is this repository's most common
+ *
+ * A guard that walks a directory and checks each hit is worthless the moment
+ * the walk returns nothing: it reports PASS having examined zero things, and a
+ * pass that examined zero things is indistinguishable from a pass that examined
+ * everything. One bad character in a glob is enough. Four separate detectors
+ * written in this session failed exactly this way, and each was caught only by
+ * deliberately breaking its pattern and watching it stay green.
+ *
+ * So a coverage floor -- `expect(n).toBeGreaterThan(...)` on what the scan
+ * actually found -- is not decoration on these tests. It is the part that makes
+ * the rest of the assertions mean anything.
+ *
+ * # Why "enumerates" and not "reads a file"
+ *
+ * The first version of this check counted `readFileSync` as scanning and
+ * reported five copy-guards as floorless. All five were fine: they read ONE
+ * named file and assert on its contents, and if that file disappears the read
+ * throws. A floor over a corpus of one is meaningless. Only enumeration --
+ * readdirSync, a glob, execFileSync feeding a list -- creates the failure mode
+ * above.
+ *
+ * # What this does NOT check
+ *
+ * That the floor is set sensibly. A floor of 1 on a corpus of 300 passes here
+ * and catches almost nothing. Numbers are a judgement this cannot make; what it
+ * can do is refuse the case of no floor at all.
+ */
+describe('guards that enumerate a corpus assert they found one', () => {
+  const dir = resolve(__dirname);
+  const ENUMERATES = /readdirSync|execFileSync|globSync|\bglob\(/;
+  const HAS_FLOOR = /toBeGreaterThan(OrEqual)?\(|toHaveLength\(/;
+
+  /** Guards that enumerate and legitimately cannot floor. Empty, and see above. */
+  const NO_FLOOR_OK = new Set<string>();
+
+  it('every enumerating guard has a coverage floor', () => {
+    const files = readdirSync(dir).filter((f) => f.endsWith('.test.ts'));
+    const enumerating = files.filter((f) => ENUMERATES.test(readFileSync(resolve(dir, f), 'utf-8')));
+
+    // The guard on this guard. If the pattern stops matching, this test starts
+    // examining nothing — which is the very failure it exists to name.
+    expect(
+      enumerating.length,
+      'no enumerating guards found — this check has become the thing it warns about',
+    ).toBeGreaterThan(10);
+
+    const floorless = enumerating.filter(
+      (f) => !NO_FLOOR_OK.has(f) && !HAS_FLOOR.test(readFileSync(resolve(dir, f), 'utf-8')),
+    );
+    expect(
+      floorless,
+      'these guards walk a corpus and never assert they found one, so an empty ' +
+        'walk would pass forever:\n  ' + floorless.join('\n  '),
     ).toEqual([]);
   });
 });
