@@ -832,6 +832,20 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] CI now runs the two subcommands added this session INSIDE the image, and the
+      key one as a round trip: the key `gen-data-key` mints is the key the image
+      boots with, with a bogus key as the control. Asserting the output looks like
+      base64 would accept a wrong-length key — the exact mistake an operator
+      improvising with `openssl rand` makes. Tamper: generator emits 31 bytes -> CAUGHT.
+      Most operators run gen-data-key FROM the image, and no Go test covers that path.
+
+      TWO harness traps in one sitting, both giving a FALSE verdict about working code:
+      `for c in "energy rebucket"; do docker run $c` does not word-split under zsh, so
+      a correct two-word dispatch reported `unknown command "energy rebucket"` — a false
+      RED, where this repository's traps are usually false greens. And a sed tamper whose
+      REPLACEMENT contained the `|` used as the delimiter died with "bad flag" and read as
+      NOT CAUGHT. Second time the tamper-applied rule has caught a tamper that never ran.
+
 - [x] ALL FIVE CI-only checks run locally 2026-08-01, which scripts/check.sh now tells
       you how to do rather than only that they exist. Results: the race detector found a
       real race (above); fuzzing found a request injection (camera notes) AND that CI was

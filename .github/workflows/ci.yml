@@ -495,6 +495,40 @@ jobs:
           curl -fsS -o /dev/null http://127.0.0.1:18080/
           docker exec aqlci /healthprobe
           docker rm -f aqlci
+      # The image must be able to mint the key it consumes.
+      #
+      # gen-data-key exists because hub/README tells an operator to set
+      # AQL_DATA_KEY and, until this week, nothing in the product could produce
+      # one — sealed.NewKey had no caller at all. Most operators will run it FROM
+      # this image, and that path is covered by no Go test: a subcommand that
+      # works under `go run` and not in the artifact is a feature nobody
+      # deploying it can use.
+      #
+      # The ROUND TRIP is the assertion — the key this image mints is the key
+      # this image boots with. Checking that the output looks like base64 would
+      # accept a key of the wrong decoded length, which is exactly what an
+      # operator improvising with `openssl rand` produces.
+      #
+      # The bogus key is the control. Without it, a boot succeeding for any other
+      # reason — the key being ignored, most obviously — reads as a pass.
+      - name: the image can mint the key it consumes
+        run: |
+          set -eux
+          KEY="$(docker run --rm --entrypoint /aql-hub aql-hub:ci gen-data-key)"
+          docker run -d --name aqlkey -e AQL_DATA_KEY="$KEY" aql-hub:ci
+          for _ in $(seq 1 30); do
+            docker logs aqlkey 2>&1 | grep -q "aql hub" && break
+            sleep 1
+          done
+          docker logs aqlkey 2>&1 | grep -q "aql hub"
+          docker rm -f aqlkey
+          docker run --rm -e AQL_DATA_KEY=not-a-key aql-hub:ci 2>&1 \
+            | grep -q "data key is not valid base64"
+          # The other subcommand added alongside it, reaching its own code rather
+          # than falling through to booting a hub against /data.
+          docker run --rm --entrypoint /aql-hub aql-hub:ci mqtt-scan 2>&1 \
+            | grep -q "device-config is required"
+
       # The image must resolve IANA timezones.
       #
       # Schedules and energy rollups are anchored to a named zone, and getting
