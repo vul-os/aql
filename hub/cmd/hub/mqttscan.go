@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
@@ -80,8 +81,14 @@ func runMQTTScan(args []string) int {
 		return 1
 	}
 
-	// The bridge report comes FIRST and goes to stderr, so `mqtt-scan > devices.json`
-	// captures only the candidates while an operator still sees what answered.
+	// The bridge report comes FIRST and goes to stderr, so a redirect captures
+	// only the candidates while an operator still sees what answered.
+	//
+	// What that redirect produces is a FRAGMENT, not a device config: it has a
+	// `devices` array and no broker, and the hub refuses it at startup with
+	// "broker address is empty". That is the right behaviour — this command
+	// cannot know the broker's address, credentials or client id — but it is
+	// only obvious to someone who already knows, so the summary below says it.
 	//
 	// "No devices" and "no bridge" are different answers, which is why Scan
 	// separates seen from silent from unreadable — an operator debugging an
@@ -101,20 +108,32 @@ func runMQTTScan(args []string) int {
 		return 0
 	}
 
-	// One DeviceConfig per candidate, as the `devices` array of an mqtt object,
-	// so the output is the shape that goes into the config rather than a report
-	// about it.
-	devices := make([]mqtt.DeviceConfig, 0, len(res.Candidates))
-	for _, c := range res.Candidates {
-		devices = append(devices, c.SuggestedConfig())
-	}
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(map[string]any{"mqtt": map[string]any{"devices": devices}}); err != nil {
+	if err := writeScanConfig(os.Stdout, res.Candidates); err != nil {
 		fmt.Fprintf(os.Stderr, "aql-hub mqtt-scan: %v\n", err)
 		return 1
 	}
-	fmt.Fprintf(os.Stderr, "%d candidate(s). Review the capabilities before adding them: "+
-		"a capability decides which verbs the engine will route.\n", len(devices))
+	fmt.Fprintf(os.Stderr, "%d candidate(s). This is the `devices` array only — merge it into "+
+		"the `mqtt` object in your device config, which supplies the broker; on its own the hub "+
+		"refuses it with \"broker address is empty\". Review the capabilities before adding "+
+		"them: a capability decides which verbs the engine will route.\n", len(res.Candidates))
 	return 0
+}
+
+// writeScanConfig prints the candidates as the `devices` array of an mqtt
+// object — the shape that goes INTO the config file, not a report about it.
+//
+// Split out from runMQTTScan so a test can hold the output to the claim the
+// command makes. README calls this "the config an operator would paste", and
+// the only way to know that is true is to feed what it prints back through
+// loadDeviceFile, which is the same parser the hub boots with — including its
+// DisallowUnknownFields, which turns any drift between what this writes and
+// what the hub accepts into a refusal at startup rather than a surprise later.
+func writeScanConfig(w io.Writer, candidates []mqtt.Candidate) error {
+	devices := make([]mqtt.DeviceConfig, 0, len(candidates))
+	for _, c := range candidates {
+		devices = append(devices, c.SuggestedConfig())
+	}
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	return enc.Encode(map[string]any{"mqtt": map[string]any{"devices": devices}})
 }

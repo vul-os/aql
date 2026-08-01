@@ -832,6 +832,21 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] mqtt-scan's OUTPUT is now held to the claim README makes about it. Its only
+      tests were exit codes on refusal, so it could have printed valid-looking JSON
+      that the hub's own parser rejects — loadDeviceFile sets DisallowUnknownFields,
+      which turns any drift into a refusal at STARTUP, after the operator pasted it
+      and restarted. Extracted writeScanConfig and fed what it prints back through
+      loadDeviceFile: it round-trips, devices and state topics survive, and an empty
+      scan still prints a loadable file.
+      Found while doing it: the code comment advertised `mqtt-scan > devices.json` as
+      though that file were usable. It is a FRAGMENT with no broker, and the hub
+      refuses it with "broker address is empty". The summary now says so — and
+      because that sentence quotes another package's message, a test pins it.
+      Three tampers CAUGHT (wrapper key drift, refusal wording, state topics dropped).
+      My first fixture was wrong, not the code: candidates with no Fields produce
+      devices that subscribe to nothing, and the test caught its own fixture.
+
 - [x] The audit chain cannot see its own TAIL being deleted, and four documents said
       the ceiling was the expensive attack. README/SECURITY/ARCHITECTURE and
       audithash.go's header all described the honest limit as "edits a row and
