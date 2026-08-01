@@ -51,10 +51,13 @@ cd aql/hub && go build -o aql-hub ./cmd/hub
 Pure-Go SQLite (`modernc.org/sqlite`, no CGO), so `CGO_ENABLED=0 GOARCH=arm64`
 cross-compiles cleanly for a Pi.
 
-**Docker** — build the image locally from the `Dockerfile` in `hub/`:
+**Docker** — build the image locally with the `Dockerfile` in `hub/`, from the
+repository root. The build context has to be the root rather than `hub/`: the
+hub module has `replace github.com/vul-os/aql/jcs => ../jcs`, so the sibling
+module must be inside the context or `go mod download` fails.
 
 ```sh
-cd aql/hub && docker build -t aql-hub .
+cd aql && docker build -f hub/Dockerfile -t aql-hub .
 docker run -d --name aql \
   -p 8080:8080 \
   -v aql:/data \

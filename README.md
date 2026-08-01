@@ -138,7 +138,8 @@ file, no account anywhere.
 ### Docker
 
 ```bash
-docker build -t aql-hub hub
+# Context is the repository root — hub/ alone cannot build, see hub/Dockerfile.
+docker build -f hub/Dockerfile -t aql-hub .
 docker run -d --name aql -p 8080:8080 -v aql-data:/data aql-hub
 ```
 

@@ -832,6 +832,22 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] EVERY human-facing `docker build` command in this repository was broken, and
+      had been since the jcs replace landed. hub/Dockerfile's own header, README and
+      site/docs/self-host.md all passed `hub/` as the CONTEXT, which fails with
+      `"/jcs": not found` — the same mistake that left the published image
+      unbuildable for three days and which the Dockerfile explains at length 30 lines
+      BELOW its own broken usage line. Only ci.yml and check.sh were right, and
+      neither is where a person self-hosting looks. Ran the documented command to
+      confirm rather than reasoning about it. Guarded by dockerBuildCommand.test.ts,
+      anchored to the CAUSE (the sibling COPY) so it fails loudly if the constraint
+      is ever lifted rather than enforcing a dead rule. Both tampers CAUGHT.
+      Two false positives in my own scanner first, both worth remembering: a command
+      inside `echo "…"` ends in `."` not `.`, and PROSE quoting the bad command
+      counts as a bad command — I fixed the prose rather than adding a "this is only
+      an example" exemption, since that marker is also where a real broken
+      instruction would hide.
+
 - [x] CI now runs the two subcommands added this session INSIDE the image, and the
       key one as a round trip: the key `gen-data-key` mints is the key the image
       boots with, with a bogus key as the control. Asserting the output looks like

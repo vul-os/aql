@@ -2,7 +2,9 @@
 #
 # Aql hub — one static Go binary, one SQLite file.
 #
-# Build (from repo root):   docker build -t aql-hub hub
+# Build (from repo root):   docker build -f hub/Dockerfile -t aql-hub .
+#   The context is the REPOSITORY ROOT and the trailing `.` is load-bearing;
+#   A context of `hub/` alone is the three-day outage described at COPY jcs/.
 # Run:                      docker run -d -p 8080:8080 -v lintel-data:/data \
 #                             ghcr.io/vul-os/aql-hub:latest
 #
