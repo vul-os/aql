@@ -95,6 +95,16 @@ func (s *Store) MarkIfUnseen(nonce string, keepUntil, now int64) (bool, error) {
 	return true, nil
 }
 
+// Mark records a nonce unconditionally. DO NOT USE IT TO ACCEPT A COMMAND.
+//
+// It is check-then-write with the check left to the caller, which is exactly
+// the shape MarkIfUnseen exists to close: two deliveries of one command both
+// read "unseen", both mark, and both are accepted. MarkIfUnseen does the test
+// and the write under one lock and is what every production path calls.
+//
+// Kept exported only because tests seed nonces with it, and held there by
+// internal/agent/reachability_test.go's allowlist — if production ever calls
+// this, that test fails and asks why.
 func (s *Store) Mark(nonce string, keepUntil, now int64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
