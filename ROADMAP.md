@@ -514,15 +514,14 @@ and none has met physical hardware.
       device and the verb but not the number, so confirming a misread value would be
       confirming something never shown. The range stays the catalogue's: out-of-range parses
       and `Registry.Resolve` refuses it with the bounds
-- [ ] Extend it further still. **Groups are not blocked on groups existing** — that claim
-      was stale: `Device.Zone` is a field and `automations/engine.go` already fans out over
-      a zone deterministically, refusing the whole action if any member cannot resolve. What
-      is missing is a decision. `channels.ResolveDevice` recognises a zone word and scores it
-      deliberately BELOW the floor, so "turn off the exterior lights" is answered with the
-      candidates; fanning out would turn that same question into an actuation of every lamp
-      in the zone, broader than any single candidate the member might have meant. Asking is
-      the safe answer and is what happens today. T4 is genuinely blocked: it needs step-up on
-      a second rail and an operator-armed time window, and neither exists T4 needs step-up on a second rail (§3.4) and an operator-armed time window;
+- [x] Extend it further still. **Zone fan-out ships**: an explicit quantifier plus a
+      zone name drives every eligible member of that zone, at T1 only, argless verbs only,
+      with no confirmation route and one cooldown for the zone. "Turn off all the shed
+      lamps" fans out; "turn off the shed lamps" still gets the picker, because a plural
+      noun is how people name a single fixture. Rules and reasoning in `chatzone.go` and
+      docs/CHAT-COMMANDS.md §2.3 stage 5
+- [ ] T4 over chat. Genuinely blocked: it needs step-up on a second rail and an
+      operator-armed time window, and neither exists T4 needs step-up on a second rail (§3.4) and an operator-armed time window;
       neither exists, and a confirmation is not a substitute for either. Of §4.2's two
       once-unbuilt queries, **"how much solar today" is built** — one number per source for
       one day, which rule 3 permits where a curve would be the appliance fingerprint §4.3

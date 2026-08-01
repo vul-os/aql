@@ -35,27 +35,26 @@ import (
 // its precondition returns a refusal, and the refusal names what could not be
 // established rather than saying "no".
 //
-// # What is deliberately absent
+// # Group expansion
 //
-// No group expansion — and NOT for the reason this said until now, which was
-// "it needs groups, which do not exist". Groups exist: `Device.Zone` is a
-// field, and automations already fan out over one deterministically
-// (automations/engine.go resolves every zone member, skips those not offering
-// the verb, and refuses the whole action if any member cannot resolve). The
-// machinery is there.
+// Present, at T1 only, and ONLY when the member wrote an explicit
+// quantifier. "Turn off all the shed lamps" fans out; "turn off the shed lamps"
+// does not, and is answered with the picker, because a plural noun is how
+// people name a single fixture at least as often as a set. The full rule set
+// and the reasoning behind each limit is in chatzone.go; the ordering rule --
+// device first, zone only when no device resolved -- is at the call site below,
+// where it can be read next to the thing it constrains.
 //
-// What is missing is a DECISION, and it is a real one. channels.ResolveDevice
-// already recognises a zone word and scores it deliberately BELOW the floor —
-// "a hint about which devices are plausible, never an identification of one" —
-// so "turn off the exterior lights" is answered today with the candidates. Fan
-// out instead and that same message stops being a question and becomes an
-// actuation of every lamp in the zone, which is broader than any single
-// candidate the member might have meant. The plural is a signal this resolver
-// does not read.
+// What this comment said until recently is worth recording, because it was
+// wrong for a long time and wrong in the expensive direction: it said group
+// expansion "needs groups, which do not exist". Groups existed the whole time.
+// Device.Zone is a field and automations/engine.go has always fanned out over
+// one. A blocker that names the wrong obstacle does not merely mislead -- it
+// stops anyone from checking whether the obstacle is real.
 //
-// Asking is the safe answer and it is what happens now. Changing it means
-// deciding when a zone-word match is a group command rather than an ambiguity,
-// and that belongs in CHAT-COMMANDS.md before it belongs here. No selection context, so a picker reply cannot be resolved by a
+// # What is still deliberately absent
+//
+// No selection context, so a picker reply cannot be resolved by a
 // follow-up — an ambiguous body is answered with the candidates and the member
 // re-sends naming one.
 //
@@ -165,6 +164,18 @@ func (s *Server) chatActuate(ctx contextT, body, profileID, source, chatID, conf
 
 	m := channels.ResolveDevice(body, v, fleet)
 	if !m.Unique() {
+		// A device did not resolve. Before falling through, ask whether this is
+		// a ZONE command — "turn off all the shed lamps" reaches here because a
+		// zone word alone is deliberately below the device floor.
+		//
+		// Device FIRST and zone only on non-unique, never the other way round.
+		// A device NAMED for a place ("Exterior Lights") scores on its name,
+		// above the floor, so it is claimed here and the zone path never sees
+		// it. Reverse the order and the place would swallow the device — the
+		// more specific reading would be the one that lost.
+		if res, handled := s.chatActuateZone(ctx, body, profileID, source, v, fleet); handled {
+			return res, true
+		}
 		// Ambiguous or unresolved: nothing actuates and the reply says which.
 		// Falls through to the caller so the existing resolving refusal, which
 		// already words both cases, is the one message a member sees.

@@ -80,6 +80,26 @@ func NewMockDriver(id string) *MockDriver {
 	return m
 }
 
+// AddDevice puts one more device in the mock fleet, or replaces the one with
+// the same ID.
+//
+// The seeded fleet has exactly one device of each kind, which makes it a poor
+// fixture for anything about GROUPS: no zone in it has two devices offering the
+// same verb, so a fan-out tested against it would be a fan-out over one. Rather
+// than register a second MockDriver — which would work, but only by producing
+// two devices with the same name in the same zone, a fleet no household has —
+// callers add the device the case actually needs.
+//
+// Call before Registry.Refresh; the registry snapshots what it is told.
+func (m *MockDriver) AddDevice(d Device) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.devices[d.ID] = d
+	if m.state[d.ID] == nil {
+		m.state[d.ID] = map[string]float64{}
+	}
+}
+
 func (m *MockDriver) ID() string { return m.id }
 
 func (m *MockDriver) Discover(_ context.Context) ([]Device, error) {

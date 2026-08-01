@@ -476,12 +476,48 @@ truncation disclosure that under-reports the truncation. A test asserts the
 rendered count matches the stated one rather than asserting the arithmetic, so
 it holds whichever constant moves.
 
-**Stage 5 — groups as explicit targets.** "All lights", "exterior lights", a
-saved group. Group expansion is allowed for T0/T1 verbs. **Group expansion is
-refused for T2 and above.** There is no "unlock all doors" over chat, and no
-"start all mowers". Fan-out multiplies both blast radius and the cost of a
-mis-resolution, and the two cases where you would want it are exactly the two
-where you would not.
+**Stage 5 — groups as explicit targets.** Group expansion is allowed for T0/T1
+verbs. **Group expansion is refused for T2 and above.** There is no "unlock all
+doors" over chat, and no "start all mowers". Fan-out multiplies both blast
+radius and the cost of a mis-resolution, and the two cases where you would want
+it are exactly the two where you would not.
+
+*Implemented, and narrower than this paragraph originally sketched.* The group
+is a **zone** — `Device.Zone`, the same field `automations/engine.go` fans out
+over — and four limits apply beyond the tier rule above:
+
+1. **An explicit quantifier is required.** "Turn off **all** the exterior
+   lights" fans out. "Turn off the exterior lights" does **not**: it is answered
+   with the picker, exactly as today. This paragraph's original examples
+   included `"exterior lights"` as a group target and that is the one thing the
+   implementation refuses, deliberately. A plural noun is how people name a
+   single fixture — "the kitchen lights" is usually one fitting — so reading it
+   as a group would convert every existing ambiguity into an N-device
+   actuation. The member asked a question and N things would move. The
+   quantifier is the whole discriminator: a fan-out can only be produced by a
+   member who wrote one.
+
+2. **No confirmation route.** A confirmation proves intent for the thing it
+   names, and the confirmation prompt names one device. Accepting it as cover
+   for a fan-out would treat agreement about one lamp as agreement about four.
+   This is why `resume` — T2, and reachable on a single device *with* a
+   confirmation — is refused outright across a zone.
+
+3. **Argless verbs only.** `set` across a zone is not obviously wrong, but it
+   multiplies the two things already hardest to get right: a quantity parsed
+   out of free text, and a widened blast radius. Narrowed on purpose; a
+   narrowing can be widened later with evidence.
+
+4. **A group of one is not a group.** A zone whose only eligible member is one
+   device does not resolve, so "all" cannot be used to reach past the score
+   floor that stops a place word from identifying a device.
+
+All-or-nothing holds **before** anything is sent — every member is resolved and
+tier-checked first, and one failure refuses the whole command — but not at
+execution, where there is no rollback. A run where some devices fail is reported
+as a partial carrying both counts and naming what did not take, because
+flattening it into either success or failure would be false in the direction the
+member most needs to be right about.
 
 **Stage 6 — bounded selection context.** A picker reply mints a selection
 context keyed on `(channel, chat, subject)` so a follow-up ("the second one",
@@ -1267,7 +1303,7 @@ document and an overclaim — please keep them accurate.
 | "dim the garden lights to 40" | `set{level:40}` | `lights-grd` | T1 | `not_implemented` — no driver seam yet (§1.4) |
 | "start the mower" | `start` | `mower-m1` | T4 | Refused unless an operator armed a window; then confirm + console step-up (§3.4) |
 | "stop the mower" | `stop` | `mower-m1` | T1 | No confirmation, no limit — the inverse is always reachable (§3.7) |
-| "turn everything off" | `off` | group | — | Refused above T1; group fan-out is T0/T1 only (§2.3 stage 5) |
+| "turn everything off" | `off` | group | — | Refused: a quantifier with no zone named is not a fleet-wide command — nothing in the body bounds what it would move (§2.3 stage 5) |
 | "is the gate closed" | `status` | `gate-lock` | T0 | "Last open acked 12:04; no position sensor, can't confirm" (§4.1) |
 | "how much solar today" | `read` | `solar` | T0 | `not_implemented` — no energy engine (`ROADMAP.md:39-43`) |
 | "unlock all doors" | `unlock` | group | T3 | Refused — group fan-out above T1 (§2.3 stage 5) |
