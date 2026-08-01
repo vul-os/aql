@@ -64,10 +64,29 @@
 //    that the audit log is "Exportable as CSV" — both false, and NEITHER
 //    of those two false claims is something this script can catch, because
 //    they live in UI prose with no ✅/🟢/🔨/`k-soon` marker for a human (or
-//    this script) to key off. That page needs a manual fix; this script
-//    will not find the next one like it either. Grep the whole tree for
-//    suspiciously confident feature language periodically — this script is
-//    not a substitute for that.
+//    this script) to key off. This script will not find the next one like
+//    them either. Grep the whole tree for suspiciously confident feature
+//    language periodically — this script is not a substitute for that.
+//
+//    BOTH OF THOSE ARE NOW FIXED, and the sweep has been run. Recorded here
+//    with a date, because "periodically" with no record is an instruction
+//    nobody can tell has been followed:
+//
+//    2026-08-01 — swept src/ for capability absolutes (we verify/encrypt/
+//    guarantee/prevent, fully X, end-to-end encrypted, always/never X,
+//    automatically X, zero-knowledge, military-grade, unhackable, impossible
+//    to). Seven hits, all of them true or explicitly disclaiming:
+//      · Security.tsx now says geofencing IS enforced and is NOT a defence,
+//        which matches geofence.go's four denial reasons inside LogAccess,
+//        and states the position is asserted by the phone and unverified;
+//      · Security.tsx now says "There's no CSV export today" outright;
+//      · Security.tsx's only "end-to-end encrypted" is a refusal to claim it;
+//      · PairingDevice.tsx's "the private key never leaves the device" holds:
+//        identity.go generates a seed with rand.Read, persists it 0600, and
+//        every use of Private() hands it to a signer, never a transmitter;
+//      · the remaining three are code comments, not product copy.
+//    Nothing to fix. The value is the dated record — a clean sweep and a
+//    sweep nobody ran look identical afterwards.
 //
 // 4. Regex evidence can false-positive (a comment mentioning a symbol name)
 //    or false-negative (real code that just doesn't match the chosen

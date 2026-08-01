@@ -880,7 +880,20 @@ export const FEATURES = [
     id: 'csv-export',
     label: 'CSV export of the audit log',
     docStatus: 'planned',
-    docRefs: ['No current README/ARCHITECTURE/site claim ships this; verified absent to guard against re-introduction.'],
+    docRefs: [
+      'No current README/ARCHITECTURE/site claim ships this; verified absent to guard against re-introduction.',
+      // The page that once claimed the log was "Exportable as CSV" now denies
+      // it in as many words. Pinned, because the evidence check below only
+      // catches CSV SHIPPING — it cannot catch the denial being quietly
+      // dropped, and a page that stops saying "there is no CSV export" is one
+      // edit away from implying there is. That is the exact shape of the
+      // original lie.
+      // Quoted WITHOUT the apostrophe on purpose: the page's copy is a
+      // single-quoted JS string, so the file literally contains "There\\'s",
+      // and checkDocRefs compares raw bytes rather than unescaping. The first
+      // version of this ref quoted the rendered sentence and failed.
+      'src/pages/Security.tsx — "no CSV export today"',
+    ],
     evidence: [[
       { root: 'hub/internal', pattern: 'text/csv|ExportCSV|\\.csv"', flags: 'i' },
     ]],
