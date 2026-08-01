@@ -377,9 +377,12 @@ open a gate**, structurally rather than by configuration.
 account-suspended and user-disabled (fail-closed), time windows, geofences,
 cooldown, per-member and per-account rate limits, per-member and per-location
 daily quotas. `close` is never denied — someone who got in must be able to get
-out. Commands are Ed25519-signed envelopes with a nonce and an expiry; the
-controller pins the hub's key at pairing and verifies in a fixed normative order
-before it moves a relay.
+out. Commands are Ed25519-signed envelopes with a nonce and an expiry, canonicalized
+with RFC 8785 (JCS) so both sides sign and verify the same bytes; the controller
+pins the hub's key at pairing and verifies in a fixed normative order before it
+moves a relay. That canonicalizer is **one module** (`jcs/`) imported by hub and
+controller alike — it used to be three hand-maintained copies, and a signature
+scheme is only as good as the agreement about which bytes it covers.
 
 **Signing-key rotation** retains two keys and signs each command with whichever
 key its target controller pins, moving controllers across one `repair` at a time.

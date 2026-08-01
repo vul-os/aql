@@ -80,6 +80,38 @@ export const FEATURES = [
     // Evidence on the package alone would pass for a driver that had quietly
     // grown an actuation path.
   },
+  // ── the canonicalizer, which had no claim at all despite deciding what
+  // every signature in the product covers.
+  //
+  // Found while checking whether fixing one representation of a fact had taught
+  // anything about the others: jcs/ was missing from ARCHITECTURE.md's layout
+  // tree, then from its subsystem table, then unnamed in README's signing
+  // paragraph — the section that says it is for anyone wanting to AUDIT this.
+  // "Ed25519-signed envelopes" without the canonicalization is an incomplete
+  // description: two implementations that serialise differently sign different
+  // bytes over the same object.
+  {
+    id: 'one-canonicalizer',
+    label: 'RFC 8785 canonicalization is ONE shared module, imported by both hub and controller',
+    docStatus: 'shipped',
+    docRefs: [
+      // The quote must be at least 12 characters: checkDocRefs extracts with
+      // /"([^"]{12,})"/, so a shorter one is silently ignored and the ref
+      // checks NOTHING. "one module" was 10 and passed every tamper.
+      'README.md § Under the hood — "a signature scheme is only as good as the agreement"',
+      'ARCHITECTURE.md — the subsystem table row for jcs',
+    ],
+    evidence: [
+      { file: 'jcs/jcs.go', pattern: 'package jcs' },
+      // Both importers, because the claim is not "a canonicalizer exists" — it
+      // is that there is exactly one and both sides use it. The three copies
+      // this replaced each passed a test of the first kind.
+      // Anchored on the version token: a bare 'aql/jcs' is a SUBSTRING of
+      // 'aql/jcsX', so renaming the module out of a go.mod left this green.
+      { file: 'hub/go.mod', pattern: 'aql/jcs v' },
+      { file: 'controller/go.mod', pattern: 'aql/jcs v' },
+    ],
+  },
   // ── the device engine itself, as ARCHITECTURE.md's own repository tree
   // describes it.
   //
@@ -1174,7 +1206,15 @@ export const FEATURES = [
     id: 'controller-key-pinning',
     label: 'Controller pins its paired gateway\'s public key',
     docStatus: 'shipped',
-    docRefs: ['README.md dev table — controller row: "key pinning"', 'controller/internal/state/state.go'],
+    docRefs: [
+      // Was: 'README.md dev table — controller row: "key pinning"'. README has
+      // no dev table and does not contain the phrase "key pinning" anywhere.
+      // Nothing caught it: at 11 characters the quote fell one below
+      // checkDocRefs' 12-char minimum and was silently never extracted, so the
+      // ref pointed at nothing for as long as it existed.
+      'README.md § Safety — "The controller pins your hub\'s key" at pairing and never accepts another',
+      'controller/internal/state/state.go',
+    ],
     evidence: [{ file: 'controller/internal/state/state.go', pattern: 'ErrKeyChangeRefused' }],
   },
   {
