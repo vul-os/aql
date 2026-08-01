@@ -253,6 +253,27 @@ func (s *Server) chatActuate(ctx contextT, body, profileID, source, chatID, conf
 			Reply: channels.ActuationRefused(m.Device.Device.Name, v, "the device did not accept it"),
 		}, true
 	}
+	// A verb that carried a quantity echoes it back. That echo is the member's
+	// only evidence the number was read correctly — "is now updated" reads the
+	// same whether this understood 30 or 3 — and it is the same argument that
+	// keeps a quantity verb off the confirmation route. Refusing a confirmation
+	// for not showing the number and then not showing it on success would be
+	// the two halves disagreeing.
+	//
+	// plan.Args rather than the parsed map, so what is echoed is what the device
+	// GOT rather than what this asked for. Today the two are identical —
+	// Resolve copies the one declared argument and the parser only ever sets
+	// that one — so no test can tell them apart, and swapping them passes.
+	// Said out loud rather than left as an implied property: it is defensive
+	// against Resolve gaining a normalisation (a clamp, a rounding) that would
+	// otherwise be invisible in the reply, and nobody should read the choice as
+	// something the tests hold.
+	for arg, val := range plan.Args {
+		return chatActuationResult{
+			Reply:    channels.ActuationDoneWithValue(m.Device.Device.Name, arg, val),
+			Actuated: true,
+		}, true
+	}
 	return chatActuationResult{
 		Reply:    channels.ActuationDone(m.Device.Device.Name, v),
 		Actuated: true,

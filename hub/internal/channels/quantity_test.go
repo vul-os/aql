@@ -1,6 +1,7 @@
 package channels_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/vul-os/aql/hub/internal/channels"
@@ -59,6 +60,21 @@ func TestOutOfRangeValuesStillParse(t *testing.T) {
 	for _, body := range []string{"dim to 0", "dim to 100", "dim to 5000"} {
 		if _, ok := channels.Quantity(body); !ok {
 			t.Errorf("Quantity(%q) refused — range belongs to the catalogue", body)
+		}
+	}
+}
+
+// The echo renders a number the way a person wrote it. "30.000000" would be
+// technically correct and would read as a machine reporting a different value
+// from the one typed.
+func TestTheValueEchoIsWrittenTheWayAPersonWroteIt(t *testing.T) {
+	for _, c := range []struct {
+		value float64
+		want  string
+	}{{30, "30"}, {21.5, "21.5"}, {0, "0"}, {100, "100"}} {
+		got := channels.ActuationDoneWithValue("Garden Lights", "level", c.value)
+		if !strings.Contains(got, "level is now "+c.want+".") {
+			t.Errorf("ActuationDoneWithValue(%v) = %q, want it to say %q", c.value, got, c.want)
 		}
 	}
 }

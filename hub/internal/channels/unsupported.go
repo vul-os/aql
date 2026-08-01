@@ -2,6 +2,7 @@ package channels
 
 import (
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/vul-os/aql/hub/internal/devices"
@@ -201,6 +202,29 @@ func UnsupportedVerbReplyFor(m DeviceMatch, publicURL string) string {
 // present continuous would be a claim about a thing that has finished.
 func ActuationDone(deviceName string, v devices.Verb) string {
 	return "Done — " + deviceName + " is now " + verbPastTense(v) + "."
+}
+
+// ActuationDoneWithValue reports a device driven with a QUANTITY, echoing it.
+//
+// The echo is not decoration; it is the only evidence the member gets that the
+// number was read correctly. `set` takes a value parsed out of free text
+// (channels.Quantity), and "Done — Garden Lights is now updated" would be the
+// same reply whether this understood 30 or 3. That is the same objection that
+// keeps a quantity verb off the confirmation route — ConfirmationPrompt does
+// not echo the argument either — and it would be inconsistent to refuse a
+// confirmation for not showing the number and then not show it on success.
+//
+// The catalogue's own argument name is used rather than a unit: the catalogue
+// declares `level` and `celsius` and declares no units, and inventing "%" here
+// would be this file asserting something the authority does not say.
+func ActuationDoneWithValue(deviceName string, arg string, value float64) string {
+	return "Done — " + deviceName + " " + arg + " is now " + trimNumber(value) + "."
+}
+
+// trimNumber renders a float the way a person wrote it: 30, not 30.000000, and
+// 21.5 when they meant 21.5.
+func trimNumber(f float64) string {
+	return strconv.FormatFloat(f, 'f', -1, 64)
 }
 
 // ActuationRefused explains why nothing happened, in the terms the member can

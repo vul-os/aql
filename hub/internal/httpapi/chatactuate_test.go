@@ -594,6 +594,16 @@ func TestADimmerTakesALevelFromChat(t *testing.T) {
 	if !res.Actuated {
 		t.Fatalf("a dimmer set did not actuate: %q", res.Reply)
 	}
+	// The echo is the member's only evidence the number was read right: "is now
+	// updated" reads the same whether this understood 30 or 3. It is the same
+	// argument that keeps a quantity verb off the confirmation route, so the
+	// two halves have to agree.
+	if !strings.Contains(res.Reply, "30") {
+		t.Errorf("reply = %q — it does not echo the level, so a misparse is invisible", res.Reply)
+	}
+	if !strings.Contains(res.Reply, "level") {
+		t.Errorf("reply = %q — it does not name what was set", res.Reply)
+	}
 }
 
 // Fail-closed on the quantity, per §3.5, and the refusal says WHICH problem it

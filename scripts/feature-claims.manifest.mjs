@@ -446,6 +446,10 @@ export const FEATURES = [
         },
       ],
       [{ file: 'hub/internal/httpapi/chatactuate_test.go', pattern: 'TestADimmerTakesALevelFromChat' }],
+      // The success reply echoes the level. Without it "is now updated" reads
+      // the same whether the parser understood 30 or 3 — the same objection
+      // that keeps a quantity verb off the confirmation route.
+      [{ root: 'hub/internal/channels', pattern: 'func ActuationDoneWithValue' }],
     ],
   },
   {
