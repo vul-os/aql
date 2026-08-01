@@ -210,6 +210,13 @@ func main() {
 		os.Exit(runVerifyRestore(os.Args[2:]))
 	}
 
+	// `aql-hub gen-data-key` — print a key for AQL_DATA_KEY. hub/README.md asks
+	// an operator for "a base64 32-byte key" and, until this existed, offered no
+	// way to produce one from the product that consumes it.
+	if len(os.Args) > 1 && os.Args[1] == "gen-data-key" {
+		os.Exit(runGenDataKey(os.Args[2:]))
+	}
+
 	if len(os.Args) > 2 && os.Args[1] == "2fa" && os.Args[2] == "disable" {
 		os.Exit(runTwoFactorDisable(os.Args[3:]))
 	}
@@ -1559,8 +1566,16 @@ func loadOrCreateSecret(path string, dataKey []byte) ([]byte, error) {
 // an operator types. Kept beside unknownCommand so the refusal can list them:
 // "unknown command" without the list is a dead end, and this binary's commands
 // are the kind somebody reaches for once a year.
+// Every dispatched subcommand, and the help an unknown one prints.
+//
+// `verify-restore` was dispatched and MISSING from this list, so `aql-hub
+// bogus` told an operator it did not exist. Held by
+// TestEveryDispatchedSubcommandIsInTheHelp now: source→doc, which is the
+// direction this repository keeps finding an omission in.
 var knownCommands = []string{
 	"aql-hub verify-audit [-data DIR]",
+	"aql-hub verify-restore [-data DIR]",
+	"aql-hub gen-data-key",
 	"aql-hub 2fa disable -user NAME -reason TEXT [-data DIR]",
 	"aql-hub energy rebucket -account ID [-tz ZONE] [-dry-run]",
 }

@@ -92,8 +92,12 @@ It opens the database READ-ONLY and does not migrate it: the directory you are
 asking about may be the only copy you have. Run it after every restore, and
 after taking a backup if you want to find out then rather than later.
 
-**Encrypting the signing key at rest.** Set `AQL_DATA_KEY` to a base64 32-byte
-key — it accepts `${file:/run/secrets/aql-data-key}` like any device secret —
+**Encrypting the signing key at rest.** Generate a key with `aql-hub
+gen-data-key` — it prints one base64 32-byte key and writes nothing, so
+`aql-hub gen-data-key > /run/secrets/aql-data-key` puts it where you want it.
+Until that subcommand existed this paragraph asked for a key and left you to
+invent the format. Set `AQL_DATA_KEY` to it — it accepts
+`${file:/run/secrets/aql-data-key}` like any device secret —
 and the hub seals `gateway_ed25519.seed` with AES-256-GCM. A plaintext seed is
 sealed in place the first time it starts with a key set, so turning this on is
 setting a variable rather than running a migration. Leave it unset and nothing
