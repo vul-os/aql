@@ -95,6 +95,11 @@ func WithClock(now func() time.Time) Option {
 // off. When off, a gap's energy is still recorded in the delta table (so a
 // long-period total from deltas stays correct) but is not attributed to any
 // bucket, and the buckets stay QualityPartial.
+//
+// Not called in production either — the hub takes the default. Of the three
+// energy options in that position this is the one whose default is a real
+// product decision rather than a performance number, so it is the one to look
+// at first if the behaviour above is ever questioned.
 func WithCounterGapInterpolation(on bool) Option {
 	return func(s *Store) { s.interpolateCounterGaps = on }
 }

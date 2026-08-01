@@ -935,7 +935,15 @@ hub serves. Adding an entry back is a real decision, not bookkeeping.
       tested (the poller's clock on untimed readings, the per-device read timeout, the
       rollup budget), each confirmed by tampering first. They earn their place; they now
       have callers. UnmarshalJSON is called by encoding/json and is fine.
-      CORRECTION (2026-08-01): "they now have callers" was wrong for one.
+      CORRECTION (2026-08-01): "they now have callers" was wrong for FIVE, and the
+      entry also undercounted — there are four energy options in this position, not
+      three. WithClock, WithReadTimeout, WithRollupBudget and
+      WithCounterGapInterpolation have no PRODUCTION caller; the hub constructs the
+      store and poller and takes every default. Only WithLocation is set in anger.
+      WithClock says "For tests." and is fine; the other three are real tunables with
+      no config surface reaching them, which is a different thing and now says so at
+      each declaration — the missing piece is a config field, not the option.
+      And it was wrong for one more:
       keys.CanonicalizeJSON is reached only from tests, and jcs.go's own comment
       claimed four production callers by naming it alongside Canonicalize, which
       genuinely has them. The comment now separates the two and says why the

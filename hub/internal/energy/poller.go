@@ -133,6 +133,12 @@ func WithInterval(d time.Duration) PollerOption {
 }
 
 // WithReadTimeout bounds one device read.
+//
+// Nothing in production calls this: the hub constructs the poller and takes the
+// default. It is not a test seam like WithClock — the timeout is a real tunable
+// and the tests that set it prove the bounded path works — it is a knob with no
+// surface to turn it from. If a deployment ever needs a different value, the
+// missing piece is a config field, not this function.
 func WithReadTimeout(d time.Duration) PollerOption {
 	return func(p *Poller) {
 		if d > 0 {
@@ -142,6 +148,9 @@ func WithReadTimeout(d time.Duration) PollerOption {
 }
 
 // WithRollupBudget caps hour buckets recomputed per cycle.
+//
+// Same standing as WithReadTimeout above: real tunable, exercised by tests,
+// never set by the hub, no config surface reaching it.
 func WithRollupBudget(n int) PollerOption {
 	return func(p *Poller) { p.rollupBudget = n }
 }
