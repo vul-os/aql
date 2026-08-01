@@ -328,12 +328,17 @@ and none has met physical hardware.
         be tested); the common serial deployment is already reachable through a
         TCP-to-RTU bridge
   - [x] Generic HTTP/webhook
-- [x] ONVIF probe (WS-Discovery) and MQTT bridge scan, reachable as `aql-hub mqtt-scan`
-      since 2026-08-01 — for a while `mqtt.Scan` had no caller at all, so this line was
-      true about the code and false about the product. It reads
-      zigbee2mqtt's retained `bridge/devices` announcement and proposes candidates
-      with their evidence. It writes no config and registers nothing: a capability
-      decides which verbs the engine will route, so that stays a human's call
+- [x] ONVIF probe (WS-Discovery) — reached through the camera driver's `Discover`,
+      which `Registry.Refresh` calls, so it runs as part of the engine rather than as
+      anything an operator invokes
+- [x] MQTT bridge scan — `aql-hub mqtt-scan -device-config FILE` since 2026-08-01.
+      Before that `mqtt.Scan` had no caller anywhere and this line, which used to cover
+      both discoveries in one breath, was true about the code and false about the
+      product. The two are reached in genuinely different ways and saying so in one
+      sentence is what hid it. It reads zigbee2mqtt's retained `bridge/devices`
+      announcement and proposes candidates with their evidence. It writes no config and
+      registers nothing: a capability decides which verbs the engine will route, so that
+      stays a human's call
 - [x] mDNS controller discovery — the controller has advertised `_lintel._tcp` for a
       while and nothing listened; `hub/internal/discovery` is the other half, served at
       `POST /v1/accounts/{id}/discover/controllers`. It pairs nothing: mDNS is
