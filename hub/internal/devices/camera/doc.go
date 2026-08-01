@@ -147,4 +147,24 @@
 // to make the docs say what this package actually is — discovery, reachability
 // and stream-address resolution, with no live view and no recording — not to
 // soften the check.
+//
+// # Accessors with no production caller
+//
+// MediaFlow.Intact, StreamInfo.VideoResolution, Fragmenter.Params and
+// Fragmenter.DecodeTime are exported and nothing outside a test calls them.
+// That is deliberate and worth stating once here rather than four times at the
+// declarations.
+//
+// This pipeline has never received a frame from real hardware — every test
+// drives it with fixtures and an in-process RTSP server — so tests ARE the only
+// caller it has ever had. These four let a test observe what the fragmenter and
+// the flow accounting actually did without exporting the fields themselves,
+// which would let anything write them.
+//
+// The distinction that matters, and the reason this note exists rather than an
+// allowlist entry: an accessor for test observability is a design choice, while
+// a symbol nothing calls because its wiring was forgotten is a defect. Two of
+// the latter were found and deleted elsewhere in hub/ on 2026-08-01. Anyone
+// sweeping for uncalled exports should skip these four and spend the time on
+// something whose absence of a caller is a surprise.
 package camera

@@ -910,7 +910,13 @@ hub serves. Adding an entry back is a real decision, not bookkeeping.
       raw pair because they assert properties of the declaration itself; TextGateVerb
       collapses TextGateIntent's command-vs-QUESTION distinction to a bool, so a rail
       using it would answer "is the gate open" by opening it; GateVerbForCommand is the
-      bare string mapping under SelectionCommandVerb. 24 left, each still
+      bare string mapping under SelectionCommandVerb. Then four in camera/ —
+      MediaFlow.Intact, StreamInfo.VideoResolution, Fragmenter.Params and
+      Fragmenter.DecodeTime — all accessors that let a test observe pipeline state
+      without exporting the fields, which is a design choice rather than a defect and
+      is now said ONCE in camera/doc.go instead of four times at the declarations. That
+      pipeline has never seen hardware, so tests are the only caller it has ever had.
+      20 left, each still
       needing classification one at a time before a guard can
       exist — an allowlist written in bulk is the thing store/'s guard warns against.
       A signing-path symbol sat outside every guard for four commits; see the keys note.
