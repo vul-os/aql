@@ -76,7 +76,7 @@ flowchart LR
         WA["WhatsApp<br/>(Meta Cloud API)"]
         TG["Telegram bot<br/>(webhook)"]
         SL["Slack bot<br/>(Events API / Socket Mode)"]
-        DC["Discord<br/>(not built)"]
+        DC["Discord<br/>(Gateway websocket)"]
     end
 
     subgraph gw ["HUB — one Go binary · SQLite"]

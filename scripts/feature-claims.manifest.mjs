@@ -807,6 +807,12 @@ export const FEATURES = [
     docStatus: 'shipped',
     docRefs: [
       'site/docs/channels.md — the channel table lists Discord as shipped',
+      // ARCHITECTURE.md's rails diagram rendered `Discord (not built)` long
+      // after wireDiscord() was in server.go. It is the FOURTH under-claim
+      // found in that one file this session and the SECOND to hide in a
+      // diagram -- the tree said the device engine was "🔨 not started" the
+      // same way. Prose scans do not read mermaid nodes; a pinned quote does.
+      'ARCHITECTURE.md — the rails diagram: "Discord<br/>(Gateway websocket)"',
     ],
     // Three separate things, because "the file exists" was never the claim: the
     // adapter, the env read that lets an operator turn it on, and the
