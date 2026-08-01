@@ -33,7 +33,7 @@ contract, a device that verifies rather than trusts, and an audit trail you can 
 after the fact.
 
 **The hub** (`hub/`) — one Go binary, SQLite inside, **131 HTTP routes over 31
-migrations, and more than 1,000 tests green** across 19 packages:
+migrations, and more than 1,000 tests green** across 20 packages:
 
 - [x] Accounts, locations, access points, members with roles, invites
 - [x] An **instance-admin** operator seat above every account: one-shot claim

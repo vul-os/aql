@@ -85,6 +85,27 @@ It opens the database READ-ONLY and does not migrate it: the directory you are
 asking about may be the only copy you have. Run it after every restore, and
 after taking a backup if you want to find out then rather than later.
 
+**Encrypting the signing key at rest.** Set `AQL_DATA_KEY` to a base64 32-byte
+key — it accepts `${file:/run/secrets/aql-data-key}` like any device secret —
+and the hub seals `gateway_ed25519.seed` with AES-256-GCM. A plaintext seed is
+sealed in place the first time it starts with a key set, so turning this on is
+setting a variable rather than running a migration. Leave it unset and nothing
+changes.
+
+Be exact about what it buys: it protects the data directory once it has LEFT the
+running host — a stolen disk, a snapshot, a `tar czf`. It does not protect
+against anyone who can read the hub's environment or the key file it points at,
+because the hub must decrypt unattended. There is no passphrase prompt on
+purpose: this software opens gates, and a hub that will not come back after a
+power cut until somebody drives out to it is worse than one whose key root can
+read.
+
+**Losing the data key is losing the hub's identity.** A sealed seed with no key
+REFUSES to start and says so — it never mints a replacement, because a hub no
+paired controller obeys is the outcome this whole design avoids. Keep the key
+somewhere other than the backup it protects, and run `verify-restore`, which
+reports a sealed key with no `AQL_DATA_KEY` in your shell.
+
 **Device secrets.** Any credential in `-device-config` may be a reference instead
 of a value: `${env:NAME}` reads an environment variable, `${file:/path}` reads a
 file and trims the trailing newline every way of making one adds. It applies to

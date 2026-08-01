@@ -287,6 +287,29 @@ export const FEATURES = [
     ],
   },
   {
+    id: 'signing-key-can-be-encrypted-at-rest',
+    label:
+      'AQL_DATA_KEY seals gateway_ed25519.seed with AES-256-GCM, and a sealed seed with no ' +
+      'key REFUSES to start rather than minting a replacement',
+    docStatus: 'shipped',
+    docRefs: ['hub/README.md — "Losing the data key is losing the hub\'s identity"'],
+    evidence: [
+      [{ root: 'hub/internal/sealed', pattern: 'func Seal\\(key, plaintext' }],
+      // The refusal is the load-bearing half: without it a sealed seed fails
+      // hex-decoding and a caller could reach the generate branch.
+      [{ file: 'hub/internal/keys/keys.go', pattern: 'ErrSealedNoKey' }],
+      [
+        {
+          file: 'hub/internal/keys/sealed_test.go',
+          pattern: 'TestASealedSeedWithNoDataKeyRefusesRatherThanMinting',
+        },
+      ],
+      [{ file: 'hub/cmd/hub/main.go', pattern: 'keys.WithDataKey' }],
+      // And the restore check knows about the loss encryption ADDS.
+      [{ file: 'hub/cmd/hub/verifyrestore.go', pattern: 'sealed.IsSealed' }],
+    ],
+  },
+  {
     id: 'verify-restore-checks-a-backup-before-it-is-needed',
     label:
       'aql-hub verify-restore reports the unrecoverable losses in a data directory, ' +

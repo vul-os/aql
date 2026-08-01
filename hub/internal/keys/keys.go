@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/vul-os/aql/hub/internal/sealed"
 )
 
 const keyFile = "gateway_ed25519.seed"
@@ -73,9 +75,44 @@ func RequireExisting(dir string) error {
 	return nil
 }
 
-func Load(dir string) (*Keys, error) {
+// Option configures Load. Variadic so every existing caller — tests, the
+// audit-verify tool, the rotation CLI — keeps working unchanged; each of them
+// wants the unencrypted behaviour and has no business deciding otherwise.
+type Option func(*loadOpts)
+
+type loadOpts struct{ dataKey []byte }
+
+// WithDataKey supplies the key that seals the signing key at rest
+// (internal/sealed). With it, Load decrypts a sealed seed, and SEALS a
+// plaintext one in place on first use so enabling encryption needs no separate
+// migration step.
+func WithDataKey(k []byte) Option { return func(o *loadOpts) { o.dataKey = k } }
+
+// ErrSealedNoKey is a sealed seed with no data key to open it.
+//
+// The single most important error in this package. Without it the sealed file
+// would fail hex-decoding, be reported as "corrupt", and — depending on how a
+// caller reacted — could end at the generate branch, which mints a new identity
+// and orphans every paired controller. Encryption ADDS this failure mode, so it
+// has to add the refusal too.
+var ErrSealedNoKey = errors.New(
+	"the gateway signing key is encrypted and no data key was supplied. Set AQL_DATA_KEY " +
+		"to the key this hub was sealed with. Do NOT delete the file: a hub that mints a " +
+		"replacement is a hub no paired controller will obey")
+
+func Load(dir string, opts ...Option) (*Keys, error) {
+	var o loadOpts
+	for _, fn := range opts {
+		fn(&o)
+	}
 	path := filepath.Join(dir, keyFile)
 	seedHex, err := os.ReadFile(path)
+	if err == nil {
+		seedHex, err = unsealSeed(path, seedHex, o.dataKey)
+		if err != nil {
+			return nil, err
+		}
+	}
 	switch {
 	case err == nil:
 		seed, err := hex.DecodeString(string(seedHex))
@@ -93,7 +130,13 @@ func Load(dir string) (*Keys, error) {
 		if _, err := rand.Read(seed); err != nil {
 			return nil, err
 		}
-		if err := os.WriteFile(path, []byte(hex.EncodeToString(seed)), 0o600); err != nil {
+		body := []byte(hex.EncodeToString(seed))
+		if len(o.dataKey) > 0 {
+			if body, err = sealed.Seal(o.dataKey, body); err != nil {
+				return nil, fmt.Errorf("seal gateway key: %w", err)
+			}
+		}
+		if err := os.WriteFile(path, body, 0o600); err != nil {
 			return nil, fmt.Errorf("persist gateway key: %w", err)
 		}
 		priv := ed25519.NewKeyFromSeed(seed)
@@ -137,4 +180,30 @@ func Verify(pub ed25519.PublicKey, msg []byte, sigB64 string) bool {
 		return false
 	}
 	return ed25519.Verify(pub, msg, sig)
+}
+
+// unsealSeed turns whatever is on disk into plaintext seed bytes.
+//
+// Four cases, and each needs a different answer:
+//
+//   - sealed + key: decrypt.
+//   - sealed + NO key: refuse. Never fall through — see ErrSealedNoKey.
+//   - plaintext + key: decrypt nothing, and SEAL it in place so turning
+//     encryption on is setting a variable rather than running a migration. The
+//     write is best-effort: failing it would take down a hub whose key is
+//     perfectly readable, which trades an outage for a hardening step.
+//   - plaintext + no key: today's behaviour, unchanged.
+func unsealSeed(path string, raw, dataKey []byte) ([]byte, error) {
+	if sealed.IsSealed(raw) {
+		if len(dataKey) == 0 {
+			return nil, ErrSealedNoKey
+		}
+		return sealed.Open(dataKey, raw)
+	}
+	if len(dataKey) > 0 {
+		if body, err := sealed.Seal(dataKey, raw); err == nil {
+			_ = os.WriteFile(path, body, 0o600)
+		}
+	}
+	return raw, nil
 }

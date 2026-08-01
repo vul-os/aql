@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/vul-os/aql/hub/internal/keys"
+	"github.com/vul-os/aql/hub/internal/sealed"
 	"github.com/vul-os/aql/hub/internal/store"
 )
 
@@ -85,6 +86,21 @@ func verifyRestore(dataDir string) (problems []string, checked []string, err err
 	paired, err := st.AnyDevicePaired(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("read devices: %w", err)
+	}
+
+	// A sealed key with no data key to hand is the loss encryption ADDS, so a
+	// restore check has to report it. It is not "missing" — the file is right
+	// there — and calling it that would send an operator hunting for a backup
+	// of something they already have.
+	if raw, err := os.ReadFile(filepath.Join(dataDir, "gateway_ed25519.seed")); err == nil && sealed.IsSealed(raw) {
+		if os.Getenv("AQL_DATA_KEY") == "" {
+			problems = append(problems, "gateway_ed25519.seed is ENCRYPTED and AQL_DATA_KEY "+
+				"is not set in this shell. The file is fine; without its data key the hub "+
+				"cannot start, and the key is not in this directory by design. Check you "+
+				"have it before you need it.")
+		} else {
+			checked = append(checked, "gateway key        present (encrypted; AQL_DATA_KEY is set)")
+		}
 	}
 
 	// The signing key. Absent is fine ONLY for a hub that has never paired —

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/vul-os/aql/hub/internal/keys"
+	"github.com/vul-os/aql/hub/internal/sealed"
 	"github.com/vul-os/aql/hub/internal/store"
 )
 
@@ -222,5 +223,48 @@ func TestVerifyRestoreUsesTheReadOnlyOpener(t *testing.T) {
 		t.Error("verifyRestore uses store.Open, which APPLIES MIGRATIONS to the directory " +
 			"it was asked to inspect — for a backup from an older version that rewrites the " +
 			"only copy the operator has")
+	}
+}
+
+// A sealed key with no data key in the environment is the loss encryption adds,
+// and verify-restore has to name it — the file is present, so "missing" would
+// be the wrong word and would send an operator looking for a backup they
+// already have.
+func TestVerifyRestoreReportsASealedKeyWithNoDataKey(t *testing.T) {
+	dir := pairedHubDir(t)
+	key, err := sealed.NewKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	parsed, err := sealed.ParseKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Seal it the way the hub would.
+	if _, err := keys.Load(dir, keys.WithDataKey(parsed)); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("AQL_DATA_KEY", "")
+	problems, _, err := verifyRestore(dir)
+	if err != nil {
+		t.Fatalf("verifyRestore: %v", err)
+	}
+	if len(problems) != 1 || !strings.Contains(problems[0], "ENCRYPTED") {
+		t.Fatalf("problems = %v, want one naming the encrypted key", problems)
+	}
+
+	// With the key to hand it is not a problem, and the pass says so rather
+	// than staying silent about a file it did examine.
+	t.Setenv("AQL_DATA_KEY", key)
+	problems, checked, err := verifyRestore(dir)
+	if err != nil {
+		t.Fatalf("verifyRestore: %v", err)
+	}
+	if len(problems) != 0 {
+		t.Fatalf("problems with the data key set: %v", problems)
+	}
+	if !strings.Contains(strings.Join(checked, "\n"), "encrypted") {
+		t.Errorf("the pass does not mention the encrypted key: %v", checked)
 	}
 }

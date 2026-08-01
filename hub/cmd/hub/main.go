@@ -42,6 +42,8 @@
 //	AQL_DEVICE_REFRESH_INTERVAL       how often every driver is re-discovered (default 5m)
 //	AQL_ENERGY_INTERVAL               meter polling interval (default 60s)
 //	AQL_CLOCK_SYNC_INTERVAL           controller clock-proof ping interval (default 6h)
+//	AQL_DATA_KEY                      base64 32-byte key that seals the signing key at
+//	                                  rest; accepts ${file:/path} and ${env:NAME}
 //	AQL_ENERGY_SAMPLE_RETENTION       how long raw meter samples are kept
 //	                                  (default 720h / 30d; 0 keeps forever)
 //	AQL_ENERGY_TZ                     IANA timezone rollup buckets are anchored to
@@ -113,6 +115,7 @@ import (
 	"github.com/vul-os/aql/hub/internal/httpapi"
 	"github.com/vul-os/aql/hub/internal/keys"
 	"github.com/vul-os/aql/hub/internal/recording"
+	"github.com/vul-os/aql/hub/internal/sealed"
 	"github.com/vul-os/aql/hub/internal/secretref"
 	"github.com/vul-os/aql/hub/internal/store"
 )
@@ -670,7 +673,24 @@ func buildHub(cfg config, log *slog.Logger) (*hub, error) {
 		}
 	}
 
-	ks, err := keys.Load(cfg.dataDir)
+	// The data key that seals the signing key at rest, if the operator set one.
+	// Resolved through secretref so it can be `${file:/run/secrets/aql-data-key}`
+	// — the same indirection device credentials use, and the only shape that
+	// works in a container.
+	var dataKey []byte
+	if raw := envOr("AQL_DATA_KEY", ""); raw != "" {
+		resolved, err := secretref.Resolve("AQL_DATA_KEY", raw)
+		if err != nil {
+			st.Close()
+			return nil, err
+		}
+		if dataKey, err = sealed.ParseKey(resolved); err != nil {
+			st.Close()
+			return nil, err
+		}
+	}
+
+	ks, err := keys.Load(cfg.dataDir, keys.WithDataKey(dataKey))
 	if err != nil {
 		st.Close()
 		return nil, fmt.Errorf("keys: %w", err)
