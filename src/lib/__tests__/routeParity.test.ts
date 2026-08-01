@@ -230,6 +230,15 @@ const NON_CONSOLE_ROUTES: Array<{ method: string; path: string; reason: string }
     reason: 'no operator UI yet — a window is inert until step-up exists; see CHAT-COMMANDS.md §3.4' },
   { method: 'POST', path: '/v1/accounts/{id}/t4-windows/{windowID}/disarm',
     reason: 'no operator UI yet — a window is inert until step-up exists; see CHAT-COMMANDS.md §3.4' },
+  // The approval screen. T4 over chat now works end to end on the hub — a chat
+  // request records an intent and the decide route is the only place it ever
+  // actuates — but no console SCREEN reaches it yet, so today the flow is
+  // exercised by tests and by an API client rather than by a person. These two
+  // entries are what a console page has to delete.
+  { method: 'GET', path: '/v1/accounts/{id}/stepup-intents',
+    reason: 'no approval screen yet — the hub-side flow is complete; see CHAT-COMMANDS.md §3.4' },
+  { method: 'POST', path: '/v1/accounts/{id}/stepup-intents/{intentID}/decide',
+    reason: 'no approval screen yet — the hub-side flow is complete; see CHAT-COMMANDS.md §3.4' },
   // The console DOES reach this — Footage.tsx puts it in a <video src> — but a
   // media element carries no method for the AST extraction above to find, and
   // api.cameraClipURL builds a URL rather than calling apiFetch. Listed here

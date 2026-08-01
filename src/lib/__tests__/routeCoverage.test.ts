@@ -80,6 +80,8 @@ const NO_CLIENT_NEEDED = new Map<string, string>([
   ['GET /v1/accounts/{param}/t4-windows', 'PENDING — no operator UI yet; see CHAT-COMMANDS.md §3.4'],
   ['POST /v1/accounts/{param}/t4-windows', 'PENDING — no operator UI yet; see CHAT-COMMANDS.md §3.4'],
   ['POST /v1/accounts/{param}/t4-windows/{param}/disarm', 'PENDING — no operator UI yet; see CHAT-COMMANDS.md §3.4'],
+  ['GET /v1/accounts/{param}/stepup-intents', 'PENDING — no operator UI yet; see CHAT-COMMANDS.md §3.4'],
+  ['POST /v1/accounts/{param}/stepup-intents/{param}/decide', 'PENDING — no operator UI yet; see CHAT-COMMANDS.md §3.4'],
 
   // Machine-to-machine and liveness.
   ['GET /health', 'liveness probe; the console uses it only through testGatewayUrl'],

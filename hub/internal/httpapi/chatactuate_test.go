@@ -122,8 +122,13 @@ func TestAHazardousVerbIsRefusedFromChat(t *testing.T) {
 	if res.Actuated {
 		t.Fatal("chat resumed a mower's blades")
 	}
-	if !strings.Contains(res.Reply, "hazardous-motion") {
-		t.Errorf("refusal does not name the tier: %q", res.Reply)
+	// The refusal used to name the TIER, because the tier ceiling was the only
+	// thing standing here. It now names the missing ARMED WINDOW, which is the
+	// first of §3.3's four T4 requirements to fail on a hub where no operator
+	// has armed anything — a more actionable answer, and the one the member can
+	// do something about.
+	if !strings.Contains(res.Reply, "armed") {
+		t.Errorf("refusal does not name what is missing: %q", res.Reply)
 	}
 	if !strings.Contains(res.Reply, "console") {
 		t.Errorf("refusal does not say where it CAN be done: %q", res.Reply)
@@ -173,10 +178,10 @@ func TestAConfirmationDoesNotUnlockHazardousMotion(t *testing.T) {
 	e := actuationServer(t)
 	res, _ := e.act(t, "resume the mower", devices.VerbResume)
 	if strings.Contains(res.Reply, "send this back") {
-		t.Fatal("a T4 verb was offered a confirmation")
+		t.Fatal("a T4 verb was offered a confirmation before the window was checked")
 	}
-	if !strings.Contains(res.Reply, "hazardous-motion") {
-		t.Errorf("refusal does not name the tier: %q", res.Reply)
+	if !strings.Contains(res.Reply, "armed") {
+		t.Errorf("refusal does not name what is missing: %q", res.Reply)
 	}
 	// Even holding a valid token for something else, T4 does not open. Mint one
 	// against the cleaning bot, then present it at the mower.
@@ -300,11 +305,27 @@ func tokenFrom(t *testing.T, reply string) string {
 	return tok
 }
 
-// `start` is refused earlier still: it is not a verb chat sends at all.
+// `start` is not a verb chat SENDS, and that is now a stronger statement than
+// "chat ignores it".
+//
+// Chat will take a REQUEST for `start` — chatSendableVerbs still does not carry
+// it, and chatRequestT4 never calls ExecutePlan. The two are different
+// questions: may chat send this (no, at any tier, ever) versus may chat record
+// that someone asked (yes, once four independent checks hold).
+//
+// Asserting on the AUDIT rather than on `handled` is the point. `handled` only
+// says a reply was produced; the audit says whether a mower moved.
 func TestStartIsNotAVerbChatSends(t *testing.T) {
 	e := actuationServer(t)
-	if _, handled := e.act(t, "start the mower", devices.VerbStart); handled {
-		t.Error("chat claimed to handle `start`")
+	res, _ := e.act(t, "start the mower", devices.VerbStart)
+	if res.Actuated {
+		t.Error("chat actuated `start`")
+	}
+	if n := e.commands(t, "start"); n != 0 {
+		t.Errorf("chat sent `start` to a mower: %d audited rows", n)
+	}
+	if chatSendableVerbs[devices.VerbStart] {
+		t.Error("`start` is in chatSendableVerbs — chat may ask for it, never send it")
 	}
 }
 

@@ -204,21 +204,11 @@ func (s *Store) DisarmT4Window(ctx context.Context, accountID, id, byUserID stri
 	return n > 0, err
 }
 
-// The CONSUME half is deliberately not here yet.
+// The CONSUME half lives in stepup.go, not here.
 //
-// TryConsumeT4Window and RefundT4WindowUse were written alongside this file --
-// an atomic `UPDATE ... RETURNING` claim so a use cap holds under the duplicate
-// delivery chat rails produce, and a refund with a max(..., 0) floor. They were
-// then removed before commit, because their only caller is the chat T4 path and
-// that path refuses every T4 verb today.
-//
-// The store's reachability guard is what forced the issue, and it was right to.
-// Its rule: a method reachable only from tests is either an exception with a
-// durable reason, or unfinished work -- and "we never finished wiring it up" is
-// explicitly not a reason. Every previous instance it caught was a feature that
-// did not work while its tests passed, because the code was correct and never
-// executed.
-//
-// So what remains here is the half that has a caller: an operator can arm a
-// window, see it, and close it. Nothing consumes one. That is a record, not a
-// permission, and the routes in httpapi/t4windows.go say so.
+// TryConsumeT4Window, AnyLiveT4Window and RefundT4WindowUse are next to their
+// only caller: a window is spent at the moment an approved step-up intent
+// actuates, and nowhere else. They were written with this file and removed
+// before its commit, because at that point nothing in production called them --
+// the store's reachability guard refuses code that runs only from tests, and it
+// was right to. They came back when the caller did.

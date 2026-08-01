@@ -32,7 +32,7 @@ reference for how every other device kind should eventually work: a versioned wi
 contract, a device that verifies rather than trusts, and an audit trail you can check
 after the fact.
 
-**The hub** (`hub/`) — one Go binary, SQLite inside, **134 HTTP routes over 32
+**The hub** (`hub/`) — one Go binary, SQLite inside, **136 HTTP routes over 33
 migrations, and more than 1,000 tests green** across 20 packages:
 
 - [x] Accounts, locations, access points, members with roles, invites
@@ -533,22 +533,20 @@ and none has met physical hardware.
       lamps" fans out; "turn off the shed lamps" still gets the picker, because a plural
       noun is how people name a single fixture. Rules and reasoning in `chatzone.go` and
       docs/CHAT-COMMANDS.md §2.3 stage 5
-- [ ] T4 over chat. **The operator-armed window half is built** (migration 0033,
-      `store/t4window.go`, three admin-only routes): an admin can arm a window for one
-      exact `(device_key, verb)` for up to four hours, see it, and close it. Expiry is
-      DERIVED from the timestamps rather than written back, so there is no sweeper whose
-      failure would turn every expired window live. **It grants nothing yet** — nothing
-      consumes a window, no console screen reaches the routes, and every T4 verb is still
-      refused over chat. The atomic claim and its refund were written and then REMOVED
-      before commit, because their only caller is the chat T4 path: the store's
-      reachability guard refuses code that runs only in tests, and it was right to
-- [ ] Step-up on a second rail — the remaining T4 blocker, and the harder half. The
-      console's TOTP (`httpapi/twofactor.go`) is a second FACTOR on the same rail, not a
-      second RAIL: the point of §3.3's T4 requirement is that compromising the chat
-      account alone must not be enough, and a code typed into the same chat thread does
-      not establish that. Until this lands the window routes stay UI-less on purpose — a
-      console control that appeared to grant a hazardous permission, while nothing
-      consults what it grants, is worse than no control T4 needs step-up on a second rail (§3.4) and an operator-armed time window;
+- [x] **T4 over chat works end to end on the hub, and a chat message still never moves
+      anything.** Four independent checks (`httpapi/chatstepup.go`): the operator role, a
+      live operator-armed window (migration 0033 — READ, never spent, so asking cannot
+      exhaust it), the existing chat-side confirmation, and an intent recorded in migration
+      0034. The device moves in `httpapi/stepupapi.go`, on the CONSOLE rail, and nowhere
+      else — which is what makes it step-up on a second rail rather than a second factor:
+      someone holding the member's WhatsApp can ask, and cannot approve. The approval
+      claims the intent with one conditional `UPDATE … RETURNING` and commits before the
+      device is touched, so two tabs pressing approve actuate once and a hub that dies
+      mid-command cannot leave the same command approvable again. The audit separates the
+      request from the actuation and attributes the actuation to `console`
+- [ ] An approval SCREEN in the console. The routes exist and the flow is complete on the
+      hub, but no page reaches them, so today it is driven by tests and an API client
+      rather than by a person. `routeCoverage` and `routeParity` both name it T4 needs step-up on a second rail (§3.4) and an operator-armed time window;
       neither exists, and a confirmation is not a substitute for either. Of §4.2's two
       once-unbuilt queries, **"how much solar today" is built** — one number per source for
       one day, which rule 3 permits where a curve would be the appliance fingerprint §4.3

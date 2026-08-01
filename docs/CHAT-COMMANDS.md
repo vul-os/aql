@@ -727,14 +727,50 @@ a confirmation, AND step-up on a different rail, independently. A window makes a
 T4 verb *eligible to be considered*; every other check still runs. Nothing in
 `t4window.go` executes anything or knows what a device is.
 
-**What is still missing, and why T4 stays refused.** No console route arms a
-window yet, and there is no step-up on a second rail: the console's TOTP
-(`httpapi/twofactor.go`) is a second FACTOR on the same rail, not a second
-RAIL — the point of the T4 requirement is that compromising the chat account
-alone must not be enough, and a code typed into the same chat thread does not
-establish that. Until both land, `chatSendableVerbs` and `chatTierCeiling` keep
-every T4 verb out, and this section describes a mechanism rather than a
-behaviour.
+**Step-up on a second rail — built, and this is what it is.** A T4 verb reaching
+chat does NOT actuate. Four requirements are checked independently, in this
+order (`httpapi/chatstepup.go`):
+
+1. the sender holds an **operator role** — checked before the window is looked
+   up, so a member without it learns nothing about what is armed;
+2. a **window is live** for that exact `(device_key, verb)` — READ, never spent,
+   because asking must not cost a use;
+3. the member holds a **chat-side confirmation** — the existing
+   `chat_confirmations` exchange, unchanged;
+4. an **intent is recorded** (`store/migrations/0034_chat_stepup_intents.sql`) and the
+   reply says plainly that nothing has moved and where to approve it.
+
+The device moves in `httpapi/stepupapi.go`, on the console rail, and nowhere
+else. That is the whole point: the console's TOTP is a second FACTOR on the same
+rail and would not satisfy this — a code typed into the same chat thread travels
+the same path as the command, so whoever controls the chat account controls both
+halves. An approval that must happen in an authenticated console session is a
+different path with a different credential. **Someone holding the member's
+WhatsApp can ask. They cannot approve.**
+
+The approval claims the intent with one conditional `UPDATE … RETURNING`, so two
+console tabs pressing approve produce one actuation and one conflict. The claim
+commits BEFORE the device is touched — sharing a transaction would let a hub
+that died mid-command roll back to `pending` and allow the same command to be
+approved again after it had already gone out. The window is spent after the
+claim and refunded if the device refuses, and the role is re-checked at approval
+because it may have been removed since the request.
+
+The audit records the request and the actuation as separate entries, and the
+actuation is attributed to **console**: a row saying `telegram` drove a mower
+would say the thing this design exists to prevent.
+
+`chatSendableVerbs` still does not carry a T4 verb, and never will — "may chat
+SEND this" stays no at every tier. `chatT4Verbs` answers the different question
+of what chat may take a REQUEST for, currently `start` and `resume`.
+
+**What is still missing.** No console SCREEN reaches the approval routes, so
+today the flow is driven by tests and an API client rather than by a person; both
+`routeCoverage` and `routeParity` carry entries naming that. A T4 verb taking a
+VALUE is out of scope — the number would have to be echoed in the approval and
+re-checked at execution — and nothing tells the chat rail when the command
+finally runs, because sending an unsolicited message back down a rail a member
+may share with a household is a §4 disclosure decision that has not been made.
 
 ### 3.5 The fail-closed rule
 

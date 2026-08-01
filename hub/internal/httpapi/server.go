@@ -408,6 +408,11 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("POST /v1/accounts/{id}/t4-windows", s.requireAuth(s.handleT4WindowArm))
 	mux.Handle("POST /v1/accounts/{id}/t4-windows/{windowID}/disarm", s.requireAuth(s.handleT4WindowDisarm))
 
+	// T4 step-up on the console rail. The decide route is the ONLY place a T4
+	// verb asked for over chat ever actuates — see stepupapi.go.
+	mux.Handle("GET /v1/accounts/{id}/stepup-intents", s.requireAuth(s.handleStepUpIntentsList))
+	mux.Handle("POST /v1/accounts/{id}/stepup-intents/{intentID}/decide", s.requireAuth(s.handleStepUpIntentDecide))
+
 	// Geofence rules (see geofence.go): an optional radius around a door or a
 	// site, outside which an open is refused. Writes are admin-only; the list
 	// is readable by ANY member, because a fence binds everyone identically

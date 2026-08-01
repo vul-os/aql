@@ -34,7 +34,7 @@ exist and which are design intent. The condensed operator-facing tour is
 
 | Layer | Status |
 | --- | --- |
-| Hub (`hub/`) — open path, console, API, device hub, audit | **Built.** 134 HTTP routes, 1,380 Go test functions green across 20 packages |
+| Hub (`hub/`) — open path, console, API, device hub, audit | **Built.** 136 HTTP routes, 1,389 Go test functions green across 20 packages |
 | **Access module** — the first device kind wired end to end | **Built.** Signed commands, pinned-key controller, offline grants, tamper-evident audit |
 | Controller agent (`controller/`) — pairing, signed commands, grants, events | **Built.** 192 Go test functions green. GPIO relay driver and BLE radio are **not** |
 | Wire contracts (`proto/`) | **Built.** 83 conformance vectors, 118 checks, consumed by both sides |
@@ -133,7 +133,7 @@ ports.
 aql/
 ├── hub/          # 🟢 the hub: Go, the whole product server (auth, open path, device hub, admin)
 │                 #    …plus channels/, the transitional chat adapters moving to Ephor (§3a)
-│   └── migrations/   # SQLite schema, clean folded baseline (32 migrations, 57 tables)
+│   └── migrations/   # SQLite schema, clean folded baseline (33 migrations, 58 tables)
 ├── controller/   # 🟢 reference gate device agent (own Go module); GPIO/BLE need real hardware
 ├── e2e/          # 🟢 cross-module suite, real hub + controller binaries over the wire
 ├── proto/        # 🟢 pairing · commands · grants · events contracts (+ vectors/ fixtures)

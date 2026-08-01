@@ -150,15 +150,24 @@ func (s *Server) chatActuate(ctx contextT, body, profileID, source, chatID, conf
 	if reg == nil {
 		return chatActuationResult{}, false
 	}
+	fleet := s.chatFleetFor(ctx, profileID)
+	if len(fleet) == 0 {
+		return chatActuationResult{}, false
+	}
+
+	// T4 first, and it does NOT go through the rest of this function. A
+	// hazardous verb is never sent from here at any tier: chatRequestT4 records
+	// a request and the device moves only when the console approves it. Placed
+	// before the sendable-verb gate because `start` is deliberately absent from
+	// chatSendableVerbs — chat may ask for it, and may not send it.
+	if res, handled := s.chatRequestT4(ctx, body, profileID, source, chatID, confirmToken, v, fleet); handled {
+		return res, true
+	}
+
 	if !chatSendableVerbs[v] {
 		// Not refused here — the caller's existing refusal already explains
 		// that chat does not do this, and duplicating that copy would put two
 		// wordings of the same refusal in the product.
-		return chatActuationResult{}, false
-	}
-
-	fleet := s.chatFleetFor(ctx, profileID)
-	if len(fleet) == 0 {
 		return chatActuationResult{}, false
 	}
 
@@ -351,13 +360,32 @@ func (s *Server) confirmedOrPrompt(
 	ctx contextT, plan devices.Plan, m channels.DeviceMatch, v devices.Verb,
 	profileID, source, chatID, confirmToken string,
 ) (chatActuationResult, bool) {
-	name := m.Device.Device.Name
 	if plan.Tier > chatConfirmedTierCeiling {
 		return chatActuationResult{
-			Reply: channels.ActuationOutOfTier(name, v, plan.Tier.String(), s.channelPublicURL()),
+			Reply: channels.ActuationOutOfTier(
+				m.Device.Device.Name, v, plan.Tier.String(), s.channelPublicURL()),
 		}, false
 	}
+	return s.confirmationHeld(ctx, m, v, profileID, source, chatID, confirmToken)
+}
 
+// confirmationHeld is the confirmation exchange itself, with NO tier ceiling of
+// its own.
+//
+// Split out of confirmedOrPrompt because T4 needs the same exchange and must not
+// go through that function's T2 ceiling — chatstepup.go asks for a confirmation
+// on a verb the confirmed ceiling would refuse, and then still refuses to send
+// it. The ceiling stays where it was, in the caller that owns it; duplicating
+// the mint/redeem/mismatch/counter sequence into a second copy is how the two
+// would eventually disagree about what a valid confirmation is.
+//
+// Returns ok=true only when the caller holds a VALID, MATCHING, unspent
+// confirmation for this exact (device, verb).
+func (s *Server) confirmationHeld(
+	ctx contextT, m channels.DeviceMatch, v devices.Verb,
+	profileID, source, chatID, confirmToken string,
+) (chatActuationResult, bool) {
+	name := m.Device.Device.Name
 	want := store.IntentHash(m.Device.Key, string(v), nil)
 	subject := "profile:" + profileID
 
