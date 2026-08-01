@@ -327,6 +327,21 @@ export const FEATURES = [
     ],
   },
   {
+    id: 'tamper-harness-refuses-unearned-verdicts',
+    label:
+      'scripts/tamper.sh distinguishes CAUGHT from NOT CAUGHT from INVALID, so a tamper ' +
+      'that never applied cannot read as a working guard',
+    docStatus: 'shipped',
+    docRefs: ['hub/README.md — "Proving a test can fail"'],
+    evidence: [
+      [{ file: 'scripts/tamper.sh', pattern: 'INVALID  — the tampered tree does not compile' }],
+      // The three invalid cases are the point; a harness that only reported
+      // pass/fail would repeat the mistake it exists to prevent.
+      [{ file: 'scripts/tamper.sh', pattern: 'the replacement produced an identical file' }],
+      [{ file: 'scripts/tamper.sh', pattern: 'the text appears' }],
+    ],
+  },
+  {
     id: 'verify-restore-checks-a-backup-before-it-is-needed',
     label:
       'aql-hub verify-restore reports the unrecoverable losses in a data directory, ' +

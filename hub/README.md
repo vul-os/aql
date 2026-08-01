@@ -71,6 +71,13 @@ number formatting is rejected rather than implemented — envelopes only carry
 integers and strings. Full detail, including where the TypeScript and
 JavaScript implementations diverge from Go: [`../proto/JCS-PROFILE.md`](../proto/JCS-PROFILE.md).
 
+**Proving a test can fail.** `scripts/tamper.sh FILE OLD NEW -- go test ./pkg/`
+breaks something on purpose and reports whether a test noticed. It refuses to
+give a verdict it has not earned: `CAUGHT`, `NOT CAUGHT` (the guard is blind),
+or `INVALID` when the tamper did not apply, changed nothing, or did not compile
+— which are the three ways a hand-run tamper quietly reports success while
+testing nothing. The file is restored on any exit, including Ctrl-C.
+
 **Checking a backup before you need it.** `aql-hub verify-restore -data DIR`
 answers "can this directory start a hub without losing anything", from the copy,
 without starting a server. It reports the two losses that are unrecoverable
