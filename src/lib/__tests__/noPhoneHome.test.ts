@@ -47,7 +47,38 @@ const ALLOWED: Record<string, string> = {
   'discord.com': 'Discord chat rail — runs only with an operator-configured token',
 };
 
-/** Every non-test .go file in the two shipped modules. */
+/**
+ * The roots that make up the shipped binaries.
+ *
+ * Named as a constant so each can be asserted SEPARATELY. The total-file floor
+ * below cannot protect them: hub/ and controller/ alone clear it, so dropping
+ * src-tauri/src from this list left every test green — verified by tampering,
+ * which is the only reason it is a list rather than an inline literal.
+ *
+ * A global count says the walk found something. It says nothing about WHICH
+ * subject it found, and a guard that stops looking at one binary is exactly as
+ * quiet as one that stops looking at all of them.
+ */
+const SHIPPED_ROOTS = [
+  'hub/internal',
+  'hub/cmd',
+  'controller/internal',
+  'controller/cmd',
+  'src-tauri/src',
+] as const;
+
+/**
+ * Every non-test source file in the shipped binaries.
+ *
+ * THREE binaries, not two. This walked hub/ and controller/ and called them
+ * "the two shipped binaries", but src-tauri/ is bundled as a desktop app
+ * (tauri.conf.json's productName is "Aql") and reaches users' machines the same
+ * way. A host compiled into its Rust would have shipped with the guard green
+ * and README still saying no telemetry.
+ *
+ * It is clean today — main.rs contains no external host at all — which is the
+ * cheapest moment to include it, because the rule starts life satisfied.
+ */
 function shippedGoFiles(): string[] {
   const out: string[] = [];
   const walk = (dir: string) => {
@@ -58,11 +89,15 @@ function shippedGoFiles(): string[] {
         walk(full);
         continue;
       }
-      if (!entry.endsWith('.go') || entry.endsWith('_test.go')) continue;
+      const isGo = entry.endsWith('.go') && !entry.endsWith('_test.go');
+      // Rust string literals are quoted the same way, so the host pattern below
+      // reads them without change.
+      const isRust = entry.endsWith('.rs');
+      if (!isGo && !isRust) continue;
       out.push(full);
     }
   };
-  for (const d of ['hub/internal', 'hub/cmd', 'controller/internal', 'controller/cmd']) {
+  for (const d of SHIPPED_ROOTS) {
     walk(resolve(root, d));
   }
   return out;
@@ -72,7 +107,35 @@ describe('no phone-home', () => {
   it('every hard-coded external host in the shipped binaries is a reviewed one', () => {
     const files = shippedGoFiles();
     // A walker that found nothing would pass forever.
-    expect(files.length, 'no Go source found — the module layout moved').toBeGreaterThan(50);
+    expect(files.length, 'no source found — the module layout moved').toBeGreaterThan(50);
+    // The LIST itself, against a fixed expectation.
+    //
+    // Iterating SHIPPED_ROOTS to check SHIPPED_ROOTS is self-referential:
+    // deleting an entry deletes its own check, so both "drop src-tauri" and
+    // "drop controller/internal" passed. A guard cannot derive what it should
+    // cover from the thing it is guarding — verified by tampering, twice, after
+    // the per-root loop below was supposed to have fixed exactly that.
+    for (const required of [
+      'hub/internal',
+      'hub/cmd',
+      'controller/internal',
+      'controller/cmd',
+      'src-tauri/src',
+    ]) {
+      expect(
+        SHIPPED_ROOTS as readonly string[],
+        `${required} is no longer scanned — that binary ships to users unchecked`,
+      ).toContain(required);
+    }
+
+    // And each must actually have contributed, because the total above is
+    // satisfied by hub/ alone.
+    for (const r of SHIPPED_ROOTS) {
+      expect(
+        files.filter((f) => f.startsWith(resolve(root, r))).length,
+        `${r} contributed no files — that binary is no longer being scanned`,
+      ).toBeGreaterThan(0);
+    }
 
     const found: string[] = [];
     for (const file of files) {
