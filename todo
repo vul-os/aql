@@ -832,6 +832,24 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] The audit chain cannot see its own TAIL being deleted, and four documents said
+      the ceiling was the expensive attack. README/SECURITY/ARCHITECTURE and
+      audithash.go's header all described the honest limit as "edits a row and
+      recomputes every hash forward" — true, and it reads as "the cheap attacks are
+      caught". They are not: deleting the most RECENT rows needs no hash work at all,
+      every surviving row still points at its true predecessor, and the walk returns
+      OK. Measured before writing anything: 5 rows -> delete 2 -> OK=true,
+      RowsChecked 5->3. Middle deletes ARE caught (prev_hash mismatch).
+      Nothing inside the file can fix it — an anchor beside the rows is editable by
+      whoever edited the rows — so the verify result now carries Head, the CLI prints
+      `(N rows, head <64 hex>)`, and GET /v1/admin/audit/verify returns it. A count
+      alone is NOT an anchor: ordinary activity refills it. Docs now say all of this.
+      TWO of my own tamper runs were worthless before they were useful: the first
+      used `go build` as the detector for a missing PRINT (of course it passed), and
+      the honest re-run showed NOT CAUGHT — no test asserted the CLI prints the head,
+      while three documents had just started telling operators to record it. Added
+      that test; the tamper is caught now, as is making both chains share a genesis.
+
 - [x] Fixed the name-based scans' per-site subtraction in BOTH modules, which is the
       bug that hid four symbols from the hub's sweep: it recorded one declaring file
       per name and discounted the `func X(` line only there, so a second declaration

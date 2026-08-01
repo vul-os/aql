@@ -358,7 +358,14 @@ func runVerifyAudit(args []string) int {
 	ok := true
 	for _, res := range results {
 		if res.OK {
-			fmt.Printf("%-16s OK   (%d rows)\n", res.Table, res.RowsChecked)
+			// The head is printed because the chain cannot see its own tail
+			// being cut off: deleting the most recent rows leaves every
+			// remaining row pointing at its true predecessor, so the walk finds
+			// nothing wrong. Recording (rows, head) somewhere this box does not
+			// control is what turns that into something noticeable — and the
+			// head is the half that matters, since ordinary activity refills a
+			// row count but cannot reproduce a hash for history that is gone.
+			fmt.Printf("%-16s OK   (%d rows, head %s)\n", res.Table, res.RowsChecked, res.Head)
 			continue
 		}
 		ok = false

@@ -34,7 +34,7 @@ exist and which are design intent. The condensed operator-facing tour is
 
 | Layer | Status |
 | --- | --- |
-| Hub (`hub/`) — open path, console, API, device hub, audit | **Built.** 136 HTTP routes, 1,402 Go test functions green across 20 packages |
+| Hub (`hub/`) — open path, console, API, device hub, audit | **Built.** 136 HTTP routes, 1,404 Go test functions green across 20 packages |
 | **Access module** — the first device kind wired end to end | **Built.** Signed commands, pinned-key controller, offline grants, tamper-evident audit |
 | Controller agent (`controller/`) — pairing, signed commands, grants, events | **Built.** 194 Go test functions green. The GPIO relay driver and the BLE GATT peripheral are **written and unvalidated**: the relay implements uAPI v2 line handles and a pulse state machine, the peripheral cross-compiles for Linux (BlueZ) and Windows (WinRT) behind `-tags ble`, and neither has ever driven real hardware. Written, not proven — those are different claims and this row used to make only the pessimistic one |
 | Wire contracts (`proto/`) | **Built.** 83 conformance vectors, 118 checks, consumed by both sides |
@@ -354,7 +354,11 @@ Both are stated in code, and both are load-bearing:
 
 And the audit chain's honest ceiling: it makes tampering *detectable*, not impossible. An
 attacker with filesystem access who edits a row and recomputes every downstream hash
-leaves a clean-looking chain. The test suite proves that boundary directly.
+leaves a clean-looking chain — and so does one who just deletes the last few rows, which
+takes no hash work at all. Both boundaries are pinned by tests rather than described:
+`TestHashChainTamperRecomputingDownstreamIsUndetected` and
+`TestTruncatingTheMostRecentRowsIsNotVisibleToTheChain`. The verifier reports the row
+count and chain head so the truncation case is at least anchorable off the box.
 
 ---
 

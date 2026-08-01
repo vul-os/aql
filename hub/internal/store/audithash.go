@@ -19,6 +19,22 @@ package store
 // `aql-hub verify-audit` CLI subcommand). It is a detection control, not a
 // prevention control, and it does not claim otherwise.
 //
+// AND THE CHEAP ATTACK, which the paragraph above used to imply was covered:
+// deleting the most RECENT rows is invisible to the walk. Every surviving row
+// still points at its true predecessor, so a truncated chain verifies. That
+// costs an attacker no hash work whatsoever — it is the opposite end of the
+// effort scale from the recompute case, and it is what someone who just opened
+// a gate would actually do. Deleting from the MIDDLE is detected, because the
+// next row's prev_hash no longer matches.
+//
+// Nothing stored beside the rows can fix this: an anchor in the same file is
+// editable by whoever edited the file. What makes it detectable is an anchor
+// kept elsewhere, so the verify result carries Head alongside RowsChecked and
+// both the CLI and GET /v1/admin/audit/verify print them. A count alone is not
+// an anchor — normal activity refills it — but a head cannot be reproduced for
+// history that no longer exists.
+// TestTruncatingTheMostRecentRowsIsNotVisibleToTheChain pins this.
+//
 // WHAT'S COVERED vs NOT — access_logs:
 //   COVERED:     id, command, source, lat, long, distance_m, success, error,
 //                ts, created_at, reconciles_log_id, and the four *_snapshot
@@ -444,6 +460,25 @@ type VerifyHashChainResult struct {
 	RowsChecked int64
 	OK          bool
 	Break       *HashChainBreak
+
+	// Head is the last row's hash — the genesis hash for an empty table.
+	//
+	// It exists because of the one attack the chain cannot see by itself.
+	// Deleting the most RECENT rows leaves a shorter chain that verifies
+	// perfectly: every remaining row still points at its true predecessor, so
+	// there is nothing internally inconsistent to find. Unlike the edit-and-
+	// recompute attack this file's header describes, truncation costs the
+	// attacker no work at all — it is the cheapest way to erase what someone
+	// just did, not the most expensive.
+	//
+	// Nothing INSIDE the file can fix that: any anchor stored beside the rows
+	// is editable by whoever edited the rows. What makes it detectable is an
+	// anchor kept somewhere else, and (RowsChecked, Head) is that anchor in its
+	// smallest useful form — a count alone is not enough, because an attacker
+	// who truncates and then lets normal activity refill the table restores it.
+	// Two verifications with the same count and different heads at the same
+	// index is history that changed.
+	Head string
 }
 
 // VerifyAccessLogHashChain walks every access_logs row in rowid order and
@@ -515,6 +550,9 @@ func (s *Store) VerifyAccessLogHashChain(ctx context.Context) (*VerifyHashChainR
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	// The head after a clean walk. On a break this stays empty: the chain did
+	// not verify, so there is no verified head to anchor anything to.
+	res.Head = prev
 	return res, nil
 }
 
@@ -573,6 +611,9 @@ func (s *Store) VerifyAdminAuditHashChain(ctx context.Context) (*VerifyHashChain
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	// The head after a clean walk. On a break this stays empty: the chain did
+	// not verify, so there is no verified head to anchor anything to.
+	res.Head = prev
 	return res, nil
 }
 

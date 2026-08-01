@@ -525,3 +525,74 @@ func TestVerifyHashChainsReportsBothTables(t *testing.T) {
 		t.Errorf("admin_audit_log result: %+v", results[1])
 	}
 }
+
+// Deleting the most RECENT rows leaves a chain that verifies.
+//
+// This pins a limitation rather than a feature, like
+// TestHashChainTamperRecomputingDownstreamIsUndetected above it. The two are
+// not the same attack and the difference is the point: that one requires
+// re-deriving every downstream hash, which is the expensive case the package
+// header, README, SECURITY and ARCHITECTURE all describe as the honest ceiling.
+// Truncation requires NO hash work at all. An attacker who opens a gate and
+// then deletes the last row is doing the cheapest possible thing, and every
+// remaining row still points at its true predecessor, so there is nothing
+// internally inconsistent for the walk to find.
+//
+// What this asserts is therefore threefold: the chain still says OK, the row
+// count visibly drops, and the HEAD changes. The last is what makes the
+// limitation survivable in practice — (rows, head) recorded somewhere the
+// attacker does not control is an anchor, and a count on its own is not,
+// because ordinary activity refills it.
+func TestTruncatingTheMostRecentRowsIsNotVisibleToTheChain(t *testing.T) {
+	s := openTest(t)
+	ctx := context.Background()
+	acctA, _, locA, _ := twoTenants(t, s)
+	ap, err := s.CreateAccessPointFull(ctx, acctA.ID, locA.ID, "Gate", "gate", "", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 5; i++ {
+		if _, err := s.InsertAccessLog(ctx, AccessLog{
+			AccessPointID: ap.ID, LocationID: locA.ID, AccountID: acctA.ID,
+			Command: "open", Source: "web", Success: true,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	before, err := s.VerifyAccessLogHashChain(ctx)
+	if err != nil || !before.OK || before.RowsChecked != 5 {
+		t.Fatalf("setup: %+v err=%v", before, err)
+	}
+	if before.Head == "" {
+		t.Fatal("a verified chain must report a head, or there is nothing to anchor")
+	}
+
+	// Raw file access — the trust boundary SECURITY.md names. The triggers stop
+	// application code, not someone with the file.
+	for _, q := range []string{
+		`DROP TRIGGER IF EXISTS access_logs_no_delete`,
+		`DELETE FROM access_logs WHERE rowid IN (
+		   SELECT rowid FROM access_logs ORDER BY rowid DESC LIMIT 2)`,
+	} {
+		if _, err := s.db.ExecContext(ctx, q); err != nil {
+			t.Fatalf("%s: %v", q, err)
+		}
+	}
+
+	after, err := s.VerifyAccessLogHashChain(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !after.OK {
+		t.Fatal("truncation was detected — if that is a real improvement, this test " +
+			"and the honesty paragraphs in audithash.go, README.md, SECURITY.md and " +
+			"ARCHITECTURE.md should all be updated together")
+	}
+	if after.RowsChecked != 3 {
+		t.Errorf("rows checked = %d, want 3", after.RowsChecked)
+	}
+	if after.Head == before.Head {
+		t.Error("the head did not change after truncation, so the only anchor an " +
+			"operator can keep outside the file would not show it")
+	}
+}

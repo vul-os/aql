@@ -395,8 +395,12 @@ pinning it.
 **The audit trail** is a SHA-256 hash chain over `access_logs` and
 `admin_audit_log`, with append-only database triggers and an `aql-hub
 verify-audit` CLI that runs against a cold backup with no server. It is a
-*detection* control: it makes tampering evident, not impossible, and it cannot
-see an attacker who edits the database and recomputes every hash forward.
+*detection* control: it makes tampering evident, not impossible. Two things it
+cannot see: an attacker who edits the database and recomputes every hash
+forward, and — much cheaper — one who simply deletes the most recent rows,
+since what remains still chains correctly. `verify-audit` therefore prints the
+row count and chain head; recorded somewhere the box does not control, those
+two make a truncated history noticeable.
 
 **The camera pipeline** goes RTSP → H.264 depacketization → SPS parsing →
 access-unit assembly → fMP4 → disk, with per-camera retention, a `camera:view`

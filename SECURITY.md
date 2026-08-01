@@ -44,7 +44,10 @@ In scope, roughly in order of severity:
    filesystem access to the box editing `lintel.db` and recomputing every downstream hash.
    That was always the trust boundary of a self-hosted single-file database; the hash
    chain turns *silent* tampering by that party into *detectable* tampering, and does not
-   and cannot prevent it. Don't report "I have root on the box and can edit the database";
+   and cannot prevent it. The same boundary covers deleting the most recent rows, which
+   needs no recomputation at all — a truncated chain verifies, and only the row count and
+   head that `verify-audit` prints will show it, if you kept the previous ones off the
+   box. Don't report "I have root on the box and can edit the database";
    do report anything that achieves the same result through the running application.
 3. **Chat webhooks** — signature-verification flaws on channel ingress (Meta HMAC, Slack
    signing secret + replay window, Telegram secret token), and sender-identity spoofing

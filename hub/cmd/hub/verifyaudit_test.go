@@ -23,6 +23,8 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/vul-os/aql/hub/internal/store"
@@ -84,5 +86,59 @@ func TestTheDatabaseNameTheCheckUsesIsTheOneTheStoreCreates(t *testing.T) {
 	if _, err := os.Stat(store.DatabaseFile(dir)); err != nil {
 		t.Errorf("store.DatabaseFile points at %s, which Open did not create: %v",
 			store.DatabaseFile(dir), err)
+	}
+}
+
+// The head must appear in what the command prints.
+//
+// README, SECURITY.md and ARCHITECTURE.md now all tell an operator that the
+// chain cannot see its own tail being deleted, and that recording the row count
+// and head off the box is what makes that noticeable. That instruction is only
+// true while the command actually prints the head — and nothing checked it: a
+// tamper removing res.Head from the format string was NOT CAUGHT by any test in
+// this package, which is how a documented operator procedure quietly becomes
+// impossible to follow.
+func TestVerifyAuditPrintsTheHeadOperatorsAreToldToRecord(t *testing.T) {
+	dir := t.TempDir()
+	st, err := store.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.Close()
+
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	saved := os.Stdout
+	os.Stdout = w
+	code := runVerifyAudit([]string{"-data", dir})
+	w.Close()
+	os.Stdout = saved
+
+	buf := make([]byte, 8192)
+	n, _ := r.Read(buf)
+	out := string(buf[:n])
+
+	if code != 0 {
+		t.Fatalf("exit %d: %s", code, out)
+	}
+	// Both chains, each with a head. An empty database still has one — the
+	// genesis hash — so there is no "nothing to anchor yet" state for an
+	// operator to be confused by.
+	head := regexp.MustCompile(`head ([0-9a-f]{64})`)
+	found := head.FindAllStringSubmatch(out, -1)
+	if len(found) != 2 {
+		t.Fatalf("want a 64-hex head for each of the two chains, got %d in:\n%s", len(found), out)
+	}
+	// The two tables' chains are seeded with distinct genesis hashes precisely
+	// so they cannot be spliced; identical heads here would mean that stopped
+	// being true.
+	if found[0][1] == found[1][1] {
+		t.Errorf("both chains report the same head %s — the per-table genesis is not "+
+			"distinguishing them", found[0][1])
+	}
+	if !strings.Contains(out, "rows") {
+		t.Errorf("the row count is the other half of the anchor and is missing:\n%s", out)
 	}
 }

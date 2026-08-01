@@ -467,7 +467,11 @@ func (s *Server) handleAdminAuditVerify(w http.ResponseWriter, r *http.Request) 
 	ok := true
 	chains := make([]map[string]any, 0, len(results))
 	for _, res := range results {
-		row := map[string]any{"table": res.Table, "rows_checked": res.RowsChecked, "ok": res.OK}
+		// head travels with rows_checked for the reason store.VerifyHashChainResult
+		// gives: together they are an anchor a caller can keep off this box, and
+		// the count alone is not one.
+		row := map[string]any{"table": res.Table, "rows_checked": res.RowsChecked, "ok": res.OK,
+			"head": res.Head}
 		if !res.OK {
 			ok = false
 			row["broken_at"] = map[string]any{
