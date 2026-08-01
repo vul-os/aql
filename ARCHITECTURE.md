@@ -34,7 +34,7 @@ exist and which are design intent. The condensed operator-facing tour is
 
 | Layer | Status |
 | --- | --- |
-| Hub (`hub/`) — open path, console, API, device hub, audit | **Built.** 136 HTTP routes, 1,393 Go test functions green across 20 packages |
+| Hub (`hub/`) — open path, console, API, device hub, audit | **Built.** 136 HTTP routes, 1,397 Go test functions green across 20 packages |
 | **Access module** — the first device kind wired end to end | **Built.** Signed commands, pinned-key controller, offline grants, tamper-evident audit |
 | Controller agent (`controller/`) — pairing, signed commands, grants, events | **Built.** 192 Go test functions green. GPIO relay driver and BLE radio are **not** |
 | Wire contracts (`proto/`) | **Built.** 83 conformance vectors, 118 checks, consumed by both sides |
