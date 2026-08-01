@@ -214,6 +214,12 @@ func startGatewayIn(t *testing.T, dataDir string, extraArgs []string) *gateway {
 		"-admin-claim-token", adminToken,
 	}, extraArgs...)
 	cmd := exec.Command(hubBin, args...)
+	// Inherit the test process's environment, so a test can set AQL_DATA_KEY
+	// (or any other AQL_* setting) with t.Setenv and have the hub see it. The
+	// subprocess previously got Go's default — the parent environment — which
+	// already worked; this is explicit so it cannot be lost in a refactor that
+	// sets cmd.Env for some other reason.
+	cmd.Env = os.Environ()
 	cmd.Stdout = gw.logs
 	cmd.Stderr = gw.logs
 	if err := cmd.Start(); err != nil {
@@ -245,6 +251,20 @@ func startGatewayIn(t *testing.T, dataDir string, extraArgs []string) *gateway {
 	seedHex, err := os.ReadFile(filepath.Join(dataDir, "gateway_ed25519.seed"))
 	if err != nil {
 		t.Fatalf("read gateway seed: %v", err)
+	}
+	// The seed is ciphertext when the hub was started with AQL_DATA_KEY, so the
+	// harness has to unseal it to keep cross-checking against /v1/gateway/key.
+	// Skipping the check for sealed hubs would have been easier and would have
+	// dropped the one assertion that catches a hub serving a different key from
+	// the one on disk — exactly the failure encryption could introduce.
+	if isSealedFile(seedHex) {
+		dk, err := parseDataKey(os.Getenv("AQL_DATA_KEY"))
+		if err != nil {
+			t.Fatalf("the seed is sealed and AQL_DATA_KEY is unusable: %v", err)
+		}
+		if seedHex, err = openSealedFile(dk, seedHex); err != nil {
+			t.Fatalf("unseal gateway seed: %v", err)
+		}
 	}
 	seed, err := hex.DecodeString(strings.TrimSpace(string(seedHex)))
 	if err != nil || len(seed) != ed25519.SeedSize {

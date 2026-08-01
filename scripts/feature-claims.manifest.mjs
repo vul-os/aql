@@ -307,6 +307,15 @@ export const FEATURES = [
       [{ file: 'hub/cmd/hub/main.go', pattern: 'keys.WithDataKey' }],
       // And the restore check knows about the loss encryption ADDS.
       [{ file: 'hub/cmd/hub/verifyrestore.go', pattern: 'sealed.IsSealed' }],
+      // Proven in a real hub process, with a real controller pinning the key it
+      // serves and the identity surviving a restart — the seam unit tests
+      // cannot reach, and where an identity change would orphan the fleet.
+      [
+        {
+          file: 'e2e/sealedkey_e2e_test.go',
+          pattern: 'TestSealedSigningKey_PairsOpensAndSurvivesARestart',
+        },
+      ],
       // The session key too, which is the opposite trade: losing it is
       // harmless, leaking it lets anyone mint a session for any user.
       [
