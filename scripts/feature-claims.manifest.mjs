@@ -73,6 +73,51 @@ export const FEATURES = [
     // Evidence on the package alone would pass for a driver that had quietly
     // grown an actuation path.
   },
+  // ── the device engine itself, as ARCHITECTURE.md's own repository tree
+  // describes it.
+  //
+  // This entry exists because of a stale line rather than a new feature. That
+  // tree carried `(device engine)   # 🔨 not started — see §8` while the same
+  // file's subsystem table said "Built, default off" twelve lines earlier, and
+  // the engine had five drivers, a registry and persistence. One file, two
+  // answers, and the gate could not see it: no manifest entry keyed off that
+  // line, which is caveat 2 in check-feature-claims.mjs's header — "a
+  // brand-new eleventh overclaim in a doc nobody wired into the manifest is
+  // invisible to this script".
+  //
+  // It is an UNDER-claim rather than an over-claim, which is the direction that
+  // rots quietly: nobody files a bug because a doc undersells the product, so
+  // the line survived every reading. Quoted here so that reverting it breaks
+  // the build.
+  {
+    id: 'device-engine-built',
+    label: 'The device engine is built and default-off — registry behind a driver seam, five constructible drivers, persistence',
+    docStatus: 'shipped',
+    docRefs: [
+      // The emoji is part of the quote ON PURPOSE. "built, default off" alone
+      // also appears in the mermaid diagram at the top of the same file, so a
+      // quote without the marker passes while the tree line says the opposite —
+      // which is exactly what happened: the first version of this entry was
+      // tampered by restoring the stale line and stayed green.
+      'ARCHITECTURE.md — the repository tree: "🟢 built, default off" for the device engine',
+      'ARCHITECTURE.md — the subsystem table: "Registry behind a driver seam"',
+      'ROADMAP.md — the driver list',
+    ],
+    evidence: [
+      [{ root: 'hub/internal/devices', pattern: 'func NewRegistry' }],
+      // Constructible from the binary, not merely present in the tree: a
+      // registry no flag can build is a package, not an engine.
+      //
+      // Anchored on the `=` because a bare name is a SUBSTRING match: the first
+      // version of these patterns passed after the constant was renamed to
+      // deviceDriverModbusX, which is a driver the binary no longer accepts.
+      [{ file: 'hub/cmd/hub/main.go', pattern: 'deviceDriverMQTT\\s*=' }],
+      [{ file: 'hub/cmd/hub/main.go', pattern: 'deviceDriverModbus\\s*=' }],
+      [{ file: 'hub/cmd/hub/main.go', pattern: 'deviceDriverCamera\\s*=' }],
+      // Persistence, which is the half "a registry exists" does not cover.
+      [{ root: 'hub/internal/store', pattern: 'device_claims|DeviceClaim' }],
+    ],
+  },
   // ── the controller reporting its configuration back.
   // docs/CONTROLLER-CONFIG-REPORT.md is the design and says "designed, not
   // built" in those words. This holds that line in both directions: nobody can

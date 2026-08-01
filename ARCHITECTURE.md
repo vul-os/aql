@@ -143,7 +143,7 @@ aql/
 ├── site/         # 🟢 static mini-site — index.html + docs.html + site/docs/*.md
 ├── docs/         # 🟢 deep engineering reference (threat model, KOTVA alignment, design system)
 ├── scripts/      # 🟢 screenshotter + docs-vs-code feature-claim guard
-└── (device engine)   # 🔨 not started — see §8
+└── (device engine)   # 🟢 built, default off — `hub/internal/devices/`, see §8
 ```
 
 **There is no `backend/`.** A Cloudflare Workers + Postgres backend was the behavioural
