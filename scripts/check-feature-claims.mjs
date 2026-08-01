@@ -168,6 +168,66 @@ function* walk(absRoot) {
 }
 
 /**
+ * Claims whose evidence is legitimately a COMMENT.
+ *
+ * One entry, and it earns it: the GPIO relay driver's whole claim is that the
+ * code is written and has never been run against a relay, and the thing that
+ * says so is a `STATUS: NOT VALIDATED ON HARDWARE` marker in its header. There
+ * is no compiled artifact for "nobody has tested this on hardware"; the comment
+ * IS the fact.
+ *
+ * Removing this entry makes that claim fail, which is the check on the
+ * allowlist: it is one named exemption, not a way to wave a claim through.
+ */
+const COMMENT_EVIDENCE_OK = new Set(['gpio-relay-driver-written']);
+
+/** Whether a source line is a comment, for the languages evidence roots hold. */
+function isCommentLine(line, file) {
+  const t = line.trim();
+  if (file.endsWith('.sql')) return t.startsWith('--');
+  return t.startsWith('//') || t.startsWith('*') || t.startsWith('/*') || t.startsWith('#');
+}
+
+/**
+ * Does this evidence slot match any line that is NOT a comment?
+ *
+ * Caveat 4 above warns that "regex evidence can false-positive (a comment
+ * mentioning a symbol name)". That is the gate's own worst case: a `shipped`
+ * claim whose only evidence is prose ABOUT the feature is exactly the
+ * documented-but-absent failure this script exists to catch, arriving through
+ * the front door.
+ *
+ * Audited by hand on 2026-08-01 across all 241 shipped evidence slots: exactly
+ * one was comment-only, the GPIO marker above, which is correct. So this
+ * enforces a property the tree already had rather than demanding new work --
+ * the cheapest moment to make an invariant mechanical is while it still holds.
+ *
+ * Per SLOT, not per item. A slot is an array of OR-ed items and any one of them
+ * matching real code is enough: "no MQTT under src-tauri/src" is a normal
+ * member of a healthy OR group, and an earlier version of this scan that
+ * flattened slots away reported three such non-findings.
+ */
+function slotHasCodeEvidence(slot, featureId) {
+  if (COMMENT_EVIDENCE_OK.has(featureId)) return true;
+  const items = Array.isArray(slot) ? slot : [slot];
+  for (const item of items) {
+    if (item?.pattern === undefined || item.expectMissing) return true;
+    const re = new RegExp(item.pattern, item.flags ?? '');
+    const files = item.root !== undefined
+      ? walk(path.join(repoRoot, item.root))
+      : [path.join(repoRoot, item.file)];
+    for (const abs of files) {
+      const content = readSafe(abs);
+      if (content === null) continue;
+      for (const line of content.split('\n')) {
+        if (re.test(line) && !isCommentLine(line, abs)) return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
  * Evaluate one evidence item. Returns { ok, detail } where `detail` is a
  * short human-readable explanation used in failure output.
  */
@@ -376,6 +436,21 @@ function main() {
       });
     } else {
       passes.push(feature);
+    }
+
+    if (feature.docStatus === 'shipped') {
+      const proseOnly = (feature.evidence ?? []).filter(
+        (slot) => !slotHasCodeEvidence(slot, feature.id),
+      );
+      if (proseOnly.length > 0) {
+        failures.push({
+          feature,
+          reason:
+            `evidence matches only COMMENTS — prose about a feature is not the feature ` +
+            `(caveat 4). Slots with no non-comment match:\n` +
+            proseOnly.map((sl) => `      - ${JSON.stringify(sl)}`).join('\n'),
+        });
+      }
     }
 
     const refProblems = checkDocRefs(feature);
