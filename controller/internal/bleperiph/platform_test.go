@@ -86,6 +86,25 @@ func TestNoFileInThisPackageCarriesAnImplicitPlatformConstraint(t *testing.T) {
 // context.Background() rather than t.Context(): this module targets go1.23 and
 // t.Context() landed in 1.24. `go test` hid that once — the package was cached
 // from before the file existed — and only `go vet` caught it.
+// WHERE EACH HALF OF THIS TEST ACTUALLY RUNS, because a green local run does
+// not mean what it looks like.
+//
+// The two branches below execute in different places and neither machine runs
+// both:
+//
+//	· locally, scripts/check.sh runs `go test -tags ble ./...` on whatever host
+//	  you are on. On darwin that links the stub — the tag is
+//	  `ble && (linux || windows)` — so a developer on a Mac exercises the
+//	  ErrUnsupported branch and NEVER the real-backend one, however green the
+//	  run looks.
+//	· in CI, the same command runs on ubuntu-latest (.github/workflows/ci.yml,
+//	  the race-detector job), where a real backend IS linked and the second
+//	  half runs.
+//
+// So this test is fully covered across the two, and not on either alone. Worth
+// stating because the failure it guards — a backend claiming ErrUnsupported on
+// a build that has one, which makes the agent skip BLE silently — can only ever
+// be caught by the half a Mac does not run.
 func TestExactlyOneBackendIsLinked(t *testing.T) {
 	err := Start(context.Background(), Config{})
 
