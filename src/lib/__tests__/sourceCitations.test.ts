@@ -152,6 +152,49 @@ describe('source-comment citations', () => {
   const dirs = topLevelDirs();
   const pattern = citationPattern(dirs);
 
+  /** Dangling citations per file, using this guard's own scan rather than a
+   * second copy of it. A separate counter written to answer the same question
+   * gave the wrong answer twice — reusing the real path is the only way the
+   * two cannot disagree. */
+  function danglingByFile(): Map<string, string[]> {
+    const out = new Map<string, string[]>();
+    for (const file of sourceFiles()) {
+      const text = readFileSync(resolve(root, file), 'utf-8');
+      for (const line of text.split('\n')) {
+        if (!isComment(line)) continue;
+        for (const m of line.matchAll(pattern)) {
+          const path = m[1];
+          if (EXTERNAL_REPOS.some((p) => path.startsWith(p))) continue;
+          if (existsSync(resolve(root, path))) continue;
+          out.set(file, [...(out.get(file) ?? []), path]);
+        }
+      }
+    }
+    return out;
+  }
+
+  /**
+   * An exemption must still be needed.
+   *
+   * ALLOWED skips a whole file, so an entry that outlives its dangling citation
+   * silently widens what this guard permits — and the next real one in that file
+   * is invisible. Tampering found the hole: adding a clean file to ALLOWED
+   * changed nothing.
+   *
+   * The same shape as noPhoneHome's root list and repoLayout's NOT_IN_TREE, both
+   * fixed this session: an exemption list that nothing validates is an escape
+   * hatch, and the check has to come from outside the list.
+   */
+  it('every exemption is still needed', () => {
+    const dangling = danglingByFile();
+    const unnecessary = Object.keys(ALLOWED).filter((f) => !dangling.has(f));
+    expect(
+      unnecessary,
+      'these files are exempted but have no dangling citation, so the entry only ' +
+        'hides whatever appears there next — remove it:\n  ' + unnecessary.join('\n  '),
+    ).toEqual([]);
+  });
+
   it('every path a source comment cites exists', () => {
     const broken: string[] = [];
     let checked = 0;

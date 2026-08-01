@@ -132,6 +132,40 @@ describe('the repo-layout tree', () => {
     ).toEqual([]);
   });
 
+  /**
+   * Every NOT_IN_TREE entry must be build output, checked against git rather
+   * than against its own prose.
+   *
+   * Without this the list is a silent escape hatch: adding `jcs` to it hides
+   * the module again and nothing fails — undoing, with one line, the fix that
+   * put it in the tree. Verified by tampering, and it is the same self-
+   * referential shape as noPhoneHome's root list, where iterating the constant
+   * to check the constant meant deleting an entry deleted its own check.
+   *
+   * `git check-ignore` is the independent fact. The comment on NOT_IN_TREE says
+   * build output only; this is that sentence made mechanical, so an exemption
+   * for a real component fails on what git knows rather than on what the entry
+   * claims about itself.
+   */
+  it('exempts only build output', () => {
+    const entries = Object.keys(NOT_IN_TREE);
+    expect(entries.length, 'NOT_IN_TREE is empty — this check has nothing to hold').toBeGreaterThan(1);
+    const tracked = entries.filter((d) => {
+      try {
+        execFileSync('git', ['check-ignore', '-q', d], { cwd: root });
+        return false;
+      } catch {
+        return true;
+      }
+    });
+    expect(
+      tracked,
+      'these NOT_IN_TREE entries are tracked by git, so they are components rather ' +
+        'than build output and belong in the layout tree — an exemption is not a ' +
+        'place to put something you did not want to document:\n  ' + tracked.join('\n  '),
+    ).toEqual([]);
+  });
+
   it('names nothing that does not exist', () => {
     const { names } = treeNames();
     const phantom = [...names].filter((n) => {
