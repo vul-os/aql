@@ -799,6 +799,13 @@ cannot catch what both implementations get wrong together.
       compares false against every threshold anyone would check it with. Tampered: removing
       the finite guard fails on the seed corpus; loosening the length guard fails with a
       257-byte PDU the fuzzer built itself. All three added to CI.
+- [x] CI now FUZZES the camera targets. They were absent from ci.yml's fuzz list — the
+      H.264 pair since it was written, the RTSP pair from the day they landed — so their
+      seed corpora ran under `go test` and no fuzzing happened in CI at all. The step's
+      own helper already guards against a target that does not exist, because two JCS
+      entries had silently become no-ops when the canonicalizer moved; what it could not
+      guard is a target nobody added. Verified each new invocation by running it, and
+      that the -list check fires on a wrong name.
 - [x] The camera RTSP text protocol is fuzzed (rtspfuzz_test.go, 2026-08-01):
       readRTSPResponse and parseSDP, the layer ABOVE the depacketizer h264_test.go
       already covered — where a camera's bytes first become structure. It found a real

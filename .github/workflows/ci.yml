@@ -168,9 +168,10 @@ jobs:
       # thorough campaign; it is a tripwire that costs a minute and has years of
       # pushes to get lucky in.
       #
-      # Run by hand at length first: ~5 million executions across the four
-      # targets found nothing, which is why they are worth keeping green rather
-      # than a reason to skip them.
+      # Run by hand at length first. The five original targets: ~5 million
+      # executions, nothing found, which is why they are worth KEEPING green
+      # rather than a reason to skip them. The four camera targets added later
+      # were not so quiet — see FuzzParseSDP's note below.
       - name: fuzz (short)
         working-directory: hub
         run: |
@@ -191,6 +192,17 @@ jobs:
           fuzz ./internal/devices/modbus/ FuzzReadADU
           fuzz ./internal/devices/modbus/ FuzzDecodeReadResponse
           fuzz ./internal/devices/modbus/ FuzzMetricDecode
+          # The camera pipeline, which reads bytes from a device on the LAN that
+          # the hub dialled. These four were absent from this list — the H.264
+          # pair since it was written, and the RTSP pair from the day they were
+          # added — so their seed corpora ran during `go test` and no fuzzing
+          # ever happened here. FuzzParseSDP found a request injection within
+          # seconds the first time it was run properly, which is the argument
+          # for the two minutes this adds.
+          fuzz ./internal/devices/camera/ FuzzDepacketizerPush
+          fuzz ./internal/devices/camera/ FuzzDepacketizerSequence
+          fuzz ./internal/devices/camera/ FuzzReadRTSPResponse
+          fuzz ./internal/devices/camera/ FuzzParseSDP
 
   race:
     # The race detector, which had never been run on this repository until it
