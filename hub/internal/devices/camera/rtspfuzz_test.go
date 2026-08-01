@@ -82,6 +82,33 @@ func FuzzReadRTSPResponse(f *testing.F) {
 			t.Fatalf("body of %d bytes exceeds the %d-byte ceiling the reader enforces",
 				len(resp.body), rtspMaxResponseBytes)
 		}
+
+		// The Session value goes back out as a header LINE — describeAndProbe
+		// sends "Session: "+session on both PLAY and TEARDOWN, and
+		// rtspExchangeExtra writes that verbatim followed by CRLF. That is the
+		// same shape as the control-attribute injection this file found in
+		// parseSDP, one layer over: text the camera chose, interpolated into a
+		// message the hub composes.
+		//
+		// Asked of the fuzzer rather than reasoned about, and then verified
+		// directly: 1.7M executions found nothing, and feeding
+		// "Session: a\rb" by hand shows why. net/textproto REFUSES the line —
+		// "malformed MIME header line" — and readRTSPResponse propagates that,
+		// so the whole response is rejected and no session value exists.
+		//
+		// That is the difference between this and the parseSDP bug, and it is
+		// the useful part. The header layer delegates to a parser that
+		// VALIDATES; the SDP body is split on "\n" by hand, with nothing
+		// checking what the pieces contain. The injection was exactly where the
+		// code parsed text itself.
+		//
+		// The assertion stays because that safety is inherited rather than
+		// stated: a future reader that stops using textproto, or reads headers
+		// itself for speed, silently takes it away.
+		if sid := sessionID(resp.header.Get("Session")); strings.ContainsFunc(sid, isCtl) {
+			t.Fatalf("session id %q carries a control character and is written "+
+				"into a request header verbatim", sid)
+		}
 	})
 }
 
