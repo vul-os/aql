@@ -355,7 +355,11 @@ function checkDocRefs(feature) {
     // .tsx path and truncate it — the ref then names a file that does not
     // exist, and the error blames the doc rather than this regex. Longest
     // extension first is the rule.
-    const named = ref.match(/^([A-Za-z0-9_./-]+\.(?:md|html|json|tsx|ts|go))/);
+    // `sql` and `mjs` were absent, so a ref naming a migration or a script was
+    // treated as a bare note: its path was never resolved and any quote it
+    // carried was never read. Two geofencing refs pointed at migrations that
+    // way.
+    const named = ref.match(/^([A-Za-z0-9_./-]+\.(?:md|html|json|tsx|ts|go|sql|mjs))/);
     if (!named) continue; // a ref that names no file, e.g. a bare note
     const rel = named[1];
     const body = readSafe(path.join(repoRoot, rel));

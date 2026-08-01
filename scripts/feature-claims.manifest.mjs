@@ -280,7 +280,13 @@ export const FEATURES = [
       'hub/internal/store/migrations/0015_geofence.sql — the geofence_rules table',
       'hub/internal/store/openpath.go — the check inside LogAccess, after time windows, before the limit block',
       'src/pages/docs/GeofenceSafety.tsx — "Status: enforced" and why the JSON below it is historical',
-      'STILL STALE: ARCHITECTURE.md §8 (left alone — mid-edit under another change)',
+      // Was: 'STILL STALE: ARCHITECTURE.md §8 (left alone — mid-edit under
+      // another change)'. That edit landed; ARCHITECTURE.md now lists geofences
+      // among the things it had "listed as unbuilt here for longer than it was
+      // actually unbuilt". A note recording a stale document, outliving the
+      // staleness it recorded — and invisible, because a ref with no leading
+      // file path is skipped whole.
+      'ARCHITECTURE.md — "Geofences, online time-window rules, analytics"',
     ],
     evidence: [{ root: 'hub/internal', pattern: 'geofenc', flags: 'i' }],
   },
