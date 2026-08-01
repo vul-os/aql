@@ -148,6 +148,29 @@
 // and stream-address resolution, with no live view and no recording — not to
 // soften the check.
 //
+// # Untrusted text from a camera, swept 2026-08-01
+//
+// Everything this package reads comes from a device on the LAN that the hub
+// dialled, and some of it is interpolated into messages the hub then composes.
+// Every such path was traced once, after fuzzing found a real injection:
+//
+//   - SDP `a=control:` — HAND-PARSED, and the one that was wrong. The value
+//     reaches an RTSP request LINE, so an interior CR split it. Control
+//     characters are refused at parse time now (rtsp.go), and rtspfuzz_test.go
+//     holds it.
+//   - RTSP headers, including the Session id echoed back on PLAY and TEARDOWN —
+//     safe, and not by accident: net/textproto REFUSES a header line carrying a
+//     lone CR, so a malformed response is rejected whole.
+//   - ONVIF SOAP and WS-Discovery — safe: encoding/xml, which also does not
+//     resolve external entities, then url.Parse, then sanitize(), which drops
+//     every non-printable rune and caps length.
+//
+// The pattern is worth more than the list. Every path that DELEGATED to a
+// parser which validates, or that sanitized before use, was fine; the single
+// path that split text itself and used the pieces raw was the bug. When adding
+// a reader here, the question is not "is this parser careful" but "who checks
+// what comes out of it".
+//
 // # Accessors with no production caller
 //
 // MediaFlow.Intact, StreamInfo.VideoResolution, Fragmenter.Params and
