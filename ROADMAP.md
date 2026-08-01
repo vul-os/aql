@@ -821,7 +821,18 @@ and none has met physical hardware.
       only when the answer was known would make absence ambiguous between "this hub does not
       support it" and "this device did not report". The device page shows On / Off / **Not
       reporting** — never assuming the third is the second
-- [ ] Robot control — mowers, cleaning, patrol — beyond a static status row
+- [x] **Robot control is a control surface, not a status row.** `robot.job` and
+      `robot.blade-job` each declare start / stop / pause / resume / dock, the console draws
+      all five from the capability, and the hub re-resolves every one against the catalogue —
+      the button table is presentation and cannot widen anything. Starting a mower is
+      `TierHazardousMotion` and needs an explicit `confirm`, which had no test until now:
+      `confirm_required` existed in the console, in `api.ts` and in three comments, and in no
+      assertion. Every case now asserts what the DRIVER received rather than the status code,
+      because a 409 that actuated anyway is the worst outcome here and is invisible from the
+      response
+- [ ] Robot control BEYOND verbs — schedules, no-go zones, cleaning maps, and a dedicated
+      driver. A mower with an HTTP or MQTT interface is drivable today as kind `robot`; what
+      does not exist is anything that knows a mower is a mower
 - [x] **Alerting tied to sensor and availability events.** Triggers already covered
       schedules, thresholds and availability changes; the ACTION side could only actuate, so
       "tell me when the tank is low" was inexpressible — the nearest an operator could write

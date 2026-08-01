@@ -287,6 +287,25 @@ export const FEATURES = [
     ],
   },
   {
+    id: 'hazardous-verbs-need-an-explicit-confirm',
+    label:
+      'Starting a mower needs confirm: true, and a refused command never reaches the driver',
+    docStatus: 'shipped',
+    docRefs: ['ROADMAP.md — "Robot control is a control surface, not a status row"'],
+    evidence: [
+      [{ file: 'hub/internal/httpapi/engine.go', pattern: 'confirm_required' }],
+      // The assertion that matters: a 409 that actuated anyway looks identical
+      // from the response, so the test reads the driver's call log.
+      [
+        {
+          file: 'hub/internal/httpapi/engineconfirm_test.go',
+          pattern: 'the driver received %d calls for a refused command',
+        },
+      ],
+      [{ file: 'src/components/device/engineState.ts', pattern: "'robot.blade-job'" }],
+    ],
+  },
+  {
     id: 'no-telemetry-is-checked-not-asserted',
     label:
       'Every host compiled into the hub and controller binaries is listed with a reason, ' +
