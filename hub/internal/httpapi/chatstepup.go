@@ -39,11 +39,26 @@ import (
 //
 // # What this deliberately does not do
 //
-// It does not tell the chat rail when the command finally runs. The approval
-// happens in the console and its result is shown there. Sending an unsolicited
-// message back down a rail the member may share with a household is a
-// disclosure decision (§4) that has not been made, and inventing one here to
-// round off the flow would be making it silently.
+// It does not tell the chat rail when the command finally runs, and that is now
+// a settled decision rather than an open one.
+//
+// I had this recorded as "a disclosure decision nobody has made". It was made
+// already, one layer down, and I had not looked: every rail Aql speaks declares
+// `InboundTriggered` in channels/disclosure.go, so CanInitiate() is false for
+// all five. The comment there states the property positively — "none of them
+// can be turned into a notification channel to a stranger" — it is held by
+// TestNoRailCanInitiateColdContact, and it is served to anyone who asks at
+// GET /v1/rails/disclosure as `can_initiate: false`.
+//
+// A message announcing that a mower started is the hub contacting someone who
+// did not just speak to it. That is initiation. Building it would either make
+// the product's disclosed, tested, publicly-served claim false, or make the
+// notification depend on whether the member happened to have messaged recently
+// — a feature that works sometimes, for reasons no operator can see, on a rail
+// where the failure is silence.
+//
+// So the approval's outcome lives in the console, where the person who approved
+// it already is.
 
 // chatStepUpTTLS is how long an intent stays approvable.
 //

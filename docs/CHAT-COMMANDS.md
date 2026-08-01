@@ -782,9 +782,17 @@ that could never be consumed.
 
 **What is still missing.** A T4 verb taking a
 VALUE is out of scope — the number would have to be echoed in the approval and
-re-checked at execution — and nothing tells the chat rail when the command
-finally runs, because sending an unsolicited message back down a rail a member
-may share with a household is a §4 disclosure decision that has not been made.
+re-checked at execution — and **nothing tells the chat rail when the command runs, which is settled rather
+than pending.** Every rail Aql speaks declares `InboundTriggered`
+(`channels/disclosure.go`), so `CanInitiate()` is false for all five, the
+property is held by `TestNoRailCanInitiateColdContact`, and it is served at
+`GET /v1/rails/disclosure` as `can_initiate: false`. Announcing that a mower
+started is the hub contacting someone who did not just speak to it — initiation
+— so building it would either falsify a disclosed and tested claim, or make the
+notification depend on whether the member happened to have messaged recently: a
+feature that works sometimes, for reasons no operator can see, on a rail where
+the failure mode is silence. The outcome lives in the console, where the person
+who approved it already is.
 
 ### 3.5 The fail-closed rule
 
