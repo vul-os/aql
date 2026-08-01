@@ -594,8 +594,8 @@ and none has met physical hardware.
 
 ## Phase 2 — Local persistence & secrets (partly real)
 
-- [x] SQLite for state, history and configuration — shipped with the hub (32 migrations,
-      51 tables), one file to back up, pure-Go driver so it cross-compiles to a Pi
+- [x] SQLite for state, history and configuration — shipped with the hub (33 migrations,
+      58 tables), one file to back up, pure-Go driver so it cross-compiles to a Pi
 - [ ] Extend that schema to device state, telemetry and history once Phase 1 exists
 - [x] **Device secrets can live outside the config file** — `${env:NAME}` and
       `${file:/path}` at the three places a device credential appears: the MQTT password,

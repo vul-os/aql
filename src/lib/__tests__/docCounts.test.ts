@@ -78,7 +78,7 @@ beforeAll(() => {
   // Note on the DROP branch: with today's migrations it is not load-bearing.
   // 0029 drops `automation_rules` and immediately renames the replacement onto
   // that same name, and adding a name already in the set is a no-op — so
-  // deleting the DROP handling leaves the count at 51 either way. It is here
+  // deleting the DROP handling leaves the count unchanged either way. It is here
   // for a drop that is NOT half of a rebuild, which nothing does yet. Said out
   // loud so nobody later "proves" this branch with a tamper that cannot move
   // the number and concludes the guard is watching more than it is.
@@ -150,6 +150,13 @@ const CLAIMS: Array<{ file: string; pattern: RegExp; key: string }> = [
   { file: 'ROADMAP.md', pattern: /\*\*(\d+) HTTP routes over/, key: 'routes' },
   { file: 'ROADMAP.md', pattern: /HTTP routes over (\d+)\n?migrations/, key: 'migrations' },
   { file: 'ROADMAP.md', pattern: /across (\d+) packages/, key: 'hubPackages' },
+  // ROADMAP states the migration and table counts TWICE — once in the Phase 0
+  // header (guarded above) and once in the persistence bullet. Only the first
+  // was checked, so the second sat at '32 migrations, 51 tables' while the
+  // guarded one was correctly bumped to 33/58: a claim that looks identical to
+  // a guarded one, outside the guard. Both are checked now.
+  { file: 'ROADMAP.md', pattern: /shipped with the hub \((\d+) migrations/, key: 'migrations' },
+  { file: 'ROADMAP.md', pattern: /migrations,\n?\s*(\d+) tables\), one file to back up/, key: 'tables' },
 
   { file: 'ARCHITECTURE.md', pattern: /\*\*Built\.\*\* ([\d,]+) HTTP routes/, key: 'routes' },
   { file: 'ARCHITECTURE.md', pattern: /([\d,]+) Go test functions green across/, key: 'hubTests' },
