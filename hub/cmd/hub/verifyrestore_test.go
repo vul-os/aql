@@ -268,3 +268,104 @@ func TestVerifyRestoreReportsASealedKeyWithNoDataKey(t *testing.T) {
 		t.Errorf("the pass does not mention the encrypted key: %v", checked)
 	}
 }
+
+// Every way AQL_DATA_KEY can be set and still not work.
+//
+// The first version of this check asked only whether the variable was SET,
+// which is the shape of check verify-restore exists to replace: all three of
+// these would have read as fine, and the hub would have refused to start
+// minutes later for a reason the check had every chance to find.
+func TestVerifyRestoreChecksTheDataKeyOpensTheSeed(t *testing.T) {
+	dir := pairedHubDir(t)
+	keyStr, err := sealed.NewKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	key, err := sealed.ParseKey(keyStr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := keys.Load(dir, keys.WithDataKey(key)); err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		name  string
+		value string
+		want  string
+	}{
+		{"unresolvable file reference", "${file:/nonexistent/aql-data-key}", "cannot be read"},
+		{"truncated paste", "c2hvcnQ", "not a usable data key"},
+		{"the wrong key", mustNewKey(t), "does NOT open this seed"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Setenv("AQL_DATA_KEY", c.value)
+			problems, _, err := verifyRestore(dir)
+			if err != nil {
+				t.Fatalf("verifyRestore: %v", err)
+			}
+			if len(problems) != 1 {
+				t.Fatalf("problems = %v, want exactly one", problems)
+			}
+			if !strings.Contains(problems[0], c.want) {
+				t.Errorf("problem = %q, want it to mention %q — the three failures need "+
+					"different actions: find the file, fix the paste, find the right key",
+					problems[0], c.want)
+			}
+		})
+	}
+
+	// And the key that actually works passes, with the pass saying it OPENED
+	// the seed rather than that a variable was set.
+	t.Setenv("AQL_DATA_KEY", keyStr)
+	problems, checked, err := verifyRestore(dir)
+	if err != nil {
+		t.Fatalf("verifyRestore: %v", err)
+	}
+	if len(problems) != 0 {
+		t.Fatalf("the correct key reported problems: %v", problems)
+	}
+	if !strings.Contains(strings.Join(checked, "\n"), "opens it") {
+		t.Errorf("the pass does not say the key OPENS the seed: %v", checked)
+	}
+}
+
+// A file reference that resolves is accepted, which is the shape an operator
+// actually uses in a container.
+func TestVerifyRestoreAcceptsAFileReferenceForTheDataKey(t *testing.T) {
+	dir := pairedHubDir(t)
+	keyStr, err := sealed.NewKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	key, err := sealed.ParseKey(keyStr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := keys.Load(dir, keys.WithDataKey(key)); err != nil {
+		t.Fatal(err)
+	}
+	keyFile := filepath.Join(t.TempDir(), "aql-data-key")
+	if err := os.WriteFile(keyFile, []byte(keyStr+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("AQL_DATA_KEY", "${file:"+keyFile+"}")
+	problems, _, err := verifyRestore(dir)
+	if err != nil {
+		t.Fatalf("verifyRestore: %v", err)
+	}
+	if len(problems) != 0 {
+		t.Fatalf("a working ${file:} reference reported: %v", problems)
+	}
+}
+
+func mustNewKey(t *testing.T) string {
+	t.Helper()
+	k, err := sealed.NewKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return k
+}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/vul-os/aql/hub/internal/keys"
 	"github.com/vul-os/aql/hub/internal/sealed"
+	"github.com/vul-os/aql/hub/internal/secretref"
 	"github.com/vul-os/aql/hub/internal/store"
 )
 
@@ -93,13 +94,11 @@ func verifyRestore(dataDir string) (problems []string, checked []string, err err
 	// there — and calling it that would send an operator hunting for a backup
 	// of something they already have.
 	if raw, err := os.ReadFile(filepath.Join(dataDir, "gateway_ed25519.seed")); err == nil && sealed.IsSealed(raw) {
-		if os.Getenv("AQL_DATA_KEY") == "" {
-			problems = append(problems, "gateway_ed25519.seed is ENCRYPTED and AQL_DATA_KEY "+
-				"is not set in this shell. The file is fine; without its data key the hub "+
-				"cannot start, and the key is not in this directory by design. Check you "+
-				"have it before you need it.")
+		problem, line := checkDataKey(raw)
+		if problem != "" {
+			problems = append(problems, problem)
 		} else {
-			checked = append(checked, "gateway key        present (encrypted; AQL_DATA_KEY is set)")
+			checked = append(checked, line)
 		}
 	}
 
@@ -146,4 +145,40 @@ func verifyRestore(dataDir string) (problems []string, checked []string, err err
 	}
 
 	return problems, checked, nil
+}
+
+// checkDataKey answers whether AQL_DATA_KEY can actually open this seed.
+//
+// The first version asked only whether the variable was SET. That is the shape
+// of check this command exists to replace: an unresolvable `${file:}` pointing
+// at a path that is not mounted here, a truncated paste, or simply the wrong
+// key would all have read as fine, and the hub would refuse to start minutes
+// later for a reason the check had been given every chance to find.
+//
+// So it resolves the reference, parses the key, and DECRYPTS. Each failure gets
+// its own message, because they call for different actions: find the file, fix
+// the paste, or find the right key.
+func checkDataKey(sealedSeed []byte) (problem, line string) {
+	raw := os.Getenv("AQL_DATA_KEY")
+	if raw == "" {
+		return "gateway_ed25519.seed is ENCRYPTED and AQL_DATA_KEY is not set in this shell. " +
+			"The file is fine; without its data key the hub cannot start, and the key is not " +
+			"in this directory by design. Check you have it before you need it.", ""
+	}
+	resolved, err := secretref.Resolve("AQL_DATA_KEY", raw)
+	if err != nil {
+		return fmt.Sprintf("AQL_DATA_KEY is set but cannot be read: %v. The hub would refuse "+
+			"to start with the same error.", err), ""
+	}
+	key, err := sealed.ParseKey(resolved)
+	if err != nil {
+		return fmt.Sprintf("AQL_DATA_KEY is set but is not a usable data key: %v", err), ""
+	}
+	if _, err := sealed.Open(key, sealedSeed); err != nil {
+		return "AQL_DATA_KEY is set and does NOT open this seed — it is the wrong key, or " +
+			"the file is damaged. The hub would refuse to start. Find the key this hub was " +
+			"sealed with; deleting the file is not a recovery, it is a new identity no " +
+			"paired controller will obey.", ""
+	}
+	return "", "gateway key        present (encrypted; AQL_DATA_KEY opens it)"
 }

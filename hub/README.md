@@ -108,8 +108,11 @@ even though it is not worth backing up carefully.
 **Losing the data key is losing the hub's identity.** A sealed seed with no key
 REFUSES to start and says so — it never mints a replacement, because a hub no
 paired controller obeys is the outcome this whole design avoids. Keep the key
-somewhere other than the backup it protects, and run `verify-restore`, which
-reports a sealed key with no `AQL_DATA_KEY` in your shell.
+somewhere other than the backup it protects, and run `verify-restore`: it
+resolves `AQL_DATA_KEY`, parses it, and actually DECRYPTS the seed with it, so a
+`${file:}` pointing somewhere that is not mounted, a truncated paste and the
+wrong key are each reported — with the different thing each one needs you to
+do — rather than all reading as "the variable is set".
 
 **Device secrets.** Any credential in `-device-config` may be a reference instead
 of a value: `${env:NAME}` reads an environment variable, `${file:/path}` reads a
