@@ -716,7 +716,7 @@ func buildHub(cfg config, log *slog.Logger) (*hub, error) {
 			"controllers physically")
 	}
 
-	secret, err := loadOrCreateSecret(filepath.Join(cfg.dataDir, "jwt_secret"))
+	secret, err := loadOrCreateSecret(filepath.Join(cfg.dataDir, "jwt_secret"), dataKey)
 	if err != nil {
 		st.Close()
 		return nil, fmt.Errorf("jwt secret: %w", err)
@@ -1493,9 +1493,44 @@ func (h *hub) wireAutomations(cfg config) {
 
 // loadOrCreateSecret persists a random 32-byte JWT signing secret in the data
 // dir at first boot (hex, 0600) so sessions survive restarts.
-func loadOrCreateSecret(path string) ([]byte, error) {
+// loadOrCreateSecret reads the session HMAC key, sealing it at rest when a data
+// key is configured.
+//
+// # Why this one is worth encrypting even though losing it is harmless
+//
+// The two axes point opposite ways. LOSING this file costs nothing: sessions
+// end and people sign in again, which is why verify-restore calls its absence
+// harmless. LEAKING it is serious — it signs every session token, so anyone
+// holding it can mint one for any user, including an admin. A stolen backup is
+// exactly the case where the second matters and the first does not.
+//
+// A sealed secret with no data key REFUSES rather than regenerating. Silently
+// minting a replacement would be harmless in itself and would hide a
+// misconfiguration: the operator meant to supply a key, and the file that says
+// so is sitting right there. Logging everyone out is a poor way to report a
+// missing environment variable.
+func loadOrCreateSecret(path string, dataKey []byte) ([]byte, error) {
 	if raw, err := os.ReadFile(path); err == nil {
-		secret, err := hex.DecodeString(string(raw))
+		body := raw
+		if sealed.IsSealed(raw) {
+			if len(dataKey) == 0 {
+				return nil, fmt.Errorf("%s is encrypted and no AQL_DATA_KEY was supplied. "+
+					"Losing this file would be harmless — sessions simply end — but a hub "+
+					"that regenerated it here would be hiding a missing data key rather "+
+					"than reporting one", path)
+			}
+			if body, err = sealed.Open(dataKey, raw); err != nil {
+				return nil, fmt.Errorf("%s: %w", path, err)
+			}
+		} else if len(dataKey) > 0 {
+			// Seal in place, so turning encryption on needs no migration step.
+			// Best-effort for the same reason the seed's is: failing here would
+			// take down a hub whose secret is perfectly readable.
+			if body2, err := sealed.Seal(dataKey, raw); err == nil {
+				_ = os.WriteFile(path, body2, 0o600)
+			}
+		}
+		secret, err := hex.DecodeString(string(body))
 		if err != nil || len(secret) < 32 {
 			return nil, fmt.Errorf("corrupt jwt secret file %s", path)
 		}
@@ -1507,7 +1542,14 @@ func loadOrCreateSecret(path string) ([]byte, error) {
 	if _, err := rand.Read(secret); err != nil {
 		return nil, err
 	}
-	if err := os.WriteFile(path, []byte(hex.EncodeToString(secret)), 0o600); err != nil {
+	body := []byte(hex.EncodeToString(secret))
+	if len(dataKey) > 0 {
+		var err error
+		if body, err = sealed.Seal(dataKey, body); err != nil {
+			return nil, err
+		}
+	}
+	if err := os.WriteFile(path, body, 0o600); err != nil {
 		return nil, err
 	}
 	return secret, nil

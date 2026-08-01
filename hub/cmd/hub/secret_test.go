@@ -40,7 +40,7 @@ func TestACorruptJWTSecretRefusesRatherThanRegenerating(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if _, err := loadOrCreateSecret(path); err == nil {
+			if _, err := loadOrCreateSecret(path, nil); err == nil {
 				t.Fatal(`loadOrCreateSecret accepted a corrupt secret.
 
 If it generated a replacement, every session token signed with the old one stops
@@ -66,7 +66,7 @@ nothing anywhere says why.`)
 func TestAnAbsentJWTSecretIsCreatedAndPersisted(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "jwt_secret")
 
-	first, err := loadOrCreateSecret(path)
+	first, err := loadOrCreateSecret(path, nil)
 	if err != nil {
 		t.Fatalf("first boot failed: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestAnAbsentJWTSecretIsCreatedAndPersisted(t *testing.T) {
 		t.Fatalf("generated secret is %d bytes, want at least 32", len(first))
 	}
 
-	second, err := loadOrCreateSecret(path)
+	second, err := loadOrCreateSecret(path, nil)
 	if err != nil {
 		t.Fatalf("second boot failed: %v", err)
 	}

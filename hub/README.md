@@ -100,6 +100,11 @@ purpose: this software opens gates, and a hub that will not come back after a
 power cut until somebody drives out to it is worse than one whose key root can
 read.
 
+The same key seals `jwt_secret`. Its axes point opposite ways: losing it is
+harmless (sessions end, people sign in again) while leaking it lets anyone mint
+a session for any user, so it is worth encrypting for the stolen-backup case
+even though it is not worth backing up carefully.
+
 **Losing the data key is losing the hub's identity.** A sealed seed with no key
 REFUSES to start and says so — it never mints a replacement, because a hub no
 paired controller obeys is the outcome this whole design avoids. Keep the key

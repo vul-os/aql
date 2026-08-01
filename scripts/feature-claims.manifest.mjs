@@ -307,6 +307,14 @@ export const FEATURES = [
       [{ file: 'hub/cmd/hub/main.go', pattern: 'keys.WithDataKey' }],
       // And the restore check knows about the loss encryption ADDS.
       [{ file: 'hub/cmd/hub/verifyrestore.go', pattern: 'sealed.IsSealed' }],
+      // The session key too, which is the opposite trade: losing it is
+      // harmless, leaking it lets anyone mint a session for any user.
+      [
+        {
+          file: 'hub/cmd/hub/jwtsealed_test.go',
+          pattern: 'TestASealedJWTSecretWithNoDataKeyRefusesRatherThanRegenerating',
+        },
+      ],
     ],
   },
   {
