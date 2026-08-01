@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -368,4 +369,83 @@ func mustNewKey(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return k
+}
+
+// A damaged database must not be reported as restorable.
+//
+// verify-restore checked for missing key files and read a few rows, and a
+// database can be corrupt in a way that answers those rows perfectly. Measured
+// before this check existed: 4KiB of zeros written over an interior page opened
+// cleanly, satisfied every question the command asks, and produced "this
+// directory can start a hub without losing anything". Damage to the TAIL failed
+// at open, so whether corruption was caught came down to which part of the file
+// it landed on.
+//
+// Both shapes are asserted because they surface differently — SQLite abandons
+// the pragma on a malformed image and reports faults as rows otherwise — and
+// both must end in a refusal.
+func TestVerifyRestoreRefusesADamagedDatabase(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		bust func(t *testing.T, path string)
+	}{
+		{"zeroed interior page", func(t *testing.T, p string) {
+			f, err := os.OpenFile(p, os.O_RDWR, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer f.Close()
+			if _, err := f.WriteAt(make([]byte, 4096), 8192); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{"truncated tail", func(t *testing.T, p string) {
+			fi, err := os.Stat(p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Truncate(p, fi.Size()-4096); err != nil {
+				t.Fatal(err)
+			}
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			st, err := store.Open(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			st.Close()
+
+			// The control: intact, this directory verifies, and the integrity
+			// line is among what it reports examining. Without it a check that
+			// refused everything would pass this test.
+			problems, checked, err := verifyRestore(dir)
+			if err != nil || len(problems) != 0 {
+				t.Fatalf("intact directory: err=%v problems=%v", err, problems)
+			}
+			if !slices.ContainsFunc(checked, func(s string) bool {
+				return strings.Contains(s, "integrity_check clean")
+			}) {
+				t.Fatalf("intact directory does not report an integrity check:\n%s",
+					strings.Join(checked, "\n"))
+			}
+
+			tc.bust(t, store.DatabaseFile(dir))
+
+			problems, _, err = verifyRestore(dir)
+			if err == nil && len(problems) == 0 {
+				t.Fatal("a damaged database was reported as restorable")
+			}
+			// Whichever path it took, the operator must be told it is the
+			// DATABASE that is wrong — not left with a bare SQLite code.
+			msg := strings.Join(problems, "\n")
+			if err != nil {
+				msg = err.Error()
+			}
+			if !strings.Contains(msg, "integrity") && !strings.Contains(msg, "database") {
+				t.Errorf("refusal does not name the database as the problem: %s", msg)
+			}
+		})
+	}
 }

@@ -88,6 +88,13 @@ missing retained key while a rotation is recorded (every controller that had not
 repaired is unreachable and unrepairable). A missing `jwt_secret` is reported as
 harmless, because it is — sessions end and people sign in again.
 
+It also runs SQLite's `integrity_check` on the copy, because a backup can be
+damaged rather than incomplete and the two look nothing alike from outside. A
+`cp` of a live database, a partial write or a bad sector can leave a file that
+opens, answers every question this command asks about keys and pairing, and is
+still missing a page — measured, not assumed. Damage to the tail fails at open;
+damage in the middle used to pass silently.
+
 It opens the database READ-ONLY and does not migrate it: the directory you are
 asking about may be the only copy you have. Run it after every restore, and
 after taking a backup if you want to find out then rather than later.

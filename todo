@@ -832,6 +832,23 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] verify-restore called a CORRUPT database restorable. It checked for missing key
+      files and read a few rows, and a database can be damaged in a way that answers
+      those rows perfectly. Measured first: 4KiB of zeros over an interior page opened
+      cleanly, satisfied every check, and printed "this directory can start a hub
+      without losing anything". Truncating the TAIL failed at open — so whether
+      corruption was caught came down to where the damage landed. That is the exact
+      failure this command exists to prevent. Added store.IntegrityCheck
+      (integrity_check, not quick_check: index-vs-table disagreement is what lets a
+      hub start and then answer wrongly) on the read-only handle it already had.
+      MY OWN NEW CODE had an untested branch and a tamper found it: both damage
+      shapes make SQLite abandon the pragma and ERROR, so the fault-ROW collecting
+      path ran in nothing, and dropping every collected fault was NOT CAUGHT. Getting
+      rows needs damage to a page HEADER (b-tree page header -> "btreeInitPage()
+      returns error code 11" as a row); damage to cell content at the page END is
+      fatal at open instead, which is why my first fixture found nothing. Both
+      tampers caught now, fixture stable over 3 runs.
+
 - [x] mqtt-scan's OUTPUT is now held to the claim README makes about it. Its only
       tests were exit codes on refusal, so it could have printed valid-looking JSON
       that the hub's own parser rejects — loadDeviceFile sets DisallowUnknownFields,

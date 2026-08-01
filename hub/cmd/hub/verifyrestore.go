@@ -84,6 +84,41 @@ func verifyRestore(dataDir string) (problems []string, checked []string, err err
 	defer st.Close()
 	ctx := context.Background()
 
+	// The file itself, before anything it contains. A page that this command's
+	// own queries never read can be entirely zeroed while every other check
+	// passes — see store.IntegrityCheck's comment, which records the measurement.
+	//
+	// Damage arrives in two shapes and both end in a refusal, which is what
+	// matters — but they are not the same message and it would be wrong to
+	// pretend otherwise. SQLite reports recoverable-looking faults as ROWS,
+	// which become problems below; on a badly malformed image it abandons the
+	// pragma and returns an error instead, which surfaces as "verify-restore:
+	// integrity check: database disk image is malformed" and exit 1. The zeroed
+	// interior page that prompted this check takes the second path.
+	faults, err := st.IntegrityCheck(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("integrity check (this copy is damaged and should not "+
+			"be restored): %w", err)
+	}
+	if len(faults) > 0 {
+		// Capped, because integrity_check on a badly damaged file can produce
+		// hundreds of lines and the first few are the ones that identify it.
+		// The count is stated so the cap never reads as the whole story.
+		show := faults
+		if len(show) > 5 {
+			show = show[:5]
+		}
+		for _, f := range show {
+			problems = append(problems, "database integrity: "+f)
+		}
+		if len(faults) > len(show) {
+			problems = append(problems, fmt.Sprintf(
+				"database integrity: %d further fault(s) not shown", len(faults)-len(show)))
+		}
+	} else {
+		checked = append(checked, "database           integrity_check clean")
+	}
+
 	paired, err := st.AnyDevicePaired(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("read devices: %w", err)
