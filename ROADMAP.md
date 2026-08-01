@@ -328,7 +328,9 @@ and none has met physical hardware.
         be tested); the common serial deployment is already reachable through a
         TCP-to-RTU bridge
   - [x] Generic HTTP/webhook
-- [x] ONVIF probe (WS-Discovery) and MQTT bridge scan — `mqtt.Scan` reads
+- [x] ONVIF probe (WS-Discovery) and MQTT bridge scan, reachable as `aql-hub mqtt-scan`
+      since 2026-08-01 — for a while `mqtt.Scan` had no caller at all, so this line was
+      true about the code and false about the product. It reads
       zigbee2mqtt's retained `bridge/devices` announcement and proposes candidates
       with their evidence. It writes no config and registers nothing: a capability
       decides which verbs the engine will route, so that stays a human's call

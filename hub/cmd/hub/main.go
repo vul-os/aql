@@ -217,6 +217,13 @@ func main() {
 		os.Exit(runGenDataKey(os.Args[2:]))
 	}
 
+	// `aql-hub mqtt-scan -device-config FILE` — read a bridge's device
+	// announcement and print the config to paste. README and ROADMAP both
+	// describe this feature; until now nothing could invoke it.
+	if len(os.Args) > 1 && os.Args[1] == "mqtt-scan" {
+		os.Exit(runMQTTScan(os.Args[2:]))
+	}
+
 	if len(os.Args) > 2 && os.Args[1] == "2fa" && os.Args[2] == "disable" {
 		os.Exit(runTwoFactorDisable(os.Args[3:]))
 	}
@@ -1576,6 +1583,7 @@ var knownCommands = []string{
 	"aql-hub verify-audit [-data DIR]",
 	"aql-hub verify-restore [-data DIR]",
 	"aql-hub gen-data-key",
+	"aql-hub mqtt-scan -device-config FILE [-window 5s]",
 	"aql-hub 2fa disable -user NAME -reason TEXT [-data DIR]",
 	"aql-hub energy rebucket -account ID [-tz ZONE] [-dry-run]",
 }

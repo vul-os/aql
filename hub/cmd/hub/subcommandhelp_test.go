@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -136,5 +137,31 @@ func TestGenDataKeyPrintsAKeyTheHubAccepts(t *testing.T) {
 	}
 	if len(after) != len(before) {
 		t.Errorf("gen-data-key wrote to disk; it must only print")
+	}
+}
+
+// mqtt-scan refuses without a broker, and says which of the two problems it is.
+//
+// Both refusals are argument errors rather than failures, so they exit 2 and
+// name the fix. The distinction matters because they have different fixes: no
+// -device-config means the operator has not said where the file is, while a
+// file with no `mqtt` object means they pointed at a real config for a hub that
+// does not use MQTT at all.
+func TestMQTTScanRefusesWithoutABroker(t *testing.T) {
+	if code := runMQTTScan(nil); code != 2 {
+		t.Errorf("no -device-config: exit %d, want 2", code)
+	}
+
+	path := filepath.Join(t.TempDir(), "devices.json")
+	if err := os.WriteFile(path, []byte(`{"http":{"devices":[]}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if code := runMQTTScan([]string{"-device-config", path}); code != 2 {
+		t.Errorf("config without an mqtt object: exit %d, want 2", code)
+	}
+
+	// A path that does not exist is a real failure, not a usage error.
+	if code := runMQTTScan([]string{"-device-config", filepath.Join(t.TempDir(), "missing.json")}); code != 1 {
+		t.Errorf("missing file: exit %d, want 1", code)
 	}
 }
