@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -303,21 +304,43 @@ func TestAGrantedMemberWatchesLiveAndItIsAudited(t *testing.T) {
 	req := httptest.NewRequest("GET", "/v1/accounts/"+acct+"/cameras/"+key+"/live", nil).WithContext(ctx)
 	req.Header.Set("Authorization", "Bearer "+access)
 	rec := httptest.NewRecorder()
+	sr := &syncRecorder{rec: rec}
 
 	done := make(chan struct{})
 	go func() {
-		h.ServeHTTP(rec, req)
+		h.ServeHTTP(sr, req)
 		close(done)
 	}()
 
-	// Publish after the subscriber is attached. Retried rather than slept on:
-	// a fixed sleep is a race dressed as a delay.
+	// Publish after the subscriber is attached, and wait for attachment via
+	// Viewers rather than by watching the recorder fill up.
+	//
+	// The earlier version polled rec.Body.Len() while the handler goroutine was
+	// writing to the same httptest.ResponseRecorder, which is not safe for
+	// concurrent use — `go test -race` reports it, and scripts/check.sh does
+	// not run the detector, so it only ever surfaced in CI. Its comment said "a
+	// fixed sleep is a race dressed as a delay", which was right about the sleep
+	// and introduced a different race in avoiding it.
+	//
+	// Broadcaster.Viewers takes the broadcaster's own mutex, so asking it is
+	// synchronised with the Subscribe the handler performs. Every read of rec
+	// now happens after <-done, when the only goroutine that writes it has
+	// returned.
 	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) {
-		live.PublishFragment(key, []byte("fragment-bytes"))
-		if rec.Body.Len() > 0 {
-			break
-		}
+	for time.Now().Before(deadline) && live.Viewers(key) == 0 {
+		time.Sleep(5 * time.Millisecond)
+	}
+	if live.Viewers(key) == 0 {
+		t.Fatal("no subscriber attached within 3s, so publishing would prove nothing")
+	}
+	live.PublishFragment(key, []byte("fragment-bytes"))
+
+	// Then wait for the handler to have WRITTEN it, through a wrapper that
+	// guards the recorder with a mutex. Cancelling straight after publishing
+	// would race the handler's send loop and the assertions below would be
+	// about an empty body; sleeping "a moment" instead is the same race with a
+	// timer in front of it.
+	for time.Now().Before(deadline) && sr.written() == 0 {
 		time.Sleep(5 * time.Millisecond)
 	}
 	cancel()
@@ -571,4 +594,51 @@ func adminAuditRows(t *testing.T, st *store.Store, action, mentions string) int 
 		}
 	}
 	return n
+}
+
+// syncRecorder guards an httptest.ResponseRecorder with a mutex so a test can
+// ask how much has been written while the handler is still writing.
+//
+// httptest.ResponseRecorder is not safe for concurrent use, and the streaming
+// camera tests need exactly that: a handler running in its own goroutine, and
+// an assertion that has to know when output has arrived. Reading rec.Body.Len()
+// directly is a data race the detector reports — it did, in this file — and
+// scripts/check.sh does not run the detector, so it surfaced only in CI.
+//
+// Flush is forwarded because the live handler streams: without it the recorder
+// never sees a flush and the test would be measuring a different code path from
+// the one that runs.
+type syncRecorder struct {
+	mu  sync.Mutex
+	rec *httptest.ResponseRecorder
+	n   int
+}
+
+func (s *syncRecorder) Header() http.Header { return s.rec.Header() }
+
+func (s *syncRecorder) Write(b []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	n, err := s.rec.Write(b)
+	s.n += n
+	return n, err
+}
+
+func (s *syncRecorder) WriteHeader(code int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.rec.WriteHeader(code)
+}
+
+func (s *syncRecorder) Flush() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.rec.Flush()
+}
+
+// written reports bytes written so far, safely.
+func (s *syncRecorder) written() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.n
 }

@@ -815,6 +815,16 @@ cannot catch what both implementations get wrong together.
       property assertion is a claim about the spec and deserves the same scepticism as
       the code.
 
+- [x] A REAL RACE found 2026-08-01 by running `go test -race` locally on the packages
+      a session had touched — something scripts/check.sh explicitly does not do
+      ("the race detector ... CI-only"). TestAGrantedMemberWatchesLiveAndItIsAudited
+      polled rec.Body.Len() while the handler goroutine wrote to the same
+      httptest.ResponseRecorder, which is not safe for concurrent use. Its own comment
+      said "a fixed sleep is a race dressed as a delay" — right about the sleep, and the
+      thing that replaced it was a different race. Fixed with a mutex-guarded recorder
+      wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
+      lock, to wait for attachment. Whole httpapi package now green under -race.
+
 ## race detector
 - [x] Never run on this repo before. Run by hand across hub, controller and e2e, plus
       the gpio and ble tagged builds: CLEAN, no data races anywhere. Now a CI job so it
