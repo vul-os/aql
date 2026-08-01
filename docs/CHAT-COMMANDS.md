@@ -417,7 +417,10 @@ its HTTP handler rather than reimplemented, because a parallel scope is how a
 rail and the console come to disagree about who owns what, and the direction of
 that disagreement is not predictable.
 
-Stages 2, 4, 5 and 6 are not built.
+Stages 2, 4 and 6 are not built. **Stage 5 is** — zone fan-out, at T1 only and
+only behind an explicit quantifier; see that stage below for the four limits and
+`httpapi/chatzone.go` for the code. This sentence said stage 5 was unbuilt for a
+while after it shipped, which is the drift this document's own §0 warns about.
 
 **Stage 1 — verb-first filtering.** Resolve the verb before the target, then
 drop every device whose capabilities do not expose that verb. This is the single

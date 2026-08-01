@@ -247,11 +247,14 @@ optional weekly window) bound to the app's own keypair. Near the gate, the app f
 controller directly (mDNS on the same LAN, or BLE) and proves itself with a
 challenge-response. No internet, no hub, no chat platform.
 
-**Status: three pieces of four.** The wire contract, the controller-side verification
-(11 normative steps, conformance-tested) and the hub's issuance endpoint
-(`POST /v1/offline-grants`) are all real. **The app side — requesting, storing and
-presenting a grant — is not built**, so this path does not run end to end for a real
-resident today. See [`site/docs/emergency-access.md`](site/docs/emergency-access.md).
+**Status: built end to end.** The wire contract, the controller-side verification
+(11 normative steps, conformance-tested), the hub's issuance endpoint
+(`POST /v1/offline-grants`) and **the app side — requesting, storing and presenting a
+grant** — are all real: `src/lib/offline/service.ts` requests and presents,
+`vault.ts` holds the non-extractable app key, and `/app/emergency` is a routed
+screen rather than a library nobody can reach. What has NOT happened is a
+redemption against a real controller at a real gate; the path is exercised by the
+conformance vectors and by e2e, not by hardware. See [`site/docs/emergency-access.md`](site/docs/emergency-access.md).
 
 Grant issuance re-checks the same membership / account-suspended / user-disabled gates as
 a live open, is all-or-nothing across the requested access points, has a fixed 7-day TTL

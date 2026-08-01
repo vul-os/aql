@@ -270,6 +270,12 @@ export const FEATURES = [
       // and it was the one still calling this unbuilt. Pinned the same way the
       // threat model is, and for the reason the threat model comment gives.
       'proto/grants.md § Implementation status — "The app side is now built too"',
+      // And ARCHITECTURE.md, which was the THIRD document to go on calling this
+      // unbuilt after it shipped -- exactly what the comment above predicted
+      // would keep happening to any doc left off this list. It said "The app
+      // side ... is not built", in bold, while service.ts had requestGrant and
+      // presentAtGate and /app/emergency was routed.
+      'ARCHITECTURE.md — "Status: built end to end"',
     ],
     // Both halves: the library AND a routed screen that imports it. Evidence on
     // the library alone would have passed for weeks while no user could reach
