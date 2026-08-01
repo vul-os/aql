@@ -91,6 +91,12 @@ func (e *Envelope) signable() map[string]any {
 	return m
 }
 
+// No production caller: the hub signs through signForDevice and
+// SignCommandForPin, which pick the right key during a rotation. This is the
+// plain form, kept because the conformance vectors and the e2e harness sign
+// without a rotation in play and should not have to reach past the wrapper to
+// do it.
+//
 // SignCommand builds and signs a command envelope. ttl is clamped to
 // MaxCommandTTL, fail-closed at the controller anyway.
 //
@@ -225,6 +231,19 @@ var needsAccessPoint = map[string]bool{
 	"open": true, "hold": true, "close": true,
 }
 
+// NO PRODUCTION CALLER IN THE HUB, deliberately — see below before deleting it.
+//
+// This is the CONTROLLER's verification, implemented here. The controller has
+// the mirror of this arrangement: its wire.VerifyWSAuth is the HUB's side of
+// ws.auth, carried there because the two are separate Go modules and neither
+// can import the other's internals. Each module holds one independent
+// implementation of the other's half, and proto/vectors checks both against the
+// same fixtures. A contract with one implementation is a contract nobody has
+// cross-checked.
+//
+// So "reachable only from tests" is the point rather than a gap. Deleting it
+// would leave the controller's verifier agreeing only with itself.
+//
 // VerifyCommand runs the complete fail-closed controller-side verification of
 // a command envelope, in the normative order (first failure wins): sig,
 // device_id/access_point, window + iat/exp with ±ClockSkewSeconds on both

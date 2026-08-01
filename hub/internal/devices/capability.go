@@ -284,6 +284,13 @@ func lookupIn(cat map[CapabilityID]Capability, cap CapabilityID, v Verb) (VerbSp
 	return VerbSpec{}, false
 }
 
+// No production caller today — Registry.Resolve reads spec.Tier from Supports()
+// and checks the ok. TierOf is the fail-safe alternative for a caller that does
+// not, and it stays for that reason rather than because anything needs it: the
+// cost is nine lines, and the failure it prevents is a forgotten ok silently
+// yielding the zero Tier, which Allowed() rejects only because TierUnset was
+// deliberately made the zero value.
+//
 // TierOf resolves a pair to its tier, returning TierUnset when the pair is not
 // in the catalogue. TierUnset.Allowed() is false, so a caller that forgets to
 // check the ok from Lookup and uses this instead still fails closed.

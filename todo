@@ -895,7 +895,15 @@ hub serves. Adding an entry back is a real decision, not bookkeeping.
       `accessdev.NewAccessDriver`, a one-line alias to `New` with no caller anywhere, and
       `channels.OccupancyEnabledButUnbuilt`, a carefully-argued reply for a limitation
       that no longer exists ("which lights are on" is built, CHAT-COMMANDS.md §4.2).
-      Both deleted. The remaining 31 need classifying one at a time before a guard can
+      Both deleted. 3 of the remaining 31 are now classified, all legitimate and all
+      now SAYING so at their declaration — which is what a future allowlist needs and
+      what none had: keys.VerifyCommand is the CONTROLLER's verifier carried in the hub,
+      the mirror of the controller carrying wire.VerifyWSAuth, so proto/vectors checks
+      two independent implementations rather than one agreeing with itself;
+      keys.SignCommand is the plain signer the vectors and e2e use, production going
+      through the rotation-aware wrappers; devices.TierOf is a fail-safe alternative to
+      Supports()+ok that nothing needs and that costs nine lines. 28 left, each still
+      needing classification one at a time before a guard can
       exist — an allowlist written in bulk is the thing store/'s guard warns against.
       A signing-path symbol sat outside every guard for four commits; see the keys note.
 - [ ] a token-scoped `GET /v1/events` feed (today the audit log is instance-admin only)
