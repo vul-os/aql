@@ -199,6 +199,14 @@ func main() {
 	// and their recovery codes. See store/twofactor_operator.go for what
 	// authorises it (possession of the data directory, nothing else) and why
 	// the audit entry is written in the same transaction as the disable.
+	// `aql-hub verify-restore [-data DIR]` — answer "can this directory start a
+	// hub without losing anything" BEFORE pointing a hub at it. Both of this
+	// codebase's unrecoverable-data outages were found at a gate; this is where
+	// they should be found instead.
+	if len(os.Args) > 1 && os.Args[1] == "verify-restore" {
+		os.Exit(runVerifyRestore(os.Args[2:]))
+	}
+
 	if len(os.Args) > 2 && os.Args[1] == "2fa" && os.Args[2] == "disable" {
 		os.Exit(runTwoFactorDisable(os.Args[3:]))
 	}

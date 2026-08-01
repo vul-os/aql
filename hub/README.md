@@ -71,6 +71,20 @@ number formatting is rejected rather than implemented — envelopes only carry
 integers and strings. Full detail, including where the TypeScript and
 JavaScript implementations diverge from Go: [`../proto/JCS-PROFILE.md`](../proto/JCS-PROFILE.md).
 
+**Checking a backup before you need it.** `aql-hub verify-restore -data DIR`
+answers "can this directory start a hub without losing anything", from the copy,
+without starting a server. It reports the two losses that are unrecoverable
+rather than inconvenient: a missing `gateway_ed25519.seed` on a hub that has
+paired controllers (starting it mints an identity none of them trusts, and the
+`repair` that would move them must be signed by the key that is gone), and a
+missing retained key while a rotation is recorded (every controller that had not
+repaired is unreachable and unrepairable). A missing `jwt_secret` is reported as
+harmless, because it is — sessions end and people sign in again.
+
+It opens the database READ-ONLY and does not migrate it: the directory you are
+asking about may be the only copy you have. Run it after every restore, and
+after taking a backup if you want to find out then rather than later.
+
 **Device secrets.** Any credential in `-device-config` may be a reference instead
 of a value: `${env:NAME}` reads an environment variable, `${file:/path}` reads a
 file and trims the trailing newline every way of making one adds. It applies to

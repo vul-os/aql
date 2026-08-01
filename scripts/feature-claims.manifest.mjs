@@ -287,6 +287,27 @@ export const FEATURES = [
     ],
   },
   {
+    id: 'verify-restore-checks-a-backup-before-it-is-needed',
+    label:
+      'aql-hub verify-restore reports the unrecoverable losses in a data directory, ' +
+      'read-only, before a hub is pointed at it',
+    docStatus: 'shipped',
+    docRefs: ['hub/README.md — "Checking a backup before you need it"'],
+    evidence: [
+      [{ file: 'hub/cmd/hub/verifyrestore.go', pattern: 'func runVerifyRestore' }],
+      [{ file: 'hub/cmd/hub/main.go', pattern: '"verify-restore"' }],
+      // Read-only is the load-bearing part: the directory being checked may be
+      // the only copy, so the check must not migrate it.
+      [{ root: 'hub/internal/store', pattern: 'func OpenReadOnly' }],
+      [
+        {
+          file: 'hub/cmd/hub/verifyrestore_test.go',
+          pattern: 'TestVerifyRestoreUsesTheReadOnlyOpener',
+        },
+      ],
+    ],
+  },
+  {
     id: 'a-lost-signing-key-refuses-to-start',
     label:
       'A hub with paired controllers refuses to start without its signing key, rather than ' +
