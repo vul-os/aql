@@ -207,8 +207,8 @@ function isCommentLine(line, file) {
  * member of a healthy OR group, and an earlier version of this scan that
  * flattened slots away reported three such non-findings.
  */
-function slotHasCodeEvidence(slot, featureId) {
-  if (COMMENT_EVIDENCE_OK.has(featureId)) return true;
+function slotHasCodeEvidence(slot, featureId, { honourExemption = true } = {}) {
+  if (honourExemption && COMMENT_EVIDENCE_OK.has(featureId)) return true;
   const items = Array.isArray(slot) ? slot : [slot];
   for (const item of items) {
     if (item?.pattern === undefined || item.expectMissing) return true;
@@ -481,6 +481,39 @@ function main() {
         reason:
           `the doc references for this claim have rotted:\n` +
           refProblems.map((p) => `      - ${p}`).join('\n'),
+      });
+    }
+  }
+
+  // Every COMMENT_EVIDENCE_OK entry must still be NEEDED.
+  //
+  // The set bypasses the prose-is-not-the-feature check for a whole claim, so an
+  // entry for a claim that has real code evidence hides nothing today and
+  // everything tomorrow — the moment that claim's evidence decays to a comment,
+  // the exemption is already there to wave it through. Adding `device-engine-built`
+  // to it changed nothing, which is how this was found.
+  //
+  // Same shape as repoLayout's NOT_IN_TREE and sourceCitations' ALLOWED, both
+  // closed this session: an exemption list needs a check from outside itself.
+  for (const id of COMMENT_EVIDENCE_OK) {
+    const feature = FEATURES.find((f) => f.id === id);
+    if (!feature) {
+      failures.push({
+        feature: { id, label: '(no such claim)', docStatus: 'shipped', docRefs: [] },
+        reason: `COMMENT_EVIDENCE_OK names ${id}, which is not a claim — remove it`,
+      });
+      continue;
+    }
+    const needsIt = (feature.evidence ?? []).some(
+      (slot) => !slotHasCodeEvidence(slot, id, { honourExemption: false }),
+    );
+    if (!needsIt) {
+      failures.push({
+        feature,
+        reason:
+          `COMMENT_EVIDENCE_OK exempts this claim, but every slot already matches real ` +
+          `code. The exemption is unnecessary and would wave through the first slot that ` +
+          `decays into a comment — remove it`,
       });
     }
   }
