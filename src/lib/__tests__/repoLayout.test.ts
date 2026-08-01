@@ -97,6 +97,41 @@ describe('the repo-layout tree', () => {
     ).toEqual([]);
   });
 
+  /**
+   * Every Go MODULE must also appear in the subsystem table.
+   *
+   * The layout tree and that table are two lists of the same thing for two
+   * audiences, and fixing one taught nothing about the other: jcs/ was missing
+   * from BOTH, and adding it to the tree left the table still silent about the
+   * module every signature passes through.
+   *
+   * Modules are the right unit here because they are enumerable — a go.mod is
+   * an unambiguous fact — and because a module is the largest thing that can
+   * hide. A package inside hub/ is reached by reading hub/; a sibling module is
+   * reached only by knowing it is there.
+   */
+  it('names every Go module in the subsystem table', () => {
+    const modules = readdirSync(root)
+      .filter((e) => !e.startsWith('.') && e !== 'node_modules')
+      .filter((e) => statSync(resolve(root, e)).isDirectory())
+      .filter((e) => existsSync(resolve(root, e, 'go.mod')));
+
+    expect(modules.length, 'found no Go modules — the walk has drifted').toBeGreaterThan(2);
+
+    const text = readFileSync(resolve(root, 'ARCHITECTURE.md'), 'utf-8');
+    const rows = [...text.matchAll(/^\| \*\*([^*]+)\*\*/gm)].map((m) => m[1]);
+    expect(rows.length, 'parsed no subsystem rows').toBeGreaterThan(5);
+
+    const missing = modules.filter(
+      (m) => !rows.some((r) => r.split(/[ /(]/).includes(m)),
+    );
+    expect(
+      missing,
+      `these Go modules are absent from ARCHITECTURE.md's subsystem table. A sibling ` +
+        `module is reached only by knowing it is there:\n  ` + missing.join('\n  '),
+    ).toEqual([]);
+  });
+
   it('names nothing that does not exist', () => {
     const { names } = treeNames();
     const phantom = [...names].filter((n) => {

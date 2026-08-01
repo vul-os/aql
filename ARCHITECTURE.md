@@ -126,6 +126,7 @@ ports.
 | **e2e-browser** | Playwright suite that drives the real hub binary with the embedded console | CI | TypeScript |
 | **site** | Static mini-site: landing + a self-contained docs viewer over `site/docs/` | Any static host | Hand-written HTML + markdown |
 | **proto** | The versioned wire contracts and conformance vectors (§7) | — | Markdown + JSON |
+| **jcs** | RFC 8785 canonicalization, its own module because BOTH hub and controller import it — it decides the exact bytes a signature covers, so one copy is the point rather than a convenience | — | Go, own module, no dependencies |
 
 ### Repo layout
 
