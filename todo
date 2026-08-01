@@ -832,6 +832,15 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] ALL FIVE CI-only checks run locally 2026-08-01, which scripts/check.sh now tells
+      you how to do rather than only that they exist. Results: the race detector found a
+      real race (above); fuzzing found a request injection (camera notes) AND that CI was
+      not fuzzing the camera targets at all; cross-builds clean across 12 controller
+      combinations and 4 hub platforms; Playwright 19/19; the container image builds and
+      `docker run aql-hub:ci gen-data-key` mints a key, so the two subcommands added this
+      session work in the ARTIFACT rather than only under `go run`. e2e green under -race
+      too. Two of five found defects the local gates structurally cannot see.
+
 ## race detector
 - [x] Never run on this repo before. Run by hand across hub, controller and e2e, plus
       the gpio and ble tagged builds: CLEAN, no data races anywhere. Now a CI job so it

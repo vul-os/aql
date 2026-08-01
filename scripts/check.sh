@@ -110,6 +110,15 @@ echo
 if [ "$FAIL" -eq 0 ]; then
   printf '\033[32m%d gates passed.\033[0m Not everything CI runs — the race detector, fuzzing,\n' "$PASS"
   echo "cross-platform builds, Playwright and the container image are CI-only."
+  echo
+  echo "Each of those is runnable here, and two of the five found real defects on"
+  echo "2026-08-01 the first time anyone ran them locally — a data race in a live-view"
+  echo "test, and a request injection in the SDP parser:"
+  echo "  (cd hub && go test -race -count=1 ./...)          # and controller/, e2e/"
+  echo "  (cd hub && go test -run xxx -fuzz FuzzParseSDP -fuzztime 30s ./internal/devices/camera/)"
+  echo "  (cd hub && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build ./...)"
+  echo "  npx playwright test"
+  echo "  docker build -f hub/Dockerfile -t aql-hub:ci ."
   exit 0
 fi
 printf '\033[31m%d of %d gates failed:\033[0m\n' "$FAIL" "$((PASS + FAIL))"
