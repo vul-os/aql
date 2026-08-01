@@ -113,6 +113,7 @@ import (
 	"github.com/vul-os/aql/hub/internal/httpapi"
 	"github.com/vul-os/aql/hub/internal/keys"
 	"github.com/vul-os/aql/hub/internal/recording"
+	"github.com/vul-os/aql/hub/internal/secretref"
 	"github.com/vul-os/aql/hub/internal/store"
 )
 
@@ -971,7 +972,57 @@ func loadDeviceFile(path string) (deviceFile, error) {
 	if err := dec.Decode(&out); err != nil {
 		return out, fmt.Errorf("parse %s: %w", path, err)
 	}
+	if err := resolveDeviceSecrets(&out); err != nil {
+		return deviceFile{}, fmt.Errorf("%s: %w", path, err)
+	}
 	return out, nil
+}
+
+// resolveDeviceSecrets turns `${env:…}` and `${file:…}` references into the
+// secrets they name, at exactly the three places a credential can appear.
+//
+// Enumerated rather than reflected over: resolving EVERY string in the config
+// would mangle a device label that happens to look like a reference, and would
+// silently acquire new behaviour every time a driver gained a field. These
+// three are the credential surface, and a fourth should be added here
+// deliberately.
+//
+// A failure returns a ZERO deviceFile, so a partially-resolved config can never
+// reach a driver — half a credential set is how a hub connects to one broker
+// authenticated and another anonymously without saying so.
+func resolveDeviceSecrets(f *deviceFile) error {
+	if f.MQTT != nil {
+		v, err := secretref.Resolve("mqtt.password", f.MQTT.Password)
+		if err != nil {
+			return err
+		}
+		f.MQTT.Password = v
+	}
+	if f.Camera != nil {
+		for host, cred := range f.Camera.Credentials {
+			where := "camera.credentials[" + host + "]"
+			if host == "" {
+				where = "camera.credentials (default)"
+			}
+			v, err := secretref.Resolve(where+".password", cred.Password)
+			if err != nil {
+				return err
+			}
+			cred.Password = v
+			f.Camera.Credentials[host] = cred
+		}
+	}
+	if f.HTTP != nil {
+		for i := range f.HTTP.Devices {
+			d := &f.HTTP.Devices[i]
+			h, err := secretref.ResolveMap("http.devices["+d.ID+"]", d.Headers)
+			if err != nil {
+				return err
+			}
+			d.Headers = h
+		}
+	}
+	return nil
 }
 
 // buildDeviceDriver constructs one named driver from the config file. The

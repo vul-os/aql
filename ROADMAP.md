@@ -33,7 +33,7 @@ contract, a device that verifies rather than trusts, and an audit trail you can 
 after the fact.
 
 **The hub** (`hub/`) — one Go binary, SQLite inside, **131 HTTP routes over 31
-migrations, and more than 1,000 tests green** across 18 packages:
+migrations, and more than 1,000 tests green** across 19 packages:
 
 - [x] Accounts, locations, access points, members with roles, invites
 - [x] An **instance-admin** operator seat above every account: one-shot claim
@@ -549,10 +549,27 @@ and none has met physical hardware.
 - [x] SQLite for state, history and configuration — shipped with the hub (31 migrations,
       51 tables), one file to back up, pure-Go driver so it cross-compiles to a Pi
 - [ ] Extend that schema to device state, telemetry and history once Phase 1 exists
-- [ ] **OS-keychain-backed credential vault** for device and service secrets, scoped per
-      device, so nothing sits in plaintext in the SQLite file or a config file. Not built:
-      there is no keychain or keyring code anywhere in the repository today. The hub's own
-      signing key and JWT secret currently live unencrypted in its data directory
+- [x] **Device secrets can live outside the config file** — `${env:NAME}` and
+      `${file:/path}` at the three places a device credential appears: the MQTT password,
+      an ONVIF camera password, and an HTTP device's headers, which is where that driver's
+      own error tells an operator to put a token. So the config can go in version control
+      with nothing sensitive in it, and the secret comes from a Docker secret, a systemd
+      `LoadCredential=`, a Kubernetes mount or an environment variable. An unresolvable
+      reference REFUSES the whole file rather than becoming an empty string: MQTT brokers
+      and ONVIF cameras both accept anonymous connections, so a typo would otherwise
+      downgrade an authenticated connection and look like it worked
+- [ ] ~~**OS-keychain-backed credential vault**~~ — **withdrawn as specified, and the
+      reason is the deployment.** A container has no keychain, no logged-in session and no
+      Secret Service on the bus, and `docker run` is a documented install path; the binary
+      is built `CGO_ENABLED=0`, so it cannot bind macOS Security.framework even where one
+      exists. A keychain integration would work on a developer's laptop and nowhere a hub
+      runs. Files and environment variables are what every one of these deployments does
+      have, which is what the entry above uses
+- [ ] **Encryption at rest for the hub's own secrets.** Still open and unaddressed by the
+      above: the signing key and JWT secret live unencrypted in the data directory, and a
+      config-file indirection does nothing for them. That needs a key the hub can obtain at
+      boot without a human — an operator-supplied passphrase, a TPM, or a mounted key file
+      — and choosing between those is a design question, not an implementation gap
 
 ---
 

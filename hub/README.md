@@ -71,6 +71,15 @@ number formatting is rejected rather than implemented — envelopes only carry
 integers and strings. Full detail, including where the TypeScript and
 JavaScript implementations diverge from Go: [`../proto/JCS-PROFILE.md`](../proto/JCS-PROFILE.md).
 
+**Device secrets.** Any credential in `-device-config` may be a reference instead
+of a value: `${env:NAME}` reads an environment variable, `${file:/path}` reads a
+file and trims the trailing newline every way of making one adds. It applies to
+the MQTT password, ONVIF camera passwords and HTTP device headers. Anything not
+matching those two forms is used literally, so a password containing a brace is
+still a password. A reference that cannot be resolved refuses the whole file —
+never an empty credential, because a broker that accepts anonymous connections
+would take one and the hub would report success.
+
 **Schema** (folded migrations, `internal/store/migrations/`).
 
 **Adding one: new state gets a new TABLE, never a column on a shipped one.** A

@@ -287,6 +287,29 @@ export const FEATURES = [
     ],
   },
   {
+    id: 'device-secrets-can-live-outside-the-config',
+    label:
+      'Device credentials may be ${env:NAME} or ${file:/path} references, resolved at all ' +
+      'three places one can appear, and an unresolvable reference refuses the whole file',
+    docStatus: 'shipped',
+    docRefs: ['hub/README.md § Device secrets'],
+    evidence: [
+      [{ root: 'hub/internal/secretref', pattern: 'func Resolve\\(where, value string\\)' }],
+      // The wiring, enumerated by hand at three sites — a resolver nothing
+      // calls is the same as no resolver.
+      [{ file: 'hub/cmd/hub/main.go', pattern: 'func resolveDeviceSecrets' }],
+      [{ file: 'hub/cmd/hub/main.go', pattern: 'secretref.ResolveMap' }],
+      // The refusal, which is the security-relevant half: an empty credential
+      // is accepted by MQTT brokers and ONVIF cameras alike.
+      [
+        {
+          file: 'hub/cmd/hub/devicesecrets_test.go',
+          pattern: 'the hub would connect anonymously',
+        },
+      ],
+    ],
+  },
+  {
     id: 'hazardous-verbs-need-an-explicit-confirm',
     label:
       'Starting a mower needs confirm: true, and a refused command never reaches the driver',
@@ -856,17 +879,24 @@ export const FEATURES = [
   },
   {
     id: 'keychain-credential-vault',
-    label: 'OS-keychain-backed credential vault for device/service secrets',
+    label:
+      'No OS-keychain integration exists, and none is planned — a container has no keychain, ' +
+      'and the binary is CGO_ENABLED=0. Device secrets use ${env:}/${file:} instead',
     docStatus: 'planned',
     docRefs: [
-      'ROADMAP.md Phase 2 — "Not built: there is no keychain or keyring code anywhere in the repository today"',
-      'site/docs/overview.md — the data directory holds the unencrypted signing key and JWT secret',
+      'ROADMAP.md — "withdrawn as specified, and the reason is the deployment"',
+      'hub/README.md § Device secrets',
     ],
-    evidence: [[
-      { root: 'hub/internal', pattern: 'keychain|keyring|CredentialVault|SecretService', flags: 'i' },
-      { root: 'controller/internal', pattern: 'keychain|keyring|CredentialVault|SecretService', flags: 'i' },
-      { root: 'src-tauri/src', pattern: 'keychain|keyring|CredentialVault|SecretService', flags: 'i' },
-    ]],
+    // Matched on CODE, not the word. The previous pattern was a bare
+    // `keychain|keyring|…` over whole files, and it fired the moment a package
+    // comment EXPLAINED why there is no keychain — a guard that reads prose,
+    // which is the failure this repo has hit three times now in other tests.
+    // An import path or a qualified call is a thing only real usage produces.
+    evidence: [
+      { root: 'hub/internal', pattern: '"github\\.com/[^"]*key(chain|ring)|keyring\\.[A-Z]|keychain\\.[A-Z]' },
+      { root: 'controller/internal', pattern: '"github\\.com/[^"]*key(chain|ring)|keyring\\.[A-Z]|keychain\\.[A-Z]' },
+      { root: 'src-tauri/src', pattern: 'keyring::|keychain::' },
+    ],
   },
   {
     id: 'ble-peripheral-off-linux',
