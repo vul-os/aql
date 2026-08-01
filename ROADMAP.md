@@ -437,6 +437,19 @@ and none has met physical hardware.
       rather than corrected: `AccessPoints.tsx:94` was still IN RANGE and pointed at
       unrelated code, and a citation that looks precise and is not is worse than one that
       does not pretend
+- [x] **The same check now covers SOURCE comments, which nothing scanned.** The doc guard
+      reads Markdown and no code, and the gap held real defects: `devices/mock.go` said the
+      console's demo dataset "still owns" what the console renders, for as long as the
+      console had been on live engine state, and five store, channel and API files cited a
+      routes module, a rate-limit module and an access-lookup module as though they were in
+      this repository. None of those three has ever existed here — they are lintel's, and
+      the DESIGN-SYSTEM pass that prefixed 104 such paths never reached Go because nothing
+      scanned Go. `src/lib/__tests__/sourceCitations.test.ts` now resolves every path cited
+      in a `.go`, `.ts`, `.tsx` or `.mjs` comment. Its own first draft is the cautionary
+      half: the extension alternation matched `grants.js` inside `grants.json` and
+      `Signup.ts` inside `Signup.tsx`, so the first scan reported 41 findings of which 28
+      were the detector misreading itself — a broken detector reports MORE, not fewer, and
+      so reads as thorough
 - [x] **"Never over a chat rail" is enforced, not just written down.**
       `docs/CHAT-COMMANDS.md` §3.6 lists eleven operations a chat message must never
       reach — grant issuance and revocation, device claim, account suspension, credential

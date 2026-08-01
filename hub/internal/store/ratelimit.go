@@ -1,7 +1,7 @@
 package store
 
 // Abuse-protection rate limits + admin quotas, porting backend
-// src/lib/rate-limit.ts onto SQLite. Strictly NON-MONETARY.
+// lintel/src/lib/rate-limit.ts onto SQLite. Strictly NON-MONETARY.
 //
 // Counting uses fixed-window counters (rate_limit_counters) plus a cooldown
 // sentinel table (rate_limit_cooldowns), updated with atomic

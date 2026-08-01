@@ -1,6 +1,6 @@
 package channels
 
-// Telegram — the backend (src/routes/telegram.ts) is an honest stub: it links
+// Telegram — the backend (lintel/src/routes/telegram.ts) is an honest stub: it links
 // the chat, logs, flood-throttles and replies a bare "success"/"failed"
 // without touching the rules pipeline. Here Telegram is a REAL open channel:
 // a linked user's "open" runs the shared verdict → sign → dispatch choke

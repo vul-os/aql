@@ -16,8 +16,13 @@ import (
 // unknown device, unsupported verb, and an injectable failure so callers can
 // exercise ErrUnreachable and ErrIndeterminate.
 //
-// It is NOT a demo-data source for the console. src/lib/demoData.ts still owns
-// that, and the console marks it as demo at the point of use.
+// It is NOT a demo-data source for the console. This said until now that the
+// console's demo dataset "still owns that", which stopped being true when the
+// console moved to live engine state and that file was deleted — there is no
+// demo dataset left to be confused with. What remains true is the part that
+// matters: this driver exists for tests and for a hub with no hardware
+// attached, and nothing the console displays comes from it unless an operator
+// has registered it deliberately.
 type MockDriver struct {
 	id string
 

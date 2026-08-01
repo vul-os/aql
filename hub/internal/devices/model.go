@@ -47,10 +47,16 @@ const (
 
 // Device is the one internal representation every driver maps onto.
 //
-// The shape deliberately matches what the console already renders
-// (src/lib/demoData.ts: id, name, kind, zone, state, read, detail, seen) so
-// that replacing the demo dataset with live data is a data-source change and
-// not a UI rewrite.
+// The shape was chosen to match what the console already rendered at the time —
+// the demo dataset's {id, name, kind, zone, state, read, detail, seen} — so that
+// replacing that dataset with live data would be a data-source change and not a
+// UI rewrite.
+//
+// That replacement has since happened: the console reads live engine state and
+// the demo dataset -- `demoData.ts`, which had no
+// replacement because it needed none -- is deleted. The shape held across the
+// swap without a field being added or dropped, which is the evidence the
+// constraint was worth accepting rather than a claim that it was.
 type Device struct {
 	// ID is unique within a driver. The registry namespaces it with the
 	// driver id to form the globally-unique key it persists.

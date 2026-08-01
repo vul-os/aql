@@ -2,7 +2,7 @@ package store
 
 // The channel seam's persistence layer: identity resolution keyed on
 // (channel, external_id), the available-access-point lookup (port of backend
-// src/lib/access-lookup.ts getAvailableAccessPoints), linked-location menus,
+// lintel/src/lib/access-lookup.ts getAvailableAccessPoints), linked-location menus,
 // and the channel chat/message log with inbound dedupe. Everything here is
 // channel-agnostic; the httpapi channel handlers + internal/channels supply
 // the per-provider wire translation.

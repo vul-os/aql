@@ -1,7 +1,7 @@
 package store
 
 // The open-path choke point: the port of backend logAccess()
-// (src/routes/access.ts) + checkAndConsumeOpenLimits (src/lib/rate-limit.ts).
+// (lintel/src/routes/access.ts) + checkAndConsumeOpenLimits (lintel/src/lib/rate-limit.ts).
 // Every open path (portal, API, chat channels) funnels through LogAccess so
 // rate limits and quotas cannot be bypassed by picking a different channel.
 

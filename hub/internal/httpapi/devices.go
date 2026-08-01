@@ -18,7 +18,7 @@ import (
 )
 
 // Devices + pairing + controller transport, porting backend
-// src/routes/devices.ts and proto/pairing.md.
+// lintel/src/routes/devices.ts and proto/pairing.md.
 //
 // WebSocket library: github.com/coder/websocket (the maintained successor of
 // nhooyr.io/websocket) — context-native API, zero transitive dependencies,

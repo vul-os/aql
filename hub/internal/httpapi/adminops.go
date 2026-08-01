@@ -1,7 +1,7 @@
 package httpapi
 
 // Platform-admin (gateway operator) routes, porting backend
-// src/routes/admin.ts (everything beyond the first-run claim in admin.go).
+// lintel/src/routes/admin.ts (everything beyond the first-run claim in admin.go).
 //
 // SECURITY MODEL (ported):
 //   - Every route sits behind requireAuth + a LIVE is_platform_admin check —
