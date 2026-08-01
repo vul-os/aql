@@ -222,7 +222,10 @@ export const FEATURES = [
       'proto/commands.md § Configuration report',
     ],
     evidence: [
-      [{ file: 'hub/internal/store/migrations/0026_controller_config_reports.sql' }],
+      [{ file: 'hub/internal/store/migrations/0026_controller_config_reports.sql',
+        // The TABLE, not the file. Existence alone passed for an emptied
+        // migration, which is evidence of nothing.
+        pattern: 'CREATE TABLE controller_config_reports' }],
       [{ root: 'hub/internal/store', pattern: 'func \\(s \\*Store\\) SaveConfigReport' }],
       [{ root: 'hub/internal/httpapi', pattern: 'handleControllerConfigReport' }],
       [{ file: 'hub/internal/httpapi/server.go', pattern: 'devices/\\{id\\}/config-report' }],
@@ -1711,7 +1714,12 @@ export const FEATURES = [
     // TestHashChainTamperRecomputingDownstreamIsUndetected.
     evidence: [
       { file: 'hub/internal/store/audithash.go', pattern: 'func \\(s \\*Store\\) VerifyAccessLogHashChain' },
-      { file: 'hub/internal/store/migrations/0007_audit_hash_chain.sql' },
+      // The TRIGGER, which is the claim. 0007's load-bearing statement is
+      // `access_logs_immutable` — a BEFORE UPDATE trigger that refuses any edit
+      // except the one hash-fill transition. Pinning the file only meant an
+      // emptied migration still counted as a tamper-evident audit log.
+      { file: 'hub/internal/store/migrations/0007_audit_hash_chain.sql',
+        pattern: 'CREATE TRIGGER access_logs_immutable' },
       { file: 'hub/internal/httpapi/server.go', pattern: '"GET /v1/admin/audit/verify"' },
       { file: 'hub/cmd/hub/main.go', pattern: 'verify-audit' },
     ],
