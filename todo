@@ -935,8 +935,9 @@ hub serves. Adding an entry back is a real decision, not bookkeeping.
       in camera/doc.go. One was NOT legitimate: GateQuestionReply, deleted.
       SWEEP COMPLETE. Of 33 uncalled exports: 3 deleted, 2 missing entry points built
       (gen-data-key, mqtt-scan), several docs corrected, the rest classified in place.
-      A guard could now be written from these verdicts; the reason not to write it in
-      one sitting was
+      GUARD WRITTEN, from those verdicts rather than in bulk:
+      devices/hubreach_test.go. hub/ now has the coverage store/ and controller/ had.
+      The reason it could not be written in one sitting was
       exist — an allowlist written in bulk is the thing store/'s guard warns against.
       A signing-path symbol sat outside every guard for four commits; see the keys note.
 - [ ] a token-scoped `GET /v1/events` feed (today the audit log is instance-admin only)
