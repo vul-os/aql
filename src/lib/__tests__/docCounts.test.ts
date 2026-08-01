@@ -161,7 +161,12 @@ const CLAIMS: Array<{ file: string; pattern: RegExp; key: string }> = [
   { file: 'ARCHITECTURE.md', pattern: /\*\*Built\.\*\* ([\d,]+) HTTP routes/, key: 'routes' },
   { file: 'ARCHITECTURE.md', pattern: /([\d,]+) Go test functions green across/, key: 'hubTests' },
   { file: 'ARCHITECTURE.md', pattern: /green across ([\d,]+) packages/, key: 'hubPackages' },
-  { file: 'ARCHITECTURE.md', pattern: /\*\*Built\.\*\* ([\d,]+) Go test functions green\. GPIO/, key: 'controllerTests' },
+  // Anchored on "The GPIO" since the row was reworded: it used to say the relay
+  // and BLE "are **not**", a sentence that stopped mid-claim and read as "not
+  // built" when both are written and neither is hardware-validated. This guard
+  // caught the rewording rather than silently ceasing to check the count, which
+  // is what the trailing anchor is for.
+  { file: 'ARCHITECTURE.md', pattern: /\*\*Built\.\*\* ([\d,]+) Go test functions green\. The GPIO/, key: 'controllerTests' },
   { file: 'ARCHITECTURE.md', pattern: /\*\*Built\.\*\* ([\d,]+) conformance vectors/, key: 'vectors' },
   { file: 'ARCHITECTURE.md', pattern: /conformance vectors, ([\d,]+) checks/, key: 'vectorChecks' },
   { file: 'ARCHITECTURE.md', pattern: /Backed by \*\*([\d,]+) conformance vectors\*\*/, key: 'vectors' },

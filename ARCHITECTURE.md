@@ -36,7 +36,7 @@ exist and which are design intent. The condensed operator-facing tour is
 | --- | --- |
 | Hub (`hub/`) — open path, console, API, device hub, audit | **Built.** 136 HTTP routes, 1,397 Go test functions green across 20 packages |
 | **Access module** — the first device kind wired end to end | **Built.** Signed commands, pinned-key controller, offline grants, tamper-evident audit |
-| Controller agent (`controller/`) — pairing, signed commands, grants, events | **Built.** 194 Go test functions green. GPIO relay driver and BLE radio are **not** |
+| Controller agent (`controller/`) — pairing, signed commands, grants, events | **Built.** 194 Go test functions green. The GPIO relay driver and the BLE GATT peripheral are **written and unvalidated**: the relay implements uAPI v2 line handles and a pulse state machine, the peripheral cross-compiles for Linux (BlueZ) and Windows (WinRT) behind `-tags ble`, and neither has ever driven real hardware. Written, not proven — those are different claims and this row used to make only the pessimistic one |
 | Wire contracts (`proto/`) | **Built.** 83 conformance vectors, 118 checks, consumed by both sides |
 | Cross-module harness (`e2e/`) | **Built.** Boots real binaries and drives the open path over the wire |
 | Web console + desktop shell (`src/`, `src-tauri/`) | **Built.** Admin surfaces, the device / energy / automations screens over the real engine, and an emergency-access screen that requests and stores an offline grant |
@@ -120,7 +120,7 @@ ports.
 | Component | What it is | Runs on | Stack |
 | --- | --- | --- | --- |
 | **the hub** (`hub/`) | The entire server: open path, console, API, device hub, audit — not a KOTVA gateway (§3a) | Any VPS / Pi / always-on box | Go · SQLite (`modernc.org/sqlite`, no CGO) · `go:embed` console |
-| **controller** | The unit wired to the gate relay; verifies signatures, drives the motor. The agent is real and conformance-tested; the GPIO relay and BLE radio are the hardware-only surfaces still missing | Pi-class board at the gate, Wi-Fi or GSM | Go, own module, std-lib first (`-tags gpio` / `-tags ble` for hardware) |
+| **controller** | The unit wired to the gate relay; verifies signatures, drives the motor. The agent is real and conformance-tested; the GPIO relay and the BLE peripheral are written and cross-compile, and are the two surfaces no hardware has ever exercised | Pi-class board at the gate, Wi-Fi or GSM | Go, own module, std-lib first (`-tags gpio` / `-tags ble` for hardware) |
 | **e2e** | Cross-module harness: boots real hub + controller binaries and proves the open path over the wire | CI, dev machine | Go, subprocess-driven |
 | **src / src-tauri** | The console (embedded in the hub) and the Tauri v2 desktop shell with a hub picker | Browser, desktop | React 19 · Vite · Tauri v2 · Rust (thin) |
 | **e2e-browser** | Playwright suite that drives the real hub binary with the embedded console | CI | TypeScript |

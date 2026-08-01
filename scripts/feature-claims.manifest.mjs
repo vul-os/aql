@@ -1395,7 +1395,14 @@ export const FEATURES = [
     id: 'gpio-relay-driver-written',
     label: 'The GPIO relay driver is implemented (uAPI v2 line handles, pulse state machine) — NOT that it has ever driven a real relay',
     docStatus: 'shipped',
-    docRefs: ['ROADMAP.md — "STATUS: NOT VALIDATED ON HARDWARE"'],
+    docRefs: [
+      'ROADMAP.md — "STATUS: NOT VALIDATED ON HARDWARE"',
+      // ARCHITECTURE.md's controller row said "GPIO relay driver and BLE radio
+      // are **not**" -- a sentence that stops mid-claim and reads as "not
+      // built", when both are written and neither is validated. Pinned so the
+      // distinction cannot quietly collapse back into the pessimistic half.
+      'ARCHITECTURE.md — "written and unvalidated"',
+    ],
     evidence: [
       { file: 'controller/internal/relay/gpio.go', pattern: 'func \\(g \\*GPIO\\) Pulse' },
       { file: 'controller/internal/relay/gpio.go', pattern: 'STATUS: NOT VALIDATED ON HARDWARE' },
