@@ -449,3 +449,69 @@ func TestVerifyRestoreRefusesADamagedDatabase(t *testing.T) {
 		})
 	}
 }
+
+// The write-ahead log is reported, both when it is there and when it is not.
+//
+// hub/README tells operators to copy the directory rather than the database
+// because a live hub keeps recent writes in lintel.db-wal, and says that
+// verify-restore prints that file's size when it is present. That sentence is
+// only true while this command actually prints it — and when the line was added
+// nothing checked, so a tamper pointing the stat at a filename that does not
+// exist was NOT CAUGHT. It is the second time in a week that new operator-facing
+// output went in with a document describing it and no test holding it there.
+//
+// The absent case matters as much as the present one. An absent -wal is either
+// a clean checkpoint or a copy that omitted the file, the two are identical on
+// disk, and the wrong thing to do is imply the first.
+func TestVerifyRestoreReportsTheWriteAheadLog(t *testing.T) {
+	dir := t.TempDir()
+	st, err := store.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	walPath := store.DatabaseFile(dir) + "-wal"
+	if _, err := os.Stat(walPath); err != nil {
+		st.Close()
+		t.Skipf("no -wal beside an open database: %v", err)
+	}
+
+	// Open, so the WAL is on disk with the migrations in it.
+	_, checked, err := verifyRestore(dir)
+	if err != nil {
+		st.Close()
+		t.Fatal(err)
+	}
+	if !slices.ContainsFunc(checked, func(s string) bool {
+		return strings.Contains(s, "write-ahead log") && strings.Contains(s, "present")
+	}) {
+		st.Close()
+		t.Fatalf("a directory with a %d-byte -wal does not mention it:\n%s",
+			fileSizeOf(t, walPath), strings.Join(checked, "\n"))
+	}
+
+	// Closed cleanly, SQLite checkpoints and removes the -wal. The line must
+	// change rather than disappear, because "no -wal" is not "nothing to say".
+	st.Close()
+	if _, err := os.Stat(walPath); err == nil {
+		t.Skip("this SQLite build leaves the -wal after a clean close")
+	}
+	_, checked, err = verifyRestore(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.ContainsFunc(checked, func(s string) bool {
+		return strings.Contains(s, "write-ahead log") && strings.Contains(s, "absent")
+	}) {
+		t.Errorf("a directory with no -wal says nothing about it:\n%s", strings.Join(checked, "\n"))
+	}
+}
+
+func fileSizeOf(t *testing.T, p string) int64 {
+	t.Helper()
+	fi, err := os.Stat(p)
+	if err != nil {
+		return 0
+	}
+	return fi.Size()
+}

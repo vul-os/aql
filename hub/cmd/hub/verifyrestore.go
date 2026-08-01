@@ -77,6 +77,35 @@ func verifyRestore(dataDir string) (problems []string, checked []string, err err
 	}
 	checked = append(checked, "lintel.db          present")
 
+	// The write-ahead log, which is where a running hub's recent data actually
+	// lives — and the file a backup is most likely to leave behind.
+	//
+	// This is not a small effect. A hub that has been up for a few minutes can
+	// have a 4 KiB lintel.db and a 1.9 MiB lintel.db-wal: copying "the
+	// database" then produces a file that opens, passes integrity_check with
+	// zero faults, and does not contain the tables. After a checkpoint the
+	// split is less dramatic and more dangerous — the copy looks complete and
+	// is merely missing whatever happened since.
+	//
+	// What can be said depends on which case this is, and only one of the two
+	// is knowable from the copy:
+	//
+	//   - a -wal is here: say how much is in it, because it must travel with
+	//     the database. Its contents ARE included in everything below; the
+	//     read-only open replays them.
+	//   - no -wal: this is either a clean backup or one that omitted the file,
+	//     and they are identical on disk. SQLite deletes the -wal on a clean
+	//     close, so its absence proves nothing either way. Saying so is the
+	//     honest answer; claiming the backup is complete is not.
+	if fi, statErr := os.Stat(store.DatabaseFile(dataDir) + "-wal"); statErr == nil {
+		checked = append(checked, fmt.Sprintf(
+			"write-ahead log    present, %s (its contents are included below; a copy "+
+				"without it loses them)", humanBytes(fi.Size())))
+	} else {
+		checked = append(checked, "write-ahead log    absent (either checkpointed or "+
+			"omitted from the copy — the two look identical here)")
+	}
+
 	st, err := store.OpenReadOnly(dataDir)
 	if err != nil {
 		return nil, nil, err
@@ -216,4 +245,18 @@ func checkDataKey(sealedSeed []byte) (problem, line string) {
 			"paired controller will obey.", ""
 	}
 	return "", "gateway key        present (encrypted; AQL_DATA_KEY opens it)"
+}
+
+// humanBytes formats a size for an operator rather than a machine. Deliberately
+// coarse: the number exists to convey "this is where your data is", not to be
+// arithmetic anyone does.
+func humanBytes(n int64) string {
+	switch {
+	case n >= 1<<20:
+		return fmt.Sprintf("%.1f MiB", float64(n)/(1<<20))
+	case n >= 1<<10:
+		return fmt.Sprintf("%.1f KiB", float64(n)/(1<<10))
+	default:
+		return fmt.Sprintf("%d bytes", n)
+	}
 }

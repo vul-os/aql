@@ -832,6 +832,23 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] "Back up the database" was a DATA-LOSS instruction and nothing said so. The hub
+      opens SQLite with journal_mode(WAL), so a live hub can have a 4096-BYTE
+      lintel.db beside a 1.8 MiB lintel.db-wal — measured, and now pinned by a test.
+      Copying the .db alone gives a file that opens, reports ZERO integrity faults,
+      and does not contain the tables, because an empty database is a valid one. The
+      integrity check added yesterday cannot see this: the copy is not damaged, it is
+      empty. After a checkpoint it is worse, because the copy looks complete and is
+      merely missing everything since. A whole-directory copy replays correctly under
+      OpenReadOnly (50/50 rows), so the fix is instructions plus visibility.
+      verify-restore now reports the WAL's size when present, and when ABSENT says it
+      cannot tell a clean checkpoint from a copy that omitted the file — they are
+      identical on disk. hub/README says all of it.
+      SAME TRAP AS THE AUDIT HEAD, one week apart: I added operator-facing output,
+      documented it in README, and nothing pinned it — the tamper pointing the stat
+      at "-nope" was NOT CAUGHT. Test added, both branches now caught, and the two
+      t.Skip paths verified never to fire.
+
 - [x] verify-restore called a CORRUPT database restorable. It checked for missing key
       files and read a few rows, and a database can be damaged in a way that answers
       those rows perfectly. Measured first: 4KiB of zeros over an interior page opened

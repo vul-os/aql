@@ -95,6 +95,16 @@ opens, answers every question this command asks about keys and pairing, and is
 still missing a page — measured, not assumed. Damage to the tail fails at open;
 damage in the middle used to pass silently.
 
+**Copy the directory, not the database file.** The hub opens SQLite in WAL mode,
+so recent writes live in `lintel.db-wal` until a checkpoint folds them in. A hub
+that has been up for a few minutes can have a 4 KiB `lintel.db` sitting beside a
+1.9 MiB `lintel.db-wal` — that is a measurement from the test suite, not an
+estimate. Copying "the database" then gives you a file that opens, reports zero
+integrity faults, and does not contain your tables, because an empty database is
+a perfectly valid one. `verify-restore` prints the WAL's size when it is present
+and says so plainly when it is not: an absent `-wal` means either a clean
+checkpoint or a copy that left it behind, and those are identical on disk.
+
 It opens the database READ-ONLY and does not migrate it: the directory you are
 asking about may be the only copy you have. Run it after every restore, and
 after taking a backup if you want to find out then rather than later.
