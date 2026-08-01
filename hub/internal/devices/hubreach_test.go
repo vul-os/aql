@@ -1,6 +1,7 @@
 package devices_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -42,51 +43,88 @@ import (
 
 var declRe = regexp.MustCompile(`(?m)^func (?:\([^)]*\) )?([A-Z]\w*)\(`)
 
-// allowedUncalled maps a symbol to why production does not call it.
+// allowedUncalled maps a symbol to why production does not call it, and to the
+// packages that declaration lives in.
+//
+// # Why the packages are part of the entry
+//
+// This scan reports NAMES, and an entry used to be a bare name too. A name is
+// not unique: an orphan planted in channels called `Params` — a name the camera
+// package legitimately has an entry for — was absorbed by that entry instead of
+// being reported. The failure it produced was worse than silence: it announced
+// that the camera's exemption had gone stale, which is a specific and wrong
+// accusation about working code.
+//
+// Recording where each was granted turns that into a failure. A new declaration
+// of an exempt name in a different package changes the site list and fails here,
+// which is the same reasoning as the counts in docCitations' historical
+// exemptions: an exemption must cover exactly what it was argued for.
 //
 // "Nothing calls it yet" is unfinished work and does not belong here. The four
 // symbols that turned out to mean that were fixed or deleted rather than added.
-var allowedUncalled = map[string]string{
+type exemption struct {
+	why string
+	in  []string // packages, relative to hub/internal
+}
+
+var allowedUncalled = map[string]exemption{
 	// Cross-module mirrors: each module holds one independent implementation of
 	// the other's half so proto/vectors can check two rather than one.
-	"VerifyCommand": "the CONTROLLER's verification, implemented in the hub; see its declaration",
-	"SignCommand":   "the plain signer; production goes through the rotation-aware wrappers",
+	"VerifyCommand": {"the CONTROLLER's verification, implemented in the hub; see its declaration", []string{"keys"}},
+	"SignCommand":   {"the plain signer; production goes through the rotation-aware wrappers", []string{"keys"}},
 
 	// Config-unaware forms whose config-aware twin is what production must use.
-	"Disclosure":  "declared table verbatim; production needs DisclosureFor, which corrects for the Telegram engine",
-	"Disclosures": "same as Disclosure",
+	"Disclosure":  {"declared table verbatim; production needs DisclosureFor, which corrects for the Telegram engine", []string{"channels"}},
+	"Disclosures": {"same as Disclosure", []string{"channels"}},
 
 	// Superseded wrappers, kept for tests that want the narrower behaviour.
-	"TextGateVerb":       "collapses TextGateIntent's command-vs-question distinction",
-	"GateVerbForCommand": "the bare mapping under SelectionCommandVerb",
-	"TierOf":             "fail-safe alternative to Supports()+ok that nothing needs",
+	"TextGateVerb":       {"collapses TextGateIntent's command-vs-question distinction", []string{"channels"}},
+	"GateVerbForCommand": {"the bare mapping under SelectionCommandVerb", []string{"channels"}},
+	"TierOf":             {"fail-safe alternative to Supports()+ok that nothing needs", []string{"devices"}},
 
 	// Functional options with no configurator. The three non-test ones are real
 	// tunables reachable from nowhere an operator can get to; see their docs.
-	"WithClock":                   "test seam, says so at its declaration",
-	"WithReadTimeout":             "real tunable, no config surface reaches it",
-	"WithRollupBudget":            "real tunable, no config surface reaches it",
-	"WithCounterGapInterpolation": "real tunable whose default is a product decision",
+	"WithClock":                   {"test seam, says so at its declaration", []string{"energy"}},
+	"WithReadTimeout":             {"real tunable, no config surface reaches it", []string{"energy"}},
+	"WithRollupBudget":            {"real tunable, no config surface reaches it", []string{"energy"}},
+	"WithCounterGapInterpolation": {"real tunable whose default is a product decision", []string{"energy"}},
 
 	// Test fixtures and observability.
-	"NewMockDriver":       "the mock driver itself",
-	"AddDevice":           "mock fleet construction",
-	"Drop":                "mock failure injection",
-	"Weekdays":            "builds a day bitmask for readable schedule fixtures",
-	"DenialReasons":       "exists so a test can assert every reason has a message; says so",
-	"Intact":              "camera pipeline observability; see camera/doc.go",
-	"VideoResolution":     "camera pipeline observability; see camera/doc.go",
-	"Params":              "camera pipeline observability; see camera/doc.go",
-	"DecodeTime":          "camera pipeline observability; see camera/doc.go",
-	"Sequence":            "camera pipeline observability; see camera/doc.go",
-	"BackwardsTimestamps": "camera diagnostics; see camera/doc.go",
-	"MarkerDisagreements": "camera diagnostics; see camera/doc.go",
-	"Viewers":             "subscriber accounting; its doc explains why the capture loop cannot use it",
+	"NewMockDriver":       {"the mock driver itself", []string{"devices"}},
+	"AddDevice":           {"mock fleet construction", []string{"devices"}},
+	"Drop":                {"mock failure injection", []string{"devices"}},
+	"Weekdays":            {"builds a day bitmask for readable schedule fixtures", []string{"automations"}},
+	"DenialReasons":       {"exists so a test can assert every reason has a message; says so", []string{"channels"}},
+	"Intact":              {"camera pipeline observability; see camera/doc.go", []string{"devices/camera"}},
+	"VideoResolution":     {"camera pipeline observability; see camera/doc.go", []string{"devices/camera"}},
+	"Params":              {"camera pipeline observability; see camera/doc.go", []string{"devices/camera"}},
+	"DecodeTime":          {"camera pipeline observability; see camera/doc.go", []string{"devices/camera"}},
+	"Sequence":            {"camera pipeline observability; see camera/doc.go", []string{"devices/camera"}},
+	"BackwardsTimestamps": {"camera diagnostics; see camera/doc.go", []string{"devices/camera"}},
+	"MarkerDisagreements": {"camera diagnostics; see camera/doc.go", []string{"devices/camera"}},
+	"Viewers":             {"subscriber accounting; its doc explains why the capture loop cannot use it", []string{"recording"}},
+
+	// Pipeline counters. Both names are declared on more than one type, which is
+	// exactly what used to hide them: the other declaration's signature line
+	// counted as a use, so neither appeared here until the scan started
+	// subtracting every declaring file rather than the first one.
+	"Dropped": {"depacketizer and broadcaster loss counters; read by tests and by camera/doc.go's diagnostics story, not by the capture loop", []string{"devices/camera", "recording"}},
+	"Emitted": {"the assembler and depacketizer output counters, same story as Dropped", []string{"devices/camera"}},
+
+	// Derived energy figures the API deliberately does not send.
+	//
+	// GET /v1/accounts/{id}/energy/mix returns the COMPONENTS — kwh,
+	// estimated_kwh, coverage_seconds, expected_seconds — and the console does
+	// the arithmetic itself (src/components/device/liveState.ts:222 and :315).
+	// Sending a derived number as well would be two representations of one fact,
+	// which is what the mix design is most careful to avoid.
+	"CoverageRatio": {"coverage/expected, derivable by any client from what the mix API already sends", []string{"energy"}},
+	"MeasuredKWh":   {"kwh minus estimated_kwh, same reason; note the console branches on a null kwh first, as this function's doc requires", []string{"energy"}},
+	"Share":         {"the mix API returns coverage/expected seconds instead, so a client shows the gap", []string{"energy"}},
 
 	// Genuinely incidental.
-	"IsNotFound":    "errors.Is wrapper",
-	"UnmarshalJSON": "called by encoding/json",
-	"Share":         "the mix API returns coverage/expected seconds instead, so a client shows the gap",
+	"IsNotFound":    {"errors.Is wrapper", []string{"automations"}},
+	"UnmarshalJSON": {"called by encoding/json", []string{"httpapi"}},
 }
 
 func hubRoot(t *testing.T) string {
@@ -141,35 +179,71 @@ func sources(t *testing.T, root string, extra map[string]string) map[string]stri
 	return out
 }
 
-func uncalled(prod map[string]string) []string {
-	declared := map[string]string{}
+// uncalled returns exported names with no reference outside their own
+// declarations.
+//
+// # Why every declaring file is subtracted, not just the first
+//
+// This used to record ONE declaring file per name and subtract the `func X(`
+// lines only there. Names are declared more than once all over this tree —
+// `Execute` on seven driver types, `Dropped` on two — and every other
+// declaration's own signature line then counted as a USE of the name. Four
+// symbols were invisible because of it, and a planted orphan named after an
+// existing symbol was not reported at all: instead the scan announced that the
+// allowlist entry for the REAL symbol had gone stale, which is a confident,
+// specific, wrong answer.
+//
+// Uses are still counted across the whole tree rather than per package, so a
+// name used in one package counts as used in all of them. That is deliberately
+// conservative: it can hide an orphan, never invent one. scripts/deadcode.sh
+// does the type-based analysis that resolves it properly, and this stays a
+// cheap in-module net for the case deadcode does NOT cover — reachable from a
+// test, unreachable from production.
+// The returned map is name -> the packages declaring it, relative to
+// hub/internal, so an exemption can be held to the site it was argued for.
+func uncalled(prod map[string]string) map[string][]string {
+	declared := map[string][]string{}
 	for p, src := range prod {
 		if !strings.Contains(p, "/internal/") || strings.Contains(p, "/internal/store/") {
 			continue
 		}
 		for _, m := range declRe.FindAllStringSubmatch(src, -1) {
-			if _, seen := declared[m[1]]; !seen {
-				declared[m[1]] = p
-			}
+			declared[m[1]] = append(declared[m[1]], p)
 		}
 	}
-	var out []string
-	for name, where := range declared {
+	out := map[string][]string{}
+	for name, sites := range declared {
 		re := regexp.MustCompile(`\b` + regexp.QuoteMeta(name) + `\b`)
+		declRe := regexp.MustCompile(`(?m)^func (?:\([^)]*\) )?` + regexp.QuoteMeta(name) + `\(`)
+		at := map[string]bool{}
+		for _, p := range sites {
+			at[p] = true
+		}
 		uses := 0
 		for p, src := range prod {
 			n := len(re.FindAllString(src, -1))
-			if p == where {
-				n -= len(regexp.MustCompile(`(?m)^func (?:\([^)]*\) )?`+regexp.QuoteMeta(name)+`\(`).
-					FindAllString(src, -1))
+			if at[p] {
+				n -= len(declRe.FindAllString(src, -1))
 			}
 			uses += n
 		}
 		if uses == 0 {
-			out = append(out, name)
+			pkgs := map[string]bool{}
+			for _, p := range sites {
+				dir := filepath.Dir(p)
+				if i := strings.Index(dir, "internal/"); i >= 0 {
+					dir = dir[i+len("internal/"):]
+				}
+				pkgs[dir] = true
+			}
+			var list []string
+			for d := range pkgs {
+				list = append(list, d)
+			}
+			sort.Strings(list)
+			out[name] = list
 		}
 	}
-	sort.Strings(out)
 	return out
 }
 
@@ -182,10 +256,8 @@ func TestTheUncalledScanCanSeeAnOrphan(t *testing.T) {
 	planted := map[string]string{
 		filepath.Join(root, "internal", "channels", "zz_probe.go"): "package channels\n\nfunc DeadProbeXYZ() int { return 1 }\n",
 	}
-	for _, n := range uncalled(sources(t, root, planted)) {
-		if n == "DeadProbeXYZ" {
-			return
-		}
+	if _, ok := uncalled(sources(t, root, planted))["DeadProbeXYZ"]; ok {
+		return
 	}
 	t.Fatal("the scan did not find a planted orphan, so its verdict on the real tree is worthless")
 }
@@ -204,12 +276,32 @@ func TestEveryUncalledHubSymbolIsExplained(t *testing.T) {
 	}
 
 	live := map[string]bool{}
-	var unexplained []string
-	for _, name := range found {
+	var unexplained, misplaced []string
+	for name, pkgs := range found {
 		live[name] = true
-		if _, ok := allowedUncalled[name]; !ok {
+		e, ok := allowedUncalled[name]
+		if !ok {
 			unexplained = append(unexplained, name)
+			continue
 		}
+		// The exemption covers the packages it was argued for and no others. A
+		// new uncalled declaration of the same name elsewhere is a different
+		// symbol with a different reason, and used to be absorbed silently.
+		if strings.Join(pkgs, ",") != strings.Join(e.in, ",") {
+			misplaced = append(misplaced, fmt.Sprintf("%s: declared in [%s], the exemption covers [%s] — %s",
+				name, strings.Join(pkgs, " "), strings.Join(e.in, " "), e.why))
+		}
+	}
+	sort.Strings(unexplained)
+	sort.Strings(misplaced)
+	if len(misplaced) > 0 {
+		t.Errorf(`an exemption is covering a package it was not argued for:
+
+  %s
+
+Adding a symbol here explains ONE declaration. A same-named one in another
+package is a different function with a different reason to be unreachable, and
+before this check it inherited the first one's excuse.`, strings.Join(misplaced, "\n  "))
 	}
 	if len(unexplained) > 0 {
 		t.Errorf(`these exported symbols have no production caller and no entry here:

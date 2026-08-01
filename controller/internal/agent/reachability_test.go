@@ -122,28 +122,36 @@ func loadSources(t *testing.T, root string, extra map[string]string) sources {
 
 // orphans returns exported symbols declared under internal/ that no production
 // file references.
+//
+// Every declaring file is discounted, not just the first. The hub's equivalent
+// scan discounted only the first, so when a name was declared in two places the
+// second declaration's own signature line counted as a USE of the first and
+// both became invisible — four symbols were hidden there. No name in this
+// module currently collides, which is checked below rather than assumed.
 func orphans(src sources) []string {
-	declared := map[string]string{}
+	declared := map[string][]string{}
 	for p, body := range src.prod {
 		if !strings.Contains(p, string(filepath.Separator)+"internal"+string(filepath.Separator)) {
 			continue
 		}
 		for _, m := range declRe.FindAllStringSubmatch(body, -1) {
-			if _, seen := declared[m[1]]; !seen {
-				declared[m[1]] = p
-			}
+			declared[m[1]] = append(declared[m[1]], p)
 		}
 	}
 	var out []string
-	for name, where := range declared {
+	for name, sites := range declared {
 		re := regexp.MustCompile(`\b` + regexp.QuoteMeta(name) + `\b`)
+		dRe := regexp.MustCompile(`(?m)^func (?:\([^)]*\) )?` + regexp.QuoteMeta(name) + `\(`)
+		at := map[string]bool{}
+		for _, p := range sites {
+			at[p] = true
+		}
 		uses := 0
 		for p, body := range src.prod {
 			n := len(re.FindAllString(body, -1))
-			if p == where {
-				// Discount the declaration itself, not references to it.
-				n -= len(regexp.MustCompile(`(?m)^func (?:\([^)]*\) )?`+regexp.QuoteMeta(name)+`\(`).
-					FindAllString(body, -1))
+			if at[p] {
+				// Discount the declarations themselves, not references to them.
+				n -= len(dRe.FindAllString(body, -1))
 			}
 			uses += n
 		}
@@ -220,6 +228,31 @@ make sense to whoever reads it next.`, strings.Join(unexplained, "\n  "))
 			declared[m[1]] = true
 		}
 	}
+	// An exemption here is keyed by NAME alone, which is safe only while no
+	// exempt name is declared twice. In the hub it was not: an orphan planted in
+	// one package inherited another package's exemption and the failure blamed
+	// the wrong symbol. If this ever fires, port the hub's exemption struct,
+	// which records the packages an entry was argued for.
+	for name := range allowedTestOnly {
+		var where []string
+		for p, body := range src.prod {
+			if strings.Contains(p, string(filepath.Separator)+"internal"+string(filepath.Separator)) &&
+				regexp.MustCompile(`(?m)^func (?:\([^)]*\) )?`+regexp.QuoteMeta(name)+`\(`).MatchString(body) {
+				dir := filepath.Dir(p)
+				if i := strings.Index(dir, "internal"+string(filepath.Separator)); i >= 0 {
+					dir = dir[i:]
+				}
+				where = append(where, dir)
+			}
+		}
+		if len(where) > 1 {
+			sort.Strings(where)
+			t.Errorf("%q is declared in %v — a name-keyed exemption now covers more than "+
+				"one symbol; see hub/internal/devices/hubreach_test.go's exemption struct",
+				name, where)
+		}
+	}
+
 	for name := range allowedTestOnly {
 		if !declared[name] {
 			t.Errorf("allowedTestOnly names %q, which is no longer an exported symbol — remove it", name)

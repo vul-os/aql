@@ -832,6 +832,25 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] Fixed the name-based scans' per-site subtraction in BOTH modules, which is the
+      bug that hid four symbols from the hub's sweep: it recorded one declaring file
+      per name and discounted the `func X(` line only there, so a second declaration
+      of the same name read as a USE of the first and both vanished. `Execute` has
+      seven declarations here, `Dropped` two. Surfaced CoverageRatio, MeasuredKWh,
+      Dropped, Emitted — all four legitimately production-unreachable: the mix API
+      sends COMPONENTS (kwh, estimated_kwh, coverage_seconds, expected_seconds) and
+      the console derives the rest itself, which I verified rather than assumed,
+      including that the TS branches on a null kwh first exactly as the Go doc
+      demands. Entries added with that reason.
+      Exemptions in the hub are now keyed by NAME + the packages they were argued
+      for. A `Params` orphan planted in channels used to be absorbed by the camera's
+      entry and produce a WRONG accusation — "the exemption has gone stale" — about
+      working code; it now reports "declared in [channels devices/camera], the
+      exemption covers [devices/camera]". Controller has 8 entries and no collisions,
+      so it keeps name keys plus an invariant that fires the moment one appears,
+      pointing at the hub's struct. Controls: planted collision -> caught in both
+      modules, fresh orphan -> caught, clean tree -> green.
+
 - [x] SIX functions nothing reached at all — not production, not a single test —
       found by running `deadcode` (type-based RTA) rather than the name-based
       reachability tests, which cannot tell two same-named declarations apart. The
