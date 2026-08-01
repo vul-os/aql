@@ -85,7 +85,7 @@ flowchart LR
         PORTAL["Web console<br/>(embedded React build)"]
         HUB["Device hub<br/>signed commands · Ed25519"]
         AUD[("Audit log<br/>hash-chained, append-only")]
-        DEV["Device engine<br/>(built, default off)<br/>camera · lighting · robot<br/>climate · energy · sensor"]
+        DEV["Device engine<br/>(built, default off)<br/>camera · lighting · robot · climate<br/>energy · sensor · access (read-only)"]
     end
 
     subgraph site ["At the edge — the access kind, today"]

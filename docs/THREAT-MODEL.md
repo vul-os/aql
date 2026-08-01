@@ -117,7 +117,7 @@ future concern.
 | Controllers | Semi-trusted hardware at the perimeter. They verify content, not network position. A stolen controller's key is revocable server-side; it never learns another controller's key. |
 | LAN | Semi-trusted reachability boundary, never a trust boundary for control actions. |
 | WAN / remote access | Untrusted. The hub refuses to bind a non-loopback address unless the operator declares TLS is terminated upstream. |
-| Third-party device firmware (cameras, sensors, bots) | Untrusted. *Target* — no such devices are integrated yet. |
+| Third-party device firmware (cameras, sensors, bots) | Untrusted, and now REACHABLE: the device engine ships MQTT, Modbus, HTTP and ONVIF drivers an operator configures from the hub's device config, so this class is in the live trust surface rather than a target. What has not happened is a driver meeting real hardware here — the engine is exercised by fakes and conformance fixtures. This row said "no such devices are integrated yet" after the drivers shipped, which in a threat model invites treating a present attack surface as future work. |
 | Zana hardware | Held to the same untrusted-device bar as any other hardware. No special trust for being the companion line. |
 
 ### Tenant isolation

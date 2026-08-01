@@ -63,6 +63,12 @@ export const FEATURES = [
       // build breaks until somebody decides that deliberately.
       'ARCHITECTURE.md §8 — "ACTUATION still runs as its own stack, deliberately"',
       'site/docs/devices.md — the seven-kinds table',
+      // ARCHITECTURE.md's own diagram listed SIX kinds, omitting access, while
+      // its prose twelve lines earlier said seven. Third under-claim found in a
+      // diagram in that file. The node names access read-only so the drawing
+      // cannot imply the engine actuates a gate, which is the one thing
+      // ACCESS-ON-THE-ENGINE.md exists to prevent.
+      'ARCHITECTURE.md — the device-engine node: "access (read-only)"',
     ],
     evidence: [
       [{ root: 'hub/internal/devices', pattern: 'func NewAccessDriver|package accessdev' }],
@@ -103,6 +109,12 @@ export const FEATURES = [
       'ARCHITECTURE.md — the repository tree: "🟢 built, default off" for the device engine',
       'ARCHITECTURE.md — the subsystem table: "Registry behind a driver seam"',
       'ROADMAP.md — the driver list',
+      // The threat model's trust table called third-party device firmware a
+      // target with "no such devices are integrated yet", after four drivers
+      // shipped that an operator can point at real equipment. A threat model
+      // that puts a live attack surface in the future tense is the one place
+      // this drift is most expensive.
+      'docs/THREAT-MODEL.md — "Untrusted, and now REACHABLE"',
     ],
     evidence: [
       [{ root: 'hub/internal/devices', pattern: 'func NewRegistry' }],
