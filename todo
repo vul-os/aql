@@ -799,8 +799,16 @@ cannot catch what both implementations get wrong together.
       compares false against every threshold anyone would check it with. Tampered: removing
       the finite guard fails on the seed corpus; loosening the length guard fails with a
       257-byte PDU the fuzzer built itself. All three added to CI.
-- [ ] Parsers still unfuzzed: the camera RTSP/RTP
-      reader.
+- [x] The camera RTSP text protocol is fuzzed (rtspfuzz_test.go, 2026-08-01):
+      readRTSPResponse and parseSDP, the layer ABOVE the depacketizer h264_test.go
+      already covered — where a camera's bytes first become structure. It found a real
+      one within seconds: parseSDP let a control attribute keep an interior \r, and that
+      value is interpolated into a request LINE, so `a=control:x\r\nFake: y` made the hub
+      emit a SETUP it never composed. TrimSpace does not help; the injection is in the
+      middle. Control characters are refused at parse time now, and the crasher is a
+      committed regression seed. NOTE: a third fuzz assertion of mine was also wrong
+      before the code was — I asserted status != 0 on success, and "RTSP/ 0" parses to a
+      legitimate zero that every caller refuses one layer up.
 - NOTE: two of my own fuzz assertions were wrong before the code was. The framing one
       forbade messages alongside an error; the JCS one compared numbers by SPELLING, so
       canonicalising `0e00` to `0` — exactly correct — looked like value corruption. A

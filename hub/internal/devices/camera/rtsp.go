@@ -554,6 +554,13 @@ func firstWord(s string) string {
 // Deliberately partial, for the reason the config parsers here are: decoding
 // only what is used means a camera sending fields this does not know about
 // cannot break the probe.
+// isCtl reports whether r is a C0/C1 control character or DEL.
+//
+// Broader than "\r or \n" on purpose: a NUL or a bare ESC in a request line is
+// no more intended than a CRLF, and enumerating the two that happen to split a
+// request invites the next one.
+func isCtl(r rune) bool { return r < 0x20 || r == 0x7f || (r >= 0x80 && r <= 0x9f) }
+
 func parseSDP(body string) []MediaDescription {
 	var out []MediaDescription
 	var cur *MediaDescription
@@ -591,7 +598,30 @@ func parseSDP(body string) []MediaDescription {
 					cur.Codec = strings.SplitN(f[1], "/", 2)[0]
 				}
 			case strings.HasPrefix(value, "control:"):
-				cur.Control = strings.TrimSpace(strings.TrimPrefix(value, "control:"))
+				// Refused if it carries a control character, because this value
+				// is interpolated straight into a request LINE:
+				//
+				//	fmt.Fprintf(&b, "%s %s RTSP/1.0\r\n", method, url)
+				//
+				// An SDP of `a=control:x\r\nFake-Header: y` therefore makes the
+				// hub emit a SETUP it never composed. TrimSpace does not help —
+				// it strips the ends, and the injection is in the middle.
+				//
+				// Found by fuzzing (rtspfuzz_test.go), within seconds of the
+				// target existing. The camera is attacking its own session
+				// rather than reaching another host, since SETUP travels the
+				// connection already open, so the cost is protocol correctness
+				// rather than a boundary crossed — but a hub that emits a
+				// request it did not intend has lost track of what it is saying,
+				// and that is worth failing closed over on input from a device.
+				//
+				// Dropping it rather than the whole media description leaves
+				// Control empty, which absoluteControl already treats as "use
+				// the stream URL" — the same path a camera that sends no control
+				// attribute takes.
+				if c := strings.TrimSpace(strings.TrimPrefix(value, "control:")); !strings.ContainsFunc(c, isCtl) {
+					cur.Control = c
+				}
 			case strings.HasPrefix(value, "fmtp:"):
 				cur.readSpropParameterSets(strings.TrimPrefix(value, "fmtp:"))
 			}
