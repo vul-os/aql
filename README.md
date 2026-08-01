@@ -353,7 +353,7 @@ shape in one screen.
 
 **One binary, one file.** The hub is a single Go binary with the web console
 embedded via `go:embed`, and its entire state is one SQLite file in the data
-directory — 31 migrations, 56 tables. Back it up by copying that file. The
+directory — 32 migrations, 57 tables. Back it up by copying that file. The
 controller agent is a separate Go module with its own pinned key.
 
 **The device engine.** One internal device model, a driver-adapter seam, and a

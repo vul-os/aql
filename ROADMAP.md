@@ -32,7 +32,7 @@ reference for how every other device kind should eventually work: a versioned wi
 contract, a device that verifies rather than trusts, and an audit trail you can check
 after the fact.
 
-**The hub** (`hub/`) — one Go binary, SQLite inside, **131 HTTP routes over 31
+**The hub** (`hub/`) — one Go binary, SQLite inside, **134 HTTP routes over 32
 migrations, and more than 1,000 tests green** across 20 packages:
 
 - [x] Accounts, locations, access points, members with roles, invites
@@ -533,8 +533,22 @@ and none has met physical hardware.
       lamps" fans out; "turn off the shed lamps" still gets the picker, because a plural
       noun is how people name a single fixture. Rules and reasoning in `chatzone.go` and
       docs/CHAT-COMMANDS.md §2.3 stage 5
-- [ ] T4 over chat. Genuinely blocked: it needs step-up on a second rail and an
-      operator-armed time window, and neither exists T4 needs step-up on a second rail (§3.4) and an operator-armed time window;
+- [ ] T4 over chat. **The operator-armed window half is built** (migration 0033,
+      `store/t4window.go`, three admin-only routes): an admin can arm a window for one
+      exact `(device_key, verb)` for up to four hours, see it, and close it. Expiry is
+      DERIVED from the timestamps rather than written back, so there is no sweeper whose
+      failure would turn every expired window live. **It grants nothing yet** — nothing
+      consumes a window, no console screen reaches the routes, and every T4 verb is still
+      refused over chat. The atomic claim and its refund were written and then REMOVED
+      before commit, because their only caller is the chat T4 path: the store's
+      reachability guard refuses code that runs only in tests, and it was right to
+- [ ] Step-up on a second rail — the remaining T4 blocker, and the harder half. The
+      console's TOTP (`httpapi/twofactor.go`) is a second FACTOR on the same rail, not a
+      second RAIL: the point of §3.3's T4 requirement is that compromising the chat
+      account alone must not be enough, and a code typed into the same chat thread does
+      not establish that. Until this lands the window routes stay UI-less on purpose — a
+      console control that appeared to grant a hazardous permission, while nothing
+      consults what it grants, is worse than no control T4 needs step-up on a second rail (§3.4) and an operator-armed time window;
       neither exists, and a confirmation is not a substitute for either. Of §4.2's two
       once-unbuilt queries, **"how much solar today" is built** — one number per source for
       one day, which rule 3 permits where a curve would be the appliance fingerprint §4.3
@@ -576,7 +590,7 @@ and none has met physical hardware.
 
 ## Phase 2 — Local persistence & secrets (partly real)
 
-- [x] SQLite for state, history and configuration — shipped with the hub (31 migrations,
+- [x] SQLite for state, history and configuration — shipped with the hub (32 migrations,
       51 tables), one file to back up, pure-Go driver so it cross-compiles to a Pi
 - [ ] Extend that schema to device state, telemetry and history once Phase 1 exists
 - [x] **Device secrets can live outside the config file** — `${env:NAME}` and

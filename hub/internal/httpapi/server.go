@@ -401,6 +401,13 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("POST /v1/accounts/{id}/time-windows", s.requireAuth(s.handleTimeWindowCreate))
 	mux.Handle("DELETE /v1/accounts/{id}/time-windows/{ruleID}", s.requireAuth(s.handleTimeWindowDelete))
 
+	// Operator-armed T4 chat windows. Arming does NOT make a T4 verb reachable
+	// over chat — see t4windows.go — it is one of the three independent
+	// requirements in CHAT-COMMANDS.md §3.3's T4 row.
+	mux.Handle("GET /v1/accounts/{id}/t4-windows", s.requireAuth(s.handleT4WindowsList))
+	mux.Handle("POST /v1/accounts/{id}/t4-windows", s.requireAuth(s.handleT4WindowArm))
+	mux.Handle("POST /v1/accounts/{id}/t4-windows/{windowID}/disarm", s.requireAuth(s.handleT4WindowDisarm))
+
 	// Geofence rules (see geofence.go): an optional radius around a door or a
 	// site, outside which an open is refused. Writes are admin-only; the list
 	// is readable by ANY member, because a fence binds everyone identically

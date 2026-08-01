@@ -692,13 +692,49 @@ a window for that `(device, verb)` from the console — "the mower may be starte
 from chat for the next 30 minutes". Outside the window, chat T4 is refused with
 the honest reason and a console link.
 
-The mechanism already exists and does not need inventing: temporary access
-grants are `{starts_at, ends_at, max_uses, status}` with an
-`EffectiveStatus` of `revoked > exhausted > pending > expired > active`
-(`hub/internal/store/grants.go:12-46`), consumed atomically inside their
-window by one `UPDATE … RETURNING` (`:194-220`) and refunded when a later check
-denies (`:224-230`). Extend the grant target from *access point* to
-*(target, verb)* and the whole T4 window falls out of code that already works.
+*Status: the STORE half is built; T4 over chat is still refused.* Nothing below
+changes what a chat message can do — see the end of this section for what is
+still missing.
+
+The shape did not need inventing, and this paragraph used to say the table did
+not either: temporary access grants are `{starts_at, ends_at, max_uses,
+status}` with an `EffectiveStatus` of `revoked > exhausted > pending > expired >
+active` (`hub/internal/store/grants.go`), consumed atomically inside their
+window by one `UPDATE … RETURNING` and refunded when a later check denies. The
+suggestion was to extend the grant target from *access point* to *(target,
+verb)* and let the T4 window fall out.
+
+That was right about the shape and wrong about the table. A temporary grant's
+subject is a visitor's phone number and its object is an access point — both
+NOT NULL columns, joined through a link table — while a window's subject is the
+operator who armed it and its object is a `(device_key, verb)` pair. Reusing the
+table would have meant either inventing a phone number for a mower or widening
+columns that mean something specific, and this repository rebuilds rather than
+ALTERs. The consume rules differ too: a grant matches on
+`(phone, access_point)`, a window on `(account, device, verb)`.
+
+So `chat_t4_windows` is a separate table with deliberately the same shape
+(`store/migrations/0033_chat_t4_windows.sql`, `store/t4window.go`). It arms per
+`(device_key, verb)` — not per device, because §3.2's point is that a mower is
+not "a T4 device", it has a T4 `start` and a T1 `stop` — records who armed it,
+and derives expiry from the timestamps rather than storing it, because a stored
+`expired` needs a sweeper and a sweeper that stops running turns every expired
+window into a live one. The claim is one atomic `UPDATE … RETURNING`, so a use
+cap of one holds under the duplicate delivery chat rails actually produce.
+
+**A live window is not authorization.** §3.3's T4 row requires an operator role,
+a confirmation, AND step-up on a different rail, independently. A window makes a
+T4 verb *eligible to be considered*; every other check still runs. Nothing in
+`t4window.go` executes anything or knows what a device is.
+
+**What is still missing, and why T4 stays refused.** No console route arms a
+window yet, and there is no step-up on a second rail: the console's TOTP
+(`httpapi/twofactor.go`) is a second FACTOR on the same rail, not a second
+RAIL — the point of the T4 requirement is that compromising the chat account
+alone must not be enough, and a code typed into the same chat thread does not
+establish that. Until both land, `chatSendableVerbs` and `chatTierCeiling` keep
+every T4 verb out, and this section describes a mechanism rather than a
+behaviour.
 
 ### 3.5 The fail-closed rule
 

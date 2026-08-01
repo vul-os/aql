@@ -215,6 +215,21 @@ const NON_CONSOLE_ROUTES: Array<{ method: string; path: string; reason: string }
   { method: 'POST', path: '/api/pair/redeem', reason: 'controller firmware — pairing redemption' },
   { method: 'POST', path: '/pair/redeem', reason: 'controller firmware — unversioned pairing alias' },
   { method: 'GET', path: '/health', reason: 'process probes and load balancers, not a user surface' },
+  // Operator-armed T4 chat windows. No screen reaches these YET, and that is
+  // the honest state rather than an oversight: a window is inert until the
+  // other two requirements in CHAT-COMMANDS.md §3.3's T4 row exist — the
+  // confirmation route and step-up on a SECOND RAIL. A console control that
+  // appeared to grant a hazardous permission while nothing consults what it
+  // grants is worse than no control, so the UI waits for the consumer.
+  //
+  // This entry is the thing to delete when that lands. If it is still here
+  // after T4 works, the console is missing a page.
+  { method: 'GET', path: '/v1/accounts/{id}/t4-windows',
+    reason: 'no operator UI yet — a window is inert until step-up exists; see CHAT-COMMANDS.md §3.4' },
+  { method: 'POST', path: '/v1/accounts/{id}/t4-windows',
+    reason: 'no operator UI yet — a window is inert until step-up exists; see CHAT-COMMANDS.md §3.4' },
+  { method: 'POST', path: '/v1/accounts/{id}/t4-windows/{windowID}/disarm',
+    reason: 'no operator UI yet — a window is inert until step-up exists; see CHAT-COMMANDS.md §3.4' },
   // The console DOES reach this — Footage.tsx puts it in a <video src> — but a
   // media element carries no method for the AST extraction above to find, and
   // api.cameraClipURL builds a URL rather than calling apiFetch. Listed here
