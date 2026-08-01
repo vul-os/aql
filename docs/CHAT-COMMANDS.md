@@ -430,7 +430,8 @@ against `Gate Lock` (capability `access.barrier`) and `Front Gate Camera`
 (capability `camera.*`, no `open` verb) has exactly one candidate, not two.
 
 **Stage 2 — scope narrowing.** The existing location filter
-(`channels_whatsapp.go:149`) generalises to Aql's `zone` (`src/lib/demoData.ts`)
+(`channels_whatsapp.go:149`) generalises to Aql's `zone` (`devices/model.go:66-67`
+— free-text, grouping only, never authorises)
 layered under the gateway's `location` (`store/channels.go:39-42`):
 site → zone → device. Match a mentioned scope, filter, re-check.
 
@@ -1108,9 +1109,13 @@ map of the property.
 
 "Which lights are on" is an occupancy question. The energy curve is an appliance
 fingerprint and a schedule. A device list is a floor plan with equipment names.
-"Is anyone home" never has to be asked directly to be answered — the demo
-dataset already contains an `Away arm` automation whose trigger is *"everyone
-leaves"* (`src/lib/demoData.ts`), and reporting its state reports occupancy.
+"Is anyone home" never has to be asked directly to be answered. The runtime's
+trigger set is closed — schedule, threshold, event, clip
+(`automations/rule.go:17-34`) — so there is no presence trigger to leak
+directly. The leak is one step removed and no weaker for it: a rule NAMED
+`Away arm`, and a `TriggerSchedule` carrying the hours a property is empty
+(`rule.go:17`), answer the question between them. Reporting a rule's state
+reports occupancy whether or not anything in the model is called presence.
 
 ### 4.4 Rules for read paths
 
@@ -1157,8 +1162,9 @@ foreign keys that migration 0007's snapshots exist for.
    the rail's picker capacity (§2.3) and state the truncation: "3 of 12 lights
    are on; showing 3." Depth lives in the console — the existing pattern of
    pointing at the portal (`channels/reply.go:22`).
-3. **No raw telemetry.** No series, no per-circuit breakdowns
-   (`src/lib/demoData.ts`), no coordinates, no camera state, no lock history.
+3. **No raw telemetry.** No series, no per-device breakdowns
+   (`GET /v1/accounts/{id}/energy/series`, `httpapi/server.go:450`; buckets in
+   `energy/buckets.go`), no coordinates, no camera state, no lock history.
 4. **Separate counter.** `query_1h`, its own scope. A query burst must not
    consume the `opens_1h` budget, or a reconnaissance flood becomes a
    denial-of-open against a member standing at their own gate. A query burst is
@@ -1221,13 +1227,14 @@ Exhaustively:
 4. **Fleet inventories, floor plans, zone maps** — anything that enumerates the
    property in one message.
 5. **Occupancy and presence facts**, including automation states that imply them
-   (`src/lib/demoData.ts`), unless opted in per location (§4.4 rule 6).
+   — a rule's name and its schedule both do (`automations/rule.go:17-34`) —
+   unless opted in per location (§4.4 rule 6).
 6. **Security posture and lock state** for anything not being acted on in that
    exact exchange.
 7. **Audit-log contents, member rosters, other members' activity.**
 8. **Anything that narrows a physical attack** — schedules ("mower runs at
-   06:00", `src/lib/demoData.ts`), maintenance windows, controller offline
-   status framed as an availability gap.
+   06:00", `TriggerSchedule`, `automations/rule.go:17`), maintenance windows,
+   controller offline status framed as an availability gap.
 
 ### 5.4 Identifiers in chat payloads are hints, never capabilities
 

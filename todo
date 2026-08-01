@@ -832,6 +832,23 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] A DOCUMENT-SCOPED exemption laundered five stale citations. docCitations has
+      an entry allowing docs/CHAT-COMMANDS.md to cite the deleted src/lib/demoData.ts,
+      justified as "§2.2 and §4.3-4.4, which document behaviour as it was". §2.2 is
+      genuinely historical and says so. §4.3-4.5 are the PRESENT-TENSE disclosure
+      rules, and five citations there pointed at the deleted file as live evidence —
+      one propping up an example the runtime cannot express at all (an `Away arm`
+      automation triggered by "everyone leaves"; the trigger set is CLOSED —
+      schedule/threshold/event/clip — and has no presence trigger). Repointed all
+      five to automations/rule.go, devices/model.go and the energy series route, and
+      corrected the claim itself: the occupancy leak is via rule NAMES and schedules,
+      not a presence trigger. Exemptions now carry a COUNT, so a new citation of an
+      exempt path fails even though the path is exempt. Both tampers CAUGHT.
+      The general rule again: the exemption list could not catch this, because
+      checking it against itself is what granted the licence. Found by a sweep of
+      every documented path from outside it. npm run and doc paths otherwise clean
+      (29 npm targets, 399 path citations).
+
 - [x] EVERY human-facing `docker build` command in this repository was broken, and
       had been since the jcs replace landed. hub/Dockerfile's own header, README and
       site/docs/self-host.md all passed `hub/` as the CONTEXT, which fails with

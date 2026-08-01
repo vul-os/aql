@@ -111,24 +111,52 @@ const CITATION = /`([A-Za-z0-9_][A-Za-z0-9_./-]*\/[A-Za-z0-9_.-]+\.(?:go|ts|tsx|
 /**
  * Citations to files that are deliberately GONE.
  *
- * Both of these appear inside passages the citing document explicitly marks as
+ * Both appear inside passages the citing document explicitly marks as
  * historical — a record of what the code used to do, kept because the reasoning
  * still explains the shape of what replaced it. Rewriting them to point at
  * current files would falsify that record, which is worse than a dangling path.
  *
- * Keyed by document so a stale path cannot be laundered into a different file
- * by adding it here once. Neither file is coming back, so unlike the PENDING
- * entries in routeCoverage these are permanent rather than debt.
+ * # Why each carries a COUNT
+ *
+ * This exemption was per-document, and that is exactly how it failed. The entry
+ * below said demoData.ts was cited "in §2.2 and §4.3-4.4, which document
+ * behaviour as it was". §2.2 is genuinely historical and carries a NOTE saying
+ * so. The rest were not: five citations sat in §4.3-4.5, which are the
+ * present-tense disclosure rules — "No raw telemetry (src/lib/demoData.ts)",
+ * "automation states that imply occupancy (src/lib/demoData.ts)". They cited a
+ * deleted file as live evidence for rules the product is meant to follow today,
+ * and one of them propped up an example the runtime can no longer express at
+ * all: an `Away arm` automation triggered by "everyone leaves", when the trigger
+ * set is closed and contains no presence trigger.
+ *
+ * A document-scoped exemption cannot tell those apart. Granted once for a real
+ * historical passage, it launders every later citation of the same path anywhere
+ * in the same file — including ones written years apart for opposite reasons.
+ *
+ * So the count is the exemption's real content. A new citation of an exempt path
+ * fails this suite even though the path is exempt, which forces the question the
+ * document-level entry let people skip: is this passage historical, or is it
+ * live text quietly pointing at something that is not there?
  */
-const HISTORICAL: Record<string, Record<string, string>> = {
+type Historical = { readonly count: number; readonly why: string };
+
+const HISTORICAL: Record<string, Record<string, Historical>> = {
   'docs/CHAT-COMMANDS.md': {
-    'src/lib/demoData.ts':
-      'the demo dataset, deleted when the console moved to live engine state; ' +
-      'cited in §2.2 and §4.3-4.4, which document behaviour as it was',
+    'src/lib/demoData.ts': {
+      count: 2,
+      why:
+        'the demo dataset, deleted when the console moved to live engine state. ' +
+        'Both remaining citations are in §2.2, which opens with a NOTE stating ' +
+        'the file is gone and that the section describes superseded behaviour. ' +
+        'The five that were in §4.3-4.5 now cite automations/rule.go, ' +
+        'devices/model.go and the energy series route instead.',
+    },
   },
   'docs/DESIGN-SYSTEM.md': {
-    'src/app.css':
-      "deleted in the lintel fold; §7 is explicitly the 'system that was replaced'",
+    'src/app.css': {
+      count: 6,
+      why: "deleted in the lintel fold; §7 is explicitly the 'system that was replaced'",
+    },
   },
 };
 
@@ -187,6 +215,27 @@ describe('documentation citations', () => {
     // the guard on the guard.
     expect(checked, 'no citations parsed — the pattern has drifted').toBeGreaterThan(300);
     expect(broken, `${broken.length} citations point at files that do not exist`).toEqual([]);
+  });
+
+  it('no historical exemption covers more citations than it was granted for', () => {
+    // The exemption is document-scoped, so without this it is a blanket licence
+    // to cite a deleted file anywhere in that document forever. That is not
+    // hypothetical: five live citations in §4.3-4.5 rode in on an entry written
+    // for §2.2, and were found by a sweep from OUTSIDE this test rather than by
+    // this test — which is the recurring lesson about exemption lists here.
+    for (const [doc, paths] of Object.entries(HISTORICAL)) {
+      const text = readFileSync(resolve(root, doc), 'utf8');
+      for (const [path, { count }] of Object.entries(paths)) {
+        const actual = [...text.matchAll(CITATION)].filter((m) => m[1] === path).length;
+        expect(
+          actual,
+          `${doc} cites ${path} ${actual} times; the exemption covers ${count}. ` +
+            `If the new one is in a passage marked historical, raise the count and ` +
+            `say where. If it is live text, repoint it at a file that exists — a ` +
+            `dangling path in a present-tense rule reads as evidence and is not.`,
+        ).toBe(count);
+      }
+    }
   });
 
   it('every historical exemption is still a file that does not exist', () => {
