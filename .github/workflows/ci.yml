@@ -552,6 +552,31 @@ jobs:
             energy rebucket -account probe -tz Not/AZone -data /data 2>&1 \
             | grep -q "is not a timezone this system knows"
 
+  reachability:
+    # Functions nothing reaches — not production, not a test.
+    #
+    # The name-based reachability tests inside each module cannot tell two
+    # same-named declarations apart (`Dropped` is on two types, `Execute` on
+    # seven), so an orphan hides behind its namesake. This runs the type-based
+    # analysis that can, across every build configuration the release matrix
+    # ships, and reports only functions ALL of them agree are dead — a verdict
+    # from one configuration is an artifact of what it was allowed to see, which
+    # is how two live BLE functions first read as dead.
+    name: unreachable functions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: |
+            hub/go.sum
+            controller/go.sum
+      - name: install deadcode
+        run: go install golang.org/x/tools/cmd/deadcode@latest
+      - name: scripts/deadcode.sh
+        run: ./scripts/deadcode.sh
+
   verify-script:
     name: release verifier (lint + failure matrix)
     runs-on: ubuntu-latest

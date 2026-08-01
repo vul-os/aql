@@ -115,11 +115,6 @@ func (d *Depacketizer) Emitted() int { return d.emitted }
 // contract — count it, report it, do not fold it into a number that hides it.
 func (d *Depacketizer) Dropped() int { return d.dropped }
 
-// Reset clears all in-progress reassembly state, for a caller that knows the
-// source has restarted (a new PLAY, a reconnect) and wants stale FU-A state
-// discarded rather than incorrectly gated against the old sequence space.
-func (d *Depacketizer) Reset() { *d = Depacketizer{} }
-
 // Push processes one RTP packet — the full packet as read off the wire,
 // header included, the same shape countInterleaved already parses in rtsp.go
 // — and returns zero or more complete Annex-B NAL units it produced.

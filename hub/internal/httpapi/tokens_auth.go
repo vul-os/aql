@@ -258,14 +258,6 @@ func (s *Server) auditTokenUse(r *http.Request, p *store.APITokenPrincipal, scop
 	}
 }
 
-// apiTokenFrom returns the principal for a token-authenticated request, or
-// nil for a session request. Informational only — no authorisation decision
-// anywhere depends on calling it.
-func apiTokenFrom(r *http.Request) *store.APITokenPrincipal {
-	p, _ := r.Context().Value(apiTokenKey).(*store.APITokenPrincipal)
-	return p
-}
-
 // ---------------------------------------------------------------------------
 // Fences
 // ---------------------------------------------------------------------------

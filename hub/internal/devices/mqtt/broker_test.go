@@ -196,24 +196,6 @@ func (b *fakeBroker) push(t *testing.T, topic, payload string, qos byte) {
 		t.Fatalf("push: write: %v", err)
 	}
 }
-
-// pushRaw sends bytes the codec would refuse to build, so a test can play a
-// broker that is broken or hostile rather than merely absent.
-func (b *fakeBroker) pushRaw(t *testing.T, pkt []byte) {
-	t.Helper()
-	b.mu.Lock()
-	bc := b.cur
-	b.mu.Unlock()
-	if bc == nil {
-		t.Fatal("pushRaw: no session")
-	}
-	if err := bc.write(pkt); err != nil {
-		t.Fatalf("pushRaw: %v", err)
-	}
-}
-
-// drop kills the current session the way a broker restart would: no DISCONNECT,
-// the socket simply goes away.
 func (b *fakeBroker) drop() {
 	b.mu.Lock()
 	bc := b.cur

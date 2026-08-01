@@ -33,6 +33,7 @@ ROOT="$PWD"
 
 PASS=0
 FAIL=0
+SKIPPED=0
 FAILED_NAMES=()
 
 run() {
@@ -64,6 +65,19 @@ run_gofmt() {
     FAIL=$((FAIL + 1))
     FAILED_NAMES+=("$name")
   fi
+}
+
+run_deadcode() {
+  local name="$1" out rc
+  out=$("$ROOT/scripts/deadcode.sh" 2>&1); rc=$?
+  case "$rc" in
+    0) printf '  \033[32mok\033[0m    %s\n' "$name"; PASS=$((PASS + 1)) ;;
+    2) printf '  \033[33mSKIP\033[0m  %s (deadcode not installed; CI runs it)\n' "$name"
+       SKIPPED=$((SKIPPED + 1)) ;;
+    *) printf '  \033[31mFAIL\033[0m  %s\n' "$name"
+       printf '%s\n' "$out" | sed 's/^/          /'
+       FAIL=$((FAIL + 1)); FAILED_NAMES+=("$name") ;;
+  esac
 }
 
 echo "aql: running every local gate"
@@ -98,6 +112,13 @@ run      "go test -tags ble"          controller go test -count=1 -tags ble ./..
 echo "e2e (real binaries)"
 run      "go test"                    e2e go test -count=1 -timeout 900s ./...
 
+# A gate whose tool may be missing has to distinguish SKIP from ok, or an
+# absent binary reads as a pass — this repository's most common defect shape,
+# now in the checker itself. deadcode.sh exits 2 when the tool is not installed,
+# and CI installs it, so CI never takes this branch.
+echo "reachability"
+run_deadcode "unreachable functions"
+
 echo "wire contracts"
 run      "vector verifier"            proto/vectors node verify.mjs
 
@@ -108,6 +129,12 @@ run      "feature claims"             . npm run check:claims
 
 echo
 if [ "$FAIL" -eq 0 ]; then
+  # A skipped gate is reported as loudly as a failed one. The whole premise of
+  # this script is that a gate which does not run must never look like one that
+  # did.
+  if [ "$SKIPPED" -gt 0 ]; then
+    printf '\033[33m%d gate(s) SKIPPED — not run here, so not evidence.\033[0m\n' "$SKIPPED"
+  fi
   printf '\033[32m%d gates passed.\033[0m Not everything CI runs — the race detector, fuzzing,\n' "$PASS"
   echo "cross-platform builds, Playwright and the container image are CI-only."
   echo

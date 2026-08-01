@@ -280,7 +280,7 @@ func (d *Driver) note(deviceID string, a devices.Availability, summary, errText 
 func (d *Driver) Health(_ context.Context) devices.Health {
 	var down []string
 	for addr, ep := range d.endpoints {
-		if !ep.healthy.Load() {
+		if !ep.ok() {
 			// The address is operator-facing and is NOT a credential: a Modbus
 			// TCP endpoint carries no auth of any kind, which is itself worth
 			// knowing and is documented in the package doc. Host:port is what
@@ -332,9 +332,7 @@ func (d *Driver) Health(_ context.Context) devices.Health {
 // a driver holding no resources needs none — but cmd/hub closes what it can.
 func (d *Driver) Close() error {
 	for _, ep := range d.endpoints {
-		ep.mu.Lock()
-		ep.closeLocked()
-		ep.mu.Unlock()
+		ep.close()
 	}
 	return nil
 }

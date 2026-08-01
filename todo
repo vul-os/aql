@@ -832,6 +832,31 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] SIX functions nothing reached at all — not production, not a single test —
+      found by running `deadcode` (type-based RTA) rather than the name-based
+      reachability tests, which cannot tell two same-named declarations apart. The
+      worst was httpapi.occupancyAllowedFor, whose own doc reads "the read every
+      disclosure path must go through" and which NO disclosure path went through.
+      The control itself is fine — consent went multi-location and the batch reader
+      enforces it, fail-closed — but the singular wrapper survived, and it kept
+      store.OccupancyDisclosureAllowed looking alive to the store's own guard. A
+      dead wrapper masking a dead method is the backstop shape again. Deleting the
+      wrapper made the store guard fire on the method within seconds, which is the
+      guard working. Also: apiTokenFrom (documented informational, no caller),
+      Depacketizer.Reset (a fresh one is built per assembler), a dead test helper,
+      and modbus close()/ok() whose bodies had been copied inline at their one call
+      site — those two got WIRED rather than deleted.
+
+      THE LESSON IS THE INTERSECTION. Run on darwin, deadcode calls controller's
+      LocalName and Session.AbortPartial dead; both are called from a file behind
+      `//go:build ble && (linux || windows)`. I was minutes from "fixing" live code.
+      A function is dead only if EVERY build configuration agrees, so scripts/deadcode.sh
+      intersects five of them and CI runs it. Controls: planted orphan -> exit 1,
+      planted tag-only-reachable function -> NOT flagged, stale exemption -> exit 1,
+      clean tree -> 0. My own harness lied twice more: `-run 'A\|B'` matched no tests
+      and still printed ok, and `script | head` reported head's exit code as the
+      script's.
+
 - [x] A DOCUMENT-SCOPED exemption laundered five stale citations. docCitations has
       an entry allowing docs/CHAT-COMMANDS.md to cite the deleted src/lib/demoData.ts,
       justified as "§2.2 and §4.3-4.4, which document behaviour as it was". §2.2 is

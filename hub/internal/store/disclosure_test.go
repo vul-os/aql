@@ -27,17 +27,29 @@ func disclosureFixture(t *testing.T) (*Store, context.Context, string, string, s
 	return s, ctx, u.ID, loc.ID, other
 }
 
+// allowed asks the batch reader about ONE location, which is how production
+// asks: answerOccupancyQuestion collects the member's locations and reads them
+// together. The singular store method these cases were written against is gone.
+func allowed(t *testing.T, s *Store, ctx context.Context, id string) bool {
+	t.Helper()
+	m, err := s.OccupancyDisclosureLocations(ctx, []string{id})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return m[id]
+}
+
 // The default, and the only one that matters if everything else is wrong.
 func TestOccupancyDisclosureIsOffUntilSomebodyTurnsItOn(t *testing.T) {
 	s, ctx, _, loc, _ := disclosureFixture(t)
-	if s.OccupancyDisclosureAllowed(ctx, loc) {
+	if allowed(t, s, ctx, loc) {
 		t.Error("a location nobody has configured discloses occupancy")
 	}
 	// An unknown location is off too, rather than erroring into a truthy value.
-	if s.OccupancyDisclosureAllowed(ctx, "no-such-location") {
+	if allowed(t, s, ctx, "no-such-location") {
 		t.Error("an unknown location discloses occupancy")
 	}
-	if s.OccupancyDisclosureAllowed(ctx, "") {
+	if allowed(t, s, ctx, "") {
 		t.Error("an empty location id discloses occupancy")
 	}
 }
@@ -47,12 +59,12 @@ func TestConsentIsPerLocationNotPerAccount(t *testing.T) {
 	if err := s.SetOccupancyDisclosure(ctx, loc, user, true); err != nil {
 		t.Fatal(err)
 	}
-	if !s.OccupancyDisclosureAllowed(ctx, loc) {
+	if !allowed(t, s, ctx, loc) {
 		t.Error("the opted-in location is still off")
 	}
 	// The second location in the SAME account must not inherit it: a household
 	// consenting for the main house has not consented for the cottage.
-	if s.OccupancyDisclosureAllowed(ctx, other) {
+	if allowed(t, s, ctx, other) {
 		t.Error("consent for one location leaked to another in the same account")
 	}
 }
@@ -66,7 +78,7 @@ func TestWithdrawingConsentLeavesNoRow(t *testing.T) {
 	if err := s.SetOccupancyDisclosure(ctx, loc, user, false); err != nil {
 		t.Fatal(err)
 	}
-	if s.OccupancyDisclosureAllowed(ctx, loc) {
+	if allowed(t, s, ctx, loc) {
 		t.Error("consent survived being withdrawn")
 	}
 	var n int

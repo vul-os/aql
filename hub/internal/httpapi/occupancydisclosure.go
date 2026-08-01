@@ -80,14 +80,3 @@ func (s *Server) handleLocationDisclosurePatch(w http.ResponseWriter, r *http.Re
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"occupancy": *req.Occupancy})
 }
-
-// occupancyAllowedFor is the read every disclosure path must go through.
-//
-// One function so the check cannot be forgotten at a call site, and so the
-// fail-closed behaviour (a missing row or an error is "no") lives in exactly
-// one place. store.OccupancyDisclosureAllowed already collapses both; this
-// exists so a caller reaches for something named after the question rather than
-// after the table.
-func (s *Server) occupancyAllowedFor(ctx contextT, locationID string) bool {
-	return s.store.OccupancyDisclosureAllowed(ctx, locationID)
-}

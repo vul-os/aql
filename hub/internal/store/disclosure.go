@@ -8,27 +8,21 @@ import (
 // Per-location occupancy-disclosure consent — docs/CHAT-COMMANDS.md §4.4 rule
 // 6, migration 0028.
 
-// OccupancyDisclosureAllowed reports whether a location has opted in to having
-// occupancy proxies disclosed over a chat rail.
-//
-// A missing row is FALSE, and an error is FALSE. Both collapse deliberately:
-// this gates whether the product will say something about the people in a
-// building, and the only safe answer to "I could not determine consent" is the
-// one that discloses nothing. Every other limit in this codebase that fails
-// open does so with a stated reason about availability at a gate; there is no
-// availability argument for answering a question about who is home.
-func (s *Store) OccupancyDisclosureAllowed(ctx context.Context, locationID string) bool {
-	if locationID == "" {
-		return false
-	}
-	var one int
-	err := s.db.QueryRowContext(ctx,
-		`SELECT 1 FROM location_disclosure WHERE location_id = ?`, locationID).Scan(&one)
-	return err == nil && one == 1
-}
-
 // OccupancyDisclosureLocations returns the subset of the given locations that
 // have opted in, preserving order.
+//
+// A missing row is FALSE, and so is an id that matches nothing. That is the
+// disclosure rule rather than a query detail: this gates whether the product
+// will say something about the people in a building, and the only safe answer
+// to "I could not determine consent" is the one that discloses nothing. Other
+// limits here fail open with a stated availability argument about a gate; there
+// is no availability argument for answering a question about who is home.
+//
+// A singular OccupancyDisclosureAllowed used to carry that paragraph. It was
+// deleted once nothing in production called it — consent went multi-location,
+// answerOccupancyQuestion reads a member's whole location set in one call, and
+// a per-id helper survived only as a wrapper around this. Its fail-closed cases
+// live on in disclosure_test.go against this method.
 //
 // Takes the caller's list rather than querying by account, so the answer cannot
 // be wider than what the caller was already entitled to see — the same shape
