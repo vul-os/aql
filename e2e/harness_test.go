@@ -739,3 +739,38 @@ func killProc(cmd *exec.Cmd) {
 		<-done
 	}
 }
+
+// startGatewayExpectingFailure runs the hub against dataDir and waits for it to
+// EXIT, returning its combined output.
+//
+// The ordinary helper t.Fatals when the process dies, which is right for every
+// other test and useless for one whose subject is a refusal. This waits for the
+// exit instead, bounded, and returns the output so a caller can assert on what
+// the hub said as well as that it stopped.
+func startGatewayExpectingFailure(t *testing.T, dataDir string) (string, error) {
+	t.Helper()
+	port := freePort(t)
+	logs := &logBuf{}
+	cmd := exec.Command(hubBin,
+		"-data", dataDir,
+		"-listen", fmt.Sprintf("127.0.0.1:%d", port),
+		"-public-url", fmt.Sprintf("http://127.0.0.1:%d", port),
+	)
+	cmd.Stdout = logs
+	cmd.Stderr = logs
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("start gateway: %v", err)
+	}
+	done := make(chan error, 1)
+	go func() { done <- cmd.Wait() }()
+	select {
+	case err := <-done:
+		return logs.String(), err
+	case <-time.After(20 * time.Second):
+		_ = cmd.Process.Kill()
+		<-done
+		// Still running is the FAILURE this returns nil for: the caller's
+		// assertion is that it stopped.
+		return logs.String(), nil
+	}
+}

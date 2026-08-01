@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -41,6 +42,37 @@ var b64 = base64.RawURLEncoding
 
 // Load reads the Ed25519 seed from dir, generating one at first boot
 // (0600, seed-only on disk — the public key is derived).
+// ErrNoKeyForPairedHub is returned by RequireExisting when a hub that has
+// paired controllers has no signing key on disk.
+var ErrNoKeyForPairedHub = errors.New(
+	"gateway signing key is missing and this hub has paired controllers: minting a new one " +
+		"would orphan every one of them (each pins the old public key, and the `repair` that " +
+		"would move it must be signed by the key that is gone). Restore " + keyFile +
+		" from a backup, or re-pair every controller physically")
+
+// RequireExisting refuses to let a hub with paired controllers start without
+// its signing key.
+//
+// Load MINTS a key when the file is absent, which is correct on a first boot
+// and unrecoverable afterwards. Load cannot tell those apart: it sees a
+// directory, and by the time it runs the database already exists because
+// store.Open created it. So the caller — which can ask whether anything is
+// paired — makes the call, and this is the refusal.
+//
+// Deliberately a separate function rather than a parameter on Load: every
+// existing caller (tests, the audit-verify tool, the key-rotation CLI) wants
+// today's behaviour, and a signature change would have made each of them decide
+// something they have no business deciding.
+func RequireExisting(dir string) error {
+	if _, err := os.Stat(filepath.Join(dir, keyFile)); err != nil {
+		if os.IsNotExist(err) {
+			return ErrNoKeyForPairedHub
+		}
+		return err
+	}
+	return nil
+}
+
 func Load(dir string) (*Keys, error) {
 	path := filepath.Join(dir, keyFile)
 	seedHex, err := os.ReadFile(path)

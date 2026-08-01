@@ -241,7 +241,14 @@ work.
 
 **Shipped:** the hub's data directory holds `lintel.db`, `gateway_ed25519.seed` (the
 command signing key) and `jwt_secret` (the session HMAC key), all raw and unencrypted at
-mode `0600`. Channel credentials live in the environment or an `.env`. A plain `tar czf`
+mode `0600`.
+
+**Losing that seed file is now a refusal to start, not a silent new identity.** A hub
+whose key is absent MINTS one, which is right on a first boot and unrecoverable
+afterwards: every paired controller pins the old public key, so each command it is sent
+fails `badsig`, and the `repair` that would move it must be signed by the key that is
+gone. The only way back is walking to every gate. The hub now refuses to start when the
+key is missing and anything has ever paired, and says to restore from a backup. Channel credentials live in the environment or an `.env`. A plain `tar czf`
 of the data directory captures the database and both keys in one unencrypted archive —
 encrypt that archive at rest and restrict who can read it.
 

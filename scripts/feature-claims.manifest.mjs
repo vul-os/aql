@@ -287,6 +287,26 @@ export const FEATURES = [
     ],
   },
   {
+    id: 'a-lost-signing-key-refuses-to-start',
+    label:
+      'A hub with paired controllers refuses to start without its signing key, rather than ' +
+      'minting a new identity and orphaning the fleet',
+    docStatus: 'shipped',
+    docRefs: [
+      'docs/THREAT-MODEL.md § 6 — "Losing that seed file is now a refusal to start, not a silent new identity"',
+    ],
+    evidence: [
+      [{ root: 'hub/internal/keys', pattern: 'ErrNoKeyForPairedHub' }],
+      // Keyed on paired_at, not on a status value: the first version asked for
+      // `status = 'paired'`, which nothing writes, and the unit test agreed
+      // with it because the fixture invented the same value.
+      [{ file: 'hub/internal/store/pairedcount.go', pattern: 'paired_at IS NOT NULL' }],
+      [{ file: 'hub/cmd/hub/main.go', pattern: 'keys.RequireExisting' }],
+      // Proven by stopping a real hub, deleting the seed and restarting it.
+      [{ file: 'e2e/lostkey_e2e_test.go', pattern: 'RefusesToStartRatherThanOrphanItsFleet' }],
+    ],
+  },
+  {
     id: 'device-secrets-can-live-outside-the-config',
     label:
       'Device credentials may be ${env:NAME} or ${file:/path} references, resolved at all ' +

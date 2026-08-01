@@ -638,6 +638,30 @@ func buildHub(cfg config, log *slog.Logger) (*hub, error) {
 		return nil, fmt.Errorf("store: %w", err)
 	}
 
+	// Refuse to mint a NEW signing identity for a hub that has paired
+	// controllers. keys.Load generates one when the seed file is absent, which
+	// is right on a first boot and unrecoverable afterwards: each paired
+	// controller pins the old public key, so a fresh identity makes every
+	// command it is sent fail `badsig`, and the `repair` that would move it has
+	// to be signed by the key that is gone. The only way back is physically
+	// re-pairing every controller.
+	//
+	// Checked HERE because it is the only place that can be: keys.Load sees a
+	// directory, and by the time it runs store.Open has already created the
+	// database, so "is this a first boot" is not a question the filesystem can
+	// answer. The store can.
+	paired, err := st.AnyDevicePaired(context.Background())
+	if err != nil {
+		st.Close()
+		return nil, fmt.Errorf("check paired devices: %w", err)
+	}
+	if paired {
+		if err := keys.RequireExisting(cfg.dataDir); err != nil {
+			st.Close()
+			return nil, fmt.Errorf("keys: %w", err)
+		}
+	}
+
 	ks, err := keys.Load(cfg.dataDir)
 	if err != nil {
 		st.Close()
