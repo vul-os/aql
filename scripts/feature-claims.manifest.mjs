@@ -886,6 +886,11 @@ export const FEATURES = [
     docRefs: [
       'ROADMAP.md — "withdrawn as specified, and the reason is the deployment"',
       'hub/README.md § Device secrets',
+      // The security document is where a reader goes to learn the posture, and
+      // it went stale the moment the plan changed — it still described the
+      // keychain as the intended destination after the decision to drop it.
+      // Quoted so reverting the text, or the decision, breaks the build.
+      'docs/THREAT-MODEL.md § 6 — "That is withdrawn, on grounds of deployment rather than taste"',
     ],
     // Matched on CODE, not the word. The previous pattern was a bare
     // `keychain|keyring|…` over whole files, and it fired the moment a package
