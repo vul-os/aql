@@ -307,6 +307,16 @@ export const FEATURES = [
           pattern: 'the hub would connect anonymously',
         },
       ],
+      // And the backstop against a FOURTH credential appearing unresolved: the
+      // resolver enumerates its sites by hand, so a driver gaining a Password
+      // or Token field would silently be the one place a reference is not
+      // honoured — and the literal "${env:NAME}" would be sent as the secret.
+      [
+        {
+          file: 'hub/cmd/hub/credentialsurface_test.go',
+          pattern: 'these look like credentials and resolveDeviceSecrets does not resolve them',
+        },
+      ],
     ],
   },
   {
