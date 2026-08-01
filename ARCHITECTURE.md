@@ -135,6 +135,8 @@ aql/
 │                 #    …plus channels/, the transitional chat adapters moving to Ephor (§3a)
 │   └── migrations/   # SQLite schema, clean folded baseline (33 migrations, 58 tables)
 ├── controller/   # 🟢 reference gate device agent (own Go module); GPIO/BLE need real hardware
+├── jcs/         # 🟢 the shared RFC 8785 canonicalizer — its own Go module, required by
+│                 #    BOTH hub and controller, so it decides what a signature covers
 ├── e2e/          # 🟢 cross-module suite, real hub + controller binaries over the wire
 ├── proto/        # 🟢 pairing · commands · grants · events contracts (+ vectors/ fixtures)
 ├── src/          # 🟢 console + landing — React 19 · Vite (wrapped by src-tauri/ for desktop)
@@ -143,6 +145,9 @@ aql/
 ├── site/         # 🟢 static mini-site — index.html + docs.html + site/docs/*.md
 ├── docs/         # 🟢 deep engineering reference (threat model, KOTVA alignment, design system)
 ├── scripts/      # 🟢 screenshotter + docs-vs-code feature-claim guard
+├── brand/ assets/ public/  # 🟢 marks and static files the site and console serve
+├── .github/      # 🟢 CI — the gates scripts/check.sh runs, plus the race detector,
+│                 #    fuzzing, cross-compiles and Playwright that only run there
 └── (device engine)   # 🟢 built, default off — `hub/internal/devices/`, see §8
 ```
 
