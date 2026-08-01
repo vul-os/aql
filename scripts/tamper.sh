@@ -31,7 +31,18 @@
 #     'return nil, ErrSealedNoKey' 'return raw, nil' \
 #     -- go test -count=1 ./internal/keys/
 #
-# CMD runs from the FILE's module root, so the go test path is module-relative.
+# Non-Go files work too, and are the reason this exists as a tool rather than a
+# habit — a doc claim, a manifest entry, a TypeScript guard:
+#
+#   scripts/tamper.sh ARCHITECTURE.md 'Status: built end to end' 'Status: unbuilt' \
+#     -- npm run check:claims
+#
+# CMD runs from the FILE's module root when there is one, else from the
+# repository root, so `npm run` and `npx vitest` work the way they do by hand.
+#
+# ON A FLOOR: to test a coverage floor, RAISE it above real coverage. Lowering
+# one changes nothing while the corpus is larger than either number, so it reads
+# NOT CAUGHT against a guard that is fine.
 
 set -uo pipefail
 
@@ -46,9 +57,22 @@ shift
 
 [ -f "$file" ] || { echo "INVALID: $file does not exist" >&2; exit 2; }
 
-# The module root, so `go test ./internal/x/` works the way it does by hand.
+# Where CMD runs. For a Go file that is the module root, so `go test ./internal/x/`
+# works the way it does by hand.
+#
+# For anything else it is the repository root, where npm and vitest live. That
+# case used to be refused outright — "no go.mod above $file" — which meant every
+# tamper against a doc, a manifest or a TypeScript guard had to be hand-rolled
+# with cp and python. Two of those silently failed to APPLY and read as
+# "NOT CAUGHT", which is the most expensive way to be wrong about a guard: it
+# says the guard is blind when nothing was tested. The checks below — exactly
+# one match, the file actually changed — are the ones that catch that, and they
+# were unavailable precisely where I kept needing them.
 root=$(cd "$(dirname "$file")" && while [ ! -f go.mod ] && [ "$PWD" != / ]; do cd ..; done; pwd)
-[ -f "$root/go.mod" ] || { echo "INVALID: no go.mod above $file" >&2; exit 2; }
+if [ ! -f "$root/go.mod" ]; then
+  root=$(cd "$(dirname "$file")" && while [ ! -d .git ] && [ "$PWD" != / ]; do cd ..; done; pwd)
+  [ -d "$root/.git" ] || { echo "INVALID: no go.mod and no repository root above $file" >&2; exit 2; }
+fi
 
 backup=$(mktemp)
 cp "$file" "$backup"
@@ -80,15 +104,24 @@ if cmp -s "$file" "$backup"; then
   exit 2
 fi
 
-if ! (cd "$root" && go build ./... >/dev/null 2>&1); then
-  echo "INVALID  — the tampered tree does not compile. A tamper that cannot build proves nothing."
-  exit 2
+# Only a Go module can be compiled, and only a compile failure invalidates a Go
+# tamper. A doc or a manifest has no build step; its equivalent check is that the
+# gate itself still runs, which the CMD below reports.
+compiled="compiled, and "
+if [ -f "$root/go.mod" ]; then
+  if ! (cd "$root" && go build ./... >/dev/null 2>&1); then
+    echo "INVALID  — the tampered tree does not compile. A tamper that cannot build proves nothing."
+    exit 2
+  fi
+else
+  # No build step to speak of, so the verdict must not claim one.
+  compiled=""
 fi
 
 if (cd "$root" && "$@" >/dev/null 2>&1); then
-  echo "NOT CAUGHT  — applied, compiled, and the tests still pass. The guard is blind to this."
+  echo "NOT CAUGHT  — applied, ${compiled}the tests still pass. The guard is blind to this."
   exit 1
 fi
 
-echo "CAUGHT  — applied, compiled, and the tests went red."
+echo "CAUGHT  — applied, ${compiled}the tests went red."
 exit 0
