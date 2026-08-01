@@ -37,8 +37,25 @@ import (
 //
 // # What is deliberately absent
 //
-// No group expansion (§2.3 stage 5 permits it at T1; it needs groups, which do
-// not exist). No selection context, so a picker reply cannot be resolved by a
+// No group expansion — and NOT for the reason this said until now, which was
+// "it needs groups, which do not exist". Groups exist: `Device.Zone` is a
+// field, and automations already fan out over one deterministically
+// (automations/engine.go resolves every zone member, skips those not offering
+// the verb, and refuses the whole action if any member cannot resolve). The
+// machinery is there.
+//
+// What is missing is a DECISION, and it is a real one. channels.ResolveDevice
+// already recognises a zone word and scores it deliberately BELOW the floor —
+// "a hint about which devices are plausible, never an identification of one" —
+// so "turn off the exterior lights" is answered today with the candidates. Fan
+// out instead and that same message stops being a question and becomes an
+// actuation of every lamp in the zone, which is broader than any single
+// candidate the member might have meant. The plural is a signal this resolver
+// does not read.
+//
+// Asking is the safe answer and it is what happens now. Changing it means
+// deciding when a zone-word match is a group command rather than an ambiguity,
+// and that belongs in CHAT-COMMANDS.md before it belongs here. No selection context, so a picker reply cannot be resolved by a
 // follow-up — an ambiguous body is answered with the candidates and the member
 // re-sends naming one.
 //
