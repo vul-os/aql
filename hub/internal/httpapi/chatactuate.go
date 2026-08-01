@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/vul-os/aql/hub/internal/channels"
@@ -39,9 +40,14 @@ import (
 // No group expansion (§2.3 stage 5 permits it at T1; it needs groups, which do
 // not exist). No selection context, so a picker reply cannot be resolved by a
 // follow-up — an ambiguous body is answered with the candidates and the member
-// re-sends naming one. No arguments: `set` takes a value and parsing one from
-// free text is a second resolution problem with its own failure modes, so `set`
-// is not reachable from chat even though it is T1 on some capabilities.
+// re-sends naming one.
+//
+// Arguments ARE read now, for one verb and no further: `set`. The objection
+// this paragraph used to make — that parsing a value out of free text is a
+// resolution problem of its own — was true about parsing and did not settle the
+// question, because the three phrasings it named all contain exactly one number
+// and channels.Quantity insists on exactly one. What settled it was the tier
+// table; see chatSendableVerbs.
 
 // chatTierCeiling is the highest tier a chat message may actuate.
 //
@@ -78,14 +84,23 @@ const chatT2PerDay = 20
 // hourly counters are — it is a debounce on a physical thing.
 const chatActuationCooldownS = 5
 
-// chatArgumentlessVerbs is the closed set of verbs chat may send.
+// chatSendableVerbs is the closed set of verbs chat may send.
 //
-// A verb that takes a value is excluded even when its tier would allow it:
-// `set` at T1 on a dimmer needs a number parsed out of free text, and "dim the
-// lounge to 30" against "dim the lounge to 30%" against "dim lounge 30 percent"
-// is a resolution problem of its own. Chat sends verbs it can send WITHOUT
-// interpreting a quantity, and the console keeps the rest.
-var chatArgumentlessVerbs = map[devices.Verb]bool{
+// It was chatArgumentlessVerbs, and excluded every verb taking a value on the
+// grounds that "dim the lounge to 30" against "…to 30%" against "…30 percent"
+// is a resolution problem of its own. That was true about parsing and did not
+// settle the question: all three contain exactly ONE number, and a parser that
+// insists on exactly one reads them identically (channels.Quantity).
+//
+// What settled it was the TIER TABLE. `set` is TierReversible on a dimmer and
+// TierConsequential on a thermostat, and this surface's ceiling is
+// TierReversible — so allowing it reaches a lamp's brightness and nothing else.
+// A misparse there is a light at the wrong level, which is the definition of
+// the tier it sits in; a thermostat stays out by machinery that was already
+// here rather than by the parser being careful. The ceiling does the safety
+// work, as it is supposed to.
+var chatSendableVerbs = map[devices.Verb]bool{
+	devices.VerbSet:    true,
 	devices.VerbOn:     true,
 	devices.VerbOff:    true,
 	devices.VerbToggle: true,
@@ -119,7 +134,7 @@ func (s *Server) chatActuate(ctx contextT, body, profileID, source, chatID, conf
 	if reg == nil {
 		return chatActuationResult{}, false
 	}
-	if !chatArgumentlessVerbs[v] {
+	if !chatSendableVerbs[v] {
 		// Not refused here — the caller's existing refusal already explains
 		// that chat does not do this, and duplicating that copy would put two
 		// wordings of the same refusal in the product.
@@ -139,15 +154,49 @@ func (s *Server) chatActuate(ctx contextT, body, profileID, source, chatID, conf
 		return chatActuationResult{}, false
 	}
 
+	// An argument, when the verb takes one. Fail-closed per §3.5: exactly one
+	// number in the body or nothing happens, and the refusal says which problem
+	// it is — none supplied, or too many to tell apart.
+	//
+	// The RANGE is not checked here. Resolve validates against the catalogue's
+	// own Min/Max and produces the message naming them, and a second copy of a
+	// bound is a second thing to disagree with the first.
+	args, argRefusal := chatVerbArgs(reg, m.Device.Key, v, body)
+	if argRefusal != "" {
+		return chatActuationResult{
+			Reply: channels.ActuationRefused(m.Device.Device.Name, v, argRefusal),
+		}, true
+	}
+
 	// The registry is the authority on tier. This never re-derives one and
 	// never widens one — it only refuses.
-	plan, err := reg.Resolve(m.Device.Key, v, nil)
+	plan, err := reg.Resolve(m.Device.Key, v, args)
 	if err != nil {
 		return chatActuationResult{
 			Reply: channels.ActuationRefused(m.Device.Device.Name, v, "that device would not accept it"),
 		}, true
 	}
 	if plan.Tier > chatTierCeiling {
+		// A verb carrying a PARSED QUANTITY never takes the confirmation route,
+		// even though its tier would be within reach of one.
+		//
+		// A confirmation proves intent. It does not prove the number was read
+		// correctly, because ConfirmationPrompt echoes the device and the verb
+		// and NOT the argument — so confirming "set the thermostat to 21" that
+		// this parsed as 2 is confirming a value the member never saw. Raising
+		// a ceiling on the strength of a check that does not cover the new
+		// failure mode is how a safety property gets hollowed out.
+		//
+		// So `set` reaches exactly what the unconfirmed ceiling allows: a
+		// dimmer at TierReversible. A thermostat is TierConsequential and is
+		// refused here, which is what it was before this verb was allowed at
+		// all — the console keeps it.
+		if len(args) > 0 {
+			return chatActuationResult{
+				Reply: channels.ActuationOutOfTier(
+					m.Device.Device.Name, v, plan.Tier.String(), s.channelPublicURL()),
+			}, true
+		}
 		// Above T1: a confirmation may raise the ceiling by one tier, and only
 		// if the member is holding one for THIS intent.
 		res, ok := s.confirmedOrPrompt(ctx, plan, m, v, profileID, source, chatID, confirmToken)
@@ -317,4 +366,37 @@ func (s *Server) soleAccountFor(ctx contextT, userID string) string {
 		return ""
 	}
 	return accounts[0].ID
+}
+
+// chatVerbArgs reads the argument a verb needs out of the message body.
+//
+// Returns nil args and an empty refusal for a verb that takes none, which is
+// every verb chat sent before `set` existed — so the common path is unchanged
+// and does not depend on a body containing no digits.
+//
+// The catalogue is asked what the verb needs rather than a list here deciding:
+// a capability that gains an argument gets this behaviour without an edit, and
+// one that loses it stops asking for a number the same way.
+func chatVerbArgs(reg *devices.Registry, key string, v devices.Verb, body string) (map[string]float64, string) {
+	// Device.Supports is what Resolve itself calls, so the two cannot disagree
+	// about which argument a verb takes. A new registry method would have been
+	// a second path to the same answer.
+	dev, ok := reg.Get(key)
+	if !ok {
+		return nil, ""
+	}
+	spec, _, ok := dev.Device.Supports(v)
+	if !ok || spec.Arg == "" {
+		return nil, ""
+	}
+	switch channels.QuantityCount(body) {
+	case 1:
+		val, _ := channels.Quantity(body)
+		return map[string]float64{spec.Arg: val}, ""
+	case 0:
+		return nil, fmt.Sprintf("that needs a %s between %v and %v, and I didn't see a number",
+			spec.Arg, spec.Min, spec.Max)
+	default:
+		return nil, "there is more than one number in that and I can't tell which is the level"
+	}
 }

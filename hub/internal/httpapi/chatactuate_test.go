@@ -424,11 +424,27 @@ func TestTheCooldownIsPerDevice(t *testing.T) {
 	}
 }
 
-// A verb taking a value is not sent from chat at all, even at T1.
-func TestAVerbWithAnArgumentIsNotSentFromChat(t *testing.T) {
+// A verb taking a value is REFUSED above the unconfirmed ceiling, and is not
+// offered a confirmation.
+//
+// This test used to assert that `set` was not sendable at all. It is now, for
+// a dimmer — TierReversible, where a misparse is a light at the wrong level.
+// A thermostat is TierConsequential and stays refused, and deliberately does
+// not get the confirmation route that would otherwise raise the ceiling by one
+// tier: ConfirmationPrompt echoes the device and the verb and NOT the argument,
+// so confirming a misread number is confirming something never shown.
+func TestAnArgumentVerbAboveTheCeilingIsRefusedAndNotConfirmed(t *testing.T) {
 	e := actuationServer(t)
-	if _, handled := e.act(t, "set the thermostat to 21", devices.VerbSet); handled {
-		t.Error("chat sent a verb that takes a value")
+	res, handled := e.act(t, "set the thermostat to 21", devices.VerbSet)
+	if !handled {
+		t.Fatal("the message fell through instead of being refused")
+	}
+	if res.Actuated {
+		t.Fatal("chat set a thermostat — that is TierConsequential and above this ceiling")
+	}
+	if strings.Contains(strings.ToLower(res.Reply), "confirm") {
+		t.Errorf("a confirmation was offered for a parsed quantity: %q — the prompt does not "+
+			"echo the number, so confirming it proves nothing about the parse", res.Reply)
 	}
 }
 
@@ -557,4 +573,60 @@ func countCommands(t *testing.T, e *chEnv, command string) int {
 		}
 	}
 	return n
+}
+
+// The feature: a dimmer takes a level from a chat message.
+//
+// TierReversible, so no confirmation and no step-up — a misparse is a light at
+// the wrong brightness, which is what that tier means. The three phrasings the
+// old design note gave as the reason this could not be done all read the same,
+// because each contains exactly one number.
+func TestADimmerTakesALevelFromChat(t *testing.T) {
+	e := actuationServer(t)
+	// One actuation, not a loop: the cooldown is per (subject, device, verb),
+	// so a second `set` on the same lamp would be refused for a reason that has
+	// nothing to do with parsing. The phrasings are covered where they belong,
+	// in channels/quantity_test.go, against the parser itself.
+	res, handled := e.act(t, "dim the garden lights to 30", devices.VerbSet)
+	if !handled {
+		t.Fatal("a dimmer set fell through")
+	}
+	if !res.Actuated {
+		t.Fatalf("a dimmer set did not actuate: %q", res.Reply)
+	}
+}
+
+// Fail-closed on the quantity, per §3.5, and the refusal says WHICH problem it
+// is — the two need different things from the member.
+func TestAnUnreadableLevelRefusesAndSaysWhy(t *testing.T) {
+	e := actuationServer(t)
+
+	res, handled := e.act(t, "dim the garden lights", devices.VerbSet)
+	if !handled || res.Actuated {
+		t.Fatalf("a set with no number actuated or fell through: %+v", res)
+	}
+	if !strings.Contains(res.Reply, "didn't see a number") {
+		t.Errorf("reply = %q — it should say no number was supplied", res.Reply)
+	}
+
+	res, handled = e.act(t, "dim the garden lights 2 to 30", devices.VerbSet)
+	if !handled || res.Actuated {
+		t.Fatalf("an ambiguous set actuated or fell through: %+v", res)
+	}
+	if !strings.Contains(res.Reply, "more than one number") {
+		t.Errorf("reply = %q — it should say the body is ambiguous", res.Reply)
+	}
+}
+
+// The range belongs to the catalogue. Out-of-range PARSES and is refused by
+// Registry.Resolve, so there is one authority on what a verb accepts.
+func TestALevelOutOfRangeIsRefusedByTheCatalogue(t *testing.T) {
+	e := actuationServer(t)
+	res, handled := e.act(t, "dim the garden lights to 500", devices.VerbSet)
+	if !handled {
+		t.Fatal("an out-of-range set fell through")
+	}
+	if res.Actuated {
+		t.Fatal("a level of 500 actuated")
+	}
 }

@@ -427,6 +427,28 @@ export const FEATURES = [
     ],
   },
   {
+    id: 'chat-can-set-a-dimmer-and-nothing-above-the-ceiling',
+    label:
+      'A chat message can set a dimmer level; a quantity verb above the ceiling is refused ' +
+      'and never offered a confirmation that would not cover the parse',
+    docStatus: 'shipped',
+    docRefs: ['ROADMAP.md — "`set` reaches chat, and only as far as the ceiling allows"'],
+    evidence: [
+      // Exactly one number, or nothing happens.
+      [{ root: 'hub/internal/channels', pattern: 'func Quantity\\(body string\\)' }],
+      [{ file: 'hub/internal/httpapi/chatactuate.go', pattern: 'devices.VerbSet:' }],
+      // The refusal that keeps the claim true: no confirmation route for a
+      // parsed quantity, because the prompt does not echo the number.
+      [
+        {
+          file: 'hub/internal/httpapi/chatactuate_test.go',
+          pattern: 'TestAnArgumentVerbAboveTheCeilingIsRefusedAndNotConfirmed',
+        },
+      ],
+      [{ file: 'hub/internal/httpapi/chatactuate_test.go', pattern: 'TestADimmerTakesALevelFromChat' }],
+    ],
+  },
+  {
     id: 'hazardous-verbs-need-an-explicit-confirm',
     label:
       'Starting a mower needs confirm: true, and a refused command never reaches the driver',

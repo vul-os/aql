@@ -503,8 +503,18 @@ and none has met physical hardware.
       case-sensitive, so a T2 command answered its own confirmation with a fresh
       confirmation, forever. The store tests passed throughout because they carried the
       raw token
-- [ ] Extend it further, to the other device classes. `set`, groups and T4 remain in the
-      console. T4 needs step-up on a second rail (§3.4) and an operator-armed time window;
+- [x] **`set` reaches chat, and only as far as the ceiling allows.** A dimmer takes a level
+      from a message — `channels.Quantity` insists on EXACTLY ONE number, so "dim the lounge
+      to 30", "…to 30%" and "…30 percent" read identically and "dim lounge 2 to 30" is
+      refused as ambiguous rather than guessed at (§3.5). What settled the long-standing
+      objection was the tier table rather than the parser: `set` is TierReversible on a
+      dimmer and TierConsequential on a thermostat, so this reaches a lamp's brightness and
+      nothing else, and a misparse is a light at the wrong level. A quantity verb above the
+      ceiling is REFUSED and deliberately not offered a confirmation — the prompt echoes the
+      device and the verb but not the number, so confirming a misread value would be
+      confirming something never shown. The range stays the catalogue's: out-of-range parses
+      and `Registry.Resolve` refuses it with the bounds
+- [ ] Extend it further still. Groups and T4 remain in the console. T4 needs step-up on a second rail (§3.4) and an operator-armed time window;
       neither exists, and a confirmation is not a substitute for either. Of §4.2's two
       once-unbuilt queries, **"how much solar today" is built** — one number per source for
       one day, which rule 3 permits where a curve would be the appliance fingerprint §4.3
