@@ -231,6 +231,11 @@ describe('the drivers the docs advertise are the drivers the binary accepts', ()
   it.each([
     { file: 'hub/README.md', pattern: /comma-separated device drivers to construct \(([^)]+)\)/ },
     { file: 'site/docs/architecture.md', pattern: /Registry behind a driver seam; ([^|]+)\|/ },
+    // ARCHITECTURE.md states the SAME driver-seam fact as site/docs/architecture.md
+    // and was not checked, so the two had drifted: it listed four of the five
+    // drivers, omitting `access`. Two files saying one thing differently, with
+    // only one of them guarded, is how that happens.
+    { file: 'ARCHITECTURE.md', pattern: /Registry behind a driver seam; ([^;]+);/ },
   ])('$file names them all', ({ file, pattern }) => {
     const text = read(file);
     const m = pattern.exec(text);
@@ -239,6 +244,57 @@ describe('the drivers the docs advertise are the drivers the binary accepts', ()
     expect(listed, `${file} advertises a different set of drivers than the binary accepts`).toEqual(
       drivers(),
     );
+  });
+});
+
+/**
+ * The root README's driver table, which is a DIFFERENT claim from the lists above.
+ *
+ * Those enumerate what `-device-drivers` accepts. This one is scoped to PROTOCOL
+ * drivers — what the hub speaks to reach real hardware — and legitimately omits
+ * `access`, which speaks no protocol: accessdev presents gates to the fleet
+ * read-only and refuses every verb, because a gate is actuated by the hub's
+ * signed controller route and two actuation paths to a gate is strictly worse
+ * than one.
+ *
+ * So this cannot assert the same set. What it can do is make the omission
+ * DELIBERATE rather than incidental: every protocol driver must have a row, and
+ * a new driver constant fails here until someone decides whether it belongs in
+ * the table. The mapping is hand-written on purpose — it is the place that
+ * decision gets recorded.
+ */
+describe('the root README driver table covers every protocol driver', () => {
+  // Driver constant → the table row that stands for it.
+  const ROWS: Record<string, RegExp> = {
+    mqtt: /^\| MQTT \|/m,
+    modbus: /^\| Modbus TCP \|/m,
+    http: /^\| HTTP \/ webhook \|/m,
+    camera: /^\| ONVIF \|/m,
+  };
+  // Not a protocol driver, and the reason is in this describe's comment.
+  const NOT_A_PROTOCOL = new Set(['access']);
+
+  it('has a row for each, and a decision recorded for each exclusion', () => {
+    const src = read('hub/cmd/hub/main.go');
+    const names = [...src.matchAll(/deviceDriver[A-Z]\w*\s*=\s*"([a-z]+)"/g)].map((m) => m[1]);
+    expect(names.length, 'no deviceDriver constants were parsed').toBeGreaterThan(3);
+
+    const readme = read('README.md');
+    for (const name of names) {
+      if (NOT_A_PROTOCOL.has(name)) continue;
+      expect(
+        ROWS[name],
+        `the binary accepts driver "${name}" and this test has no row mapping for it — ` +
+          'add one, or add it to NOT_A_PROTOCOL with a reason',
+      ).toBeDefined();
+      expect(readme, `README.md's driver table has no row for "${name}"`).toMatch(ROWS[name]);
+    }
+    // And no mapping may outlive its driver: a row for something the binary no
+    // longer builds is an advertisement for a driver that does not exist.
+    for (const mapped of Object.keys(ROWS)) {
+      expect(names, `this test maps a row for "${mapped}", which the binary no longer accepts`)
+        .toContain(mapped);
+    }
   });
 });
 
