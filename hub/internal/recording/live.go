@@ -167,8 +167,24 @@ func (b *Broadcaster) sendLocked(deviceKey string, seg LiveSegment) {
 	}
 }
 
-// Viewers reports how many are attached, for the capture loop to decide whether
-// producing live output is worth anything.
+// Viewers reports how many subscribers are attached.
+//
+// NOT, despite what this said, "for the capture loop to decide whether
+// producing live output is worth anything". That optimisation cannot exist
+// under the design recording.go chose: fragments are published from inside
+// WriteClip, from the same muxer that writes the file, precisely so a viewer
+// and the disk see identical bytes — "two muxers over one stream is two chances
+// to disagree, and the disagreement would only show up as a picture that plays
+// from a file and not from the live view".
+//
+// So the output is produced for the clip whether or not anyone is watching, and
+// publishing it costs a map lookup that sendLocked drops immediately when there
+// are no subscribers. There is nothing for a viewer count to save, and a
+// capture loop that skipped publishing on zero viewers would only add a race
+// against someone subscribing mid-fragment.
+//
+// What it is actually for: tests asserting subscribe/unsubscribe accounting,
+// and anything that wants to report attachment without holding the lock itself.
 func (b *Broadcaster) Viewers(deviceKey string) int {
 	b.mu.Lock()
 	defer b.mu.Unlock()

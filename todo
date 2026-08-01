@@ -916,7 +916,15 @@ hub serves. Adding an entry back is a real decision, not bookkeeping.
       without exporting the fields, which is a design choice rather than a defect and
       is now said ONCE in camera/doc.go instead of four times at the declarations. That
       pipeline has never seen hardware, so tests are the only caller it has ever had.
-      20 left, each still
+      Then recording/: EnsureFreeSpace was "exported for the worker" and no worker
+      exists — the internal form runs before every WriteClip, which is the right place
+      because that is where space is consumed, so the export was deleted and the tests
+      (same package) call the unexported one. Broadcaster.Viewers claimed to exist "for
+      the capture loop to decide whether producing live output is worth anything", an
+      optimisation the design forbids: fragments are published from inside WriteClip by
+      the same muxer that writes the file, so a viewer and the disk see identical bytes,
+      and the output exists whether or not anyone watches. Doc corrected.
+      12 left, each still
       needing classification one at a time before a guard can
       exist — an allowlist written in bulk is the thing store/'s guard warns against.
       A signing-path symbol sat outside every guard for four commits; see the keys note.

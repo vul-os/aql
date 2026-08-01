@@ -270,9 +270,6 @@ func (r *Recorder) expireOnce(ctx context.Context, accountID string, deviceKeys 
 	return removed, nil
 }
 
-// EnsureFreeSpace is ensureFreeSpace, exported for the worker.
-func (r *Recorder) EnsureFreeSpace(ctx context.Context) error { return r.ensureFreeSpace(ctx) }
-
 // ensureFreeSpace evicts oldest-first across all cameras until the floor is met.
 //
 // Across all cameras (§2.3), never per camera: a busy camera must not be able to

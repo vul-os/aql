@@ -360,7 +360,7 @@ func TestRecordingStopsRatherThanDeletingUnexpiredFootage(t *testing.T) {
 // camera must not be able to evict a quiet one's footage preferentially.
 //
 // The ordering lives in the store query, so it is asserted there. An earlier
-// version of this test tried to observe it through EnsureFreeSpace and proved
+// version of this test tried to observe it through ensureFreeSpace and proved
 // nothing twice over: it gave both cameras a one-hour retention, so every clip
 // was expired and eviction correctly took them all, and its "recovered after two
 // deletions" hook closed over a counter that was only assigned once the test had
@@ -430,8 +430,8 @@ func TestEvictionWillNotTakeAClipInsideItsRetention(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := r.EnsureFreeSpace(ctx); err == nil {
-		t.Fatal("EnsureFreeSpace reported success while still under the floor")
+	if err := r.ensureFreeSpace(ctx); err == nil {
+		t.Fatal("ensureFreeSpace reported success while still under the floor")
 	}
 	clips := clipState(t, st, acct, "cam")
 	if clips[0].DeletedAt != nil {
