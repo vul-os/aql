@@ -3,7 +3,8 @@
 // here. This file is just the list of claims; it has no logic of its own.
 //
 // Each entry is one feature CLAIM as it currently reads in the docs (README's
-// status table, ARCHITECTURE.md's §8 roadmap, site/index.html's `.soon`
+// markers (ARCHITECTURE.md's repository tree and subsystem table — NOT README,
+// which carries none any more), ARCHITECTURE.md's §8 roadmap, site/index.html's `k-soon`
 // badges, or an explicit "Status:" line in a doc). `docStatus` records what
 // the docs say TODAY:
 //
@@ -11,7 +12,7 @@
 //               not implemented" marker attached). Evidence MUST be found,
 //               or the check fails ("documented feature, zero code" — the
 //               2026-07-20 audit's failure mode, nine times over).
-//   'planned' — the docs explicitly mark this not-yet-real (🔨, `.soon`,
+//   'planned' — the docs explicitly mark this not-yet-real (🔨, `k-soon`,
 //               "designed, not implemented", "coming", "not started", a
 //               stub/panic notice, etc). Evidence MUST NOT be found, or the
 //               check fails the other direction — something shipped and the

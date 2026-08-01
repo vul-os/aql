@@ -11,10 +11,15 @@
 //
 // route-parity (src/lib/__tests__/routeParity.test.ts) catches frontend/API
 // drift. Nothing caught doc/code drift. This is that check, for the docs'
-// own existing shipped-vs-planned vocabulary (README's ✅/🟢/🔨 status
-// table, site/index.html's `.soon` badges, and the explicit "designed, not
-// implemented" / "Status:" notices sprinkled through ARCHITECTURE.md and
-// site/docs/). It does NOT invent a new vocabulary — see
+// own existing shipped-vs-planned vocabulary. Where that vocabulary LIVES has
+// moved, and this sentence said the wrong thing for a while: it named
+// "README's ✅/🟢/🔨 status table", and README carries no such marker at all
+// any more — it was rebuilt into prose. The markers live in ARCHITECTURE.md
+// (twelve of them, in the repository tree and the subsystem table); ROADMAP.md
+// uses `- [x]` / `- [ ]`; site/index.html uses a `k-soon` badge class,
+// which is NOT the spelling this header carried for years; and explicit "designed, not implemented" / "Status:" notices are
+// scattered through ARCHITECTURE.md and site/docs/. It does NOT invent a new
+// vocabulary — see
 // scripts/feature-claims.manifest.mjs, which is a hand-maintained mirror of
 // what those docs currently say, one entry per claim.
 //
@@ -58,7 +63,7 @@
 //    location or a live ping... outside the radius we deny the open") and
 //    that the audit log is "Exportable as CSV" — both false, and NEITHER
 //    of those two false claims is something this script can catch, because
-//    they live in UI prose with no ✅/🟢/🔨/`.soon` marker for a human (or
+//    they live in UI prose with no ✅/🟢/🔨/`k-soon` marker for a human (or
 //    this script) to key off. That page needs a manual fix; this script
 //    will not find the next one like it either. Grep the whole tree for
 //    suspiciously confident feature language periodically — this script is
@@ -245,6 +250,25 @@ function evaluateFeature(feature) {
 //      the next person stops updating it.
 //
 // Whitespace is collapsed on both sides so a reflowed paragraph still matches.
+// A quote must be UNIQUE in the file it names, and choosing one that is not is
+// how a docRef ends up pinning nothing.
+//
+// This asks whether the quote appears SOMEWHERE in the file, never whether it
+// is on the line the ref describes — deliberately, because line numbers rot and
+// this repository dropped them for exactly that reason. The consequence is that
+// a quote which also occurs elsewhere silently stops being evidence.
+//
+// A real instance: `device-engine-built` quoted "built, default off" to pin the
+// repository tree's status marker for the engine. The same words appear in the
+// mermaid diagram at the top of the same file, so restoring the stale
+// "🔨 not started" line left this green. The quote now carries the 🟢, which
+// occurs once.
+//
+// The eleven other multi-occurrence quotes in the manifest were checked at the
+// same time (2026-08-01) and are fine: they are section HEADINGS and
+// cross-references — locators for where a claim lives, not the claim itself —
+// so a second occurrence is a table-of-contents entry rather than a coincidence.
+// The rule is about quotes that carry the CLAIM: those must occur once.
 function checkDocRefs(feature) {
   const problems = [];
   for (const ref of feature.docRefs) {
