@@ -123,11 +123,6 @@ func New(cfg Config) (*Driver, error) {
 	return &Driver{cfg: cfg}, nil
 }
 
-// NewAccessDriver is New under the name the feature-claims manifest greps for.
-// Kept so the guard that fails the day this package appears has something
-// stable to match, whatever New is called later.
-func NewAccessDriver(cfg Config) (*Driver, error) { return New(cfg) }
-
 func (d *Driver) ID() string { return DriverID }
 
 // Discover re-reads the access points and maps them onto engine devices.

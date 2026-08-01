@@ -227,38 +227,6 @@ func LightsAnswer(facts []LightFact, total int, publicURL string) string {
 	return b.String()
 }
 
-// OccupancyEnabledButUnbuilt is the reply when a household HAS consented and
-// the hub still cannot answer.
-//
-// This is the honest end of a half-built path, and it is deliberately not
-// silence. A member who turned the setting on and then got nothing would
-// reasonably conclude the switch is broken; telling them the consent is
-// recorded and the answer is not built yet distinguishes "you did it wrong"
-// from "we have not finished". The same distinction §4.1 makes about the gate
-// sensor, applied to a feature rather than to hardware.
-//
-// The reason is named rather than hand-waved, because it is a real one and not
-// a scheduling excuse. A device's state exists only as Device.Summary — free
-// text a driver wrote for a human ("62% · warm", "warm white", "on") — which
-// the model documents as "presentational; never parsed". Counting lights would
-// mean guessing at each driver's vocabulary and reporting the guess as a fact
-// about someone's home. It needs a machine-readable state on the device model,
-// and devices/summarycontract_test.go keeps the shortcut closed until there is
-// one.
-func OccupancyEnabledButUnbuilt(consented, total int, publicURL string) string {
-	var b strings.Builder
-	b.WriteString("Occupancy answers are enabled for ")
-	if consented == total {
-		b.WriteString("this home")
-	} else {
-		fmt.Fprintf(&b, "%d of your %d locations", consented, total)
-	}
-	b.WriteString(", but I still can't say which lights are on: a device reports its " +
-		"state as text for a person to read, not as something I can count. The console " +
-		"shows each one" + portalSuffix(publicURL))
-	return b.String()
-}
-
 // ClassifyEnergyQuestion reports whether a body is asking about energy at all.
 //
 // Separate from ClassifyGateQuestion because the two are answered from

@@ -887,6 +887,17 @@ hub serves. Adding an entry back is a real decision, not bookkeeping.
   recovery is username-based through a delivery seam, not an email dependency.
 
 ## api & integrations
+- [ ] Reachability is guarded for `*Store` methods and for the whole controller module,
+      and for NOTHING ELSE in hub/. Measured 2026-08-01 with a planted-orphan control:
+      311 exported declarations under hub/internal outside store/, 31 with no production
+      caller. Most are legitimate — test constructors, package API another package uses —
+      but two were not, and both were found only because the scan was run by hand:
+      `accessdev.NewAccessDriver`, a one-line alias to `New` with no caller anywhere, and
+      `channels.OccupancyEnabledButUnbuilt`, a carefully-argued reply for a limitation
+      that no longer exists ("which lights are on" is built, CHAT-COMMANDS.md §4.2).
+      Both deleted. The remaining 31 need classifying one at a time before a guard can
+      exist — an allowlist written in bulk is the thing store/'s guard warns against.
+      A signing-path symbol sat outside every guard for four commits; see the keys note.
 - [ ] a token-scoped `GET /v1/events` feed (today the audit log is instance-admin only)
 - [ ] revoke-a-controller endpoint (no DELETE on /v1/devices yet)
 - [ ] API docs with python/go/curl examples
