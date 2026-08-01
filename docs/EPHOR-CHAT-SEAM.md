@@ -413,7 +413,7 @@ Four properties that matter and are easy to lose:
 
   > *"A valid mesh `sender_sig` proves *who signed*, **not** *who may relay* — anyone can sign a
   > MOTE — so signature-validity is necessary but **not sufficient** to authorise egress."*
-  > — `kotva/07-gateway.md:876-878`
+  > — `kotva/07-gateway.md` §7.11.2
 
   Read for this seam: a valid `gw-rail:whatsapp:+27821234567` grant proves that estate hub H may
   speak as that number. It proves nothing whatsoever about whether resident R may open gate G.
@@ -614,7 +614,7 @@ draws between content-address dedupe and a validity window
 > itself, from its own state, on every single intent. An intent is a question. It is never a
 > permission.**
 
-This is `kotva/07-gateway.md:876-878` applied one layer out: a valid `chat.intent` signature
+This is `kotva/07-gateway.md` §7.11.2 applied one layer out: a valid `chat.intent` signature
 proves *which adapter relayed this*, not *who may open this gate*. And §26.5 forecloses ever
 strengthening it: *"Every other rail is platform-asserted and cryptographically unverifiable …
 there is no signature the adapter itself can verify independently of trusting the platform's own

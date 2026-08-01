@@ -28,6 +28,35 @@ import { resolve } from 'node:path';
  * pretend. If a line ever matters, quote the code instead — a quote can be
  * checked, a number cannot.
  *
+ * Citations into SIBLING REPOSITORIES (the EXTERNAL_REPOS list below). Those
+ * paths cannot be resolved from here — kotva/ and ephor/ are not checked out in
+ * CI — so they are skipped, and it is worth saying why no guard covers them
+ * rather than leaving that looking like an oversight.
+ *
+ * A guard that verified them WHEN the sibling repo happened to be present would
+ * skip every citation in CI and print PASS. That is the exact shape of the
+ * hollow gate this repository keeps finding: a check whose subject is absent,
+ * reporting success. Making it fail when the repos are missing breaks CI for
+ * everyone; making it opt-in means CI never runs it. There is no version of it
+ * that is both honest and green.
+ *
+ * So they were verified ONCE, by hand, on 2026-08-01, against the local
+ * checkouts: 78 unique external citations, all resolving except two deliberate
+ * ones (EPHOR-CHAT-SEAM.md §0.1 cites `ephor/coordinator/CONTRACT.md` precisely
+ * to establish that it does not exist). Quote-and-line pairs were then checked
+ * by script, which flagged thirteen — of which twelve were the script
+ * mis-pairing a quote with the next citation in the paragraph, and ONE was
+ * real: the §7.11.2 open-relay sentence was cited at `kotva/07-gateway.md:876-878`
+ * and lives at 886-887, with 876-878 holding unrelated text. It now cites the
+ * SECTION, which is stable, greppable and does not drift when a paragraph is
+ * inserted above it.
+ *
+ * That is the durable lesson, and it is the same one that made this file drop
+ * line numbers from DESIGN-SYSTEM.md rather than correct them: for a target
+ * nothing can check, a section reference is worth more than a line range,
+ * because it degrades honestly instead of pointing confidently at the wrong
+ * paragraph.
+ *
  * It also does not check that the SURROUNDING CLAIM is true. Every value in the
  * design system's type-scale table pointed at a file that existed and stated a
  * size the file had not used since the site was redesigned. This test would not
