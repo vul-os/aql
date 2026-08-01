@@ -377,6 +377,23 @@ function checkDocRefs(feature) {
       .map((line) => line.replace(/^\s*(?:\/\/+|\*|>)+\s?/, ''))
       .join(' ')
       .replace(/\s+/g, ' ');
+    // A quote too SHORT to be extracted is worse than a wrong one: the ref
+    // looks pinned, and checks nothing at all. Two of these existed —
+    // "one module" at ten characters, and "key pinning" at eleven, the latter
+    // naming a README table that does not exist and text README has never
+    // contained. Neither could fail, because neither was ever read.
+    //
+    // So the length limit is now enforced rather than merely applied. The
+    // floor exists because a short string matches accidentally: "shipped" or
+    // "the hub" appears everywhere, and a ref pinned to one would pass whatever
+    // the document said.
+    for (const [, short] of ref.matchAll(/"([^"]{1,11})"/g)) {
+      problems.push(
+        `quotes ${JSON.stringify(short)}, which is ${short.length} characters — under the ` +
+          `12-character minimum, so it is never checked. Quote at least 12 characters of ` +
+          `the document, or drop the quotation marks if this ref is only a pointer`,
+      );
+    }
     for (const [, quoted] of ref.matchAll(/"([^"]{12,})"/g)) {
       if (!flat.includes(quoted.replace(/\s+/g, ' '))) {
         problems.push(`quotes ${JSON.stringify(quoted)} but ${rel} does not contain it`);

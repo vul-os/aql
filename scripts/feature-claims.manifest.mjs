@@ -1418,7 +1418,11 @@ export const FEATURES = [
     id: 'chat-ambiguity-fail-closed',
     label: 'An ambiguous chat message opens nothing and asks, rather than acting on the first name that matched',
     docStatus: 'shipped',
-    docRefs: ['docs/CHAT-COMMANDS.md § 2.2 (a) — "FIXED"'],
+    docRefs: [
+      // Was just "FIXED" — five characters, so never extracted and never
+      // checked. Quotes the sentence that states the property instead.
+      'docs/CHAT-COMMANDS.md § 2.2 (a) — "collects every hit and returns a"',
+    ],
     evidence: [
       { file: 'hub/internal/channels/whatsapp.go', pattern: 'func FindMentionedGate' },
       { file: 'hub/internal/channels/whatsapp.go', pattern: 'PushAmbiguousGateMenu' },
@@ -1557,7 +1561,11 @@ export const FEATURES = [
     label: 'Controller-originated events persisted on the hub, deduped on event_id, ' +
       'with access kinds appended to the hash-chained audit log',
     docStatus: 'shipped',
-    docRefs: ['proto/events.md § Delivery — "On receipt"'],
+    docRefs: [
+      // Was just "On receipt" — ten characters, unchecked. The dedupe property
+      // is the claim, so that is what this pins.
+      'proto/events.md § Delivery — "that key *is* the dedupe, so a redelivery collides"',
+    ],
     evidence: [
       { file: 'hub/internal/store/controllerevents.go', pattern: 'RecordControllerEvent' },
       { file: 'hub/internal/store/migrations/0019_controller_events.sql', pattern: 'event_id\\s+TEXT PRIMARY KEY' },
