@@ -304,6 +304,17 @@ export const FEATURES = [
       [{ file: 'hub/cmd/hub/main.go', pattern: 'keys.RequireExisting' }],
       // Proven by stopping a real hub, deleting the seed and restarting it.
       [{ file: 'e2e/lostkey_e2e_test.go', pattern: 'RefusesToStartRatherThanOrphanItsFleet' }],
+      // The same loss one step in: a rotation recorded with the retained key
+      // gone. Not a refusal — controllers that already repaired are fine — but
+      // reported, because signForDevice stops consulting pins once
+      // HasPrevious() is false and silently signs with the current key.
+      [{ file: 'hub/internal/httpapi/keyrotation.go', pattern: 'retained_key_present' }],
+      [
+        {
+          file: 'hub/internal/httpapi/rotationretained_test.go',
+          pattern: 'TestRotationStatusReportsAMissingRetainedKey',
+        },
+      ],
     ],
   },
   {

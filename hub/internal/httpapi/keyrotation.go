@@ -92,17 +92,30 @@ func (s *Server) handleKeyRotationStatus(w http.ResponseWriter, r *http.Request)
 		out = append(out, m)
 	}
 
+	// The retained key is what lets this hub sign for a controller that has NOT
+	// repaired yet. Without it, signForDevice sees HasPrevious() false, leaves
+	// the pin empty and signs everything with the CURRENT key — which every
+	// unrepaired controller rejects as badsig, and the repair that would move
+	// them cannot be signed either. They are unreachable and unrepairable.
+	//
+	// Reported rather than repaired, for the reason the start path already
+	// gives about the mirror-image state: the two sources disagreeing is
+	// something a person has to look at, and guessing which is right is how a
+	// retained key gets destroyed.
 	writeJSON(w, http.StatusOK, map[string]any{
-		"rotating":        true,
-		"rotation_id":     rot.ID,
-		"started_at":      rot.StartedAt,
-		"reason":          rot.Reason,
-		"previous_pubkey": rot.PreviousPub,
-		"new_pubkey":      rot.NewPub,
-		"current_pubkey":  s.keys.PublicKeyB64(),
-		"controllers":     out,
-		"repaired":        repaired,
-		"remaining":       len(pins) - repaired,
+		"rotating": true,
+		// False means the seeds and the database disagree, in the direction
+		// that orphans controllers.
+		"retained_key_present": s.keys.HasPrevious(),
+		"rotation_id":          rot.ID,
+		"started_at":           rot.StartedAt,
+		"reason":               rot.Reason,
+		"previous_pubkey":      rot.PreviousPub,
+		"new_pubkey":           rot.NewPub,
+		"current_pubkey":       s.keys.PublicKeyB64(),
+		"controllers":          out,
+		"repaired":             repaired,
+		"remaining":            len(pins) - repaired,
 	})
 }
 

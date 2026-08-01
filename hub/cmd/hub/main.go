@@ -668,6 +668,26 @@ func buildHub(cfg config, log *slog.Logger) (*hub, error) {
 		return nil, fmt.Errorf("keys: %w", err)
 	}
 
+	// The mirror image of the check above, and the same failure one step in.
+	//
+	// A rotation in the database with NO retained key on disk means every
+	// controller that has not repaired yet is unreachable: signForDevice sees
+	// HasPrevious() false, leaves the pin empty, and signs with the CURRENT
+	// key — which those controllers reject as badsig, and the repair that would
+	// move them cannot be signed either.
+	//
+	// This does NOT refuse to start, unlike the missing-key case. Controllers
+	// that already repaired are fine, and stopping the hub would take their
+	// gates down to punish them for the others. So it is an alarm, and the
+	// rotation status endpoint reports `retained_key_present: false` so the
+	// console can show it rather than an operator finding out at a gate.
+	if _, err := st.OpenKeyRotation(context.Background()); err == nil && !ks.HasPrevious() {
+		log.Error("KEY ROTATION IS RECORDED BUT THE RETAINED KEY IS GONE: every controller " +
+			"that has not repaired yet will reject this hub's commands, and cannot be " +
+			"repaired without that key. Restore it from a backup, or re-pair those " +
+			"controllers physically")
+	}
+
 	secret, err := loadOrCreateSecret(filepath.Join(cfg.dataDir, "jwt_secret"))
 	if err != nil {
 		st.Close()
