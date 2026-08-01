@@ -902,7 +902,15 @@ hub serves. Adding an entry back is a real decision, not bookkeeping.
       two independent implementations rather than one agreeing with itself;
       keys.SignCommand is the plain signer the vectors and e2e use, production going
       through the rotation-aware wrappers; devices.TierOf is a fail-safe alternative to
-      Supports()+ok that nothing needs and that costs nine lines. 28 left, each still
+      Supports()+ok that nothing needs and that costs nine lines.
+      Then four more in channels/, all superseded wrappers rather than dead ends, all
+      now annotated: Disclosure/Disclosures return the DECLARED table and ignore the
+      Config, so on a polling hub they would publish a Telegram transport claim that is
+      false — production must use DisclosureFor/DisclosuresFor, and the tests keep the
+      raw pair because they assert properties of the declaration itself; TextGateVerb
+      collapses TextGateIntent's command-vs-QUESTION distinction to a bool, so a rail
+      using it would answer "is the gate open" by opening it; GateVerbForCommand is the
+      bare string mapping under SelectionCommandVerb. 24 left, each still
       needing classification one at a time before a guard can
       exist — an allowlist written in bulk is the thing store/'s guard warns against.
       A signing-path symbol sat outside every guard for four commits; see the keys note.

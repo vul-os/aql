@@ -331,12 +331,26 @@ func DisclosuresFor(cfg Config) []RailDisclosure {
 // The second return is false for a Kind with no disclosure, which a test
 // forbids for any registered rail — so a false here in production means a rail
 // was added without one.
+// NO PRODUCTION CALLER, and production must not acquire one — use DisclosureFor.
+//
+// This returns the DECLARED table verbatim. DisclosureFor takes the Config and
+// corrects it: with AQL_TELEGRAM_ENGINE=polling, Telegram's inbound transport is
+// OutboundPersistent rather than a webhook, and this function does not know
+// that. Serving it from /v1/rails/disclosure on a polling hub would publish a
+// transport claim that is false for that deployment — on the surface whose
+// entire purpose is telling people what a rail costs them.
+//
+// It stays because the tests that assert properties of the DECLARATION — "no
+// rail can cold-initiate", the per-direction shape — are asking about the table
+// itself and not about one configuration of it. That is the right subject for
+// them, and DisclosuresFor(Config{}) would quietly narrow it to a single config.
 func Disclosure(k string) (RailDisclosure, bool) {
 	d, ok := disclosures[k]
 	return d, ok
 }
 
-// Disclosures returns every declaration, ordered by rail, for rendering.
+// Disclosures returns every declaration, ordered by rail. Same rule as
+// Disclosure above: tests only, because it does not read the Config.
 func Disclosures() []RailDisclosure {
 	out := make([]RailDisclosure, 0, len(disclosures))
 	for _, d := range disclosures {

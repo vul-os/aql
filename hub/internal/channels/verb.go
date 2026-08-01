@@ -186,6 +186,9 @@ func (v GateVerb) String() string {
 // GateVerbForCommand maps an open-path command string back to a GateVerb.
 // ok is false for anything outside the closed vocabulary — the same set as
 // SelectionCommandVerb, read the other way round.
+// No production caller: rails resolve a tapped or typed command through
+// SelectionCommandVerb. This is the bare string mapping underneath, used by
+// tests that assert the vocabulary itself rather than a rail's use of it.
 func GateVerbForCommand(command string) (GateVerb, bool) {
 	switch command {
 	case "open":
@@ -239,6 +242,11 @@ func LocationCommandVerb(cmd string) (GateVerb, bool) {
 // and orders nothing. See question.go for why the narrowing lives here rather
 // than at the call sites: every caller of this function actuates on `ok`, and a
 // guard each of them has to remember is a guard one of them will not.
+// No production caller: the rails use TextGateIntent, which distinguishes a
+// command from a QUESTION ("is the gate open"). This collapses that to a bool
+// and discards the distinction, so a rail reaching for it would answer a
+// question by opening a gate. Kept for tests that only care whether a phrasing
+// parses as a command at all.
 func TextGateVerb(body string) (GateVerb, bool) {
 	v, intent := TextGateIntent(body)
 	return v, intent == IntentCommand
