@@ -287,3 +287,52 @@ func TestAMalformedAnnouncementIsANoteNotAGuess(t *testing.T) {
 		t.Error("an unparseable announcement produced no explanation")
 	}
 }
+
+// A scan may never propose a COMMAND, whatever the bridge announces.
+//
+// # Why this is the property worth pinning on discovery
+//
+// `aql-hub mqtt-scan` prints SuggestedConfig output for an operator to paste,
+// so every field here is bridge-controlled text on a short path into a live
+// hub's configuration. The review step is real but it is a human reading JSON,
+// and the thing a human is worst at spotting is a plausible extra stanza.
+//
+// State topics are safe to propose: config.go's validateDevice runs
+// ValidateFilter over them, which permits '+' and '#' deliberately because a
+// device may publish under a filter, and a wider subscription is read-only —
+// it costs scope, not control.
+//
+// Commands are not. ValidateTopic refuses a wildcard there precisely because
+// "commanding a wildcard would" reach every device under it, and a command
+// stanza is what turns a discovered device from something the hub WATCHES into
+// something it can DRIVE. A bridge that could get one into a pasted config
+// would be choosing, on the operator's behalf, which of its devices the engine
+// may actuate — and the capability attached to it decides the tier ceiling.
+//
+// So the rule is structural rather than a matter of care: discovery proposes
+// reads, a human writes writes.
+func TestSuggestedConfigNeverProposesACommand(t *testing.T) {
+	// The nastiest announcement a bridge could plausibly send: wildcards in the
+	// topic, a name that looks like a lock, and fields whose names read like
+	// actions rather than measurements.
+	c := Candidate{
+		Name:          "Front Door Lock",
+		Topic:         "zigbee2mqtt/#",
+		SuggestedKind: "sensor",
+		Fields:        []string{"state", "action", "lock", "unlock"},
+	}
+	dc := c.SuggestedConfig()
+
+	if len(dc.Commands) != 0 {
+		t.Fatalf("discovery proposed %d command(s); a bridge must not be able to put an "+
+			"actuation stanza into a config an operator pastes", len(dc.Commands))
+	}
+	if len(dc.State) == 0 {
+		t.Fatal("proposed nothing at all, so this test would pass for a broken scanner")
+	}
+	for _, st := range dc.State {
+		if st.Topic != c.Topic {
+			t.Errorf("state topic %q is not the announced one", st.Topic)
+		}
+	}
+}
