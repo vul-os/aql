@@ -259,8 +259,19 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 - [x] Telegram long-polling (`getUpdates`) — shipped as an opt-in engine
       (`AQL_TELEGRAM_ENGINE=polling`). The poller had been complete and tested for a
       while with nothing constructing it; wiring is now covered by a reachability test.
-- [ ] Discord — designed into the seam, no code yet. Same question: whose seam?
-- [ ] extend the intent vocabulary past `open`/`close` so chat reaches the other kinds
+- [x] Discord — BUILT, and this line said "no code yet" long after it was.
+      `channels/discord.go`, `discord_gateway.go` (a dialled Gateway websocket, the
+      Slack Socket Mode shape) and `discord_send.go`, wired by `s.wireDiscord()` in
+      server.go, with `discord-channel` a shipped manifest claim carrying three pieces
+      of evidence — the adapter, the DISCORD_BOT_TOKEN read, and the registration.
+      ARCHITECTURE.md's rails diagram carried the same stale "(not built)" until
+      2026-08-01. Whose seam it ends up in is still the Ephor question below.
+- [x] extend the intent vocabulary past `open`/`close` so chat reaches the other kinds
+      — DONE. `chatSendableVerbs` carries set/on/off/toggle/stop/pause/resume, which
+      reaches CapSwitch, CapDimmable, CapSetpoint and CapJob: lighting, climate and
+      robot as well as access. Plus zone fan-out behind an explicit quantifier
+      (`chatzone.go`) and a T4 request path that records an intent and actuates only on
+      console approval (`chatstepup.go`). Ceiling still T1 for anything chat SENDS.
 - [ ] DMTAP channel stays a scaffold with a fail-closed transport until there is a real
       wire format. Do not present it as a channel.
 
@@ -883,7 +894,7 @@ hub serves. Adding an entry back is a real decision, not bookkeeping.
 ## conformance
 - [x] store/tenants.go's six superseded methods are gone; the tenancy-scoping test now
       drives the accessors production uses.
-- [ ] ~32 uncalled exported symbols remain. Two of the six with NO caller at all
+- [x] ~32 uncalled exported symbols swept. Two of the six with NO caller at all
       (not even a test) turned out to matter: NewTelegramPoller was an entire unwired
       feature, and jcs.CanonicalizeJSON was an unrun entry point in a safety-critical
       package. The four left are UnmarshalJSON (encoding/json calls it) and three
@@ -891,6 +902,12 @@ hub serves. Adding an entry back is a real decision, not bookkeeping.
       tested (the poller's clock on untimed readings, the per-device read timeout, the
       rollup budget), each confirmed by tampering first. They earn their place; they now
       have callers. UnmarshalJSON is called by encoding/json and is fine.
+      CORRECTION (2026-08-01): "they now have callers" was wrong for one.
+      keys.CanonicalizeJSON is reached only from tests, and jcs.go's own comment
+      claimed four production callers by naming it alongside Canonicalize, which
+      genuinely has them. The comment now separates the two and says why the
+      test-only one stays. Neither reachability guard covers package keys, which
+      is how a symbol in the SIGNING path went four commits without one.
 - [x] Same sweep run over TypeScript (exported VALUES with no use anywhere, counting
       in-file use — the Go version's lesson). 4 candidates from 302 exports: two false
       positives (sample code inside a CodeBlock template literal; a type-only export),
