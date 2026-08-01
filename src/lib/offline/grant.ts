@@ -343,6 +343,21 @@ export function needsRefresh(grant: Grant, nowSec: number): boolean {
  * access point, and among those the one that lasts longest. Returns null
  * when the resident holds nothing usable — which the caller must render as
  * an explicit "you hold no grant for this gate", never as a silent no-op.
+ *
+ * NOT CALLED, and the reason is a storage decision rather than an oversight.
+ *
+ * The vault keys a record `${hubPubkey}::${memberId}` — "grants never cross
+ * hubs or members" — so a device holds AT MOST ONE grant per hub. There is
+ * never a set to choose from, which is why EmergencyAccess.tsx looks its record
+ * up by hub and presents it. That is correct under this model, not a shortcut
+ * around this function.
+ *
+ * This encodes the other model: several grants per hub, differing in which
+ * access points they cover and when they expire. Keep it only while that
+ * remains a plausible direction — and if the vault ever stores more than one,
+ * this is the selection rule, because "the first one that matches the hub"
+ * would then present an expired or non-covering grant and the resident would
+ * learn about it standing at the gate.
  */
 export function selectGrantForAccessPoint(
   grants: Grant[],

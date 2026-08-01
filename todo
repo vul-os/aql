@@ -969,6 +969,19 @@ hub serves. Adding an entry back is a real decision, not bookkeeping.
       genuinely has them. The comment now separates the two and says why the
       test-only one stays. Neither reachability guard covers package keys, which
       is how a symbol in the SIGNING path went four commits without one.
+- [x] TypeScript sweep RE-RUN 2026-08-01 with a planted-orphan control, after the Go one
+      found two unreachable features. 215 exported declarations, 8 used nowhere outside
+      tests, and no third finding: the two wire constants are pinned by
+      wireConstants.test.ts (which the scan skips, being under __tests__),
+      verifyAqlWebhook is sample code shown to integrators inside ApiReference.tsx,
+      and countryByCode / isAlwaysOpenWindow / canonicalMinusSig / resetHubReachability
+      are helpers their own tests exercise. One was worth the look:
+      selectGrantForAccessPoint picks among SEVERAL grants for one hub, and the vault
+      keys records `${hubPubkey}::${memberId}`, so a device holds at most one — the
+      page's lookup by hub is correct under that model rather than a shortcut past this
+      function. Said at its declaration, with what to do if the vault ever stores more.
+      No TS guard written: unlike Go, the honest candidates here are mostly test-pinned
+      constants and documentation samples, so the rule would be noise.
 - [x] Same sweep run over TypeScript (exported VALUES with no use anywhere, counting
       in-file use — the Go version's lesson). 4 candidates from 302 exports: two false
       positives (sample code inside a CodeBlock template literal; a type-only export),
