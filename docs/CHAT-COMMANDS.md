@@ -771,6 +771,15 @@ buzzed. It renders the status the hub derived rather than recomputing it from
 the timestamps, keeps refused and expired requests visible, and its approval
 dialog names the device, the verb and the rail that asked.
 
+**On a T4 verb taking a value.** This is listed below as out of scope, and it is
+worth being precise: **no verb in the catalogue is both TierHazardousMotion and
+argument-taking**, so the restriction is currently vacuous rather than a gap in
+the product. `devices/tierinvariants_test.go` holds that, because the chat
+step-up path resolves T4 verbs with nil args at both ends — if one ever gained
+an argument, `Resolve` would fail closed and the member would be told "that
+device would not accept it", which is false, and an operator could arm a window
+that could never be consumed.
+
 **What is still missing.** A T4 verb taking a
 VALUE is out of scope — the number would have to be echoed in the approval and
 re-checked at execution — and nothing tells the chat rail when the command

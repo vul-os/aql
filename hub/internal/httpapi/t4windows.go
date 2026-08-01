@@ -156,6 +156,22 @@ func (s *Server) handleT4WindowArm(w http.ResponseWriter, r *http.Request) {
 	// something, and a list full of windows that mean nothing is how the ones
 	// that DO mean something stop being read. The refusal names the tier so the
 	// message is "you did not need to" rather than "no".
+	// Two-sided, and the upper bound is not decoration. `TierRefused` sits ABOVE
+	// TierHazardousMotion in the ladder — it means "never actuable from a remote
+	// surface, whatever the caller" — so `< TierHazardousMotion` alone lets it
+	// through. Nothing would ever actuate (Registry.Resolve refuses anything
+	// Tier.Allowed() rejects, and the chat path resolves before it does
+	// anything), but an operator could arm a window that can never be consumed,
+	// which is exactly the state ArmT4Window's zero-use-cap check exists to
+	// refuse: a window that silently never works is worse than an error here.
+	//
+	// Latent today — no capability in the catalogue declares TierRefused, and
+	// devices/tierinvariants_test.go holds that. Written two-sided anyway,
+	// because the cost is one clause and the failure would be silent.
+	if !spec.Tier.Allowed() {
+		writeErr(w, http.StatusBadRequest, "verb_not_actuable")
+		return
+	}
 	if spec.Tier < devices.TierHazardousMotion {
 		writeErr(w, http.StatusBadRequest, "verb_below_t4")
 		return
