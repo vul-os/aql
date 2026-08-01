@@ -975,9 +975,14 @@ The narrowing lives inside `TextGateVerb` rather than at the call sites, so a
 caller that has never heard of questions gets the safe answer. A rail that wants
 to answer one calls `TextGateIntent` deliberately.
 
-This does not answer any question — §4.2's table is still unbuilt. It makes the
-answer "I can't tell you that yet" instead of a gate swinging open, which is the
-precondition for building the rest.
+This does not answer any question by itself. It makes the answer something other
+than a gate swinging open, which was the precondition for building the rest —
+and the rest is now built: every row of §4.2's table below is shipped or
+deliberately refused. This paragraph said "§4.2's table is still unbuilt" for
+some time after that stopped being true, and so did the reply it described.
+`channels.GateQuestionReply` told a member "I can't answer questions about a
+gate yet" and was deleted on 2026-08-01 — unreachable, because the path that
+answers gate questions was built and never routed through it.
 
 ### 4.1 The gateway cannot answer "is the gate closed"
 

@@ -1,7 +1,6 @@
 package channels
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -95,30 +94,6 @@ func TestChatterIsStillNeitherCommandNorQuestion(t *testing.T) {
 		if _, intent := TextGateIntent(NormalizeText(body)); intent != IntentNone {
 			t.Errorf("%q classified %v, want IntentNone", body, intent)
 		}
-	}
-}
-
-// The reply has to do two things, and the second is what makes a false positive
-// survivable: it names the exact message that would have worked.
-func TestGateQuestionReplySaysNothingMovedAndHowToMove(t *testing.T) {
-	for _, v := range []GateVerb{VerbOpen, VerbClose, VerbHold} {
-		got := GateQuestionReply(v, "https://hub.example")
-		if !strings.Contains(got, "haven't touched it") {
-			t.Errorf("%v reply does not say the gate was untouched: %q", v, got)
-		}
-		if !strings.Contains(got, `"`+string(v.Command())+`"`) {
-			t.Errorf("%v reply does not name the message that would work: %q", v, got)
-		}
-		// It must never read as though the gate moved.
-		for _, forbidden := range []string{"Opening", "Closing", "Holding open"} {
-			if strings.Contains(got, forbidden) {
-				t.Errorf("%v reply implies actuation (%q): %q", v, forbidden, got)
-			}
-		}
-	}
-	// Without a portal there is no dangling "the log is in the console:".
-	if got := GateQuestionReply(VerbOpen, ""); strings.Contains(got, "console") {
-		t.Errorf("reply offers a console with no URL configured: %q", got)
 	}
 }
 

@@ -161,30 +161,3 @@ func fields(body string) []string {
 		return !(r == '_' || (r >= '0' && r <= '9') || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z'))
 	})
 }
-
-// GateQuestionReply answers a question about a gate without pretending to know
-// the answer and without moving anything.
-//
-// Two things it must do. Say plainly that nothing happened — the same contract
-// DenialMessage carries, because a member who asked a question and got a vague
-// reply will reasonably assume the gate is now open. And name the exact message
-// that WOULD open it, because this classifier will sometimes be wrong about a
-// real request, and a false refusal has to be recoverable in one message rather
-// than by rephrasing blindly.
-func GateQuestionReply(v GateVerb, publicURL string) string {
-	var b strings.Builder
-	b.WriteString("That reads as a question about the gate rather than a request to ")
-	b.WriteString(v.Infinitive())
-	b.WriteString(" one, so I haven't touched it. I can't answer questions about a gate yet")
-	if publicURL != "" {
-		b.WriteString(" — the log is in the console: ")
-		b.WriteString(trimURL(publicURL))
-		b.WriteString("/app")
-	}
-	b.WriteString(". Send \"")
-	b.WriteString(string(v.Command()))
-	b.WriteString("\" on its own if you did mean to ")
-	b.WriteString(v.Infinitive())
-	b.WriteString(" it.")
-	return b.String()
-}

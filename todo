@@ -924,8 +924,19 @@ hub serves. Adding an entry back is a real decision, not bookkeeping.
       optimisation the design forbids: fragments are published from inside WriteClip by
       the same muxer that writes the file, so a viewer and the disk see identical bytes,
       and the output exists whether or not anyone watches. Doc corrected.
-      12 left, each still
-      needing classification one at a time before a guard can
+      Then the rest, all legitimate: Weekdays and the mock driver's AddDevice/Drop/
+      NewMockDriver are fixture constructors; IsNotFound is an errors.Is wrapper;
+      DenialReasons says at its declaration that it exists so a test can assert every
+      reason has a message; UnmarshalJSON is called by encoding/json; energy Mix.Share
+      is a convenience the API deliberately does not use — /v1/.../energy/mix returns
+      coverage_seconds and expected_seconds per source, so a client can show the GAP
+      rather than a boolean "exact"; camera's BackwardsTimestamps and
+      MarkerDisagreements are diagnostics of the same kind as the four already covered
+      in camera/doc.go. One was NOT legitimate: GateQuestionReply, deleted.
+      SWEEP COMPLETE. Of 33 uncalled exports: 3 deleted, 2 missing entry points built
+      (gen-data-key, mqtt-scan), several docs corrected, the rest classified in place.
+      A guard could now be written from these verdicts; the reason not to write it in
+      one sitting was
       exist — an allowlist written in bulk is the thing store/'s guard warns against.
       A signing-path symbol sat outside every guard for four commits; see the keys note.
 - [ ] a token-scoped `GET /v1/events` feed (today the audit log is instance-admin only)
