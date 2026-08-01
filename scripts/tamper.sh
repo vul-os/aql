@@ -43,6 +43,27 @@
 # ON A FLOOR: to test a coverage floor, RAISE it above real coverage. Lowering
 # one changes nothing while the corpus is larger than either number, so it reads
 # NOT CAUGHT against a guard that is fine.
+#
+# ON AN EXEMPTION LIST: allowlists are where guards go quiet, and every one in
+# this repository has now been tampered. The rule that came out of it — six
+# lists, three of which were blind — is that a list needs a check from OUTSIDE
+# itself. Iterating the list to validate the list means deleting an entry
+# deletes its own check, so `for (const x of ALLOWED) expect(...)` catches
+# nothing when someone removes an x. What differs each time is where the
+# independent fact lives:
+#
+#   NOT_IN_TREE (build output only)   → git check-ignore
+#   allowedUnreachable (*Store)       → the set of methods production calls
+#   COMMENT_EVIDENCE_OK               → the evidence scan, run with the
+#                                       exemption bypassed
+#
+# Finding that fact is the design problem. If there isn't one, the list is a
+# wish rather than a rule.
+#
+# ON A VERDICT OF "NOT CAUGHT": check the tamper APPLIED before believing it.
+# This script does that for you — exactly one match, and the file changed — which
+# is why it exists. Twice this session a hand-rolled tamper silently did not
+# apply and read as a blind guard, which sends you rewriting working code.
 
 set -uo pipefail
 
