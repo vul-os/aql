@@ -103,6 +103,26 @@ describe('go test gates', () => {
  * readdirSync, a glob, execFileSync feeding a list -- creates the failure mode
  * above.
  *
+ * # The Go half is audited, not enforced, and that is a decision
+ *
+ * The same property matters in hub/ and controller/, and it holds there: nine
+ * Go tests enumerate a literal path (".", filepath.Join("..", ...), an
+ * embed.FS) and all nine assert a floor. Audited by hand 2026-08-01.
+ *
+ * It is NOT mechanised, on purpose. Vitest's floor is one matcher name, so a
+ * regex recognises it exactly. Go's is arbitrary code -- `if examined < 3 {
+ * t.Fatalf(...) }`, `if len(names) == 0 { t.Fatal(...) }`, `if seen < 8 {
+ * t.Errorf(...) }` -- and three successive attempts at matching it produced
+ * three WRONG answers on this tree: five copy-guards misreported as floorless,
+ * then four Go files, then two more, every one a false positive cleared by
+ * hand. A guard whose detector cannot be got right in three tries will fail
+ * maintainers rather than help them, and a check nobody trusts gets deleted or
+ * disabled, which is worse than the hand-audit it replaced.
+ *
+ * So: this test covers the corpus it can cover exactly, and says plainly where
+ * it stops. Someone reading a green run should not conclude the Go side is
+ * enforced.
+ *
  * # What this does NOT check
  *
  * That the floor is set sensibly. A floor of 1 on a corpus of 300 passes here
