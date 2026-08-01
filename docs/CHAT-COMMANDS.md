@@ -764,9 +764,14 @@ would say the thing this design exists to prevent.
 SEND this" stays no at every tier. `chatT4Verbs` answers the different question
 of what chat may take a REQUEST for, currently `start` and `resume`.
 
-**What is still missing.** No console SCREEN reaches the approval routes, so
-today the flow is driven by tests and an API client rather than by a person; both
-`routeCoverage` and `routeParity` carry entries naming that. A T4 verb taking a
+**The approval screen** is `src/pages/app/HazardousCommands.tsx`, at
+/app/hazardous. Pending requests sit above armed windows, because a request
+expires in ten minutes and an operator usually arrives because their phone
+buzzed. It renders the status the hub derived rather than recomputing it from
+the timestamps, keeps refused and expired requests visible, and its approval
+dialog names the device, the verb and the rail that asked.
+
+**What is still missing.** A T4 verb taking a
 VALUE is out of scope — the number would have to be echoed in the approval and
 re-checked at execution — and nothing tells the chat rail when the command
 finally runs, because sending an unsolicited message back down a rail a member

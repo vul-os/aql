@@ -1018,6 +1018,42 @@ export const api = {
       method: 'DELETE',
     }),
 
+  // Hazardous (T4) chat commands — two halves of one flow, both admin-only.
+  //
+  // A window (hub/internal/httpapi/t4windows.go) makes a T4 verb ELIGIBLE to be
+  // asked for over chat. It grants nothing on its own: a request still has to
+  // clear the operator role, a chat-side confirmation, and the approval below.
+  //
+  // The decide call (hub/internal/httpapi/stepupapi.go) is the ONLY place in
+  // the product where a T4 verb asked for over chat actuates. That is the whole
+  // point of the design — the approval happens in an authenticated console
+  // session rather than in the chat thread, so holding someone's WhatsApp is
+  // enough to ask and not enough to approve.
+  t4Windows: (accountId: string) =>
+    apiFetch<{ t4_windows: T4WindowRow[] }>(`/accounts/${accountId}/t4-windows`),
+
+  t4WindowArm: (
+    accountId: string,
+    body: { device_key: string; verb: string; duration_s: number; max_uses?: number; notes?: string },
+  ) => apiFetch<T4WindowRow>(`/accounts/${accountId}/t4-windows`, { method: 'POST', body }),
+
+  t4WindowDisarm: (accountId: string, windowId: string) =>
+    apiFetch<T4WindowRow>(
+      `/accounts/${accountId}/t4-windows/${encodeURIComponent(windowId)}/disarm`,
+      { method: 'POST' },
+    ),
+
+  stepUpIntents: (accountId: string) =>
+    apiFetch<{ stepup_intents: StepUpIntentRow[] }>(`/accounts/${accountId}/stepup-intents`),
+
+  // approve: false REJECTS. Sent explicitly rather than implied by the route so
+  // a dropped path segment cannot turn a rejection into an approval.
+  stepUpDecide: (accountId: string, intentId: string, approve: boolean) =>
+    apiFetch<StepUpIntentRow>(
+      `/accounts/${accountId}/stepup-intents/${encodeURIComponent(intentId)}/decide`,
+      { method: 'POST', body: { approve } },
+    ),
+
   // Time-window rules (hub/internal/httpapi/timewindows.go) — when a given
   // member may open. Enforced inside the open path's choke point, not by the
   // automations engine.
@@ -1610,6 +1646,52 @@ export type EngineKind =
   | 'sensor'
   | 'access'
   | (string & {});
+
+/**
+ * One operator-armed window for a hazardous verb (hub's t4WindowJSON).
+ *
+ * `status` is DERIVED by the hub from the timestamps and the use counter, never
+ * the stored column — a window past its end still reads `active` on disk, and a
+ * console trusting that would show a closed window as live. Do not recompute it
+ * here from starts_at/ends_at: two answers to one question is how they drift.
+ */
+export type T4WindowRow = {
+  id: string;
+  device_key: string;
+  verb: string;
+  armed_by: string;
+  starts_at: UnixSeconds;
+  ends_at: UnixSeconds;
+  /** null means no cap on uses within the window. */
+  max_uses: number | null;
+  uses_count: number;
+  status: 'active' | 'pending' | 'expired' | 'exhausted' | 'disarmed';
+  notes: string;
+  created_at: UnixSeconds;
+};
+
+/**
+ * One T4 command asked for over chat, awaiting a decision here (hub's
+ * stepUpIntentJSON).
+ *
+ * `status` is derived, as above. `outcome` is '' until a decision actuates:
+ * 'sent' means the device took it, 'failed' means it refused, 'refused' means
+ * the hub never sent it (the window had gone, the engine was unavailable).
+ */
+export type StepUpIntentRow = {
+  id: string;
+  requested_by: string;
+  /** Which rail carried the request — 'telegram', 'whatsapp', 'slack'. */
+  source: string;
+  device_key: string;
+  verb: string;
+  created_at: UnixSeconds;
+  expires_at: UnixSeconds;
+  status: 'pending' | 'approved' | 'rejected' | 'expired';
+  outcome: '' | 'sent' | 'failed' | 'refused';
+  outcome_detail?: string;
+  decided_by?: string;
+};
 
 export type EngineDevice = {
   /** Globally unique `driver:deviceID`. The id every engine route speaks. */

@@ -69,20 +69,6 @@ const NO_CLIENT_NEEDED = new Map<string, string>([
   ['POST /api/pair/redeem', 'controller redeems a pairing code; never a browser call'],
   ['POST /pair/redeem', 'unversioned alias of the same controller pairing route'],
 
-  // PENDING. The hub serves these and the console does not call them yet:
-  // there is no operator UI for arming a T4 chat window, because a window is
-  // inert until the other two requirements in CHAT-COMMANDS.md §3.3's T4 row
-  // exist — the confirmation route and step-up on a SECOND RAIL. Building a
-  // console control that appeared to grant a hazardous permission, while
-  // nothing consults what it grants, is the failure these entries exist to name
-  // rather than hide. The remaining step is written down in §3.4's "What is
-  // still missing" paragraph.
-  ['GET /v1/accounts/{param}/t4-windows', 'PENDING — no operator UI yet; see CHAT-COMMANDS.md §3.4'],
-  ['POST /v1/accounts/{param}/t4-windows', 'PENDING — no operator UI yet; see CHAT-COMMANDS.md §3.4'],
-  ['POST /v1/accounts/{param}/t4-windows/{param}/disarm', 'PENDING — no operator UI yet; see CHAT-COMMANDS.md §3.4'],
-  ['GET /v1/accounts/{param}/stepup-intents', 'PENDING — no operator UI yet; see CHAT-COMMANDS.md §3.4'],
-  ['POST /v1/accounts/{param}/stepup-intents/{param}/decide', 'PENDING — no operator UI yet; see CHAT-COMMANDS.md §3.4'],
-
   // Machine-to-machine and liveness.
   ['GET /health', 'liveness probe; the console uses it only through testGatewayUrl'],
   ['GET /v1/gateway/key', 'controllers and phones fetch the pinned hub key, not the console'],

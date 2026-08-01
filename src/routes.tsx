@@ -72,6 +72,11 @@ const routes: RouteObject[] = [
       { path: 'access-rules', element: wrap(() => import('@/pages/app/AccessRules')), errorElement },
       { path: 'api-tokens', element: wrap(() => import('@/pages/app/ApiTokens')), errorElement },
       { path: 'webhooks', element: wrap(() => import('@/pages/app/Webhooks')), errorElement },
+      {
+        path: 'hazardous',
+        element: wrap(() => import('@/pages/app/HazardousCommands')),
+        errorElement,
+      },
       { path: 'settings', element: wrap(() => import('@/pages/app/Settings')), errorElement },
       {
         path: 'admin',

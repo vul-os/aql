@@ -38,6 +38,7 @@ export const ACCESS_NAV_ITEMS: NavItem[] = [
   { to: '/app/analytics', label: 'Analytics' },
   { to: '/app/emergency', label: 'Emergency access' },
   { to: '/app/access-rules', label: 'Access rules' },
+  { to: '/app/hazardous', label: 'Hazardous commands' },
   { to: '/app/webhooks', label: 'Webhooks' },
   { to: '/app/api-tokens', label: 'API tokens' },
   { to: '/app/settings', label: 'Settings' },

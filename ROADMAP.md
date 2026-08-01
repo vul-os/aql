@@ -544,9 +544,15 @@ and none has met physical hardware.
       device is touched, so two tabs pressing approve actuate once and a hub that dies
       mid-command cannot leave the same command approvable again. The audit separates the
       request from the actuation and attributes the actuation to `console`
-- [ ] An approval SCREEN in the console. The routes exist and the flow is complete on the
-      hub, but no page reaches them, so today it is driven by tests and an API client
-      rather than by a person. `routeCoverage` and `routeParity` both name it T4 needs step-up on a second rail (§3.4) and an operator-armed time window;
+- [x] **The approval screen** (`src/pages/app/HazardousCommands.tsx`, /app/hazardous).
+      Pending requests first — they expire in ten minutes and an operator arrives because
+      their phone buzzed — then armed windows with an arm form and a close button. It
+      renders the status the HUB derived rather than recomputing it, keeps refused and
+      expired requests visible so "I asked and nothing happened" has a row, and its
+      approval dialog names the device, the verb and the rail, because those are what
+      separate "yes, that was me" from "I did not send that". `hazardousCopy.test.ts`
+      pins those claims — after a tamper showed its first draft was worthless, matching
+      the page's own header comment instead of the UI T4 needs step-up on a second rail (§3.4) and an operator-armed time window;
       neither exists, and a confirmation is not a substitute for either. Of §4.2's two
       once-unbuilt queries, **"how much solar today" is built** — one number per source for
       one day, which rule 3 permits where a curve would be the appliance fingerprint §4.3
