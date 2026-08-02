@@ -40,6 +40,15 @@ test('the embedded console connects to the hub that served it', async ({ page, c
 
   // The signup form, not the gateway picker.
   await expect(page.getByLabel('Your name', { exact: true })).toBeVisible({ timeout: 15_000 });
+  // Shadowed, and kept anyway.
+  //
+  // Forcing servingOrigin() to return null makes the picker render — and this
+  // line never runs, because the assertion above it fails first. So the suite
+  // going red does not prove THIS line works. Checked separately by flipping it
+  // to toHaveCount(1) with the picker forced: it matched exactly one button, so
+  // the locator is real and not the vacuous kind (a Field's hint lives inside
+  // its <label>, which made an exact-match getByLabel elsewhere in this suite
+  // match nothing and pass no matter what).
   await expect(page.getByRole('button', { name: 'Connect', exact: true })).toHaveCount(0);
 
   // And it settled on the serving origin rather than a dev port.

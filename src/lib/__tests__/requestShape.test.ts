@@ -48,10 +48,16 @@ const NOT_A_HUB_REQUEST_FIELD = new Map<string, string>([
   // update-password are all served (authrecovery.go), so they are checked like
   // anything else. Exempting a field on the strength of an out-of-date comment
   // is how an alarm ends up covering less than it claims.
+  //
+  // NOT here either, and for the same reason one step later: avatar_url. It was
+  // exempted as "no /auth/profile route on the hub" — and PATCH
+  // /v1/auth/me/profile is served (profile.go declares `json:"avatar_url"`,
+  // server.go wires it, api.ts's own comment says "Served by the hub"). The
+  // exemption outlived the gap it described, which is why the test below now
+  // fails on any entry here that the hub has since started accepting.
   ['slack_user_id', 'Slack profile link — no /auth/slack route on the hub'],
   ['slack_handle', 'Slack profile link — no /auth/slack route on the hub'],
-  ['avatar_url', 'profile update — no /auth/profile route on the hub'],
-  ['is_primary', 'phone add — no /auth/phones route on the hub'],
+  ['is_primary', 'phone add — the /phones routes take no is_primary on any body'],
 ]);
 
 /** Every JSON key a Go request struct will accept, across all handlers. */
@@ -198,5 +204,22 @@ describe('request shape parity', () => {
     for (const [key, reason] of NOT_A_HUB_REQUEST_FIELD) {
       expect(reason.length, `${key} is exempted with no reason`).toBeGreaterThan(10);
     }
+  });
+
+  it('every exemption is still a key the hub does not accept', () => {
+    // An exemption is a statement about the hub, and the hub keeps changing.
+    //
+    // avatar_url sat here reading "no /auth/profile route on the hub" long
+    // after PATCH /v1/auth/me/profile started serving it. Nothing failed:
+    // an unnecessary exemption passes quietly, which is precisely why it
+    // survived — and why the list slowly stops describing anything real.
+    // Same shape as docCitations' "every historical exemption is still a file
+    // that does not exist".
+    const accepted = goAcceptedRequestKeys();
+    const outdated = [...NOT_A_HUB_REQUEST_FIELD.keys()].filter((k) => accepted.has(k));
+    expect(
+      outdated,
+      'the hub now accepts these — drop the exemption so the key is checked like any other',
+    ).toEqual([]);
   });
 });

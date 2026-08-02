@@ -32,6 +32,25 @@ async function connectAndSignUp(
   await page.getByLabel('Your name', { exact: true }).fill('Auth Flow Tester');
   await page.getByLabel('Username', { exact: true }).fill(username);
   await page.getByRole('textbox', { name: 'Password' }).fill('correct horse battery staple 1');
+
+  // A normal signup does not ask for a phone number.
+  //
+  // It used to. The field was validated against E.164 and then dropped:
+  // registerWithPassword hands phone_e164 to api.inviteAccept and nowhere
+  // else, and the hub's registerReq has no field to receive it. Every new user
+  // was asked for a number that went nowhere, and nothing said so.
+  //
+  // Asserted here rather than left to review because the field is three lines
+  // of JSX and reads like an oversight to anyone re-adding it. Linking a
+  // number is real and lives in Settings, where the verification ceremony can
+  // actually finish; the invite path still asks, because inviteAccept matches
+  // the answer against the invitation.
+  // Matched loosely on purpose. Field renders its hint INSIDE the <label>, so
+  // the accessible name is "Phone number" followed by the hint text — an exact
+  // match never matches, and the first version of this line passed whether or
+  // not the field was there. The tamper that restored the field is what said so.
+  await expect(page.getByLabel(/Phone number/)).toHaveCount(0);
+
   await page.getByRole('button', { name: 'Continue →', exact: true }).click();
   await page.getByRole('button', { name: 'Continue →', exact: true }).click(); // account-kind step
   await page.getByLabel('Location name').fill('Auth Flow House');

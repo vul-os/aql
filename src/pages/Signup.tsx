@@ -84,7 +84,9 @@ export default function Signup() {
     name.trim().length > 0 &&
     isValidUsername(username.trim()) &&
     password.length >= 8 &&
-    (phone.trim().length === 0 || PHONE_E164_RE.test(phone.trim()));
+    // Only meaningful where the field is rendered; a stale value from a
+    // path that no longer shows it must not block the button.
+    (!isInviteSignup || phone.trim().length === 0 || PHONE_E164_RE.test(phone.trim()));
 
   async function submitSignup() {
     setErrorMsg(null);
@@ -123,7 +125,11 @@ export default function Signup() {
     setErrorMsg(null);
     if (step === 'auth') {
       if (!canAdvanceFromAuth) {
-        setErrorMsg('Fill in your name, username, password (8+ chars), and use +27821234567 if you add a phone number.');
+        setErrorMsg(
+          isInviteSignup
+            ? 'Fill in your name, username, password (8+ chars), and use +27821234567 if you add a phone number.'
+            : 'Fill in your name, username, and a password of at least 8 characters.',
+        );
         return;
       }
       if (isInviteSignup) {
@@ -221,15 +227,32 @@ export default function Signup() {
                   autoComplete="new-password"
                   required
                 />
-                <Field
-                  label="Phone number"
-                  type="tel"
-                  hint="Optional · E.164 (+27821234567)"
-                  value={phone}
-                  onChange={setPhone}
-                  placeholder="+27..."
-                  autoComplete="tel"
-                />
+                {/* Only on the invite path, because that is the only path
+                    that does anything with it.
+                
+                    A normal signup collected this number, validated it against
+                    E.164, and dropped it: registerWithPassword passes it to
+                    api.inviteAccept and nowhere else, and the hub's registerReq
+                    has no phone field to receive it. The form asked every new
+                    user for a number and threw it away without saying so.
+                
+                    Linking a number is real — POST /phones/me/link, verified,
+                    with a working UI in Settings (Phone numbers) — but it needs
+                    a ceremony the user completes FROM the phone, so it cannot
+                    finish inside a signup form. Better to ask on the one path
+                    where the answer is used and let the rest link a number that
+                    actually resolves access. */}
+                {isInviteSignup && (
+                  <Field
+                    label="Phone number"
+                    type="tel"
+                    hint="The number this invitation was sent to · E.164 (+27821234567)"
+                    value={phone}
+                    onChange={setPhone}
+                    placeholder="+27..."
+                    autoComplete="tel"
+                  />
+                )}
               </div>
 
               {errorMsg && (
@@ -535,11 +558,16 @@ function SuccessPanel({
       {/* Arrived from the WhatsApp nudge (SignupLinkForPhone adds ?wa_phone=).
           There WAS a "Connect number" button here that called api.phoneAdd() —
           a route the hub does not serve, so it failed for everyone who followed
-          that link. Worse, nothing in the hub has ever VERIFIED a phone
-          (store.AddVerifiedPhone has no callers), and access resolution
-          requires verified_at, so even a working link would have granted
-          nothing. Telling the user what to do instead beats a button that
-          cannot work — see docs/PHONE-LINKING.md. */}
+          that link. At the time, nothing in the hub had ever VERIFIED a phone
+          and access resolution requires verified_at, so even a working link
+          would have granted nothing.
+
+          The second half of that is no longer true: store/phonelink.go
+          verifies, and Settings has a working "Phone numbers" panel on the
+          real route. The note stays because the guidance is still right — the
+          hub cannot confirm a number is yours from a click, so the ceremony
+          belongs where the user has the phone in hand, not on a signup
+          confirmation screen. See docs/PHONE-LINKING.md. */}
       {pendingWhatsAppPhone && (
         <div className="mt-4 rounded-xl border border-terracotta/25 bg-terracotta/10 px-4 py-4">
           <p className="text-sm font-medium text-ink">About that WhatsApp number</p>

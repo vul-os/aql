@@ -461,9 +461,14 @@ export const api = {
   // registerReq (hub/internal/httpapi/auth.go) doesn't accept — and
   // because readJSON there calls json.Decoder.DisallowUnknownFields(),
   // sending them at all would 400 the whole request, not just get ignored.
-  // phone_e164 is accepted by the parameter for call-site compatibility but
-  // is similarly dropped: there is no /phones route on the gateway to attach
-  // it to. Invite acceptance is a separate explicit api.inviteAccept() call
+  // phone_e164 is accepted by the parameter but dropped here, and it is worth
+  // being exact about why now that it has changed. It used to be that no
+  // /phones route existed. Three do (POST /phones/me/link, GET and DELETE on
+  // /phones/me/phones), and linking is verified — but it takes a ceremony the
+  // user completes FROM the phone, which cannot finish inside a registration
+  // POST. So the parameter is still dropped, and Signup only asks for a number
+  // on the invite path, where inviteAccept matches it against the invitation.
+  // Invite acceptance is a separate explicit api.inviteAccept() call
   // (see src/pages/Signup.tsx) — the gateway registers accounts+invites as
   // two independent steps, not one atomic register-and-join.
   register: (body: {
