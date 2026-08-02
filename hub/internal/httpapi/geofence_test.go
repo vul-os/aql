@@ -133,6 +133,39 @@ func TestGeofenceRoutes(t *testing.T) {
 		t.Errorf("cross-tenant list: %d", rec.Code)
 	}
 
+	// Cross-tenant DELETE, which create and list above did not cover.
+	//
+	// A geofence is a RESTRICTION. Deleting someone else's does not read their
+	// data or move their gate — it removes a rule that was denying opens, and
+	// the next stranger who tries the door is no longer stopped. That makes an
+	// unscoped delete quieter than an unscoped read: nothing is exfiltrated,
+	// nothing errors, and the only symptom is a door that stopped saying no.
+	//
+	// store.DeleteGeofenceRule carries `AND account_id = ?`. Nothing proved it
+	// stayed.
+	rec, _ = doJSON(t, h, "DELETE", "/v1/accounts/"+accountID+"/geofences/"+siteRuleID,
+		otherAccess, nil)
+	if rec.Code != http.StatusNotFound && rec.Code != http.StatusForbidden {
+		t.Errorf("cross-tenant delete: %d, want 404 or 403", rec.Code)
+	}
+	// And the refusal has to be real. A 404 returned AFTER the row is gone is
+	// the same response and the opposite outcome, so the owner must still see
+	// the rule.
+	rec, listOut := doJSON(t, h, "GET", "/v1/accounts/"+accountID+"/geofences", adminAccess, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("owner list after cross-tenant delete: %d", rec.Code)
+	}
+	stillThere := false
+	for _, r := range listOut["geofences"].([]any) {
+		if r.(map[string]any)["id"] == siteRuleID {
+			stillThere = true
+		}
+	}
+	if !stillThere {
+		t.Error("a stranger's DELETE removed the rule and answered 404 — the response " +
+			"says refused and the database says otherwise")
+	}
+
 	// --- enforcement, end to end ------------------------------------------
 	// The site rule allows positionless opens; the door rule denies them. Drop
 	// the site rule so the door rule is the only thing speaking.

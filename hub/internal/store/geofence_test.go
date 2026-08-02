@@ -606,3 +606,59 @@ func TestCreateGeofenceRuleShapeAndAnchorSeeding(t *testing.T) {
 		t.Errorf("after delete: %v %+v", err, rules)
 	}
 }
+
+// The store's own tenant scope on a geofence rule, at the store.
+//
+// The HTTP test covers cross-tenant create and list, and now delete — but it
+// cannot see this clause. handleGeofenceDelete authorises the caller against
+// the account in the URL first, so a stranger is refused before the query runs:
+// removing `AND account_id = ?` from DeleteGeofenceRule leaves every route test
+// green. That was checked by doing it.
+//
+// What the clause defends is the other caller — anything inside the hub that
+// already has an account id and a rule id and no route in between. It is the
+// last scope on a DELETE, and the failure it prevents is quiet in a way a read
+// leak is not: a geofence is a RESTRICTION, so deleting someone else's
+// exfiltrates nothing and errors nowhere. The only symptom is a door that
+// stopped saying no.
+//
+// Modelled on TestTimeWindowRuleListingAndDelete, which has covered exactly
+// this for the sibling rule type since it was written.
+func TestGeofenceRuleDeleteIsScopedToItsAccount(t *testing.T) {
+	f := newOpenFixture(t)
+	ctx := context.Background()
+
+	lat, long := -33.9, 18.4
+	r, err := f.s.CreateGeofenceRule(ctx, f.acct.ID, CreateGeofenceRuleArgs{
+		AccessPointID: f.ap.ID, Lat: &lat, Long: &long, RadiusM: 200,
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	other, err := f.s.CreateUser(ctx, "gfscope@x.com", "h", "O", "ZA")
+	if err != nil {
+		t.Fatal(err)
+	}
+	acctB, _, err := f.s.CreateAccountWithOwner(ctx, other.ID, "B House", "ZA")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := f.s.DeleteGeofenceRule(ctx, acctB.ID, r.ID); err == nil {
+		t.Error("another account deleted this rule; a geofence is a restriction, so " +
+			"the only symptom is a door that stopped saying no")
+	}
+
+	// The refusal has to be real, not just an error return.
+	if _, err := f.s.GeofenceRuleByID(ctx, f.acct.ID, r.ID); err != nil {
+		t.Errorf("the rule is gone from its owner's account after a stranger's delete: %v", err)
+	}
+
+	// Premise: the owner CAN delete it, so the refusal above is the scope and
+	// not a delete that never works.
+	if err := f.s.DeleteGeofenceRule(ctx, f.acct.ID, r.ID); err != nil {
+		t.Fatalf("the owner could not delete their own rule (%v); this test proves "+
+			"nothing if the delete never works", err)
+	}
+}
