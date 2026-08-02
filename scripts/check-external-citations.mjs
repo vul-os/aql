@@ -47,6 +47,21 @@ const EXTERNAL = ['ephor', 'kotva'];
 const CITATION =
   /`((?:ephor|kotva)\/[A-Za-z0-9_./-]+\.(?:rs|md|toml|go|ts))(?::(\d+)(?:-(\d+))?)?`/g;
 
+// A bare `:148-160` — a line range with no path, meaning "the file I just
+// named". EPHOR-CHAT-SEAM's conformance table is written almost entirely this
+// way, so the first version of this script validated none of those rows.
+//
+// It resolves against the NEAREST PRECEDING fully-qualified external path,
+// which is how the document actually reads: a row citing
+// `.../visibility.rs:77-81, pinned by test at :135-142` means visibility.rs,
+// while a row citing only `:206-218` inherits the path from the sentence that
+// introduced the table. Both were wrong when this was added — COORD-1 pointed
+// at the `Outcome` enum and COORD-5 at a range 60 lines above its clause.
+//
+// Only resolved when the nearest preceding path is EXTERNAL; a bare range
+// following an in-repo path belongs to docCitations, not here.
+const BARE_RANGE = /(?<!\/)`:(\d+)(?:-(\d+))?`/g;
+
 function trackedDocs() {
   return execFileSync('git', ['ls-files', '*.md'], { cwd: repo, encoding: 'utf8' })
     .split('\n')
@@ -56,11 +71,52 @@ function trackedDocs() {
 const absent = EXTERNAL.filter((r) => !existsSync(join(siblings, r)));
 
 const found = [];
+let lastQualifiedPath = null;
+let lastDir = null;
 for (const doc of trackedDocs()) {
   const text = readFileSync(join(repo, doc), 'utf8');
+  // Any path-shaped citation, external or not, so an in-repo path correctly
+  // shadows an earlier external one and its bare ranges are left alone.
+  const ANY_PATH = /`([A-Za-z0-9_][A-Za-z0-9_./-]*\/[A-Za-z0-9_.-]+\.[a-z]{1,4})(?::\d+(?:-\d+)?)?`/g;
   text.split('\n').forEach((line, i) => {
+    const marks = [];
+    for (const m of line.matchAll(ANY_PATH)) marks.push({ at: m.index ?? 0, path: m[1] });
+    // `kotva/…/adapters/` followed by a bare `mod.rs`. §0.3 names a directory
+    // once and then its files by basename, so the ranges hanging off `mod.rs`
+    // inherited whatever qualified path came last — BACKLOG.md, 59 lines long,
+    // against a range ending at 333. Joining the two is what a reader does.
+    const DIR = /`([A-Za-z0-9_][A-Za-z0-9_./-]*\/)`/g;
+    const BARE_FILE = /`([A-Za-z0-9_][A-Za-z0-9_-]*\.[a-z]{1,4})`/g;
+    const dirs = [...line.matchAll(DIR)].map((m) => ({ at: m.index ?? 0, dir: m[1] }));
+    // The directory is often named a line or two above the files it holds, so
+    // it carries the same way a qualified path does.
+    for (const m of line.matchAll(BARE_FILE)) {
+      const at = m.index ?? 0;
+      const d = dirs.filter((x) => x.at < at).pop()?.dir ?? lastDir;
+      if (d) marks.push({ at, path: d + m[1] });
+    }
+    if (dirs.length) lastDir = dirs[dirs.length - 1].dir;
+    marks.sort((a, b) => a.at - b.at);
     for (const m of line.matchAll(CITATION)) {
       found.push({ doc, line: i + 1, path: m[1], from: m[2], to: m[3] });
+    }
+    for (const m of line.matchAll(BARE_RANGE)) {
+      const at = m.index ?? 0;
+      // Nearest qualified path to the left on this line, else the last one seen
+      // anywhere above it.
+      const onLine = marks.filter((k) => k.at < at).pop();
+      const inherited = onLine?.path ?? lastQualifiedPath;
+      if (!inherited || !EXTERNAL.some((r) => inherited.startsWith(`${r}/`))) continue;
+      found.push({ doc, line: i + 1, path: inherited, from: m[1], to: m[2], inherited: true });
+    }
+    // A table ROW must not become the default for the row beneath it. The
+    // conformance table's rows each cite their own files, and letting the last
+    // path in one row carry into the next attributed COORD-2's range to
+    // `crates/README.md` — the file the COORD-1 row happened to end with. The
+    // default a bare range inherits is the one established by prose BEFORE the
+    // table, which is how a reader reads it.
+    if (marks.length && !line.trimStart().startsWith('|')) {
+      lastQualifiedPath = marks[marks.length - 1].path;
     }
   });
 }
@@ -112,10 +168,11 @@ if (problems.length) {
 
 // A floor, because "0 citations verified" would otherwise print the same
 // cheerful line as a real sweep.
-if (verified < 70) {
+if (verified < 120) {
   console.error(
-    `only ${verified} external citations were verified — the pattern has drifted, ` +
-      `since docs/EPHOR-CHAT-SEAM.md alone carries about 75.`,
+    `only ${verified} external citations were verified — the pattern has drifted. ` +
+      `133 resolve today: about 75 fully-qualified, the rest bare \`:NNN\` ranges ` +
+      `inheriting their file from the nearest preceding path.`,
   );
   process.exit(1);
 }

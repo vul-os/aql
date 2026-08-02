@@ -61,10 +61,10 @@ gap should be named rather than inherited silently.
 ### 0.3 Kotva already ships four §26 rail adapters — but **not at the tag Ephor pins**
 
 `kotva/crates/kotva-mail/src/adapters/` contains a real §26 framework plus four sanctioned
-rail modules: `mod.rs` (395 lines — the four-field declaration types at `:82-146`, the
+rail modules: `mod.rs` (400 lines — the four-field declaration types at `:82-146`, the
 per-rail property table as data at `:261-333`, the `LegacyAdapter`/`RailTransport` traits at
-`:224-257`), `whatsapp_business.rs` (620), `telegram.rs` (428), `discord.rs` (416),
-`slack.rs` (379), `sms_hardware.rs` (168) — 2,406 lines total. The canonical
+`:224-257`), `whatsapp_business.rs` (620), `telegram.rs` (427), `discord.rs` (415),
+`slack.rs` (378), `sms_hardware.rs` (167) — 2,407 lines total. The canonical
 platform-asserted `Headers.ext` key §26.5.1 requires is already a constant
 (`adapters/mod.rs:35`), and the per-rail mapping honours it
 (`adapters/slack.rs:68-80`: empty `from`, empty `sig`, `verifiable = false`).
@@ -159,7 +159,7 @@ choice as virtuous restraint:
    weakest of the three: *"The operator **promises** it is blind; nothing structurally
    prevents cheating"* (`kotva/coordinator/CONTRACT.md:138`), and Ephor's own code agrees —
    `AssuranceLevel::Declared.is_verifiable()` is `false`
-   (`ephor/crates/broker-economics/src/visibility.rs:52`).
+   (`ephor/crates/broker-economics/src/visibility.rs:50-51`).
 3. **The pair still understates the exposure, and the honest declaration must say so
    elsewhere.** `Visibility` has two fields and names only *this* coordinator. It cannot
    express the second plaintext party that never goes away:
@@ -197,11 +197,11 @@ above:
 
 | # | Clause | Harness outcome | What it actually proves |
 |---|---|---|---|
-| COORD-1 | §2.1 | `Behavioral` (`:148-160`) — descriptor `kind` must equal operating kind, then defers with *"verify descriptor signature once kotva-core is pinned"* | Shape only. The `Descriptor` type structurally has no score/price-rank/stake field, so the §2.1 exclusion is by construction. **Note:** `kotva-core` **is** pinned now (`ephor/crates/README.md:16`), so this `Behavioral` is stale and could become a real signature check. |
+| COORD-1 | §2.1 | `Behavioral` (`:206-218`) — descriptor `kind` must equal operating kind, then defers with *"verify descriptor signature once kotva-core is pinned"* | Shape only. The `Descriptor` type structurally has no score/price-rank/stake field, so the §2.1 exclusion is by construction. **Note:** `kotva-core` **is** pinned now (`ephor/crates/README.md:16`), so this `Behavioral` is stale and could become a real signature check. |
 | COORD-2 | §2.2 | Whatever the crate declares — `LockIn::None` → `Pass`, `LockIn::Requires` → **`Violation`** (`:225-226`) | **This is where the design bites. See §1.4.** |
 | COORD-3 | §2.3 | `Pass` for `SelfHost::Backstop`; also `Pass` for `ScarceReachabilityException` **when `ScarceResource::plausible_for(kind)` allows it — and `SmtpEgress.plausible_for` is exactly `kind == Gateway`** (`:233-251`, `:113-118`) | A chat adapter would be *accepted* claiming the port-25 exception it does not have. **The crate must declare `SelfHost::Backstop` and must not take that false pass.** See §1.5. |
 | COORD-4 | §2.4/§3 | `Pass`, with **no** behavioral follow-up — `must_not_present_as_verified()` is `false` for `terminating` (`ephor/crates/broker-economics/src/visibility.rs:77-81`, pinned by test at `:135-142`) | Only that exactly one class+level was declared. It does **not** check that a client surfaces it, and it does **not** see §26.3's exposure field at all, because that lives in the opaque `policy` blob. **The entire §26 disclosure burden is outside COORD-4.** |
-| COORD-5 | §3.2 | Always `Behavioral` (`:205-211`) | Nothing statically. For a chat adapter there is no blind→terminating downgrade to catch (it declares terminating from the start), so the runtime test is near-vacuous. What it does **not** test is whether the adapter retains or logs the plaintext it legitimately reads. |
+| COORD-5 | §3.2 | Always `Behavioral` (`:267-273`) | Nothing statically. For a chat adapter there is no blind→terminating downgrade to catch (it declares terminating from the start), so the runtime test is near-vacuous. What it does **not** test is whether the adapter retains or logs the plaintext it legitimately reads. |
 | COORD-6 | §4 | `Pass` for `Authorization` / `DerivedViewOnly` / `NoDeliveryPath`; `Violation` for `Classification` (`:217-221`) | See §1.6 — none of the four variants describes this adapter honestly. |
 | COORD-7 | §6 | `Pass` (`NotMetered`) for free rails; a metered WhatsApp-outbound deployment must return `SignedReceiptsToPayer` (`:227-231`) | Posture, not behaviour. Nothing checks a receipt was actually delivered. |
 | COORD-8 | §6 | `Pass` — no token anywhere (`:237-241`) | Real, and structurally true of this design. |
@@ -297,7 +297,7 @@ scarcity it does not have. Telegram and Slack are `outbound-persistent`
 ### 1.6 COORD-6: none of the four `Gate` variants is honest
 
 `Gate` offers `Authorization`, `Classification`, `DerivedViewOnly`, `NoDeliveryPath`
-(`ephor/crates/broker-conformance/src/lib.rs:64-74`). For the chat adapter under §3's design:
+(`ephor/crates/broker-conformance/src/lib.rs:122-132`). For the chat adapter under §3's design:
 
 - `NoDeliveryPath` is **false** — inbound rail→hub *is* a delivery path.
 - `Classification` is **false and must stay false** — the adapter runs no spam scoring, no ML
@@ -914,7 +914,7 @@ already-written, already-tested §26 framework and per-rail mapping (§0.3). Tha
 free — the four-field table, the initiation/transport/price/exposure types, the sanctioning rule,
 `OutboundDisposition`, and the canonical platform-asserted carriage. But it stops exactly where
 the work starts: its network boundary is an **unimplemented trait**
-(`RailTransport`, `kotva/crates/kotva-mail/src/adapters/mod.rs:222-226`;
+(`RailTransport`, `kotva/crates/kotva-mail/src/adapters/mod.rs:229-231`;
 `slack.rs`'s `HttpPost` likewise), it maps rail messages to **MOTE `Payload`s**
 (`adapters/slack.rs:68-80`) rather than to an Aql intent, and it contains no HMAC verification,
 no webhook server, no Socket Mode WebSocket client, and no interactive-widget rendering. Call it
