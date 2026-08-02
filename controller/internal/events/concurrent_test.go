@@ -36,6 +36,85 @@ import (
 // every event id must be distinct: a duplicate id would make the hub's dedupe
 // drop a real event as a redelivery, which is the failure that matters and is
 // invisible to the race detector.
+// Appending while the delivery loop drains, acks and COMPACTS.
+//
+// This is the pairing the runner actually creates and the test above does not:
+// event recorders append from several goroutines while a two-second ticker
+// calls drainEvents, which drains, acks each delivered entry and then compacts.
+// Compaction REWRITES the log file, so an append racing it is the one that
+// could lose an event outright rather than merely interleave.
+//
+// All four take q.mu, which is an argument. This is the evidence, and it checks
+// the property that matters rather than only the absence of a race: every event
+// that was accepted must be accounted for exactly once — delivered or still
+// pending — because an event silently dropped during a rewrite is an audit hole
+// no ack protocol would notice.
+func TestAppendingWhileTheDeliveryLoopDrainsAndCompacts(t *testing.T) {
+	dir := t.TempDir()
+	q := mustOpen(t, dir)
+	q.SetSyncForTest(false) // fsync per append would make this minutes, not seconds
+
+	_, priv, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := &events.Recorder{
+		Priv: priv, DeviceID: "dev-drain",
+		Clock: clock.NewSynced(1_700_000_000, nil), Queue: q,
+	}
+
+	const writers, each = 4, 60
+	var wg sync.WaitGroup
+	for w := 0; w < writers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < each; i++ {
+				rec.Record("opened", map[string]any{"cause": "cmd"})
+			}
+		}()
+	}
+
+	// The delivery loop, doing exactly what drainEvents does.
+	delivered := 0
+	done := make(chan struct{})
+	var loop sync.WaitGroup
+	loop.Add(1)
+	go func() {
+		defer loop.Done()
+		for {
+			select {
+			case <-done:
+				return
+			default:
+				for _, pe := range q.Drain(16) {
+					if err := q.Ack(pe); err != nil {
+						t.Errorf("ack: %v", err)
+						return
+					}
+					delivered++
+				}
+				if err := q.CompactIfNeeded(); err != nil {
+					t.Errorf("compact: %v", err)
+					return
+				}
+			}
+		}
+	}()
+
+	wg.Wait()
+	close(done)
+	loop.Wait()
+
+	// Whatever the loop did not take must still be there.
+	remaining := len(q.Drain(writers * each * 2))
+	if delivered+remaining != writers*each {
+		t.Fatalf("%d delivered + %d pending = %d, but %d events were accepted — "+
+			"a compaction racing an append lost one",
+			delivered, remaining, delivered+remaining, writers*each)
+	}
+}
+
 func TestConcurrentRecordersLoseNothing(t *testing.T) {
 	dir := t.TempDir()
 	q := mustOpen(t, dir)

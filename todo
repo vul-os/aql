@@ -204,9 +204,16 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       fail is decoration — but writeFrame now states the invariant, because splitting that
       single Write would break it and nothing else enforces it.
 - [ ] STILL UNCOVERED, measured: 10 more packages have concurrent production code
-      (goroutines or a mutex) and zero `go func` in their tests. controller/internal/
-      events is DONE (see below); the highest-consequence remaining is
-      controller/internal/transport.
+      (goroutines or a mutex) and zero `go func` in their tests.
+      controller/internal/events is DONE, both pairings (see below).
+      controller/internal/transport is ACCOUNTED FOR rather than tested, and the
+      distinction is deliberate: its three hazards were each traced. Concurrent
+      writes to WSConn — investigated in an earlier session, documented at
+      writeFrame, kept as one Write per frame with the reasoning rather than a test
+      that could not fail. `wsFailures` — written only in Run and runWS, which are
+      the same goroutine, verified by reading every write site. The ticker goroutine
+      — touches nothing but r.Queue, whose four methods all take q.mu and are now
+      race-tested against each other.
       Each needs a test shaped around ITS hazard, not a generic hammer — a shallow sweep
       Checked and found NOT to need one: controller/internal/state returns a copy from
       every reader under its lock (Pairing, Config and AccessPoints all copy), so there is
@@ -832,6 +839,16 @@ cannot catch what both implementations get wrong together.
       thing that replaced it was a different race. Fixed with a mutex-guarded recorder
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
+
+- [x] Second events pairing tested, which is the one the RUNNER actually creates and
+      the first test did not: appends from several goroutines while the delivery loop
+      drains, acks and COMPACTS. Compaction rewrites the log file, so an append
+      racing it is the case that could lose an event outright rather than interleave
+      one. Asserts the property a race detector cannot see — every accepted event is
+      accounted for exactly once, delivered or still pending — because an event
+      dropped during a rewrite is an audit hole no ack protocol would notice.
+      Both locks proved load-bearing: compaction unlocked -> CAUGHT, Drain unlocked
+      -> CAUGHT.
 
 - [x] Swept the whole class after fixing it: THREE time.AfterFunc sites exist in
       production code, and only the one I fixed was wrong. GPIO's holdExpired takes
