@@ -840,6 +840,23 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] The lock-twice sweep is now a PERMANENT guard rather than something I happened
+      to run once. It found two live security defects, and both were invisible to
+      every other check here: each side is internally consistent, the race detector
+      sees no race because the accesses ARE synchronised, and the tests passed
+      because nothing tried two at once. The only cheap way to find that is to look
+      for the shape.
+      Not a ban — seven of the ten are legitimately correct, and banning the shape
+      would force them to be written worse. Each is listed with WHAT makes it safe,
+      so a new one fails until somebody works out which kind it is. That is the whole
+      point: both defects were written by someone who had not.
+      Verified the scan finds exactly the same 10 the original python sweep did, then
+      both controls: a planted unreviewed function -> CAUGHT, an entry made stale by
+      removing an acquisition -> CAUGHT. Plus a floor, so a regex that stops matching
+      cannot report an empty list and pass forever.
+      One junk tamper first: I removed the READ inside a locked block and left the
+      lock, so the entry was not stale and nothing fired.
+
 - [x] SWEEP COMPLETE — all 10 lock-twice candidates have a verdict, which is the point
       of running a detector rather than sampling it:
         LIVE DEFECTS (2, fixed): grants HandleProof, hub ConsumePollChallenge.
