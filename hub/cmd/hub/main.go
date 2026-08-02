@@ -372,6 +372,39 @@ func runVerifyAudit(args []string) int {
 		fmt.Printf("%-16s TAMPERED at index %d (row id %s): %s\n",
 			res.Table, res.Break.Index, res.Break.RowID, res.Break.Reason)
 	}
+
+	// The other question: does this log describe things that happened?
+	//
+	// The chain answers "has anything been edited", and answers it well. It is
+	// silent about a row that should never have been written, because a bug
+	// upstream leaves entries that verify perfectly — nobody edited them. Every
+	// audit row sourced `offline_grant` is written in one place and pointed at
+	// by the controller_events row that caused it, so an orphan is a row with no
+	// signed evidence behind it.
+	//
+	// Reported separately from TAMPERED and with its own exit path, because
+	// they mean different things: one says somebody changed the log, the other
+	// says the log over-reports. Conflating them would make a failure here
+	// ambiguous at exactly the moment somebody needs it to be precise.
+	orphans, oerr := st.OrphanedControllerAuditRows(context.Background())
+	switch {
+	case oerr != nil:
+		fmt.Fprintf(os.Stderr, "verify: cross-check failed: %v\n", oerr)
+		return 1
+	case len(orphans) == 0:
+		fmt.Printf("%-16s OK   (every controller-sourced row has its signed event)\n", "cross-check")
+	default:
+		ok = false
+		shown := orphans
+		if len(shown) > 5 {
+			shown = shown[:5]
+		}
+		fmt.Printf("%-16s %d access_logs row(s) claim a controller origin with no signed event behind them: %s\n",
+			"cross-check", len(orphans), strings.Join(shown, ", "))
+		if len(orphans) > len(shown) {
+			fmt.Printf("%-16s (%d more not shown)\n", "", len(orphans)-len(shown))
+		}
+	}
 	if !ok {
 		return 1
 	}

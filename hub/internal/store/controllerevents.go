@@ -250,3 +250,51 @@ func (s *Store) ControllerEventsByDevice(ctx context.Context, deviceID string, l
 	}
 	return out, rows.Err()
 }
+
+// OrphanedControllerAuditRows returns access_logs rows that claim to have come
+// from a controller and have no signed event behind them.
+//
+// # What this answers that the hash chain cannot
+//
+// The chain proves nobody edited a row. It cannot say whether the row should
+// ever have been written — a bug upstream produces entries that verify
+// perfectly, because nobody did edit them. That is not hypothetical here:
+// RecordControllerEvent once appended the audit row before claiming the event
+// id, so concurrent redeliveries of ONE controller event wrote one row each.
+// Six opens in the chain for one movement of one gate, all six hashing
+// correctly, five of them orphans.
+//
+// Every audit row with source `offline_grant` is written in exactly one place
+// (appendEventAuditRow) and is pointed at by the controller_events row that
+// caused it. So an orphan is a row with no signed evidence behind it, which is
+// the signature of that bug and of anything else that writes to this log
+// without going through the event path.
+//
+// # Why it is not a chain break
+//
+// An orphan is not tampering and must not be reported as such. The row is
+// intact, the chain over it is intact, and what is missing is the evidence
+// BESIDE it. Answering "is this log intact" and "does this log describe things
+// that happened" are different questions, and conflating them would make a
+// verify-audit failure mean two very different things.
+func (s *Store) OrphanedControllerAuditRows(ctx context.Context) ([]string, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT a.id FROM access_logs a
+		  WHERE a.source = ?
+		    AND NOT EXISTS (
+		          SELECT 1 FROM controller_events e WHERE e.access_log_id = a.id)
+		  ORDER BY a.rowid ASC`, SourceOfflineGrant)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}

@@ -404,7 +404,10 @@ two make a truncated history noticeable. And a third, which is not about
 attackers: the chain proves nobody edited a row, not that the row was right when
 written — a bug that logged one gate movement six times would produce six
 entries that all verify. For controller-sourced rows the signed event is kept
-beside them, so the two can be compared.
+beside them, and `verify-audit` compares the two: it reports any audit row
+claiming a controller origin with no signed event behind it, separately from a
+chain break, because "somebody changed the log" and "the log over-reports" are
+different findings.
 
 **The camera pipeline** goes RTSP → H.264 depacketization → SPS parsing →
 access-unit assembly → fMP4 → disk, with per-camera retention, a `camera:view`

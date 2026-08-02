@@ -103,3 +103,66 @@ func TestAConcurrentlyRedeliveredEventLogsOneOpen(t *testing.T) {
 		t.Errorf("the stored event does not reference its audit row")
 	}
 }
+
+// An audit row with no signed event behind it is found, and is not a chain break.
+//
+// This is the check that would have caught the duplicate-audit defect. Six rows
+// for one gate movement all hashed correctly, so the chain called the log
+// intact — and it was intact. Five of the six had no controller_events row
+// pointing at them, which is the fact the chain cannot see and this can.
+//
+// The two verdicts are deliberately separate. A chain break says somebody
+// changed the log; an orphan says the log over-reports. Reporting an orphan as
+// tampering would make a failure ambiguous exactly when someone needs it to be
+// precise.
+func TestAnAuditRowWithNoSignedEventIsFound(t *testing.T) {
+	s := openTest(t)
+	ctx := context.Background()
+	acctA, _, locA, _ := twoTenants(t, s)
+	ap, err := s.CreateAccessPointFull(ctx, acctA.ID, locA.ID, "Gate", "gate", "", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// A clean log has none.
+	if got, err := s.OrphanedControllerAuditRows(ctx); err != nil || len(got) != 0 {
+		t.Fatalf("clean log reported orphans: %v %v", got, err)
+	}
+
+	// A row that claims a controller origin with nothing behind it — what the
+	// old ordering produced under concurrent redelivery.
+	if _, err := s.InsertAccessLog(ctx, AccessLog{
+		AccessPointID: ap.ID, LocationID: locA.ID, AccountID: acctA.ID,
+		Command: "open", Source: SourceOfflineGrant, Success: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	orphans, err := s.OrphanedControllerAuditRows(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(orphans) != 1 {
+		t.Fatalf("found %d orphans, want 1", len(orphans))
+	}
+
+	// And the chain still verifies, which is the entire point: the row is
+	// intact, the chain over it is intact, and what is missing is the evidence
+	// beside it.
+	res, err := s.VerifyAccessLogHashChain(ctx)
+	if err != nil || !res.OK {
+		t.Fatalf("the chain must still verify — an orphan is not tampering: %+v %v", res, err)
+	}
+
+	// A row from the ordinary open path is not an orphan: it never claimed a
+	// controller origin.
+	if _, err := s.InsertAccessLog(ctx, AccessLog{
+		AccessPointID: ap.ID, LocationID: locA.ID, AccountID: acctA.ID,
+		Command: "open", Source: "web", Success: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := s.OrphanedControllerAuditRows(ctx); len(got) != 1 {
+		t.Fatalf("a web-sourced row was counted as an orphan: %d", len(got))
+	}
+}

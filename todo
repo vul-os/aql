@@ -840,6 +840,23 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] I CREATED THE DEFECT I KEEP FINDING, in the previous commit: wrote that "an
+      auditor can compare controller_events against access_logs" and shipped no way
+      to do it. A documented procedure with no tooling is the exact shape of every
+      unreachable feature found this week.
+      So verify-audit does the comparison now. Every audit row sourced
+      `offline_grant` is written in ONE place and pointed at by the controller_events
+      row that caused it, so an orphan is a row with no signed evidence behind it —
+      the signature of the duplicate-audit bug (5 of its 6 rows were orphans) and of
+      anything else writing to that log outside the event path.
+      Reported SEPARATELY from TAMPERED, with its own line, because the two findings
+      mean different things: one says somebody changed the log, the other says the
+      log over-reports. Conflating them makes a failure ambiguous exactly when
+      someone needs it precise. The test asserts both halves — an orphan is found AND
+      the chain still verifies over it — plus the boundary: a web-sourced row is not
+      an orphan. Two tampers CAUGHT (the check stops looking; the check flags
+      everything).
+
 - [x] Wrote down the limit the duplicate-audit bug exposed, which is not about
       attackers at all: the hash chain proves nobody EDITED a row, not that the row
       was correct when written. Six audit rows for one gate movement hashed perfectly
