@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -83,21 +84,50 @@ const EXTERNAL_REPOS = [
   'adapters/',
   'bindings/',
   'vectors/',
-  'camera/',
-  'clock/',
-  'components/',
   'lintel/',
+  // The retired Cloudflare Workers backend's own layout. hub/README's porting
+  // map is a two-column table — their file, our file — so its left column is
+  // full of paths from a codebase that has been deleted. Same category as
+  // lintel/: another repository, not a broken reference.
+  'routes/',
+  'lib/rate-limit',
 ];
 
+// `camera/`, `clock/` and `components/` used to sit in that list. They are not
+// other repositories — they are this one, abbreviated: `camera/rtsp.go` is
+// hub/internal/devices/camera/rtsp.go and `components/device/X.tsx` is under
+// src/. They were listed as external because the resolver could not follow
+// those abbreviations, so every citation using them was skipped rather than
+// checked. The resolver knows both now, and the entries are gone, which turns
+// roughly a dozen skipped citations into checked ones.
+
+// A changelog records what was true at a version, so it cites files that have
+// since been deleted BY DESIGN — src/lib/gateway.ts and the gateway console
+// gate went with the rename, demoData with the live-state migration. Rewriting
+// those entries would falsify the record; checking them would fail forever.
+const HISTORICAL_BY_NATURE = ['CHANGELOG.md'];
+
 /** Documents worth holding to this. Everything tracked, not a sample. */
+// Every tracked Markdown file, not a hand-listed few.
+//
+// This used to be ROADMAP, ARCHITECTURE, README and whatever sat directly in
+// docs/ and proto/. Everything else was invisible to every check in this file:
+// the module READMEs, CONTRIBUTING, SECURITY, and — worst — site/docs, which is
+// the documentation actually published to readers.
+//
+// The cost was not theoretical. hub/README.md opened by calling a deleted
+// directory the behavioural spec, the guard that exists to catch exactly that
+// was added afterwards, and it never looked at the file: the tamper certifying
+// it ran vitest from the wrong directory and reported a false CAUGHT, so
+// nothing said the file was out of scope.
+//
+// git ls-files rather than a walk, so build output and node_modules cannot
+// wander in.
 function docFiles(): string[] {
-  const out: string[] = ['ROADMAP.md', 'ARCHITECTURE.md', 'README.md'];
-  for (const dir of ['docs', 'proto']) {
-    for (const f of readdirSync(resolve(root, dir))) {
-      if (f.endsWith('.md')) out.push(`${dir}/${f}`);
-    }
-  }
-  return out.filter((f) => existsSync(resolve(root, f)));
+  return execFileSync('git', ['ls-files', '*.md'], { cwd: root, encoding: 'utf8' })
+    .split('\n')
+    .filter((f) => f.endsWith('.md'))
+    .filter((f) => existsSync(resolve(root, f)));
 }
 
 /**
@@ -187,6 +217,13 @@ function resolvedPath(path: string, doc: string): string | null {
     // and more churn-prone diff than teaching the resolver the convention.
     `hub/internal/${path}`,
     `controller/internal/${path}`,
+    // The console abbreviates from src/, the same way Go docs abbreviate from
+    // the package root: `components/device/X.tsx` and `lib/api.ts`.
+    `src/${path}`,
+    // And the device engine is one level deeper than internal/.
+    `hub/internal/devices/${path}`,
+    // Migrations are cited bare: `migrations/0007_audit_hash_chain.sql`.
+    `hub/internal/store/${path}`,
   ];
   if (docDir) candidates.push(`${docDir}/${path}`);
   return candidates.find((c) => existsSync(resolve(root, c))) ?? null;
@@ -203,6 +240,7 @@ describe('documentation citations', () => {
     let checked = 0;
     for (const doc of docFiles()) {
       const text = readFileSync(resolve(root, doc), 'utf8');
+      if (HISTORICAL_BY_NATURE.includes(doc)) continue;
       for (const m of text.matchAll(CITATION)) {
         const path = m[1];
         if (isExternal(path)) continue;
@@ -263,7 +301,31 @@ describe('documentation citations', () => {
       'CHANGELOG.md', // records the deletion and the earlier sweep
       'docs/CHAT-COMMANDS.md', // §2.2's historical passages, already annotated
       'docs/EPHOR-CHAT-SEAM.md', // another repository's gateway/, cited as theirs
+      // These three name a deleted directory in order to say it is deleted.
+      // Exempting them by name would let a FALSE claim back into the same file,
+      // so each is held to its explanation below rather than merely excused.
+      'hub/README.md',
+      'site/docs/faq.md',
+      'site/docs/overview.md',
     ]);
+
+    // The other half of that exemption: the sentence that earns it must still be
+    // there. Without this, "hub/README.md is exempt" would permit exactly the
+    // claim the guard exists to stop — which is how the file got the claim in
+    // the first place.
+    const mustExplain: Array<[string, RegExp]> = [
+      ['hub/README.md', /There is no `backend\/`/],
+      ['site/docs/faq.md', /renamed to `hub\/`/],
+      ['site/docs/overview.md', /renamed from `gateway\/`/],
+    ];
+    for (const [doc, phrase] of mustExplain) {
+      expect(
+        readFileSync(resolve(root, doc), 'utf8'),
+        `${doc} is exempt from the deleted-directory rule because it EXPLAINS the
+deletion. That explanation is gone, so the exemption now covers nothing but the
+mention itself.`,
+      ).toMatch(phrase);
+    }
 
     const offenders: string[] = [];
     let scanned = 0;
@@ -457,8 +519,19 @@ the exempt list with that reason.`,
     // because EXTERNAL_REPOS has to list `lintel/` — a doc CAN legitimately
     // discuss the prefix in prose (this one does) — and without this, adding it
     // to that list would have silently re-permitted the whole broken set.
+    // Documents whose subject IS the fold may name the old layout: the changelog
+    // records the move, and two others explain the prefix in prose while telling
+    // a reader not to use it. Widening this check from five files to every
+    // tracked document brought them into scope, and the rule they break is one
+    // they are describing.
+    const explainsTheFold = new Set([
+      'CHANGELOG.md',
+      'ROADMAP.md',
+      'docs/DESIGN-SYSTEM.md',
+    ]);
     const offenders: string[] = [];
     for (const doc of docFiles()) {
+      if (explainsTheFold.has(doc)) continue;
       const text = readFileSync(resolve(root, doc), 'utf8');
       for (const m of text.matchAll(/`(lintel\/[A-Za-z0-9_./-]+)`/g)) {
         offenders.push(`${doc} cites ${m[1]}`);

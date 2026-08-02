@@ -832,6 +832,28 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] Re-ran every tamper that could have been a false CAUGHT (Go/hub file + vitest
+      check). Two were genuine. ONE WAS NOT: the deleted-directory guard, certified
+      by tampering hub/README.md, had never scanned that file — docFiles() listed
+      ROADMAP, ARCHITECTURE, README and whatever sat in docs/ and proto/. Everything
+      else was invisible to EVERY check in that file, including site/docs, which is
+      the documentation actually published to readers.
+      Widened to all tracked .md via git ls-files, which surfaced work rather than
+      defects: the resolver did not know the house abbreviations (`components/...` =
+      src/, `camera/...` = hub/internal/devices/, `migrations/...` =
+      hub/internal/store/), and THREE ENTRIES IN "EXTERNAL_REPOS" WERE NOT EXTERNAL
+      AT ALL — camera/, clock/, components/ were listed as other repositories so
+      their citations would be skipped, because the resolver could not follow them.
+      Removing them turns about a dozen skipped citations into checked ones.
+      The retired Workers backend's own paths (routes/*.ts, lib/rate-limit) are now
+      categorised as what they are: another codebase, like lintel/. CHANGELOG is
+      exempt by nature — it records what was true at a version.
+      Three docs name a deleted directory in order to say it is deleted. Exempting
+      them by name would have let a FALSE claim back into the same file, so each is
+      exempt AND asserted to still contain its explanation. That is what makes the
+      original tamper — replacing "There is no `backend/`" with a claim that it is
+      the spec — CAUGHT for real this time.
+
 - [x] tamper.sh produced a FALSE CAUGHT, which is the worst verdict it can give. For
       a Go file it runs the check from the MODULE root, so a Go tamper checked by a
       TypeScript guard ran `npx vitest run src/...` from hub/, where that path does
