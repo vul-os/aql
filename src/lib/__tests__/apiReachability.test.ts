@@ -92,7 +92,10 @@ describe('every api client method is reachable from the console', () => {
   const methods = [...apiSrc.matchAll(/^ {2}(\w+):\s*\(/gm)].map((m) => m[1]);
 
   it('extracted the client surface (a scan that found nothing would pass)', () => {
-    expect(methods.length).toBeGreaterThan(60);
+    // 123 methods exist. A floor of 60 let half of them fall out of the scan
+    // without this failing — the regex partially breaking looks exactly like
+    // that. Near-actual, so erosion trips it while a normal deletion does not.
+    expect(methods.length, 'the api-method regex has stopped matching most of api.ts').toBeGreaterThan(110);
   });
 
   it('has no method that no screen calls', () => {

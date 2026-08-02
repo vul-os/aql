@@ -59,8 +59,16 @@ describe('JCS canonicalisation matches the conformance corpus', () => {
       }
     }
     // Sanity: the loop actually ran against real content.
+    //
+    // Exact, not a floor. `check` returns early for any vector missing an
+    // object or a canonical string, so a corpus edit that drops either one
+    // quietly removes a comparison — and the floor here was 28 against 55 real
+    // comparisons, meaning half the corpus could stop being checked without
+    // this failing. Exact counts make an added vector fail until the number is
+    // raised, which is the point: bumping it is the moment someone confirms the
+    // new vector is actually being compared.
     expect(vectors.length).toBe(18);
-    expect(compared).toBeGreaterThanOrEqual(28);
+    expect(compared, 'a canonical comparison stopped happening').toBe(55);
   });
 
   it('reproduces the canonical strings in the other four vector files too', () => {
@@ -79,7 +87,9 @@ describe('JCS canonicalisation matches the conformance corpus', () => {
         }
       }
     }
-    expect(compared).toBeGreaterThan(20);
+    // Exact for the same reason as above: 50 real comparisons behind a floor of
+    // 20 left 30 of them optional.
+    expect(compared, 'a canonical comparison stopped happening').toBe(50);
   });
 });
 

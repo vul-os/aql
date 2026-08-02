@@ -251,7 +251,13 @@ describe('documentation citations', () => {
     }
     // A parser that matched nothing would pass this test forever. The count is
     // the guard on the guard.
-    expect(checked, 'no citations parsed — the pattern has drifted').toBeGreaterThan(300);
+    // 665 citations are really checked here; the floor was 300. "No citations
+    // parsed" is not the only way a pattern drifts — matching half of them is
+    // the more likely and more dangerous one. (665, not the ~835 a plain regex
+    // sweep of the same files reports: external and historical citations are
+    // resolved away before this counter increments. Worth measuring with the
+    // test's own logic rather than an approximation of it.)
+    expect(checked, 'the citation pattern has drifted').toBeGreaterThan(600);
     expect(broken, `${broken.length} citations point at files that do not exist`).toEqual([]);
   });
 
@@ -600,7 +606,8 @@ describe('documentation cited from source', () => {
     expect(offenders).toEqual([]);
     // A floor, so deleting the scan or narrowing the pattern to nothing fails
     // rather than passing with an empty sweep.
-    expect(checked).toBeGreaterThan(150);
+    // 265 real citations behind it.
+    expect(checked, 'the source-citation scan has narrowed').toBeGreaterThan(240);
   });
 
   it('every section number cited beside a document exists in it', () => {
@@ -628,6 +635,7 @@ describe('documentation cited from source', () => {
       });
     }
     expect(offenders).toEqual([]);
-    expect(checked).toBeGreaterThan(80);
+    // 96 real same-line pairs behind it.
+    expect(checked, 'the section-citation scan has narrowed').toBeGreaterThan(90);
   });
 });
