@@ -57,6 +57,21 @@ const EVENT_OPTIONS: Array<{ value: string; label: string; hint: string }> = [
     label: 'access.denied',
     hint: 'Sent when an open attempt is refused (quota, suspension, rate limit, etc).',
   },
+  {
+    value: 'access.held_open',
+    label: 'access.held_open',
+    hint:
+      'Sent when a controller reports its position sensor has not said "closed" for ' +
+      'longer than its threshold. A gate that turns out to be shut means the sensor ' +
+      'is broken, which is also worth knowing.',
+  },
+  {
+    value: 'automation.alert',
+    label: 'automation.alert',
+    hint:
+      'Sent by a rule whose action is an alert rather than an actuation — the message ' +
+      'is the one whoever wrote the rule chose.',
+  },
 ];
 
 function isForbidden(err: unknown): boolean {

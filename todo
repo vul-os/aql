@@ -832,6 +832,21 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] The console offered TWO webhook events; the hub sends FOUR. automation.alert
+      has been dispatchable since rules could raise alerts and unsubscribable from
+      the UI that entire time — the only way to receive one was to call the API by
+      hand — and access.held_open was about to join it. The comment above the list
+      even names its source of truth ("hub's KnownWebhookEvents in
+      webhookdispatch.go") and had drifted from it.
+      Nothing caught it because NEITHER SIDE IS WRONG ALONE: the hub validates
+      against its own list and refuses unknown names, the console only sends names
+      from its list, so every request either side ever saw was valid. The defect
+      lives strictly in the gap — an event nobody can ask for.
+      Both added, and a parity guard reads the two lists and fails either way:
+      an event the hub sends that the console hides, or one the console offers that
+      the hub would 400. Both tampers CAUGHT, plus a floor so two regexes that stop
+      matching cannot agree perfectly about nothing.
+
 - [x] held_open now ALERTS, which is what the event was for. Yesterday's commit
       emitted it and the hub stored it — signed, deduped, inspectable — and told
       nobody: it surfaced only in the platform-admin "Controller-signed events"
