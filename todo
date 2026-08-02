@@ -832,6 +832,17 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] Extended the empty-state sweep to BOTH widths: 20 pages x 2 viewports = 40
+      visits, all clean. Measured the class first rather than assuming — 11 components
+      swap markup at a breakpoint, two of them console pages (ApiTokens, Members),
+      the rest navigation. A breakpoint there does not reflow, it renders DIFFERENT
+      MARKUP, so a desktop-only pass reads half the console.
+      Proved the phone pass is load-bearing with a two-sided control, which is the
+      part that matters: injected a bad value into Members' mobile-only card, then
+      ran the SAME defect against a desktop-only version of the sweep. Both widths ->
+      CAUGHT. Desktop only -> PASSED. Without the second run the first proves only
+      that something failed, not that the new width is why.
+
 - [x] Closed the limit I had just written down: rendered-values covers EMPTY states,
       so populated-values creates real records through the console's own forms — an
       access point, a scoped API token — and re-checks. No hardware faked; this

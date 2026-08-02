@@ -89,27 +89,43 @@ test('no console page renders a value that failed to compute', async ({ page, cl
   const offences: string[] = [];
   let visited = 0;
 
-  for (const path of PAGES) {
-    await page.goto(gw.url(`/app/${path}`));
-    // Long enough for the page's own fetches to resolve and render; a page
-    // asserted mid-load would pass by being empty.
-    await expect(page.locator('main, [role="main"], body').first()).toBeVisible();
-    await page.waitForTimeout(700);
-    visited++;
+  // Both widths, because a breakpoint can swap the markup entirely rather than
+  // reflow it. Eleven components in this console do exactly that — the tokens
+  // page draws a table on a wide viewport and a stack of cards on a narrow one,
+  // formatting its dates in two separate places — and an injected bad date in
+  // the card version was not caught by a desktop-only pass. The console at phone
+  // width is not a courtesy here; README calls it "where a gate gets opened".
+  const WIDTHS = [
+    { name: 'desktop', width: 1280, height: 900 },
+    { name: 'phone', width: 390, height: 844 },
+  ];
 
-    const body = await page.locator('body').innerText();
-    for (const { marker, test: hits } of BAD) {
-      if (!hits(body)) continue;
-      const at = body.indexOf(marker);
-      offences.push(
-        `/app/${path}: ${marker} — …${body.slice(Math.max(0, at - 70), at + 50).replace(/\n/g, ' ')}…`,
-      );
+  for (const viewport of WIDTHS) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    for (const path of PAGES) {
+      await page.goto(gw.url(`/app/${path}`));
+      // Long enough for the page's own fetches to resolve and render; a page
+      // asserted mid-load would pass by being empty.
+      await expect(page.locator('main, [role="main"], body').first()).toBeVisible();
+      await page.waitForTimeout(700);
+      visited++;
+
+      const body = await page.locator('body').innerText();
+      for (const { marker, test: hits } of BAD) {
+        if (!hits(body)) continue;
+        const at = body.indexOf(marker);
+        offences.push(
+          `/app/${path} (${viewport.name}): ${marker} — …${body
+            .slice(Math.max(0, at - 70), at + 50)
+            .replace(/\n/g, ' ')}…`,
+        );
+      }
     }
   }
 
   // The guard on the guard: a loop that silently visited nothing would report
   // clean forever.
-  expect(visited, 'the sweep visited no pages').toBe(PAGES.length);
+  expect(visited, 'the sweep visited no pages').toBe(PAGES.length * WIDTHS.length);
   expect(
     allowed503.length,
     'the automations 503 never happened — if the engine is configured in this ' +
