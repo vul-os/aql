@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/vul-os/aql/controller/internal/clock"
@@ -147,7 +148,24 @@ type Processor struct {
 	// accepted ping (drift correction; proto/commands.md `ping`).
 	SyncClock func(ts int64)
 
+	// holdMu guards holdTimer and holdGen, which are touched from two
+	// goroutines: the command path schedules and cancels, and the timer's own
+	// callback checks whether it is still the current one.
+	holdMu    sync.Mutex
 	holdTimer *time.Timer
+	// holdGen invalidates a callback that has already started.
+	//
+	// time.Timer.Stop() does not wait for a callback that is already running,
+	// and it returns false in exactly that case. cancelRelease ignored the
+	// return, so a release in flight landed anyway: measured, five runs out of
+	// five, by cancelling at the moment of expiry.
+	//
+	// What that costs on a gate: a hold is running, a new open arrives as it
+	// expires, the command path cancels and pulses — and the old callback
+	// releases the gate that was just opened, with the ack already sent saying
+	// the open succeeded. A gate that shuts on its own, and an audit trail that
+	// says it opened.
+	holdGen uint64
 }
 
 // Process verifies and executes one raw command envelope, returning the
@@ -304,15 +322,51 @@ func (p *Processor) execute(cmd *wire.Command, now int64) (result, detail string
 }
 
 func (p *Processor) scheduleRelease(d time.Duration) {
-	p.cancelRelease()
+	p.holdMu.Lock()
+	p.stopLocked()
+	p.holdGen++
+	gen := p.holdGen
 	p.holdTimer = time.AfterFunc(d, func() {
-		if err := p.Relay.Release(); err == nil {
+		// The generation check and the release happen under ONE lock.
+		//
+		// Checking under the lock and releasing outside it is not enough, and
+		// that version failed under -race: the callback read "still current",
+		// dropped the lock, a cancel landed, and the release went to the relay
+		// anyway. Check-then-act with the act outside the lock is not a check.
+		//
+		// So cancelRelease is authoritative from the moment it returns: either
+		// the release already reached the relay before it took the lock, or it
+		// never will. The cost is that a cancel can wait for one relay write —
+		// microseconds of GPIO ioctl — which is the right trade against a gate
+		// that closes by itself.
+		p.holdMu.Lock()
+		if gen != p.holdGen {
+			p.holdMu.Unlock()
+			return
+		}
+		err := p.Relay.Release()
+		p.holdMu.Unlock()
+
+		// Recording is outside: it can fsync, and holding the lock across that
+		// would stall the command path on disk.
+		if err == nil {
 			p.record("closed", map[string]any{"cause": "cmd", "ref": "hold_max"})
 		}
 	})
+	p.holdMu.Unlock()
 }
 
 func (p *Processor) cancelRelease() {
+	p.holdMu.Lock()
+	p.stopLocked()
+	// Bump even when there is no timer: a callback already running holds no
+	// reference to holdTimer, and this is the only thing that stops it.
+	p.holdGen++
+	p.holdMu.Unlock()
+}
+
+// stopLocked stops the timer if there is one. Callers hold holdMu.
+func (p *Processor) stopLocked() {
 	if p.holdTimer != nil {
 		p.holdTimer.Stop()
 		p.holdTimer = nil

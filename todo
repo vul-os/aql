@@ -833,6 +833,27 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] A REAL DEFECT on the actuation path, found by pulling on the concurrency open
+      item. time.Timer.Stop() does not wait for a callback that has already started
+      and returns false to say so; cancelRelease ignored the return, so after it
+      returned the in-flight callback still called Relay.Release(). Measured before
+      touching anything: 5 runs out of 5, cancelling at expiry.
+      On a gate that reads: a hold is running, a new open arrives as it expires, the
+      command path cancels and pulses — and the old callback closes the gate that was
+      just opened, after the ack already said the open succeeded. A gate that shuts by
+      itself and an audit trail that disagrees.
+      Fixed with a generation counter. MY FIRST FIX WAS ALSO WRONG and -race said so:
+      it checked the generation under the lock and released OUTSIDE it, so a cancel
+      landing in between still let the release through. Check-then-act with the act
+      outside the lock is not a check. Now the check and the release share one lock,
+      and recording (which can fsync) stays outside it.
+      MY FIRST TWO ASSERTIONS WERE ALSO WRONG: "no release ever" is unachievable —
+      a callback that reached the relay before cancel took the lock genuinely
+      happened first. The honest property is that nothing further arrives once
+      cancelRelease has RETURNED, so both tests snapshot at that instant. Two tampers
+      CAUGHT (no generation at all; check-outside-lock), 20 iterations per run,
+      6 runs under -race, whole controller race-clean.
+
 - [x] controller/internal/events now has the concurrency test its own open item asked
       for, and it is there because I ADDED a goroutine to that package's callers last
       week: the held_open watcher records events while the command path, grant path
