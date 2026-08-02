@@ -540,3 +540,94 @@ the exempt list with that reason.`,
     expect(offenders).toEqual([]);
   });
 });
+
+/**
+ * Source files that cite documentation, which until now nothing checked.
+ *
+ * Every test above scans Markdown. But the citation traffic runs the other way
+ * too and runs heavier: 190 references to `docs/*.md` from 106 tracked source
+ * files, against roughly the same number in the documents themselves. A doc
+ * renamed or retired left every one of them pointing at nothing, silently.
+ */
+function sourceFiles(): string[] {
+  return execFileSync('git', ['ls-files', '*.ts', '*.tsx', '*.go', '*.sh', '*.mjs'], {
+    cwd: root,
+    encoding: 'utf8',
+  })
+    .split('\n')
+    .filter(Boolean)
+    .filter((f) => existsSync(resolve(root, f)));
+}
+
+/**
+ * A documentation path as written in a comment: bare, not backticked, because
+ * that is how source comments cite. `site/` is part of the match rather than
+ * left to the tail. A pattern that anchors on the directory alone matches the
+ * tail of a site-docs path and reports ten perfectly good citations as
+ * dangling, which is what a looser version of this one did before it was
+ * written down.
+ */
+const DOC_PATH = /(?:^|[^A-Za-z0-9_/-])((?:site\/)?docs\/[A-Za-z0-9_-]+\.md)/g;
+
+/** A section number cited immediately beside the document it belongs to. */
+const DOC_SECTION = /((?:site\/)?docs\/[A-Za-z0-9_-]+\.md)`?[^\u00a7\n]{0,40}\u00a7([0-9][0-9.]*)/g;
+
+/** The numbered headings a document actually has. */
+function sectionNumbers(doc: string): Set<string> {
+  const found = new Set<string>();
+  for (const line of readFileSync(resolve(root, doc), 'utf8').split('\n')) {
+    const m = /^#{1,6}\s+\**([0-9][0-9.]*)\b/.exec(line);
+    if (m) found.add(m[1].replace(/\.$/, ''));
+  }
+  return found;
+}
+
+describe('documentation cited from source', () => {
+  it('every documentation path named in a source comment exists', () => {
+    const offenders: string[] = [];
+    let checked = 0;
+    for (const file of sourceFiles()) {
+      const text = readFileSync(resolve(root, file), 'utf8');
+      text.split('\n').forEach((line, i) => {
+        for (const m of line.matchAll(DOC_PATH)) {
+          checked++;
+          if (!existsSync(resolve(root, m[1]))) {
+            offenders.push(`${file}:${i + 1} cites ${m[1]}, which does not exist`);
+          }
+        }
+      });
+    }
+    expect(offenders).toEqual([]);
+    // A floor, so deleting the scan or narrowing the pattern to nothing fails
+    // rather than passing with an empty sweep.
+    expect(checked).toBeGreaterThan(150);
+  });
+
+  it('every section number cited beside a document exists in it', () => {
+    // Found one on the first run: a comment in the migration-number registry
+    // cited `docs/CHAT-COMMANDS.md \u00a71248`, which is a LINE number wearing a
+    // section sigil — and the wrong line at that. \u00a75.4 sits there, about
+    // identifiers in chat payloads; the passage it meant is \u00a76.3. Nothing
+    // could have caught it: the path resolves, the file exists, and no check
+    // had ever read the number after it.
+    const offenders: string[] = [];
+    let checked = 0;
+    for (const file of [...sourceFiles(), ...docFiles()]) {
+      const text = readFileSync(resolve(root, file), 'utf8');
+      text.split('\n').forEach((line, i) => {
+        for (const m of line.matchAll(DOC_SECTION)) {
+          const [, doc, section] = m;
+          if (!existsSync(resolve(root, doc))) continue; // the test above owns that
+          checked++;
+          const have = sectionNumbers(doc);
+          if (have.size === 0) continue; // an unnumbered document cannot be cited by number
+          if (!have.has(section.replace(/\.$/, ''))) {
+            offenders.push(`${file}:${i + 1} cites ${doc} \u00a7${section}, which has no such section`);
+          }
+        }
+      });
+    }
+    expect(offenders).toEqual([]);
+    expect(checked).toBeGreaterThan(80);
+  });
+});

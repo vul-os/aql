@@ -40,7 +40,7 @@ var migrationNameRe = regexp.MustCompile(`^([0-9]{4})_[a-z0-9_]+\.sql$`)
 // named a file. The distinction is the whole point: if a number here ever turns
 // out to have shipped, the entry is wrong and hubs are carrying orphan state.
 var knownGaps = map[int]string{
-	8: "reserved but never written. docs/CHAT-COMMANDS.md §1248 told an implementer to " +
+	8: "reserved but never written. docs/CHAT-COMMANDS.md §6.3 told an implementer to " +
 		"claim `0008_*.sql` as the next number; that work landed later under its own " +
 		"number and 0008 was never taken. Verified 2026-08-01: `git log --all` shows no " +
 		"file matching migrations/0008* has ever existed, so no hub can have applied one.",

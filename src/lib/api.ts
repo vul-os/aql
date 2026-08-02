@@ -1825,6 +1825,25 @@ export type AccountInsights = {
     // The hub's own flag for the same fact, sent alongside.
     prev_window_observed: boolean;
   };
+  /**
+   * The response also carries `top` — a per-member activity breakdown — and
+   * `top_truncated` beside it. Neither is declared below, and that is a
+   * decision rather than the oversight `breakdown_truncated` turned out to be.
+   *
+   * This console shows no per-member leaderboard. Who opened what, and how
+   * often, is the kind of fact docs/CHAT-COMMANDS.md §5.3 lists as
+   * never-over-a-chat-rail — "Audit-log contents, member rosters, other members'
+   * activity" — and while that rule is written for the chat rails rather than
+   * for an account admin's own console, building a surveillance surface nobody
+   * asked for is not something to do by accident, which is what declaring the
+   * field and rendering it would be.
+   *
+   * The fields stay in the response: removing them breaks any consumer already
+   * reading them, and an admin reading their own account's activity through an
+   * authenticated session is a different question from a rail answering it in a
+   * chat thread. A screen for this is a product decision with privacy weight,
+   * not a wiring task.
+   */
   members: {
     member_count: number;
     active_members_7d: number;
