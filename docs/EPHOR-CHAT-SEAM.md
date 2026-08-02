@@ -198,8 +198,8 @@ above:
 | # | Clause | Harness outcome | What it actually proves |
 |---|---|---|---|
 | COORD-1 | §2.1 | `Behavioral` (`:148-160`) — descriptor `kind` must equal operating kind, then defers with *"verify descriptor signature once kotva-core is pinned"* | Shape only. The `Descriptor` type structurally has no score/price-rank/stake field, so the §2.1 exclusion is by construction. **Note:** `kotva-core` **is** pinned now (`ephor/crates/README.md:16`), so this `Behavioral` is stale and could become a real signature check. |
-| COORD-2 | §2.2 | Whatever the crate declares — `LockIn::None` → `Pass`, `LockIn::Requires` → **`Violation`** (`:166-169`) | **This is where the design bites. See §1.4.** |
-| COORD-3 | §2.3 | `Pass` for `SelfHost::Backstop`; also `Pass` for `ScarceReachabilityException` **because `is_scarce_reachability()` keys off `kind == Gateway`** (`:178-187`, `ephor/crates/broker-economics/src/kinds.rs:120-125`) | A chat adapter would be *accepted* claiming the port-25 exception it does not have. **The crate must declare `SelfHost::Backstop` and must not take that false pass.** See §1.5. |
+| COORD-2 | §2.2 | Whatever the crate declares — `LockIn::None` → `Pass`, `LockIn::Requires` → **`Violation`** (`:225-226`) | **This is where the design bites. See §1.4.** |
+| COORD-3 | §2.3 | `Pass` for `SelfHost::Backstop`; also `Pass` for `ScarceReachabilityException` **when `ScarceResource::plausible_for(kind)` allows it — and `SmtpEgress.plausible_for` is exactly `kind == Gateway`** (`:233-251`, `:113-118`) | A chat adapter would be *accepted* claiming the port-25 exception it does not have. **The crate must declare `SelfHost::Backstop` and must not take that false pass.** See §1.5. |
 | COORD-4 | §2.4/§3 | `Pass`, with **no** behavioral follow-up — `must_not_present_as_verified()` is `false` for `terminating` (`ephor/crates/broker-economics/src/visibility.rs:77-81`, pinned by test at `:135-142`) | Only that exactly one class+level was declared. It does **not** check that a client surfaces it, and it does **not** see §26.3's exposure field at all, because that lives in the opaque `policy` blob. **The entire §26 disclosure burden is outside COORD-4.** |
 | COORD-5 | §3.2 | Always `Behavioral` (`:205-211`) | Nothing statically. For a chat adapter there is no blind→terminating downgrade to catch (it declares terminating from the start), so the runtime test is near-vacuous. What it does **not** test is whether the adapter retains or logs the plaintext it legitimately reads. |
 | COORD-6 | §4 | `Pass` for `Authorization` / `DerivedViewOnly` / `NoDeliveryPath`; `Violation` for `Classification` (`:217-221`) | See §1.6 — none of the four variants describes this adapter honestly. |
@@ -250,12 +250,33 @@ exactly this: *"questions · blockers · spec-gaps found while implementing"*,
 `ephor/COORDINATION.md:16`). Do not paper over it by declaring `LockIn::None` for a
 gateway-mode chat adapter — that would be the misrepresentation §2.4 names.
 
+> **Re-verifying the citations in this document.** Everything below cites `ephor/` and
+> `kotva/`, which are sibling repositories rather than part of this checkout — so
+> `docCitations.test.ts` exempts them and nothing in CI has ever resolved them. Run
+> `node scripts/check-external-citations.mjs` with those repos cloned beside `aql/` to check
+> all 91 of them; it exits non-zero rather than passing quietly when it cannot. Note what it
+> does not do: it checks that a line range EXISTS, not that the code there says what it is
+> cited for. Two references in the table above were pointing at unrelated code while their
+> claims were still true, and only reading them found that.
+
 ### 1.5 COORD-3: declare `Backstop`, and refuse the exception the harness would grant
 
-`is_scarce_reachability()` returns true for `CoordinatorKind::Gateway`
-(`ephor/crates/broker-economics/src/kinds.rs:120-125`), so a chat adapter declaring kind
-`gateway` **could** claim `SelfHost::ScarceReachabilityException` and the harness would pass it
-(`ephor/crates/broker-conformance/src/lib.rs:178-187`). It must not. The disclosed exception is
+A chat adapter declaring kind `gateway` **could** claim
+`SelfHost::ScarceReachabilityException` and the harness would pass it. It must not.
+
+The mechanism, checked against the crate rather than assumed: the COORD-3 arm matches
+`SelfHost::ScarceReachabilityException(resource)` and passes when
+`resource.plausible_for(c.kind())` holds
+(`ephor/crates/broker-conformance/src/lib.rs:233-251`), and `SmtpEgress.plausible_for` is
+precisely `kind == CoordinatorKind::Gateway` (`:113-118`). So the false pass is live: a
+kind-`gateway` adapter claiming SMTP egress is waved through.
+
+Worth naming because the crate's own violation message anticipates this exact case — *"§26
+legacy-rail adapters report kind=gateway while needing no scarce resource at all — the kind
+alone is not evidence"* — but that message sits in the `else` branch, which the
+gateway+`SmtpEgress` combination never reaches. The check knows about the hole and cannot
+close it from where it stands; closing it needs something the kind alone does not supply.
+That is an observation about Ephor's crate, not a change Aql makes to it. The disclosed exception is
 *"a reputable IP + unblocked port 25 for legacy SMTP egress"*
 (`kotva/coordinator/CONTRACT.md:67-70`); a WhatsApp adapter needs no such thing.
 
