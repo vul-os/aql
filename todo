@@ -832,6 +832,25 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] Closed the limit I had just written down: rendered-values covers EMPTY states,
+      so populated-values creates real records through the console's own forms — an
+      access point, a scoped API token — and re-checks. No hardware faked; this
+      suite's hub has no drivers and the access/credential surface needs none.
+      THE FIND CAME FROM A TAMPER THAT FAILED. Injecting `Invalid Date` into the
+      tokens page was NOT CAUGHT, and the reason was not the spec: that line is the
+      CARD layout, which only renders at narrow width, while the desktop viewport
+      draws a table formatting its dates somewhere else entirely. Two rendering
+      paths, one tested. README calls the phone the place "where a gate gets
+      opened", so the spec now repeats its pass at 390x844 — and the tamper that
+      exposed the gap is caught.
+      Also worth keeping: my second tamper (disable the assertion) came back NOT
+      CAUGHT and that verdict was MEANINGLESS — with no offence present, removing
+      the check cannot change the result. A tamper only proves anything against a
+      defect the check should see.
+      Incidental: the one-time token secret modal is now read while it is up. It is
+      the single screen a user cannot return to, and it renders a secret, scopes and
+      an expiry.
+
 - [x] Turned the NaN into a class check: all 20 console pages, asserted against
       rendered garbage (NaN, [object Object], Invalid Date, bare `undefined`). The
       first version only LOGGED, which is why tamper.sh returned NOT CAUGHT on it —
