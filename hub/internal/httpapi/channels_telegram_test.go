@@ -165,3 +165,78 @@ func TestAnUnsignedTelegramWebhookDoesNothingAtAll(t *testing.T) {
 			after-before)
 	}
 }
+
+// A chat-rail refusal must not reach the gate either.
+//
+// finishOpen (channels_open.go) is the open path for every chat rail, and it
+// has the same shape handleOpen had: refuse, return, dispatch only when
+// allowed. Adding a dispatchCommand call to its `!res.Allowed` branch — so a
+// rate-limited resident gets a refusal in chat AND the gate gets a signed open
+// — passed the whole hub suite.
+//
+// Invisible for the same reason as the HTTP path: the chat fixture's access
+// point has no controller attached, so dispatch returns "no_device" before
+// touching anything. This pairs one for real and leaves it offline, because an
+// offline device is the dangerous case — Hub.Dispatch QUEUES for it and returns
+// "queued", which records nothing, so the command simply waits for the gate to
+// reconnect.
+func TestAChatRailRefusalNeverReachesTheGate(t *testing.T) {
+	// A real cooldown, because permissiveRL() sets OpenCooldownS to 0 and the
+	// second open simply succeeds — which this test first read as "the refusal
+	// leaked a command to the gate".
+	rl := permissiveRL()
+	rl.OpenCooldownS = 3600
+	e := setupChannels(t, rl)
+
+	// A real enrolled controller, bound to its own access point.
+	rec, out := doJSON(t, e.h, "POST", "/v1/devices", e.ownerA, map[string]any{
+		"location_id": e.loc, "label": "chat-gate-controller",
+	})
+	if rec.Code != 201 {
+		t.Fatalf("device create: %d %s", rec.Code, rec.Body)
+	}
+	deviceID := out["id"].(string)
+	claimToken := out["claim_token"].(string)
+	rec, out = doJSON(t, e.h, "POST", "/pair/redeem", "", map[string]any{
+		"v": 0, "typ": "pair.redeem", "claim_token": claimToken,
+		"controller_pubkey": genAppPubkey(t),
+		"hw":                map[string]any{"model": "test", "fw": "0.0.1", "ifaces": []string{"wifi"}},
+	})
+	if rec.Code != 200 || out["typ"] != "pair.grant" {
+		t.Fatalf("pair redeem: %d %s", rec.Code, rec.Body)
+	}
+	rec, out = doJSON(t, e.h, "POST", "/v1/access-points", e.ownerA, map[string]any{
+		"location_id": e.loc, "name": "Wired gate", "kind": "gate", "device_id": deviceID,
+	})
+	if rec.Code != 201 {
+		t.Fatalf("wired ap create: %d %s", rec.Code, rec.Body)
+	}
+	wiredAP := out["id"].(string)
+
+	// Opens go through the picker callback, not "open <name>": with more than
+	// one gate the rail answers a bare "open" with an inline keyboard, and a
+	// name in the text is not a command form it parses. Writing this test the
+	// other way produced the help menu, an empty queue, and a premise check
+	// that failed against perfectly good code.
+	//
+	// One allowed open first, so the cooldown is armed AND the rail is shown to
+	// reach the gate at all — without that, an empty queue afterwards would
+	// mean nothing.
+	if rec := tgPost(e.h, tgCallback(testTGUID, testTGChat, "open_ap:"+wiredAP)); rec.Code != 200 {
+		t.Fatalf("first chat open: %d %s", rec.Code, rec.Body)
+	}
+	if q := e.s.hub.DrainQueue(deviceID); len(q) != 1 {
+		t.Fatalf("an allowed chat open queued %d commands, want 1 — this test's "+
+			"premise is that the rail reaches the gate", len(q))
+	}
+
+	// Second one is refused by the cooldown.
+	if rec := tgPost(e.h, tgCallback(testTGUID, testTGChat, "open_ap:"+wiredAP)); rec.Code != 200 {
+		t.Fatalf("second chat open (webhook still 200, verdict inside): %d", rec.Code)
+	}
+
+	if q := e.s.hub.DrainQueue(deviceID); len(q) != 0 {
+		t.Errorf("a refused chat open left %d command(s) queued for the gate; it "+
+			"actuates as soon as the controller reconnects", len(q))
+	}
+}
