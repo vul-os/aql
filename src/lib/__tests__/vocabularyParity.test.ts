@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-// The events the console offers must be the events the hub knows.
+// Closed vocabularies must be the same set on both sides of the language border.
+//
+// This file started as one check about webhook events and grew to five, because
+// the defect it found was never about webhooks: it is about a set the hub
+// validates against and the console renders as a fixed choice, maintained twice
+// by hand, in two languages, with no build step between them.
 //
 // # What was wrong
 //
@@ -57,6 +62,87 @@ function consoleEvents(): string[] {
   if (!block) throw new Error('EVENT_OPTIONS not found — this guard cannot read the console');
   return [...block[1].matchAll(/value:\s*'([a-z._]+)'/g)].map((m) => m[1]);
 }
+
+// The same shape, for the other closed vocabularies this product duplicates in
+// TypeScript.
+//
+// Each of these is a set the hub validates against and the console renders as a
+// fixed choice. They agree today — checked one by one before this was written,
+// not assumed — and the webhook list also agreed until it quietly did not. What
+// makes the failure invisible is identical in every case: the hub refuses names
+// it does not know, the console only sends names it does know, so no request is
+// ever wrong and the missing option is simply never offered.
+//
+// Sets are compared, not order. A vocabulary is a set; presentation order is
+// the console's business.
+const VOCABULARIES: Array<{
+  name: string;
+  goFile: string;
+  goPattern: RegExp;
+  tsFile: string;
+  tsPattern: RegExp;
+  min: number;
+}> = [
+  {
+    name: 'access point kinds',
+    goFile: 'hub/internal/httpapi/access.go',
+    goPattern: /var apKinds = map\[string\]bool\{([^}]*)\}/,
+    tsFile: 'src/lib/api.ts',
+    tsPattern: /kind: ('(?:gate|door|barrier|other)'(?:\s*\|\s*'[a-z]+')*);/,
+    min: 4,
+  },
+  {
+    name: 'location types',
+    goFile: 'hub/internal/store/migrations/0001_baseline.sql',
+    goPattern: /type\s+TEXT NOT NULL CHECK \(type IN \(([^)]*)\)\)/,
+    tsFile: 'src/components/locations/CreateLocationModal.tsx',
+    tsPattern: /\(\[([^\]]*)\] as const\)\.map/,
+    min: 4,
+  },
+  {
+    name: 'api token scopes',
+    goFile: 'hub/internal/store/tokens.go',
+    goPattern: /((?:Scope\w+ APITokenScope = "[a-z:]+"\s*(?:\/\/[^\n]*\n\s*)*)+)/,
+    tsFile: 'src/pages/app/ApiTokens.tsx',
+    tsPattern: /const ALL_SCOPES: ApiTokenScope\[\] = \[([^\]]*)\]/,
+    min: 2,
+  },
+  {
+    name: 'automation trigger kinds',
+    goFile: 'hub/internal/automations/rule.go',
+    goPattern: /((?:Trigger\w+ TriggerKind = "[a-z]+"\s*(?:\/\/[^\n]*\n\s*)*)+)/,
+    tsFile: 'src/lib/api.ts',
+    tsPattern: /export type AutomationTriggerKind = ([^;]*);/,
+    min: 4,
+  },
+];
+
+/** Every quoted lowercase token in a matched block, deduped. */
+function tokens(src: string, pattern: RegExp, what: string): string[] {
+  const m = src.match(pattern);
+  if (!m) throw new Error(`${what}: pattern matched nothing — this guard cannot read it`);
+  const found = [...m[1].matchAll(/["']([a-z][a-z:._]*)["']/g)].map((x) => x[1]);
+  return [...new Set(found)].sort();
+}
+
+describe.each(VOCABULARIES)('$name are the same set on both sides', (v) => {
+  it('agrees between the hub and the console', () => {
+    const go = tokens(read(v.goFile), v.goPattern, `${v.name} (${v.goFile})`);
+    const ts = tokens(read(v.tsFile), v.tsPattern, `${v.name} (${v.tsFile})`);
+
+    // Floors, so two patterns that stop matching cannot agree about nothing.
+    expect(go.length, `parsed ${go.length} from ${v.goFile}`).toBeGreaterThanOrEqual(v.min);
+    expect(ts.length, `parsed ${ts.length} from ${v.tsFile}`).toBeGreaterThanOrEqual(v.min);
+
+    expect(
+      ts,
+      `${v.name} differ. The hub (${v.goFile}) has [${go.join(', ')}] and the console
+(${v.tsFile}) has [${ts.join(', ')}]. One side offers something the other refuses,
+or hides something the other accepts — and neither side reports an error, because
+each is internally consistent.`,
+    ).toEqual(go);
+  });
+});
 
 describe('webhook event vocabulary', () => {
   it('is read from both sides at all', () => {

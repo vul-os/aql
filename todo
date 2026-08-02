@@ -832,6 +832,20 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] Generalised yesterday's find to the CLASS: five closed vocabularies duplicated
+      by hand across the language border — webhook events, access-point kinds,
+      location types, API token scopes, automation trigger kinds. Checked each pair
+      one by one BEFORE writing the guard; the other four agree today, which is worth
+      stating rather than implying the sweep found four more bugs. The webhook list
+      agreed too, until it quietly did not.
+      All five now compared as SETS (order is the console's business). Every one is
+      tamper-verified in the direction that matters for it: a kind added to the hub
+      only, a scope dropped from the console only, a trigger added to the hub only, a
+      location type dropped from the console only — four CAUGHT. Floors on both
+      parses so two regexes that stop matching cannot agree about nothing.
+      Renamed the file to vocabularyParity: it started as one check about webhooks
+      and the defect was never about webhooks.
+
 - [x] The console offered TWO webhook events; the hub sends FOUR. automation.alert
       has been dispatchable since rules could raise alerts and unsubscribable from
       the UI that entire time — the only way to receive one was to call the API by
