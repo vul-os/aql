@@ -327,7 +327,20 @@ func (r *Runner) longPollCycle(ctx context.Context, p *state.Pairing, log *slog.
 	postResp.Body.Close()
 	if postResp.StatusCode == http.StatusOK {
 		for _, pe := range pending {
-			_ = r.Queue.Ack(pe)
+			// Same handling as the WebSocket path above, which logs and stops.
+			// This one discarded the error, and the two do the same job: the
+			// hub has accepted these events, so the ack is what stops them
+			// being sent again.
+			//
+			// A failed ack is not lost data — the entry stays queued and the
+			// hub dedupes on event_id — but it is an unbounded resend, and it
+			// happens on the FALLBACK path, which is the one running when the
+			// network is already degraded. Silence there means a controller
+			// that never drains its queue and nothing anywhere saying why.
+			if err := r.Queue.Ack(pe); err != nil {
+				log.Error("event cursor persist failed (long-poll)", "err", err)
+				return
+			}
 		}
 	}
 }

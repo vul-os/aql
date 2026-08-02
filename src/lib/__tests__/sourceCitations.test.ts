@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
@@ -102,14 +103,38 @@ const ALLOWED: Record<string, string> = {
     'about what was removed',
 };
 
+/**
+ * Tracked sources only — the repository, not the working directory.
+ *
+ * This walked the filesystem, so any untracked file lying about got scanned and
+ * could fail the gate. On 2026-08-03 an untracked render-check script did
+ * exactly that: it names a manifest under the docs prefix in a comment, and
+ * that manifest is a URL this repo SERVES rather than a file it contains — so
+ * the guard reported a dangling citation in a file that is not part of the
+ * repository at all.
+ *
+ * The path is described rather than written here on purpose: a guard that
+ * scans source comments will read this one too, and quoting the example would
+ * make this comment the next failure.
+ *
+ * git ls-files is what docCitations already uses for the same question, and it
+ * is the right answer here for the same reason: a citation in a file nobody has
+ * committed is not a claim this repository makes.
+ */
 function sourceFiles(): string[] {
+  const tracked = new Set(
+    execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' }).split('\n').filter(Boolean),
+  );
   const out: string[] = [];
   (function walk(dir: string) {
     for (const entry of readdirSync(dir)) {
       if (SKIP.has(entry)) continue;
       const p = join(dir, entry);
       if (statSync(p).isDirectory()) walk(p);
-      else if (SOURCE.test(entry)) out.push(p.slice(root.length + 1));
+      else if (SOURCE.test(entry)) {
+        const rel = p.slice(root.length + 1);
+        if (tracked.has(rel)) out.push(rel);
+      }
     }
   })(root);
   return out;
