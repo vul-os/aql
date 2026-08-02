@@ -176,7 +176,7 @@ if [ "$FAIL" -eq 0 ]; then
   echo "2026-08-01 the first time anyone ran them locally — a data race in a live-view"
   echo "test, and a request injection in the SDP parser:"
   echo "  (cd hub && go test -race -count=1 ./...)          # and controller/, e2e/"
-  echo "  (cd hub && go test -run xxx -fuzz FuzzParseSDP -fuzztime 30s ./internal/devices/camera/)"
+  echo "  scripts/fuzz-all.sh 30                          # all 15 targets, not just one"
   echo "  (cd hub && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build ./...)"
   echo "  npx playwright test"
   echo "  docker build -f hub/Dockerfile -t aql-hub:ci ."
