@@ -63,6 +63,7 @@ import {
   type EngineReading,
 } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { shapeFor } from './energyChart';
 
 const VB_W = 640;
 const VB_H = 200;
@@ -321,7 +322,8 @@ function EnergyChart({ buckets, grain }: { buckets: EnergyBucket[]; grain: strin
                 const x = xFor(i);
                 const key = `${b.device_key}-${b.metric}-${b.start}`;
 
-                if (b.kwh === null) {
+                const shape = shapeFor(b.kwh, axisMax, VB_H);
+                if (shape.kind === 'gap') {
                   return (
                     <line
                       key={key}
@@ -340,7 +342,7 @@ function EnergyChart({ buckets, grain }: { buckets: EnergyBucket[]; grain: strin
                   );
                 }
 
-                const h = Math.max(1, (b.kwh / axisMax) * VB_H);
+                const h = shape.height;
                 const caveat = bucketCaveat(b);
                 return (
                   <rect
@@ -357,7 +359,7 @@ function EnergyChart({ buckets, grain }: { buckets: EnergyBucket[]; grain: strin
                     strokeDasharray={caveat ? '3 2' : undefined}
                     vectorEffect="non-scaling-stroke"
                   >
-                    <title>{`${b.kwh.toFixed(2)} kWh${caveat ? ` — ${caveat}` : ''}`}</title>
+                    <title>{`${shape.kwh.toFixed(2)} kWh${caveat ? ` — ${caveat}` : ''}`}</title>
                   </rect>
                 );
               })}
