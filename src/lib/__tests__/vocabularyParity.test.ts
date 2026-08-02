@@ -82,6 +82,19 @@ const VOCABULARIES: Array<{
   tsFile: string;
   tsPattern: RegExp;
   min: number;
+  /**
+   * The SCHEMA, where one of these vocabularies is also a CHECK constraint.
+   *
+   * Two surfaces was the wrong count. A value the Go allowlist accepts and the
+   * table refuses does not fail validation — it reaches the database and comes
+   * back a constraint error, which is a 500 where a 400 belonged. A value the
+   * table accepts that neither Go nor the console knows is data nothing can
+   * render. Both directions are silent until someone tries the value.
+   *
+   * Only set where a CHECK actually exists; not every vocabulary is stored.
+   */
+  sqlFile?: string;
+  sqlPattern?: RegExp;
 }> = [
   {
     name: 'access point kinds',
@@ -90,6 +103,8 @@ const VOCABULARIES: Array<{
     tsFile: 'src/lib/api.ts',
     tsPattern: /kind: ('(?:gate|door|barrier|other)'(?:\s*\|\s*'[a-z]+')*);/,
     min: 4,
+    sqlFile: 'hub/internal/store/migrations/0001_baseline.sql',
+    sqlPattern: /kind\s+TEXT NOT NULL CHECK \(kind IN \(([^)]*)\)\)/,
   },
   {
     name: 'location types',
@@ -106,6 +121,8 @@ const VOCABULARIES: Array<{
     tsFile: 'src/pages/app/ApiTokens.tsx',
     tsPattern: /const ALL_SCOPES: ApiTokenScope\[\] = \[([^\]]*)\]/,
     min: 2,
+    sqlFile: 'hub/internal/store/migrations/0012_api_tokens.sql',
+    sqlPattern: /scope\s+TEXT NOT NULL CHECK \(scope IN \(([^)]*)\)\)/,
   },
   {
     name: 'automation trigger kinds',
@@ -140,6 +157,20 @@ describe.each(VOCABULARIES)('$name are the same set on both sides', (v) => {
 (${v.tsFile}) has [${ts.join(', ')}]. One side offers something the other refuses,
 or hides something the other accepts — and neither side reports an error, because
 each is internally consistent.`,
+    ).toEqual(go);
+  });
+
+  it.runIf(v.sqlFile)('agrees with the schema that stores it', () => {
+    const go = tokens(read(v.goFile), v.goPattern, `${v.name} (${v.goFile})`);
+    const sql = tokens(read(v.sqlFile!), v.sqlPattern!, `${v.name} (${v.sqlFile})`);
+
+    expect(sql.length, `parsed ${sql.length} from ${v.sqlFile}`).toBeGreaterThanOrEqual(v.min);
+    expect(
+      sql,
+      `${v.name} differ between the hub and its own table. Go (${v.goFile}) has
+[${go.join(', ')}]; the CHECK in ${v.sqlFile} has [${sql.join(', ')}]. A value Go
+accepts and the table refuses is a 500 where a 400 belonged; a value the table
+accepts that Go does not know is a row nothing can render.`,
     ).toEqual(go);
   });
 });
