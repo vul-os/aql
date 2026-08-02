@@ -91,6 +91,44 @@ jobs:
             -ldflags "-s -w -X main.Version=${GITHUB_REF_NAME}" \
             -o "dist/${name}/aql-hub" ./cmd/hub
           tar -C dist -czf "dist/${name}.tar.gz" "${name}"
+
+      # Run the thing before shipping it.
+      #
+      # Nothing in this workflow ever executed a released binary. SHA256SUMS and
+      # the provenance attestation prove the bytes are the ones this run
+      # produced; neither says they work. A hub that panics on boot, or one
+      # built without the console — the exact regression the node step above
+      # exists to prevent — would pass every check here and reach a download
+      # page.
+      #
+      # Only the runner's own platform can be executed, so this covers
+      # linux/amd64 and the other three ride on it: they are the same source and
+      # the same build line, differing only in GOOS/GOARCH. That is a real limit
+      # and it is stated rather than hidden — a darwin binary that fails to start
+      # is not caught here.
+      - name: smoke the built binary (native platform only)
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+        working-directory: hub
+        run: |
+          set -eux
+          name="aql-hub_${GITHUB_REF_NAME}_linux_amd64"
+          bin="dist/${name}/aql-hub"
+          data="$(mktemp -d)"
+          "$bin" -data "$data" -listen 127.0.0.1:18150 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 30); do
+            curl -sf http://127.0.0.1:18150/health >/dev/null && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:18150/health | grep -q '"ok":true'
+          # The console is embedded, not the placeholder.
+          curl -sf http://127.0.0.1:18150/ | grep -qE '/assets/index-[A-Za-z0-9_-]+\.js'
+          ! curl -s http://127.0.0.1:18150/ | grep -q "does not embed the console"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18150/app/devices)" = 200
+          # And the API namespace is not answered by the console.
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18150/v1/nope)" = 404
+
       - uses: actions/upload-artifact@v4
         with:
           name: gateway-${{ matrix.goos }}-${{ matrix.goarch }}
@@ -134,6 +172,27 @@ jobs:
               -o "dist/${name}/aql-controller" .
           fi
           tar -C dist -czf "dist/${name}.tar.gz" "${name}"
+
+      # The controller cannot be smoke-tested the way the hub can — it is an
+      # agent that dials a hub, so with nothing to dial it has no useful
+      # standalone behaviour. What CAN be established is that the binary
+      # executes and its flag set is intact, which catches a build that is
+      # broken rather than merely unconfigured: a bad ldflags, a missing symbol,
+      # an init() that panics.
+      #
+      # `-h` exits non-zero by design (flag.ErrHelp), so the assertion is on the
+      # output, not the status. Stating the limit plainly: this does not prove
+      # the controller can pair, sign or drive a relay — controller/ and e2e/
+      # cover those against real binaries.
+      - name: smoke the built binary (native platform only)
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+        working-directory: controller
+        run: |
+          set -eux
+          name="aql-controller_${GITHUB_REF_NAME}_linux_amd64"
+          bin="$(ls dist/${name}/* | head -1)"
+          "$bin" -h 2>&1 | grep -q -- '-access-points'
+
       - uses: actions/upload-artifact@v4
         with:
           name: controller-${{ matrix.goos }}-${{ matrix.goarch }}

@@ -832,6 +832,24 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] NOTHING IN THE RELEASE WORKFLOW EVER RAN A RELEASED BINARY. It builds four
+      hub tarballs and four controller tarballs, emits SHA256SUMS, re-verifies them
+      with the script users run, proves the verifier refuses broken releases, and
+      attests provenance — every one of those is about the BYTES being the ones CI
+      produced. None of them says the bytes work. A hub that panics at boot, or one
+      built without the console (the regression the node step exists to prevent),
+      would pass all of it and reach a download page.
+      Added a smoke to both jobs, gated to linux/amd64 because that is the only
+      platform the runner can execute — stated as a limit rather than hidden: a
+      darwin binary that fails to start is still not caught. Hub: boots, /health
+      ok:true, hashed bundle present, placeholder sentence ABSENT, console route
+      200, /v1/nope 404. Controller: it is an agent with nothing to dial, so the
+      honest check is that it executes and its flag set is intact (`-h` exits
+      non-zero by design, so the assertion is on output, not status).
+      Verified by extracting each step from the YAML and running it verbatim
+      against a release-style build, then against a deliberately broken one:
+      console-less hub -> CAUGHT, `exit 1` controller -> CAUGHT.
+
 - [x] CI could not tell the console from the placeholder. The image job builds,
       starts and health-probes — all of which pass identically against a build with
       NO console, because the failure is not "the server is down", it is "the server
