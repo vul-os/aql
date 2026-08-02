@@ -832,6 +832,23 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] Turned the NaN into a class check: all 20 console pages, asserted against
+      rendered garbage (NaN, [object Object], Invalid Date, bare `undefined`). The
+      first version only LOGGED, which is why tamper.sh returned NOT CAUGHT on it —
+      a sweep that cannot fail is not a check, and that verdict was the tool telling
+      me so. As an assertion it is caught both ways: the original NaN restored ->
+      CAUGHT, the page list emptied -> CAUGHT (the visited-count floor).
+      Result: 20 pages clean on a fresh account. Worth being precise about what that
+      is worth — it covers EMPTY states, which is where these live (zero and null
+      are the inputs nobody exercises by hand), not a populated fleet.
+      Two things surfaced on the way. The automations endpoint answers 503
+      `automations_not_configured` on a hub with no drivers — deliberate and argued
+      in automations.go ("'not found' sends a caller hunting for a typo, 'unavailable'
+      sends them to their configuration"), so it is allowed NARROWLY, by URL and
+      status, and COUNTED so the allowance cannot cover nothing. And my first
+      predicate matched on the message text, which never contains the URL — the
+      fixture documents that exact trap thirty lines above where I was typing.
+
 - [x] NOTHING IN THE RELEASE WORKFLOW EVER RAN A RELEASED BINARY. It builds four
       hub tarballs and four controller tarballs, emits SHA256SUMS, re-verifies them
       with the script users run, proves the verifier refuses broken releases, and
