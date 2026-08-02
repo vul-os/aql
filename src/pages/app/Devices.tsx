@@ -549,7 +549,14 @@ function AccessDetail({ row }: { row: Extract<Row, { kind: 'Access' }> }) {
         items={[
           { k: 'Type', v: ap.kind },
           { k: 'Total opens', v: ap.meter.total_opens.toLocaleString(), mono: true },
-          { k: 'Movement', v: `${Math.round(ap.meter.movement_m)} m`, mono: true },
+          {
+            k: 'Movement',
+            // "0 m" was shown here for a quantity nothing measures. A reading of
+            // zero and no reading at all are different facts, and only one of
+            // them is true.
+            v: ap.meter.movement_m === null ? 'not measured' : `${Math.round(ap.meter.movement_m)} m`,
+            mono: ap.meter.movement_m !== null,
+          },
           {
             k: 'Controller',
             v: ap.device_id ? ap.device_id.slice(0, 8) : 'none paired',

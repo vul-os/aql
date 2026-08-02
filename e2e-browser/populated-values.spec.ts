@@ -101,6 +101,24 @@ test('pages with real records in them render every value', async ({ page, cleanP
   await expect(page.getByRole('cell', { name: 'E2E Token' })).toBeVisible();
   await assertClean(page, '/app/api-tokens with one token');
 
+  // The devices page showed "Movement 0 m" for a quantity nothing measures — a
+  // fabricated reading presented as a measured one. The hub sends null now and
+  // the page says so; this is the rendered half of that fix.
+  await page.goto(gw.url('/app/devices'));
+  await page.waitForLoadState('networkidle');
+  // The detail panel opens on click, and that is where the meter is shown. The
+  // first version of this check was wrapped in `if (text.includes('Movement'))`,
+  // which made it silently optional — the row was never open, so the assertion
+  // never ran and a tamper restoring "0 m" was NOT CAUGHT.
+  await page.getByText('Front Gate').first().click();
+  await expect(page.getByText('Movement', { exact: true })).toBeVisible();
+  const devicesText = await page.locator('body').innerText();
+  expect(
+    devicesText,
+    'the devices page reports a movement reading for something nothing measures',
+  ).not.toMatch(/Movement\s*0\s*m\b/);
+  expect(devicesText, 'movement should be reported as unmeasured').toContain('not measured');
+
   // The overview and settings both summarise what now exists, so they are worth
   // re-reading once there is something to summarise.
   for (const path of ['', 'settings', 'analytics', 'members']) {

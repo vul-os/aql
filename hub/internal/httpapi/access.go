@@ -17,16 +17,27 @@ var apKinds = map[string]bool{"gate": true, "door": true, "barrier": true, "othe
 
 // accessPointJSON is the wire shape for an access point.
 //
-// The meter is derived from access_logs. movement_m is a literal 0 and always
-// has been: a controller reports that a relay pulsed, not how far a leaf
-// travelled, and nothing here measures distance. It stays in the shape because
-// removing it would be a silent change to a response clients already parse —
-// and because 0 is what the hub actually knows.
+// The meter is derived from access_logs. movement_m is NULL: a controller
+// reports that a relay pulsed, not how far a leaf travelled, and nothing here
+// measures distance.
+//
+// It was a literal 0, defended in this comment as "what the hub actually
+// knows". That was wrong, and the contradiction sat ten lines apart in one
+// function: the maintenance block below sends null for the same quantity and
+// explains why — "0 m remaining" and "42% used" would both be confident answers
+// to a question this hub cannot answer. The hub does not know a gate moved zero
+// metres. It knows nothing about distance, and zero is a measurement.
+//
+// The console proved the point: it rendered "Movement 0 m" on the devices page,
+// presenting a fabricated reading as a measured one, which is precisely what the
+// maintenance comment was written to prevent.
+//
+// The KEY stays, so this is not the silent shape change the old comment feared —
+// a client that parses the field still finds it, now carrying the honest answer.
 //
 // The maintenance block used to be a hardcoded "nothing recorded", permanently
 // true because no route could record anything. It now reflects the log
-// (0017_maintenance.sql). The movement fields inside it remain null for the
-// same reason movement_m is 0 — see maintenance.go.
+// (0017_maintenance.sql). Its movement fields are null for the same reason.
 func accessPointJSON(d store.AccessPointDetail, m store.MaintenanceSummary) map[string]any {
 	return map[string]any{
 		"id":          d.ID,
@@ -36,7 +47,7 @@ func accessPointJSON(d store.AccessPointDetail, m store.MaintenanceSummary) map[
 		"device_id":   nilIfEmpty(d.DeviceID),
 		"status":      d.Status,
 		"meter": map[string]any{
-			"movement_m":   0,
+			"movement_m":   nil,
 			"total_opens":  d.TotalOpens,
 			"total_closes": d.TotalCloses,
 			"last_op_at":   nullInt64(d.LastOpAt),

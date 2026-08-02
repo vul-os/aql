@@ -832,6 +832,23 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] The console showed "Movement 0 m" for a distance NOTHING MEASURES, and the
+      contradiction sat ten lines apart in one function. accessPointJSON sent
+      `movement_m: 0`, defended in its own comment as "0 is what the hub actually
+      knows"; the maintenance block below it sends NULL for the same quantity and
+      explains why — "0 m remaining" and "42% used" would both be confident answers
+      to a question this hub cannot answer. A controller reports that a relay
+      pulsed, not how far a leaf travelled. Zero metres is a measurement.
+      Now null on the wire (KEY KEPT, so no silent shape change), typed
+      `number | null`, and rendered "not measured". Go test pins the null AND that
+      the real counters beside it (derived from access_logs) were not nulled by the
+      same sweep.
+      MY FIRST e2e ASSERTION WAS SILENTLY OPTIONAL: wrapped in
+      `if (text.includes('Movement'))`, and the detail panel only opens on click, so
+      it never ran — the tamper restoring "0 m" was NOT CAUGHT. Now it clicks the
+      row, asserts the panel is open, and asserts unconditionally. Both tampers
+      CAUGHT.
+
 - [x] Applied yesterday's lesson BACKWARDS to the two sweeps I had already shipped:
       both looped with `expect(body).toBeVisible()` + a fixed sleep, which is the
       exact pattern that made phone-layout blind — body exists the instant the

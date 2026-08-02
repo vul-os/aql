@@ -1856,7 +1856,11 @@ export type AccessPointDetail = {
   device_id: string | null;
   status: string;
   meter: {
-    movement_m: number;
+    // NULL, always: a controller reports that a relay pulsed, not how far a
+    // leaf travelled. The hub sends null rather than 0 because zero metres is a
+    // measurement and nothing measures this — the same distinction the
+    // maintenance block's movement fields already draw.
+    movement_m: number | null;
     total_opens: number;
     total_closes: number;
     last_op_at: UnixSeconds | null;
