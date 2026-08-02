@@ -126,8 +126,15 @@ status, and the number should survive a change of trustees.
 - **Webhook verification never completes** — Meta must be able to reach your hub's
   public URL over HTTPS. If you're behind NAT, set up a tunnel first
   ([Run a hub → Reachability](self-host.md)).
-- **Messages arrive but are rejected** — check the app secret: the hub fail-closes
-  on webhook signature mismatch and logs `whatsapp: bad signature` to the audit log.
+- **Messages arrive but are rejected** — check the app secret. The hub fail-closes
+  on a webhook signature mismatch and answers **403** with the reason in the body:
+  `bad_signature` (the secret does not match), `missing_signature` (no
+  `X-Hub-Signature-256` header at all) or `webhook_secret_unset` (the hub has no
+  app secret configured, so it cannot verify anything and refuses rather than
+  trusting the request). Meta shows that response in the app's webhook delivery
+  view, which is where to look — nothing is written to the audit log, because the
+  request never authenticated as anyone and a public endpoint that appends a row
+  per rejected POST is one an attacker can fill at will.
 - **The number won't register** — numbers already bound to a personal WhatsApp account
   must be released first, and some virtual/VoIP numbers can't receive Meta's
   verification call. A cheap prepaid SIM is the boring, reliable answer.

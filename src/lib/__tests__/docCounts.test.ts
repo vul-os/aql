@@ -182,6 +182,13 @@ const CLAIMS: Array<{ file: string; pattern: RegExp; key: string }> = [
 
   { file: 'site/docs/faq.md', pattern: /The hub is ([\d,]+) HTTP routes/, key: 'routes' },
   { file: 'site/docs/faq.md', pattern: /HTTP routes and ([\d,]+) Go test functions/, key: 'hubTests' },
+  // CONTRIBUTING's table of what to run. It was outside this check and said 183
+  // hub tests against 1,411, and 45 controller tests against 151 — numbers from
+  // early enough that a contributor comparing them to their own run would
+  // conclude something was badly wrong with their checkout. Every other document
+  // stating these counts was already held here; this one was simply never added.
+  { file: 'CONTRIBUTING.md', pattern: /\| `go test \.\/\.\.\.` \| `hub\/` \| ([\d,]+) test functions \|/, key: 'hubTests' },
+  { file: 'CONTRIBUTING.md', pattern: /\| `go test \.\/\.\.\.` \| `controller\/` \| ([\d,]+) test functions \|/, key: 'controllerTests' },
   { file: 'site/docs/faq.md', pattern: /the controller agent is ([\d,]+)\s*\n?more/, key: 'controllerTests' },
   { file: 'site/docs/faq.md', pattern: /have ([\d,]+) conformance vectors/, key: 'vectors' },
   { file: 'site/docs/faq.md', pattern: /conformance vectors \(([\d,]+) checks\)/, key: 'vectorChecks' },

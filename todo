@@ -832,6 +832,22 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] Swept the REVERSE direction of the doc checks — strings the docs quote FROM the
+      product — and found two. site/docs/linking-whatsapp.md told operators that a
+      webhook signature mismatch "logs `whatsapp: bad signature` to the audit log":
+      no such string exists and NOTHING is logged. All four rails behave identically
+      (403 with the reason in the body, no log), which is the right design for an
+      unauthenticated public endpoint — a row per rejected POST is a log an attacker
+      fills at will. Doc now names the three real reasons (bad_signature,
+      missing_signature, webhook_secret_unset) and says where to look instead.
+      CONTRIBUTING.md was OUTSIDE docCounts and said 183 hub tests against 1,411, and
+      45 controller against 194 — a contributor comparing those to their own run
+      would think their checkout was broken. Added both to the gate.
+      My replacement number was wrong too and the gate caught it: `go test -list`
+      sees only the DEFAULT build, so I measured 151 controller tests where the
+      gpio-tagged build has 190. Same build-configuration blindness as the deadcode
+      work, one week later, in the opposite tool.
+
 - [x] "Back up the database" was a DATA-LOSS instruction and nothing said so. The hub
       opens SQLite with journal_mode(WAL), so a live hub can have a 4096-BYTE
       lintel.db beside a 1.8 MiB lintel.db-wal — measured, and now pinned by a test.
