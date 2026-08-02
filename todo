@@ -832,6 +832,28 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] The console showed "NaN% week-over-week" to anyone with a new account, and the
+      hub had gone out of its way to prevent exactly that. analytics.go sends NULL
+      for opens_prev_7d when the comparison week predates coverage, with the comment
+      "pretending it is 0 would render as 'first week of activity' or an invented
+      percentage rise". The console TYPED that field as `number`, so null reached
+      arithmetic and rendered NaN — the fabrication the hub avoided, arriving one
+      layer up. Fixed the type (it also never declared denied_prev_7d or
+      prev_window_observed at all) and the guard.
+      Found via a STALE EXEMPTION, the third of this shape: the e2e fixture's
+      "routes the hub does not serve" allowlist still held /v1/auth/me/profile and
+      /v1/phones/me/phones (both served — and auth-flows asserts the profile form
+      saves THROUGH the first), plus a PREFIX entry '/v1/analytics/' blanketing a
+      namespace the hub serves in full. A prefix is the worst shape: one line
+      silences every route beneath it, including ones added later.
+      Removing them was not enough — tampering an analytics path was NOT CAUGHT
+      because nothing loaded /app/analytics. The new spec found the NaN on its first
+      run. Both tampers caught now; suite 23 passed.
+      Also swept every doc claim backed by a grep (4 of them: radius-arch,
+      shadow-paper/deep, the brand hexes, no-TLS-in-source) — ALL TRUE, including
+      scopes I first misread as false. And verified the loopback bind guard refuses
+      0.0.0.0 with an actionable message and permits it under -behind-proxy.
+
 - [x] hub/README opened by calling a DELETED directory the behavioural spec: "the
       Cloudflare Workers backend in `../backend/` is the behavioral spec this is
       being ported from". ARCHITECTURE.md §2 says the opposite in as many words —

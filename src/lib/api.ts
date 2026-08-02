@@ -1801,7 +1801,17 @@ export type AccountInsights = {
     opens_7d: number;
     denied_7d: number;
     closes_7d: number;
-    opens_prev_7d: number;
+    // NULL when the comparison week predates coverage. The hub sends null on
+    // purpose — its own comment: "pretending it is 0 would render as 'first
+    // week of activity' or an invented percentage rise" — and this field was
+    // typed as a plain number, so the null reached arithmetic and the console
+    // displayed "NaN% week-over-week" on every account with no history. The
+    // careful thing the hub did was undone one layer up by a type that was not
+    // true.
+    opens_prev_7d: number | null;
+    denied_prev_7d: number | null;
+    // The hub's own flag for the same fact, sent alongside.
+    prev_window_observed: boolean;
   };
   members: {
     member_count: number;

@@ -13,7 +13,13 @@ function dayLabel(iso: string): string {
   return DOW[new Date(y, m - 1, d).getDay()];
 }
 
-function weekDelta(curr: number, prev: number): string {
+function weekDelta(curr: number, prev: number | null): string {
+  // null means the comparison week predates coverage: the hub has no baseline
+  // and says so rather than sending a zero. Treating that as a number produced
+  // "NaN% week-over-week", which is the invented figure the hub was avoiding.
+  if (prev === null || prev === undefined || !Number.isFinite(prev)) {
+    return 'no comparable week yet';
+  }
   if (prev === 0) return curr === 0 ? 'no prior week data' : 'first week of activity';
   const pct = Math.round(((curr - prev) / prev) * 100);
   const sign = pct > 0 ? '+' : '';

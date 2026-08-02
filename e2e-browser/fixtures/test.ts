@@ -56,19 +56,28 @@ export function allowExpectedConsoleError(
 // module doc comment below).
 const KNOWN_UNAVAILABLE_V1_PATHS = new Set([
   '/v1/reference/countries',
-  '/v1/phones/me/phones',
   '/v1/auth/me/slack',
-  '/v1/auth/me/profile',
   // NOT here any more, because the hub serves them now:
   //   /v1/auth/forgot-password, /v1/auth/reset-password,
   //   /v1/auth/update-password  (hub/internal/httpapi/authrecovery.go)
+  //   /v1/auth/me/profile       (server.go — PATCH, and auth-flows.spec.ts
+  //                              tests that the profile form really saves
+  //                              through it, so allowlisting it silenced
+  //                              errors on a path this suite asserts works)
+  //   /v1/phones/me/phones      (server.go — GET)
   // Leaving them allowlisted would have meant a regression on the recovery
-  // path could not fail this suite.
+  // path, the profile path or the phone list could not fail this suite.
   //
   // /v1/auth/verify-email is gone entirely rather than moved: there is no
   // email in this product, so there is nothing to verify and no route to miss.
 ]);
-const KNOWN_UNAVAILABLE_V1_PREFIXES = ['/v1/analytics/'];
+// Empty, deliberately. This held '/v1/analytics/', which blanketed a namespace
+// the hub now serves in full (server.go registers the account summary, account
+// insights and location summary handlers). A PREFIX entry is the most dangerous
+// shape here — one line silences every route under it, including ones added
+// years later — so the array stays, empty, with this note rather than being
+// deleted and quietly re-added.
+const KNOWN_UNAVAILABLE_V1_PREFIXES: string[] = [];
 
 function isKnownUnavailableV1Route(pathname: string): boolean {
   if (KNOWN_UNAVAILABLE_V1_PATHS.has(pathname)) return true;
