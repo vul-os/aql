@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"os"
 	"regexp"
 	"strings"
@@ -87,6 +88,69 @@ func TestPurposeIsBoundNotInterpolated(t *testing.T) {
 		if strings.Contains(src, bad) {
 			t.Errorf("authrecovery.go contains %q — purpose must be a bound parameter, "+
 				"so that the discriminator cannot be shaped by anything a caller supplies", bad)
+		}
+	}
+}
+
+// The DATABASE refuses a purpose outside the allowed set.
+//
+// The test above pins that every query filters on purpose. This pins the other
+// half: that there is only one purpose to filter for, and that the schema —
+// not a Go constant, not a comment — is what says so.
+//
+// migration 0009 declares `CHECK (purpose IN ('password_reset'))` and
+// authrecovery.go explains the omission: identity on this hub is a local
+// username, "so there is no address to verify and no sender to verify it
+// with, and migration 0009 leaves 'email_verify' deliberately out of the
+// purpose CHECK constraint". That is a product decision — this hub runs in
+// somebody's house with no outbound mail — enforced at the strongest layer
+// available, and nothing tested it.
+//
+// A later migration widening that CHECK is a one-line change that would make
+// an email-verification flow storable, and every existing test would stay
+// green: the queries would still filter on purpose, the Go constant would
+// still be the only one defined, and the schema would quietly permit a flow
+// the product does not have.
+func TestTheSchemaRefusesAnyRecoveryPurposeButPasswordReset(t *testing.T) {
+	s, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+
+	// A real user row: user_id is a foreign key, so a made-up id fails for a
+	// reason that has nothing to do with the purpose under test.
+	ctx := context.Background()
+	u, err := s.CreateUser(ctx, "purpose-check", "argon2id$dummy", "Purpose Check", "ZA")
+	if err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+	userID := u.ID
+
+	insert := func(purpose string) error {
+		_, err := s.db.Exec(
+			`INSERT INTO auth_recovery_tokens
+			   (id, user_id, purpose, selector, salt, verifier_hash, issued_at, expires_at, created_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			"tok-"+purpose, userID, purpose, "sel-"+purpose, "salt", "hash",
+			1_700_000_000, 1_700_003_600, 1_700_000_000)
+		return err
+	}
+
+	// The premise: the one real purpose IS insertable. Without this the
+	// rejections below would pass against a table that refuses everything —
+	// a broken schema and a correct one look identical from the failure side.
+	if err := insert("password_reset"); err != nil {
+		t.Fatalf("password_reset was refused (%v); this test proves nothing if no "+
+			"purpose can be stored", err)
+	}
+
+	for _, bad := range []string{"email_verify", "phone_verify", "", "PASSWORD_RESET"} {
+		if err := insert(bad); err == nil {
+			t.Errorf("the schema accepted purpose %q. migration 0009's CHECK is what "+
+				"keeps a flow this product does not have from being storable at all — "+
+				"identity here is a local username and the hub has no outbound mail",
+				bad)
 		}
 	}
 }
