@@ -832,6 +832,29 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] tamper.sh produced a FALSE CAUGHT, which is the worst verdict it can give. For
+      a Go file it runs the check from the MODULE root, so a Go tamper checked by a
+      TypeScript guard ran `npx vitest run src/...` from hub/, where that path does
+      not exist; vitest exited non-zero for finding nothing and the script called it
+      CAUGHT. A false NOT CAUGHT says a guard is blind and the next thing anyone does
+      is look. A false CAUGHT certifies a guard that never ran, and nobody looks
+      again. Now the working directory follows the COMMAND (go/gofmt/golangci-lint ->
+      module root, everything else -> repo root), verified both ways.
+      Caught it because the verdict was implausible: adding a Verb CONSTANT with no
+      tier row cannot make a verb actuating, so the guard had no business failing.
+      Two more junk tampers on the way: one added a row referencing an undefined
+      constant (no Go compile step runs when the check is vitest, so it "applied"
+      without compiling), one was ambiguous twice over.
+- [x] Sixth vocabulary: device VERBS, and this one is not a plain set comparison. The
+      hub has 18, the console renders 16, and the two it omits — read, status — are
+      TierRead, whose result is already on screen. So the comparison is over
+      NON-read-tier verbs, derived from the hub's own tier table rather than a
+      hardcoded pair, so a future read verb is excluded for the same reason and a
+      future actuating one is not. All 16 actuating verbs have controls today.
+      My first parse read Tier as the field right after Verb, which is only true for
+      rows with no Arg — so `set` and `hold` came back classified read-only. An
+      obviously wrong answer is what exposed it.
+
 - [x] Generalised yesterday's find to the CLASS: five closed vocabularies duplicated
       by hand across the language border — webhook events, access-point kinds,
       location types, API token scopes, automation trigger kinds. Checked each pair

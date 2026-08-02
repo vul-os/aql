@@ -144,6 +144,72 @@ each is internally consistent.`,
   });
 });
 
+// Every verb a user can ACTUATE has a control in the console.
+//
+// This one is not a plain set comparison, and the reason is the interesting
+// part. The hub's catalogue has eighteen verbs; the console renders sixteen
+// buttons. The two it does not render are `read` and `status`, and their
+// absence is correct: both are TierRead, and the console already shows device
+// state continuously, so a button whose effect is "fetch what is on the screen"
+// would be noise.
+//
+// So the comparison is over verbs that are NOT read-tier — the ones a person
+// presses, where an addition the console never learned about is a capability
+// nobody can use. The exclusion is derived from the hub's own tier table rather
+// than a hardcoded list of two, so a future read-tier verb is excluded for the
+// same reason and a future ACTUATING verb is not excluded at all.
+//
+// The first version of this parse read the tier as the field immediately after
+// Verb, which is only true for rows with no Arg — so `set` and `hold`, both
+// plainly actuating, came back classified as read-only. The implausible answer
+// is what exposed the pattern.
+describe('device verbs', () => {
+  it('every actuating verb has a console control', () => {
+    const go = read('hub/internal/devices/capability.go');
+    const names = new Map(
+      [...go.matchAll(/(Verb\w+)\s+Verb = "([a-z]+)"/g)].map((m) => [m[1], m[2]]),
+    );
+    // Verb first, Tier anywhere later in the same row: Arg/Min/Max sit between
+    // them on every row that takes an argument.
+    const rows = [...go.matchAll(/\{Verb:\s*(Verb\w+)[^}]*?Tier:\s*(Tier\w+)/g)];
+    expect(rows.length, 'parsed no capability rows').toBeGreaterThanOrEqual(20);
+
+    const actuating = new Set<string>();
+    const readOnly = new Set<string>();
+    for (const [, verbConst, tier] of rows) {
+      const v = names.get(verbConst);
+      if (!v) continue;
+      if (tier === 'TierRead') readOnly.add(v);
+      else actuating.add(v);
+    }
+    for (const v of actuating) readOnly.delete(v);
+
+    expect(actuating.size, 'no actuating verbs parsed').toBeGreaterThanOrEqual(10);
+    expect(readOnly.size, 'no read-tier verbs parsed — the exclusion is doing nothing').toBeGreaterThan(0);
+
+    const ts = read('src/components/device/engineState.ts');
+    const table = ts.match(/CAP_CONTROLS[^=]*=\s*\{([\s\S]*?)\n\};/);
+    if (!table) throw new Error('CAP_CONTROLS not found — this guard cannot read the console');
+    const controls = new Set([...table[1].matchAll(/verb:\s*'([a-z]+)'/g)].map((m) => m[1]));
+    expect(controls.size, 'no controls parsed').toBeGreaterThanOrEqual(10);
+
+    const unreachable = [...actuating].filter((v) => !controls.has(v)).sort();
+    expect(
+      unreachable,
+      `the engine accepts these verbs and the console offers no way to send them: ${unreachable.join(', ')}.
+A verb with no control is a capability a driver can advertise, the tier table can
+rank, and no user can reach — add it to CAP_CONTROLS in engineState.ts.`,
+    ).toEqual([]);
+
+    const invented = [...controls].filter((v) => !actuating.has(v) && !readOnly.has(v)).sort();
+    expect(
+      invented,
+      `the console offers these and the hub's catalogue has no such verb: ${invented.join(', ')}.
+The engine refuses an unknown verb, so the button is a guaranteed error.`,
+    ).toEqual([]);
+  });
+});
+
 describe('webhook event vocabulary', () => {
   it('is read from both sides at all', () => {
     // The guard on the guard: two regexes that stopped matching would agree

@@ -89,7 +89,24 @@ shift
 # says the guard is blind when nothing was tested. The checks below — exactly
 # one match, the file actually changed — are the ones that catch that, and they
 # were unavailable precisely where I kept needing them.
-root=$(cd "$(dirname "$file")" && while [ ! -f go.mod ] && [ "$PWD" != / ]; do cd ..; done; pwd)
+# ...but only when the COMMAND is a Go command. A tamper on a Go file checked by
+# a TypeScript guard — `scripts/tamper.sh hub/internal/x.go OLD NEW -- npx vitest
+# run src/...` — ran vitest from hub/, where that path does not exist. vitest
+# exited non-zero for having found nothing, and this script called that CAUGHT.
+#
+# A false CAUGHT is worse than a false NOT CAUGHT. The second says a guard is
+# blind when nothing was tested, and the next thing anyone does is look. The
+# first certifies a guard that never ran, and nobody looks again.
+case "${1:-}" in
+  go|gofmt|golangci-lint) needs_module_root=1 ;;
+  *) needs_module_root=0 ;;
+esac
+
+root=""
+if [ "$needs_module_root" = 1 ]; then
+  root=$(cd "$(dirname "$file")" && while [ ! -f go.mod ] && [ "$PWD" != / ]; do cd ..; done; pwd)
+fi
+[ -n "$root" ] || root=/nonexistent
 if [ ! -f "$root/go.mod" ]; then
   root=$(cd "$(dirname "$file")" && while [ ! -d .git ] && [ "$PWD" != / ]; do cd ..; done; pwd)
   [ -d "$root/.git" ] || { echo "INVALID: no go.mod and no repository root above $file" >&2; exit 2; }
