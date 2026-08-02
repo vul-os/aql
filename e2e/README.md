@@ -130,6 +130,18 @@ These are documented by tests here; the fixes belong in `hub/` /
    `TestHold_RateLimitNeverReachesController`. Same property, same hub, one
    entry point covered and one not.
 
-   Both are now guarded by tests in `hub/internal/httpapi`, which is a weaker
-   place to guard them than here — those drive a handler, not a binary. If this
-   harness ever grows a chat rail, `finishOpen` is the reason.
+   **Partly closed.** `TestChatRail_TelegramOpensARealGate` now drives the whole
+   product flow against the binaries: mint a link code over the console API,
+   spend it from Telegram, then open a gate and watch a real controller pulse.
+   Both defects above fail it — a rail that never dispatches, and an unsigned
+   webhook that pulses the relay before its signature is checked.
+
+   Still uncovered here: WhatsApp, Slack and Discord. They share `finishOpen`,
+   so the open path itself is now exercised, but each has its own signature
+   scheme and its own inbound parser, and neither is touched by this harness.
+
+   One note for whoever extends it. The unsigned probe in that test posts a body
+   that WOULD open the gate, sent by a linked user. The first version posted
+   `{}` before linking and passed against a handler that verified last, because
+   an empty body does nothing either way. A negative probe has to be capable of
+   the harm it is checking for.
