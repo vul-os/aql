@@ -41,7 +41,8 @@ function flat(s: string): string {
 }
 
 /**
- * flat(), with comments removed first.
+ * flat(), with comments removed first. EVERY assertion here reads through
+ * this — see the note at the end of the block about why it is not optional.
  *
  * Every assertion in this file matches against SOURCE TEXT, and a comment is
  * source text. AppLayout.tsx explains its own wording in a JSX comment —
@@ -53,6 +54,21 @@ function flat(s: string): string {
  * A guard that a comment can satisfy is measuring the explanation rather than
  * the thing explained, and the better a file documents itself the more likely
  * that is.
+ *
+ * The other five screens were checked after that one was found and all of them
+ * matched real copy, so this is not fixing five live bugs. It is removing the
+ * luck: those five pass because no one has yet written a comment quoting the
+ * sentence the guard looks for, and safety copy is exactly the sentence a
+ * careful author explains in a comment above it.
+ *
+ * One consequence worth knowing before tampering any of these. Every pattern
+ * here is matched against WHITESPACE-FLATTENED text, so a phrase the guard
+ * finds may be split across lines in the file and invisible to a line-based
+ * grep. Devices.tsx wraps as "mDNS has no\nauthentication:", and a `grep -c`
+ * for the guard's alternatives reported ZERO while the guard was matching
+ * happily — which reads as a blind guard and is not one. Check with the same
+ * flattening the guard uses, or delete the whole sentence rather than the
+ * phrases you can see.
  */
 function code(s: string): string {
   return flat(
@@ -68,7 +84,7 @@ describe('a geofence is never presented as a security control', () => {
   // against comes from the CLIENT and nothing verifies it. Anyone who can call
   // the API can claim any coordinates. It is a mistake-preventer; it stops
   // nobody who is trying.
-  const src = flat(read('src/pages/app/AccessRules.tsx'));
+  const src = code(read('src/pages/app/AccessRules.tsx'));
 
   it('says outright that the position is unverified', () => {
     const admits =
@@ -100,7 +116,7 @@ describe('a geofence is never presented as a security control', () => {
 });
 
 describe('emergency access refuses rather than reassures', () => {
-  const src = flat(read('src/pages/app/EmergencyAccess.tsx'));
+  const src = code(read('src/pages/app/EmergencyAccess.tsx'));
 
   // A changed hub key means the thing answering is not the hub this device
   // enrolled with. There are innocent explanations and one that is not, and the
@@ -234,7 +250,7 @@ describe('the rule editor does not re-implement the safety ceiling', () => {
 });
 
 describe('a webhook target names the guard it switches off', () => {
-  const src = flat(read('src/pages/app/Webhooks.tsx'));
+  const src = code(read('src/pages/app/Webhooks.tsx'));
 
   // allow_private disables the SSRF guard for that endpoint. It is legitimate —
   // someone pointing at their own Home Assistant — but "allow private
@@ -260,7 +276,7 @@ describe('a secret shown once says so', () => {
     ['src/components/settings/TwoFactorSection.tsx', 'the 2FA secret and recovery codes'],
   ] as const) {
     it(`${file} warns that ${what} cannot be retrieved`, () => {
-      const src = flat(read(file));
+      const src = code(read(file));
       const warns =
         /shown once|only time|never be shown again|cannot be retrieved|can't be retrieved|no way to see them again/i.test(
           src,
@@ -276,7 +292,7 @@ describe('a secret shown once says so', () => {
 });
 
 describe('discovery does not present found devices as trusted', () => {
-  const src = flat(read('src/pages/app/Devices.tsx'));
+  const src = code(read('src/pages/app/Devices.tsx'));
 
   // mDNS is unauthenticated by construction. Anything on the LAN can answer.
   it('says a discovered controller is not to be trusted', () => {
