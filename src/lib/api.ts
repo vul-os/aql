@@ -1797,6 +1797,18 @@ export type AccountInsights = {
     location_name: string | null;
     opens: number;
   }>;
+  /**
+   * TRUE when the hub had more access points than it returned.
+   *
+   * The store fetches topN+1 rows precisely so it can tell, and says so. This
+   * field existed in the response for as long as the endpoint has, and nothing
+   * on this side named it — so a capped list rendered as the whole list, which
+   * is the reading a person naturally takes from a table that just ends.
+   *
+   * docs/CHAT-COMMANDS.md states the rule for the chat rails in as many words:
+   * "Aggregate, cap and say so." The hub obeys it; the console did not.
+   */
+  breakdown_truncated: boolean;
   totals: {
     opens_7d: number;
     denied_7d: number;

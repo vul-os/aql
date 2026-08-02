@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 )
@@ -551,5 +552,51 @@ func TestAnalyticsPreviousWindowComparison(t *testing.T) {
 	}
 	if !d.PrevObserved || d.PrevTotals.Opens != 5 {
 		t.Errorf("previous window: observed=%v totals=%+v, want 5 opens", d.PrevObserved, d.PrevTotals)
+	}
+}
+
+// Past the cap, the breakdown says it was capped.
+//
+// # Why this was worth writing
+//
+// accessPointBreakdown fetches analyticsTopN+1 rows precisely so it can tell
+// the difference between "these are all of them" and "these are the busiest
+// twenty", and returns a bool saying which. Nothing asserted that bool on
+// either side of the wire: the flag reached the response, the console's type
+// never named it, and a capped list rendered as the complete list.
+//
+// docs/CHAT-COMMANDS.md states the rule the hub is obeying here — "Aggregate,
+// cap and say so" — and a table that simply ends says the opposite of that.
+func TestTheAccessPointBreakdownReportsItsOwnCap(t *testing.T) {
+	f := newAnalyticsFixture(t)
+	ctx := context.Background()
+
+	// Under the cap: complete, and it says so by NOT claiming truncation.
+	f.log(t, f.acctA, f.locA, f.apA, f.ownerA.ID, "open", true, "", f.now-60)
+	d := mustInsights(t, f, f.acctA.ID, 7)
+	if d.AccessPointsTruncated {
+		t.Fatalf("a single access point reported as truncated")
+	}
+	if len(d.AccessPoints) != 1 {
+		t.Fatalf("breakdown has %d rows, want 1", len(d.AccessPoints))
+	}
+
+	// One more access point than the cap, each with an open so it appears.
+	for i := 0; i < analyticsTopN+1; i++ {
+		ap, err := f.s.CreateAccessPointFull(ctx, f.acctA.ID, f.locA.ID,
+			fmt.Sprintf("Gate %02d", i), "gate", "", nil, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.log(t, f.acctA, f.locA, ap, f.ownerA.ID, "open", true, "", f.now-60)
+	}
+
+	d = mustInsights(t, f, f.acctA.ID, 7)
+	if len(d.AccessPoints) != analyticsTopN {
+		t.Errorf("breakdown returned %d rows, want the cap of %d", len(d.AccessPoints), analyticsTopN)
+	}
+	if !d.AccessPointsTruncated {
+		t.Fatal("more access points than the cap and the breakdown does not say it was " +
+			"capped — the caller cannot tell the busiest twenty from all of them")
 	}
 }

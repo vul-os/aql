@@ -318,3 +318,19 @@ export function seriesTotals(buckets: EnergyBucket[]): {
     unmeasuredBuckets,
   };
 }
+
+/**
+ * What to say under a list the hub capped, or null when it did not cap.
+ *
+ * The hub fetches one row more than it will return so it can tell the
+ * difference, and reports it. Saying nothing turns "the busiest twenty" into
+ * "all of them" for anyone reading the screen, which is the reading a table
+ * that simply ends invites.
+ *
+ * docs/CHAT-COMMANDS.md states the rule for the chat rails: "Aggregate, cap and
+ * say so." It applies to a table as much as to a sentence.
+ */
+export function capNote(shown: number, truncated: boolean): string | null {
+  if (!truncated) return null;
+  return `Showing the busiest ${shown} — there are more.`;
+}

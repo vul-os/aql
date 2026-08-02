@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { PageHeader } from './AppLayout';
 import { Card, StatBlock } from '@/components/ui/Card';
 import { useAuth } from '@/lib/auth';
+import { capNote } from '@/components/device/liveState';
 import { api, type AccountInsights } from '@/lib/api';
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
@@ -207,6 +208,11 @@ export default function Analytics() {
                     );
                   })}
                 </ul>
+              )}
+              {capNote(breakdown.length, insights?.breakdown_truncated ?? false) && (
+                <p className="mt-4 text-xs text-ink/55">
+                  {capNote(breakdown.length, insights?.breakdown_truncated ?? false)}
+                </p>
               )}
             </Card>
           </div>

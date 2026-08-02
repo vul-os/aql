@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { servingOrigin } from '../hub';
+import { capNote } from '../../components/device/liveState';
 
 // Which origins may be treated as the hub, and which must not.
 //
@@ -62,5 +63,23 @@ describe('servingOrigin', () => {
   it('is null with no window, so nothing server-side guesses an origin', () => {
     withLocation(null);
     expect(servingOrigin()).toBeNull();
+  });
+});
+
+describe('capNote', () => {
+  // A capped list that says nothing reads as the complete list. The hub goes to
+  // the trouble of fetching one extra row to know the difference, and the
+  // console dropped the answer: breakdown_truncated has been in the response
+  // for as long as the endpoint has existed and no type here named it.
+  it('says so when the hub capped the list', () => {
+    expect(capNote(20, true)).toBe('Showing the busiest 20 — there are more.');
+  });
+
+  it('says nothing when the list is complete', () => {
+    // Silence is correct here, and it is the reason this is a function rather
+    // than an inline ternary: "there are more" under a complete list would be
+    // its own lie.
+    expect(capNote(3, false)).toBeNull();
+    expect(capNote(0, false)).toBeNull();
   });
 });

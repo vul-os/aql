@@ -840,6 +840,22 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] Swept the direction that had bitten twice — response keys the hub sends that no
+      TS type names — and found 25 of 192. Most are protocol fields the console has no
+      business reading (ws_url, gateway_pubkey, poll_interval, alg). The cluster that
+      mattered was analytics: 14 keys, including `breakdown_truncated`.
+      That flag exists because accessPointBreakdown fetches topN+1 rows precisely to
+      tell "these are all of them" from "these are the busiest twenty". The hub says
+      so; the console never read it, so a CAPPED LIST RENDERED AS THE COMPLETE LIST —
+      which is the reading a table that simply ends invites. docs/CHAT-COMMANDS.md
+      states the rule the hub is obeying, "Aggregate, cap and say so", and the console
+      was the half not obeying it.
+      NEITHER SIDE WAS TESTED. Added both: a store test that past the cap the flag
+      fires (and under it, does not), and a unit test on the note itself — extracted
+      as a pure function so it is testable without a 21-access-point browser fixture,
+      and so that "there are more" under a complete list is impossible. Both tampers
+      CAUGHT.
+
 - [x] Gave the HTTP surface the same answer as the CLI. verify-audit prints three
       lines; GET /v1/admin/audit/verify ran only the two chains, so an operator
       reading the console got a WEAKER answer than one with shell access and nothing
