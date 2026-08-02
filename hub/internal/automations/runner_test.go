@@ -338,3 +338,57 @@ func TestSchedulerCannotActuateAboveTheTierCeiling(t *testing.T) {
 	}
 	h.assertChainIntact()
 }
+
+// Only one tick runs at a time, and that is checkable rather than assumed.
+//
+// Tick reads the availability snapshot, evaluates every rule against it — driver
+// I/O included — and then writes the new snapshot. That span cannot be held
+// under a mutex without serialising hardware reads behind a lock, so its
+// correctness rests on there being exactly one tick in flight. Run provides that
+// by calling Tick on one goroutine; nothing wrote it down and nothing checked
+// it.
+//
+// This is the assertion that CAN fail, unlike the double-fire it protects
+// against: two concurrent ticks serialise on the store long before reaching any
+// edge decision, so no test could demonstrate that. What is demonstrable is the
+// guard itself — a tick entered while another is in flight does no work.
+func TestOverlappingTicksAreRefused(t *testing.T) {
+	h := newHarness(t)
+	h.eng.SaveRule(h.ctx, h.rule("tank low",
+		Trigger{Kind: TriggerThreshold, Threshold: &Threshold{
+			DeviceKey: "test:tank-1", Metric: "percent", Op: OpBelow, Value: 20}},
+		Action{DeviceKey: "test:lamp-1", Verb: devices.VerbOn}))
+	rn := h.runner()
+
+	// Seed a state where the NEXT tick would actuate: known and above the
+	// threshold, so a crossing is a real rising edge.
+	//
+	// Without this the test was worthless and a tamper said so: it called Tick
+	// at boot, where no previous level is known and nothing fires anyway, so
+	// deleting the guard entirely changed nothing and the assertion held.
+	h.drv.setReading("tank-1", "percent", 50)
+	h.tick(rn)
+	if n := len(h.drv.Calls()); n != 0 {
+		t.Fatalf("the baseline tick actuated %d times", n)
+	}
+
+	// Now hold the flag as if a tick were already running, and cross.
+	if !rn.ticking.CompareAndSwap(false, true) {
+		t.Fatal("fixture: the runner already claims to be ticking")
+	}
+	h.drv.setReading("tank-1", "percent", 10)
+	if err := rn.Tick(h.ctx); err != nil {
+		t.Fatalf("a refused tick must be a no-op, not an error: %v", err)
+	}
+	if n := len(h.drv.Calls()); n != 0 {
+		t.Fatalf("a tick entered while another was in flight actuated %d times on a "+
+			"crossing it should not have evaluated", n)
+	}
+	rn.ticking.Store(false)
+
+	// And the guard releases: the same crossing fires once now.
+	h.tick(rn)
+	if n := len(h.drv.Calls()); n != 1 {
+		t.Fatalf("after the guard released, the crossing fired %d times, want 1", n)
+	}
+}

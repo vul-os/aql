@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/vul-os/aql/hub/internal/devices"
@@ -64,6 +65,9 @@ type Runner struct {
 	// event rule. Empty means "not yet sampled": the first tick seeds it and
 	// fires nothing.
 	avail map[string]devices.Availability
+
+	// ticking makes "one tick at a time" checkable; see Tick.
+	ticking atomic.Bool
 }
 
 type levelState struct {
@@ -167,6 +171,29 @@ func (rn *Runner) Run(ctx context.Context) error {
 // Tick runs exactly one pass. Exported so tests drive the scheduler by hand
 // with an injected clock rather than by sleeping.
 func (rn *Runner) Tick(ctx context.Context) error {
+	// One tick at a time, enforced rather than assumed.
+	//
+	// Tick reads the availability snapshot, evaluates every rule against it —
+	// which calls drivers and does I/O — and then writes the new snapshot. That
+	// span cannot be held under a mutex without serialising hardware reads
+	// behind a lock, so the correctness of the read-evaluate-write depends on
+	// there being exactly one tick in flight.
+	//
+	// Run provides that today by calling Tick on one goroutine, and Tick is
+	// exported for tests. That is an assumption living in two places and
+	// written down in neither, which is how the same shape became a live defect
+	// twice this week elsewhere. A second caller — an event-driven trigger, a
+	// manual "run now" route — would inherit an edge detector that can fire the
+	// same crossing twice.
+	//
+	// A refused overlapping tick is the honest answer: the work is periodic, so
+	// a skipped pass costs one interval, and the alternative is two passes
+	// disagreeing about what changed.
+	if !rn.ticking.CompareAndSwap(false, true) {
+		return nil
+	}
+	defer rn.ticking.Store(false)
+
 	now := rn.now()
 	rules, err := rn.eng.store.AllEnabledRules(ctx)
 	if err != nil {

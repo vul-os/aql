@@ -840,6 +840,26 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] SWEEP COMPLETE — all 10 lock-twice candidates have a verdict, which is the point
+      of running a detector rather than sampling it:
+        LIVE DEFECTS (2, fixed): grants HandleProof, hub ConsumePollChallenge.
+        LATENT, closed: automations tickThreshold.
+        CORRECT AS WRITTEN (7): gpio Pulse and Mock Pulse (callbacks re-check state
+        under the lock); hub Dispatch (the `send` channel is NEVER closed, only
+        `done` is, so the post-unlock send cannot panic and is non-blocking with a
+        default); hub Register (its unregister closure re-checks `conns[id] == c`
+        before deleting); tickClip (read and write in ONE acquisition — test-and-set);
+        mqtt pump (two independent self-contained sections).
+      automations Tick was the awkward one: same split, but `prev` spans the whole
+      rule evaluation, which does driver I/O, so it CANNOT be made atomic without
+      serialising hardware reads behind a mutex. Made the real invariant checkable
+      instead — Tick now refuses an overlapping call outright. A skipped periodic
+      pass costs one interval; two passes disagreeing about what changed costs an
+      actuation.
+      My test for it was worthless twice over and tampering said so both times: the
+      first version called Tick at BOOT, where nothing fires anyway, so deleting the
+      guard entirely changed nothing.
+
 - [x] Finished examining what the detector found rather than stopping at the first
       hit. automations tickThreshold has the same read-decide-write split, and the
       act at the end of it is Fire — an actuation. But it is LATENT, not live: Run
