@@ -273,6 +273,51 @@ func TestChatRail_WhatsAppAndSlackReachARealGate(t *testing.T) {
 		t.Fatalf("a signed WhatsApp open never reached the controller; controller log:\n%s", c.logs.String())
 	}
 
+	// WhatsApp's close, which arrives by a different route from the other two
+	// rails and is the reason the previous commit left it out rather than
+	// faking it. There is no typed "close" here: opening pushes a close BUTTON
+	// (PushCloseButton), and the member taps it — so the inbound is an
+	// interactive button_reply carrying close_ap:<access point>, not text.
+	//
+	// ParseSelection is fail-closed on ids this gateway did not mint: it used
+	// to return ("open", id) for an unprefixed id, which made a malformed
+	// interactive reply resolve to the single most dangerous verb available.
+	// Driving the real id exercises the allowlist rather than stepping around
+	// it.
+	waInteractive := func(id, selection string) []byte {
+		b, _ := json.Marshal(map[string]any{
+			"object": "whatsapp_business_account",
+			"entry": []map[string]any{{
+				"id": "WABA",
+				"changes": []map[string]any{{
+					"field": "messages",
+					"value": map[string]any{
+						"metadata": map[string]any{"phone_number_id": waPhoneID},
+						"messages": []map[string]any{{
+							"id": id, "from": "27820001111",
+							"timestamp": strconv.FormatInt(time.Now().Unix(), 10),
+							"type":      "interactive",
+							"interactive": map[string]any{
+								"type":         "button_reply",
+								"button_reply": map[string]any{"id": selection, "title": "Close"},
+							},
+						}},
+					},
+				}},
+			}},
+		})
+		return b
+	}
+
+	waCloses := c.logs.countLines("msg=command", "cmd=close")
+	waClose := waInteractive("wamid.close1", "close_ap:"+ap)
+	if st := post(t, "/webhooks/whatsapp", waClose, waSigned(waClose)); st != http.StatusOK {
+		t.Fatalf("signed whatsapp close: %d", st)
+	}
+	if !c.logs.waitLines(waCloses+1, 5*time.Second, "msg=command", "cmd=close") {
+		t.Fatalf("a WhatsApp close never reached the controller; controller log:\n%s", c.logs.String())
+	}
+
 	// ── Slack ───────────────────────────────────────────────────────────────
 	// ts is the DEDUPE KEY, not decoration: processSlackEvent stores each
 	// inbound by ev.TS and drops a repeat as a redelivery. Stamping both

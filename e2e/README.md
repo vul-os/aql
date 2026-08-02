@@ -157,6 +157,13 @@ These are documented by tests here; the fixes belong in `hub/` /
    `Relay.Release` and waiting for `state=pulsing` would pass on an open and
    prove nothing about the verb.
 
+   All three rails carry close now, each by its own route: Telegram from the
+   typed word, Slack through a `close_gate:` block interaction, WhatsApp
+   through the `close_ap:` BUTTON that opening pushes (there is no typed
+   "close" on that rail). Each is tampered against the verb mapping itself —
+   `SelectionCommandVerb(close_ap) → "open"` and its Slack equivalent — which
+   is the historical defect rather than a proxy for it.
+
    Three things about the rails that only writing this surfaced, all of which
    made a working rail look broken:
 
