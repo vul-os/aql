@@ -164,6 +164,31 @@ func TestAnUnsignedTelegramWebhookDoesNothingAtAll(t *testing.T) {
 		t.Errorf("an unsigned webhook added %d access-log row(s) — it reached the open path",
 			after-before)
 	}
+
+	// The premise, which this test went without for too long.
+	//
+	// Everything above asserts a count of zero, and zero is exactly what a rail
+	// that does nothing at all produces — a signature check rejecting every
+	// body, a handler wired to nothing, a fixture whose user was never linked.
+	// All three would pass, and the suite would report the webhook safe when it
+	// was merely broken.
+	//
+	// So the same body, signed, must reach the open path. The WhatsApp
+	// equivalent has had this from the start; this one is the reason to check
+	// your own assert-zero tests for the half that makes them mean something.
+	if rec := tgPost(e.h, tgMessage(testTGUID, testTGChat, 9, "open")); rec.Code != http.StatusOK {
+		t.Fatalf("the signed webhook: %d %s", rec.Code, rec.Body)
+	}
+	e.tg.mu.Lock()
+	signedSent := len(e.tg.sent)
+	e.tg.mu.Unlock()
+	if signedSent == 0 {
+		t.Error("a SIGNED webhook drew no reply either — the assertions above are " +
+			"satisfied by a rail that does nothing at all")
+	}
+	if countLogs() == before {
+		t.Error("a SIGNED webhook wrote no access-log row — nothing here reaches the open path")
+	}
 }
 
 // A chat-rail refusal must not reach the gate either.
