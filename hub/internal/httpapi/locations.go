@@ -40,7 +40,21 @@ func (s *Server) locationScope(w http.ResponseWriter, r *http.Request, locationI
 	return accountID, role, true
 }
 
-func locationJSON(d store.LocationDetail, withCounts bool) map[string]any {
+// locationJSON renders one location for the list route.
+//
+// It used to take a withCounts bool and had an else branch emitting
+// account_id, lat and long INSTEAD of the counts — two disjoint shapes behind
+// one name. Only one call site ever existed and it always passed true, so that
+// branch never ran, and the deadcode gate could not see it: that gate finds
+// unreachable FUNCTIONS, not unreachable branches inside a reachable one.
+//
+// Removed rather than kept for a caller that might want it, because the shapes
+// are not interchangeable. LocationRow in src/lib/api.ts requires
+// access_point_count, member_count and last_opened_at; a route that called
+// this with false would have satisfied the Go compiler, returned a body
+// missing all three, and left the console reading undefined off a field its
+// type says is always a number.
+func locationJSON(d store.LocationDetail) map[string]any {
 	var addr any = json.RawMessage(d.Address)
 	m := map[string]any{
 		"id":                 d.ID,
@@ -51,15 +65,9 @@ func locationJSON(d store.LocationDetail, withCounts bool) map[string]any {
 		"status":             d.Status,
 		"address":            addr,
 	}
-	if withCounts {
-		m["access_point_count"] = d.AccessPointCount
-		m["member_count"] = d.MemberCount
-		m["last_opened_at"] = nullInt64(d.LastOpenedAt)
-	} else {
-		m["account_id"] = d.AccountID
-		m["lat"] = nullFloat64(d.Lat)
-		m["long"] = nullFloat64(d.Long)
-	}
+	m["access_point_count"] = d.AccessPointCount
+	m["member_count"] = d.MemberCount
+	m["last_opened_at"] = nullInt64(d.LastOpenedAt)
 	return m
 }
 
@@ -76,7 +84,7 @@ func (s *Server) handleLocationsList(w http.ResponseWriter, r *http.Request) {
 	}
 	list := make([]map[string]any, 0, len(locs))
 	for _, l := range locs {
-		list = append(list, locationJSON(l, true))
+		list = append(list, locationJSON(l))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"locations": list})
 }

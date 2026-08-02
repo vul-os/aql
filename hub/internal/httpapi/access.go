@@ -232,10 +232,3 @@ func nullInt64(v sql.NullInt64) any {
 	}
 	return v.Int64
 }
-
-func nullFloat64(v sql.NullFloat64) any {
-	if !v.Valid {
-		return nil
-	}
-	return v.Float64
-}
