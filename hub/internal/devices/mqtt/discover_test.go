@@ -336,3 +336,71 @@ func TestSuggestedConfigNeverProposesACommand(t *testing.T) {
 		}
 	}
 }
+
+// The same device as the fixture above, but as the bridge ACTUALLY sends it.
+//
+// The fixture at the top of this file is honest about being "trimmed to the
+// fields this reads", and that trimming is the problem: a payload shaped by the
+// parser cannot catch a parser that breaks on what the real bridge sends. It
+// tests that the code agrees with itself.
+//
+// zigbee2mqtt publishes a great deal more per device — endpoints with their
+// clusters and bindings, power_source, date_code, software_build_id,
+// model_id, interview_completed, definition.options, and per-expose access
+// bitmasks, unit and value_min/value_max. None of it is read here, and the
+// decoder is lenient, so none of it should matter. "Should" is the word this
+// test exists to remove: adding DisallowUnknownFields, or moving to a decoder
+// that is strict by default, would turn every real bridge announcement into
+// "announcement was not a JSON array of devices" and discover nothing — with
+// the trimmed fixture still passing.
+const z2mAnnouncementFull = `[
+  {"friendly_name":"Kitchen lamp","ieee_address":"0x002","type":"Router","supported":true,
+   "network_address":19461,"power_source":"Mains (single phase)","date_code":"20200312",
+   "software_build_id":"2.3.087","model_id":"TRADFRI bulb E27 CWS 806lm",
+   "interview_completed":true,"interviewing":false,"disabled":false,
+   "endpoints":{"1":{"bindings":[{"cluster":"genOnOff","target":{"endpoint":1,"ieee_address":"0x001","type":"endpoint"}}],
+      "clusters":{"input":["genBasic","genOnOff","genLevelCtrl"],"output":["genOta"]},
+      "configured_reportings":[],"scenes":[]}},
+   "definition":{"model":"LED1836G9","vendor":"IKEA","description":"TRADFRI bulb E27",
+     "options":[{"type":"numeric","name":"transition","property":"transition","access":2}],
+     "exposes":[{"type":"light","features":[
+        {"type":"binary","name":"state","property":"state","access":7,
+         "value_on":"ON","value_off":"OFF","value_toggle":"TOGGLE"},
+        {"type":"numeric","name":"brightness","property":"brightness","access":7,
+         "value_min":0,"value_max":254}]},
+       {"type":"numeric","name":"linkquality","property":"linkquality","access":1,
+        "unit":"lqi","description":"Link quality (signal strength)",
+        "value_min":0,"value_max":255}]}}
+]`
+
+func TestAFullBridgePayloadDiscoversTheSameDeviceAsTheTrimmedOne(t *testing.T) {
+	trimmed, _ := parseAnnouncement("zigbee2mqtt", []byte(z2mAnnouncement))
+	full, notes := parseAnnouncement("zigbee2mqtt", []byte(z2mAnnouncementFull))
+
+	if len(full) != 1 {
+		t.Fatalf("a real bridge payload discovered %d devices, want 1 (notes: %v)", len(full), notes)
+	}
+
+	// Find the same lamp in the trimmed run and compare what discovery produced.
+	var want *Candidate
+	for i := range trimmed {
+		if trimmed[i].Topic == "zigbee2mqtt/Kitchen lamp" {
+			want = &trimmed[i]
+			break
+		}
+	}
+	if want == nil {
+		t.Fatal("the trimmed fixture no longer yields the Kitchen lamp; this comparison is meaningless")
+	}
+
+	got := full[0]
+	if got.Topic != want.Topic {
+		t.Errorf("topic: full payload gave %q, trimmed gave %q", got.Topic, want.Topic)
+	}
+	if got.Name != want.Name {
+		t.Errorf("name: full payload gave %q, trimmed gave %q", got.Name, want.Name)
+	}
+	if len(got.Fields) != len(want.Fields) {
+		t.Errorf("fields: full payload gave %v, trimmed gave %v", got.Fields, want.Fields)
+	}
+}
