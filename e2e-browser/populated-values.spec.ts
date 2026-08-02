@@ -105,8 +105,8 @@ test('pages with real records in them render every value', async ({ page, cleanP
   // re-reading once there is something to summarise.
   for (const path of ['', 'settings', 'analytics', 'members']) {
     await page.goto(gw.url(`/app/${path}`));
-    await expect(page.locator('body')).toBeVisible();
-    await page.waitForTimeout(600);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(400);
     await assertClean(page, `/app/${path || '(overview)'} after records exist`);
   }
 
@@ -121,8 +121,8 @@ test('pages with real records in them render every value', async ({ page, cleanP
   await page.setViewportSize({ width: 390, height: 844 });
   for (const path of ['api-tokens', 'access-points', '', 'members', 'settings']) {
     await page.goto(gw.url(`/app/${path}`));
-    await expect(page.locator('body')).toBeVisible();
-    await page.waitForTimeout(600);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(400);
     await assertClean(page, `/app/${path || '(overview)'} at phone width`);
   }
 });

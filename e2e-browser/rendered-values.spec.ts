@@ -106,8 +106,15 @@ test('no console page renders a value that failed to compute', async ({ page, cl
       await page.goto(gw.url(`/app/${path}`));
       // Long enough for the page's own fetches to resolve and render; a page
       // asserted mid-load would pass by being empty.
-      await expect(page.locator('main, [role="main"], body').first()).toBeVisible();
-      await page.waitForTimeout(700);
+      // Network idle, not a fixed pause after `body` exists.
+      //
+      // body is present the instant the document parses, so waiting on it and
+      // sleeping measures whatever has rendered by then. phone-layout.spec.ts
+      // was written that way and a planted 900px element went unseen — its
+      // "clean" verdicts were partly about pages that had not drawn yet, and
+      // nothing in the output distinguished the two.
+      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(400);
       visited++;
 
       const body = await page.locator('body').innerText();

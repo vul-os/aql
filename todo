@@ -832,6 +832,19 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] Applied yesterday's lesson BACKWARDS to the two sweeps I had already shipped:
+      both looped with `expect(body).toBeVisible()` + a fixed sleep, which is the
+      exact pattern that made phone-layout blind — body exists the instant the
+      document parses, so the measurement can land before the page's own fetches
+      render. rendered-values' "40 visits clean" and populated-values' passes were
+      partly verdicts on pages that had not drawn yet, and neither said so.
+      Both now wait for network idle. Re-verified rather than assumed: each sweep's
+      certifying tamper (Members' phone-only card, ApiTokens' card date) is still
+      CAUGHT afterwards, so the fix did not weaken them. Cost is honest — the
+      empty-state sweep went 31s -> 1.1m, because it now actually waits.
+      Checked the rest of the suite for the same shape: no other spec sleeps; they
+      all wait on specific content, which is the correct form.
+
 - [x] Phone-width CLIPPING is now checked, which main.css made unverifiable by the
       usual means: `html { overflow-x: clip }` is a deliberate guard whose comment
       claims it swallows decoration "without cutting real content, which is laid out
