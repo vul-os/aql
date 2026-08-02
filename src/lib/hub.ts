@@ -34,6 +34,33 @@ export function envBaseUrl(): string | null {
 /** Base URL used when nothing else is configured (bare `npm run dev`). */
 export const FALLBACK_BASE_URL = 'http://localhost:8787';
 
+/**
+ * The origin that served this page, when it could plausibly be a hub.
+ *
+ * The hub embeds this console and serves it itself, so on the path the product
+ * documents — one binary, open localhost:8080 — the hub is not somewhere else
+ * to be configured, it is where the page came from. Until this existed the boot
+ * probe only tried FALLBACK_BASE_URL, a dev backend on :8787, so a release
+ * binary or the container image showed "Connect to your hub" and asked the
+ * operator to type the address of the server they had just loaded the page
+ * from. That was invisible for as long as no shipped artifact embedded the
+ * console at all.
+ *
+ * Returns null where an origin cannot be a hub: a `file://` or `tauri://`
+ * desktop shell (which must pick one explicitly, and whose origin serves no
+ * API), and the Vite dev server, which serves the console on :5173 while the
+ * API is somewhere else entirely.
+ */
+export function servingOrigin(): string | null {
+  if (typeof window === 'undefined' || isTauri()) return null;
+  const { protocol, origin, port } = window.location;
+  if (protocol !== 'http:' && protocol !== 'https:') return null;
+  // Vite's dev ports. A hub never listens on these, and probing them would make
+  // `npm run dev` connect the console to its own file server.
+  if (port === '5173' || port === '4173') return null;
+  return origin.replace(/\/+$/, '');
+}
+
 /** True when running inside the Tauri desktop shell. */
 export function isTauri(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;

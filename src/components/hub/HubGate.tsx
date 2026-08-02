@@ -12,6 +12,7 @@ import {
   isTauri,
   normalizeGatewayUrl,
   onOpenGatewayPicker,
+  servingOrigin,
   testGatewayUrl,
   type GatewayTestResult,
 } from '@/lib/hub';
@@ -51,14 +52,37 @@ function decideBoot(): Boot {
 export function HubGate({ children }: { children: ReactNode }) {
   const [boot, setBoot] = useState<Boot>(decideBoot);
 
-  // Bare web dev fallback: only show the picker if localhost:8787 is silent.
+  // Which hub, when nothing was configured: the origin that served this page
+  // first, then the bare dev fallback, then the picker.
+  //
+  // The origin comes first because the hub serves this console itself. On the
+  // documented path — one binary, open localhost:8080 — asking the operator to
+  // type in the address of the server they just loaded the page from is asking
+  // them to configure something the browser already knows.
+  //
+  // It is a probe rather than an assumption: the same bundle is deployed to
+  // static hosts where the origin serves no API, and answering /health is what
+  // separates the two. A hit is STORED, so the question is asked once.
   useEffect(() => {
     if (boot.mode !== 'probe') return;
     let cancelled = false;
-    void testGatewayUrl(FALLBACK_BASE_URL, 1500).then((r) => {
-      if (cancelled) return;
-      setBoot(r.ok ? { mode: 'ready' } : { mode: 'picker', prefill: '', cancelable: false });
-    });
+    const candidates = [servingOrigin(), FALLBACK_BASE_URL].filter(
+      (u): u is string => Boolean(u),
+    );
+    void (async () => {
+      for (const url of candidates) {
+        const r = await testGatewayUrl(url, 1500);
+        if (cancelled) return;
+        if (!r.ok) continue;
+        // Only the origin is remembered. The dev fallback stays unstored so a
+        // developer who later points the console elsewhere is not fighting a
+        // choice they never made.
+        if (url === servingOrigin()) applyGatewayUrl(url);
+        setBoot({ mode: 'ready' });
+        return;
+      }
+      if (!cancelled) setBoot({ mode: 'picker', prefill: '', cancelable: false });
+    })();
     return () => {
       cancelled = true;
     };

@@ -832,6 +832,24 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] The embedded console asked the operator for the address of the server that had
+      just served it. Hub-URL resolution was stored -> VITE_API_BASE_URL ->
+      http://localhost:8787, and the boot probe only tried that dev port — SAME-ORIGIN
+      was not in the list. So a release binary or the image opened onto "Connect to
+      your hub" with an empty field, on the exact path the product documents (one
+      binary, open localhost:8080). Invisible until this week because no shipped
+      artifact embedded the console at all: every path that reached the picker was a
+      dev server or a Tauri shell, where asking IS correct.
+      Now the probe tries the serving origin first, remembers a hit, and still falls
+      back to :8787 and then the picker. It is a PROBE not an assumption — the same
+      bundle is deployed to static hosts whose origin serves no API, and /health is
+      what separates them. Exclusions are the load-bearing half and have their own
+      unit test: Vite's 5173/4173 (else `npm run dev` connects the console to its own
+      file server), file:// and tauri:// (a desktop shell must pick), and no window.
+      Found by sweeping the PUBLIC routes after the /app sweep — every one of the 15
+      rendered the same setup screen, which I nearly dismissed as expected.
+      Three tampers CAUGHT (probe order, not remembering, dropped dev-port exclusion).
+
 - [x] The API namespace was answered by the CONSOLE. An unregistered /v1/ path has
       no dot in its last segment, so the SPA fallback treated it as a client route:
       `GET /v1/accounts/x/devices` returned 200 with index.html. A renamed or
