@@ -339,6 +339,42 @@ func TestChatRail_WhatsAppAndSlackReachARealGate(t *testing.T) {
 			"controller log:\n%s", c.logs.String())
 	}
 
+	// A location tap NARROWS, it never actuates.
+	//
+	// channels_whatsapp.go states it plainly — "A location tap is a NARROWING
+	// step, never an actuation" — and the three select_loc ids sit in the same
+	// allowlist as the ones that DO actuate, mapped by LocationCommandVerb to
+	// open, close and hold. That mapping decides which picker gets rendered
+	// next. If it ever decided an actuation instead, the member would tap a
+	// place name and the gate would move.
+	//
+	// Worth driving rather than reading, for the reason the hold probe in this
+	// same test gave: the allowlists here do not say which entries actuate, and
+	// the previous commit found a verb that actuates with no way to ask for it.
+	//
+	// The premise is not assumed. close_ap: and hold_ap: above reach the
+	// controller through the SAME helper, the same signature and the same
+	// parser, so an empty result here is the narrowing rule holding rather than
+	// the interactive path being broken — which is the failure that makes a
+	// negative assertion worthless. The location id is the tenant's real one
+	// for the same reason.
+	cmdsBefore := c.logs.countLines("msg=command")
+	for _, sel := range []string{
+		"select_loc:" + ten.locationID,
+		"select_loc_close:" + ten.locationID,
+		"select_loc_hold:" + ten.locationID,
+	} {
+		b := waInteractive("wamid.narrow."+sel, sel)
+		if st := post(t, "/webhooks/whatsapp", b, waSigned(b)); st != http.StatusOK {
+			t.Fatalf("narrowing selection %q: %d", sel, st)
+		}
+	}
+	time.Sleep(800 * time.Millisecond)
+	if got := c.logs.countLines("msg=command"); got != cmdsBefore {
+		t.Fatalf("a location tap actuated: commands %d → %d after three narrowing "+
+			"selections; controller log:\n%s", cmdsBefore, got, c.logs.String())
+	}
+
 	waCloses := c.logs.countLines("msg=command", "cmd=close")
 	waClose := waInteractive("wamid.close1", "close_ap:"+ap)
 	if st := post(t, "/webhooks/whatsapp", waClose, waSigned(waClose)); st != http.StatusOK {

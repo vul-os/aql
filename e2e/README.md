@@ -167,6 +167,20 @@ These are documented by tests here; the fixes belong in `hub/` /
    and it only echoes ids the bot minted. Pinned so that wiring hold up, or
    closing it off, is a decision someone makes rather than discovers.
 
+   The **narrowing** rule is asserted alongside it: a `select_loc:` /
+   `select_loc_close:` / `select_loc_hold:` tap renders the next picker and
+   actuates nothing. Those ids sit in the same allowlist as the ones that DO
+   actuate, so the distinction is a table entry rather than a type.
+
+   A note on tampering that rule, because the obvious mutation does not work.
+   Making `LocationCommandVerb` return `isNarrowing=false` does NOT cause an
+   actuation — the handler falls through to "unknown selection" and nothing
+   moves, which is correct, so the e2e assertion rightly passes. It reads as a
+   CAUGHT only because hub/internal/channels unit tests fail on it. The
+   mutation that produces the actual harm replaces the picker render with
+   `waAccessCommand(...)` on the first narrowed gate; that one fails the e2e
+   assertion with "a location tap actuated: commands 2 → 5".
+
    All three rails carry close now, each by its own route: Telegram from the
    typed word, Slack through a `close_gate:` block interaction, WhatsApp
    through the `close_ap:` BUTTON that opening pushes (there is no typed
