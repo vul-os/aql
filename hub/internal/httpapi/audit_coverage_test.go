@@ -3,7 +3,10 @@ package httpapi
 import (
 	"crypto/ed25519"
 	"encoding/base64"
+	"fmt"
 	"net/http"
+	"os"
+	"strings"
 	"testing"
 )
 
@@ -159,5 +162,65 @@ func TestAuditCoverageOnlineVisitorGrants(t *testing.T) {
 		if !containsAction(actions, want) {
 			t.Errorf("expected %q in the admin audit trail, got: %v", want, actions)
 		}
+	}
+}
+
+// No route may drop an audit write on the floor without saying why.
+//
+// 55 call sites write the admin trail; 46 of them log on failure with the same
+// shape — s.log.Error("<action> audit write failed", ...). Four in adminops.go
+// discarded it with `_ =` and no comment: account suspend, user status,
+// PLATFORM ADMIN GRANT, and the instance limits update. The highest-privilege
+// actions this hub has, and a failed audit write on any of them was invisible
+// — the action succeeded, the response said 200, and nothing anywhere recorded
+// that the trail had a hole in it.
+//
+// Returning 500 would be wrong: the action already happened, and failing the
+// response would make the answer disagree with the world. Logging is the
+// convention the other 46 already follow, so this pins it.
+//
+// automations/engine.go is deliberately NOT covered. Its discards carry a
+// stated reason — "the save did not happen, so a failed audit write cannot
+// leave the trail disagreeing with the world" — and that is a different
+// package with a different rule. A guard that swept it up would be asserting a
+// policy nobody chose.
+func TestNoHandlerDiscardsAnAuditWrite(t *testing.T) {
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	discarded := []string{}
+	checked := 0
+	for _, e := range entries {
+		name := e.Name()
+		if !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		body, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i, line := range strings.Split(string(body), "\n") {
+			if !strings.Contains(line, "WriteAdminAudit(") {
+				continue
+			}
+			checked++
+			if strings.Contains(line, "_ = ") {
+				discarded = append(discarded, fmt.Sprintf("%s:%d", name, i+1))
+			}
+		}
+	}
+
+	// A floor, so a rename of the method silently reduces this to "no
+	// discards found" rather than failing.
+	if checked < 20 {
+		t.Fatalf("only %d WriteAdminAudit call sites found in this package; the "+
+			"scan has drifted and would report clean either way", checked)
+	}
+	if len(discarded) > 0 {
+		t.Errorf("these audit writes discard their error with no handling: %v\n"+
+			"Log it the way the rest of this package does — the action has already "+
+			"happened, so a 500 would be wrong, but an unwritten trail row must not "+
+			"be silent.", discarded)
 	}
 }

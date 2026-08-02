@@ -180,8 +180,10 @@ func (s *Server) handleAdminAccountPatch(w http.ResponseWriter, r *http.Request)
 		writeErr(w, http.StatusInternalServerError, "internal")
 		return
 	}
-	_ = s.store.WriteAdminAudit(r.Context(), c.Sub, "account_status", "account", id, true,
-		map[string]any{"status": req.Status})
+	if err := s.store.WriteAdminAudit(r.Context(), c.Sub, "account_status", "account", id, true,
+		map[string]any{"status": req.Status}); err != nil {
+		s.log.Error("account status audit write failed", "account_id", id, "status", req.Status, "err", err)
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"account": map[string]any{
 		"id": a.ID, "name": a.Name, "status": a.Status, "country_code": a.CountryCode,
 	}})
@@ -245,8 +247,10 @@ func (s *Server) handleAdminUserPatch(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "internal")
 		return
 	}
-	_ = s.store.WriteAdminAudit(r.Context(), c.Sub, "user_status", "user", id, true,
-		map[string]any{"status": req.Status, "username": u.Username})
+	if err := s.store.WriteAdminAudit(r.Context(), c.Sub, "user_status", "user", id, true,
+		map[string]any{"status": req.Status, "username": u.Username}); err != nil {
+		s.log.Error("user status audit write failed", "user_id", id, "status", req.Status, "err", err)
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"user": map[string]any{
 		"id": u.ID, "username": u.Username, "status": u.Status, "is_platform_admin": u.IsPlatformAdmin,
 	}})
@@ -280,8 +284,12 @@ func (s *Server) handleAdminPlatformAdmin(w http.ResponseWriter, r *http.Request
 		writeErr(w, http.StatusInternalServerError, "internal")
 		return
 	}
-	_ = s.store.WriteAdminAudit(r.Context(), c.Sub, "platform_admin", "user", id, true,
-		map[string]any{"grant": *req.Grant, "username": u.Username})
+	if err := s.store.WriteAdminAudit(r.Context(), c.Sub, "platform_admin", "user", id, true,
+		map[string]any{"grant": *req.Grant, "username": u.Username}); err != nil {
+		// The highest-privilege change this hub has. An unwritten row here is
+		// an admin grant nobody can point at afterwards.
+		s.log.Error("platform admin audit write failed", "user_id", id, "grant", *req.Grant, "err", err)
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"user": map[string]any{
 		"id": u.ID, "username": u.Username, "status": u.Status, "is_platform_admin": u.IsPlatformAdmin,
 	}})
@@ -401,8 +409,10 @@ func (s *Server) handleAdminLimitsPatch(w http.ResponseWriter, r *http.Request) 
 		writeErr(w, http.StatusInternalServerError, "internal")
 		return
 	}
-	_ = s.store.WriteAdminAudit(r.Context(), c.Sub, "limits_update", "instance",
-		store.InstanceRateLimitsKey, true, map[string]any{"patch": patch, "overrides": next})
+	if err := s.store.WriteAdminAudit(r.Context(), c.Sub, "limits_update", "instance",
+		store.InstanceRateLimitsKey, true, map[string]any{"patch": patch, "overrides": next}); err != nil {
+		s.log.Error("limits update audit write failed", "err", err)
+	}
 	writeJSON(w, http.StatusOK, s.limitsPayload(r))
 }
 
