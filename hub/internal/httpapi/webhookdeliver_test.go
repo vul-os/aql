@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -222,13 +223,22 @@ func TestASuccessfulDeliveryResetsTheFailureCount(t *testing.T) {
 // delivery, because everything short of that has already been shown to pass
 // while the feature does nothing.
 func TestAHeldOpenEventReachesASubscriber(t *testing.T) {
+	// The receiver runs on the httptest server's goroutine and this test reads
+	// what it captured, so the captures need a lock. Dispatch here is
+	// asynchronous — that is the whole point of the code under test — unlike the
+	// synchronous deliverOne tests above, which is why they get away without
+	// one. -race said so.
 	var got atomic.Int32
+	var mu sync.Mutex
 	var event string
 	var body []byte
 	d, st, w, srv := deliverEnv(t, func(rw http.ResponseWriter, r *http.Request) {
-		got.Add(1)
+		b, _ := io.ReadAll(r.Body)
+		mu.Lock()
 		event = r.Header.Get("X-Aql-Event")
-		body, _ = io.ReadAll(r.Body)
+		body = b
+		mu.Unlock()
+		got.Add(1)
 		rw.WriteHeader(http.StatusOK)
 	})
 	ctx := context.Background()
@@ -267,13 +277,17 @@ func TestAHeldOpenEventReachesASubscriber(t *testing.T) {
 	if got.Load() == 0 {
 		t.Fatal("a held_open event was stored and nobody was told")
 	}
-	if event != EventAccessHeldOpen {
-		t.Errorf("X-Aql-Event = %q, want %q", event, EventAccessHeldOpen)
+	mu.Lock()
+	gotEvent, gotBody := event, string(body)
+	mu.Unlock()
+
+	if gotEvent != EventAccessHeldOpen {
+		t.Errorf("X-Aql-Event = %q, want %q", gotEvent, EventAccessHeldOpen)
 	}
-	if !strings.Contains(string(body), "seconds_since_reported_closed") {
-		t.Errorf("payload does not name what it measures: %s", body)
+	if !strings.Contains(gotBody, "seconds_since_reported_closed") {
+		t.Errorf("payload does not name what it measures: %s", gotBody)
 	}
-	if strings.Contains(string(body), "seconds_open") {
-		t.Errorf("payload claims the gate was open, which the controller does not know: %s", body)
+	if strings.Contains(gotBody, "seconds_open") {
+		t.Errorf("payload claims the gate was open, which the controller does not know: %s", gotBody)
 	}
 }

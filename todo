@@ -840,6 +840,25 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] FOURTH INSTANCE, found by DETECTING the shape instead of stumbling on it: wrote
+      a sweep for functions that take a lock more than once (lock, read, unlock,
+      act) — 10 across both modules. One name stood out immediately,
+      Hub.ConsumePollChallenge, because "consume" IS single-use.
+      Same defect: it read the challenge WITH its consumed flag, released the lock,
+      ran the whole signature and freshness verification against that stale flag, and
+      only then marked it. Measured: 8 concurrent auths for one cnonce, 8 accepted.
+      That is the replay protection on the long-poll path not existing under load — a
+      captured ws.auth could open more than one authenticated session.
+      Fixed with the same compare-and-swap; a challenge swept between read and
+      consume returns cnonce_unknown rather than cnonce_replay, because expired and
+      replayed are different facts. Exactly 1 accepted in every run now, tamper
+      CAUGHT.
+      -race THEN CAUGHT MY OWN TEST from two days ago: the held_open webhook test read
+      the receiver goroutine's captures without a lock. Dispatch there is
+      asynchronous — the point of the code — unlike the synchronous deliverOne tests
+      beside it, which is why they get away without one. Fixed; whole httpapi package
+      race-clean.
+
 - [x] A SINGLE-USE EMERGENCY GRANT COULD BE REDEEMED EIGHT TIMES. HandleProof read
       `used[cnonce]` at the top, released the lock, ran every validation step, and
       only then consumed the cnonce — so two proofs with the same cnonce could both

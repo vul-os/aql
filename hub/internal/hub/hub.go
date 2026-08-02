@@ -477,9 +477,31 @@ func (h *Hub) ConsumePollChallenge(controllerPub ed25519.PublicKey, raw []byte, 
 	if reason != "" {
 		return reason
 	}
+	// Re-read under the lock and refuse if someone else got here first.
+	//
+	// The `consumed` flag VerifyAuth was given came from a read that released
+	// the lock before any of the verification above ran. Two auths carrying one
+	// cnonce could therefore both see it unconsumed, both verify, and both mark
+	// it — measured at eight concurrent calls, eight accepted, which is the
+	// replay protection on this path not existing under load.
+	//
+	// This is the same defect as the grant exchange's cnonce and the relay hold
+	// timer: a check whose action happens outside the lock is not a check. Here
+	// the consume decides whether a captured ws.auth can open more than one
+	// authenticated poll session.
 	h.mu.Lock()
-	st.consumed = true
-	h.challenges[a.Cnonce] = st
+	cur, still := h.challenges[a.Cnonce]
+	switch {
+	case !still:
+		// Swept between the read and here — expired, not replayed.
+		h.mu.Unlock()
+		return "cnonce_unknown"
+	case cur.consumed:
+		h.mu.Unlock()
+		return "cnonce_replay"
+	}
+	cur.consumed = true
+	h.challenges[a.Cnonce] = cur
 	h.mu.Unlock()
 	return ""
 }
