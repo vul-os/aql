@@ -40,6 +40,15 @@
 # CMD runs from the FILE's module root when there is one, else from the
 # repository root, so `npm run` and `npx vitest` work the way they do by hand.
 #
+# ON A CROSS-MODULE PROPERTY: CMD's default scope is one module, and `go test
+# ./...` from controller/ does not run e2e/. Making Agent.OnDenied actuate the
+# relay — a denied emergency grant opening the gate — reads NOT CAUGHT that way,
+# and is caught immediately by e2e (TestOfflineGrant_Rejects,
+# TestRevoke_StopsAGrantOpeningARealController), which drives the real binaries.
+# A false NOT CAUGHT costs less than a false CAUGHT, but it still sends you
+# building a guard that already exists. For anything the other side of a seam
+# observes, pass the wider command: `-- bash -c 'cd .. && ./scripts/check.sh'`.
+#
 # ON A FLOOR: to test a coverage floor, RAISE it above real coverage. Lowering
 # one changes nothing while the corpus is larger than either number, so it reads
 # NOT CAUGHT against a guard that is fine.
