@@ -116,6 +116,19 @@ run_gofmt "gofmt"                     hub
 run      "go vet"                     hub go vet ./...
 run      "go build"                   hub go build ./...
 run      "go test"                    hub go test -count=1 ./...
+# The portal tag needs the built React bundle at hub/internal/portal/dist, which
+# is a build output and not committed — so this can only run after `make portal`.
+#
+# It is a gate rather than a footnote because the tagged build is the one that
+# ships, and its only test went unrun for as long as it existed: nothing anywhere
+# executed `go test -tags portal`. What it covers is the SPA fallback, which had
+# been answering unregistered /v1/ paths with 200 and index.html.
+#
+# Listed under hub because run_portal cds to hub/. It used to print after the
+# `controller` heading, so the output said the controller module had a portal
+# build and the hub had none — and a reader auditing whether the shipped build
+# is tested would have read the hub block and concluded it is not.
+run_portal "go test -tags portal"
 
 echo "controller"
 run_gofmt "gofmt"                     controller
@@ -125,15 +138,24 @@ run      "go test"                    controller go test -count=1 ./...
 # file behind a build tag is invisible to the plain run above.
 run      "go test -tags gpio"         controller go test -count=1 -tags gpio ./...
 run      "go test -tags ble"          controller go test -count=1 -tags ble ./...
-
-# The portal tag needs the built React bundle at hub/internal/portal/dist, which
-# is a build output and not committed — so this can only run after `make portal`.
+# ...and the two above are PARTLY BLIND on a Mac, which is where they mostly run.
 #
-# It is a gate rather than a footnote because the tagged build is the one that
-# ships, and its only test went unrun for as long as it existed: nothing anywhere
-# executed `go test -tags portal`. What it covers is the SPA fallback, which had
-# been answering unregistered /v1/ paths with 200 and index.html.
-run_portal "go test -tags portal"
+# `-tags ble` runs 296 tests on darwin. So does no tag at all: the only file
+# behind that tag is `ble && (linux || windows)`, so the gate compiled nothing
+# new and printed ok either way. A type error planted in start_gatts.go passed
+# all sixteen gates — gofmt parses it, but nothing typechecks a file the build
+# constraints exclude. Same for `gpio && linux` (gpio_linux.go and its test).
+#
+# vet rather than build, because `go build` does not look at _test.go files and
+# gpio_linux_test.go is exactly the kind of file nobody compiles here. Both are
+# typecheck-only: no Linux binary runs on this machine, and these tests still
+# need real hardware.
+run      "go vet (linux, -tags gpio)" controller env CGO_ENABLED=0 GOOS=linux go vet -tags gpio ./...
+run      "go vet (linux, -tags ble)"  controller env CGO_ENABLED=0 GOOS=linux go vet -tags ble ./...
+# ARCHITECTURE.md says the peripheral "cross-compiles for Linux (BlueZ) and
+# Windows (WinRT) behind -tags ble". The Linux half is checked above; this is
+# the Windows half, which was a claim nothing verified.
+run      "go vet (windows, -tags ble)" controller env CGO_ENABLED=0 GOOS=windows go vet -tags ble ./...
 
 echo "e2e (real binaries)"
 run      "go test"                    e2e go test -count=1 -timeout 900s ./...
