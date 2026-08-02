@@ -67,6 +67,23 @@ run_gofmt() {
   fi
 }
 
+run_portal() {
+  local name="$1" out
+  if [ ! -d "$ROOT/hub/internal/portal/dist" ]; then
+    printf '  \033[33mSKIP\033[0m  %s (no built bundle; run `make -C hub portal` — CI builds it)\n' "$name"
+    SKIPPED=$((SKIPPED + 1))
+    return
+  fi
+  if out=$(cd "$ROOT/hub" && go test -count=1 -tags portal ./internal/portal/ 2>&1); then
+    printf '  \033[32mok\033[0m    %s\n' "$name"
+    PASS=$((PASS + 1))
+  else
+    printf '  \033[31mFAIL\033[0m  %s\n' "$name"
+    printf '%s\n' "$out" | tail -25 | sed 's/^/          /'
+    FAIL=$((FAIL + 1)); FAILED_NAMES+=("$name")
+  fi
+}
+
 run_deadcode() {
   local name="$1" out rc
   out=$("$ROOT/scripts/deadcode.sh" 2>&1); rc=$?
@@ -108,6 +125,15 @@ run      "go test"                    controller go test -count=1 ./...
 # file behind a build tag is invisible to the plain run above.
 run      "go test -tags gpio"         controller go test -count=1 -tags gpio ./...
 run      "go test -tags ble"          controller go test -count=1 -tags ble ./...
+
+# The portal tag needs the built React bundle at hub/internal/portal/dist, which
+# is a build output and not committed — so this can only run after `make portal`.
+#
+# It is a gate rather than a footnote because the tagged build is the one that
+# ships, and its only test went unrun for as long as it existed: nothing anywhere
+# executed `go test -tags portal`. What it covers is the SPA fallback, which had
+# been answering unregistered /v1/ paths with 200 and index.html.
+run_portal "go test -tags portal"
 
 echo "e2e (real binaries)"
 run      "go test"                    e2e go test -count=1 -timeout 900s ./...

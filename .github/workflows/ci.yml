@@ -28,6 +28,16 @@ jobs:
       # "files": [], so a plain `tsc --noEmit` type-checks NOTHING and passes
       # on a deliberately broken file. It did exactly that until it was caught.
       - run: npm run typecheck
+      # The portal-tagged tests, which need the built bundle. Nothing ran them
+      # until now: the tagged build is what ships, and its SPA-fallback test had
+      # never executed anywhere, while the fallback was answering unregistered
+      # /v1/ paths with 200 and index.html.
+      - name: portal-tagged tests
+        run: |
+          npm run build
+          rm -rf hub/internal/portal/dist
+          cp -r dist hub/internal/portal/dist
+          (cd hub && go test -count=1 -tags portal ./internal/portal/)
       - run: npm test              # vitest run
       - run: npm run build         # tsc -b && vite build
       # The doc-accuracy gate. It has existed for a long time and CI never ran

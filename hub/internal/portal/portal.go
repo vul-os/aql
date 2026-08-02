@@ -58,6 +58,26 @@ func Handler() http.Handler {
 			http.NotFound(w, r)
 			return
 		}
+		// The API namespace never falls back, for the same reason assets do not
+		// and a stronger one.
+		//
+		// An unregistered /v1/ path has no dot in its last segment, so it used
+		// to be treated as a client route: `GET /v1/accounts/x/devices` on a
+		// hub that has no such route answered 200 with index.html. That is the
+		// worst possible answer for a caller. A renamed or mistyped endpoint
+		// stops being a 404 anyone can act on and becomes a success carrying
+		// HTML, and any client that checks the status before parsing —
+		// including a shell script with `curl -f` — reads it as working.
+		//
+		// The mux registers the real routes first, so only paths that match
+		// NOTHING arrive here. Refusing them is not a routing decision; it is
+		// declining to answer for a namespace this handler does not own.
+		if p == "v1" || strings.HasPrefix(p, "v1/") {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte(`{"error":"not_found"}` + "\n"))
+			return
+		}
 		serveIndex(w, r)
 	})
 }

@@ -832,6 +832,26 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] The API namespace was answered by the CONSOLE. An unregistered /v1/ path has
+      no dot in its last segment, so the SPA fallback treated it as a client route:
+      `GET /v1/accounts/x/devices` returned 200 with index.html. A renamed or
+      mistyped endpoint stopped being a 404 anyone can act on and became a SUCCESS
+      carrying HTML — `curl -f` calls that working. Found by chasing what looked
+      like an auth hole in a sweep (a 200 on an unauthenticated call) and turned out
+      to be the fallback; verifying before accusing paid again.
+      The fix's own test lived in portal_embed_test.go, tagged `portal` — and
+      NOTHING RAN `go test -tags portal` anywhere, so TestPortalBuildSPAFallback, the
+      only test of the shipping build's fallback, had never executed. check.sh now
+      runs it when the bundle is present (visible SKIP otherwise) and CI builds the
+      bundle and runs it unconditionally.
+      Also: HazardousCommands had no test loading it at all — the Date-into-JSX
+      errors would have crashed it for any real intent. Added an e2e spec; 3 tampers
+      caught (render crash, missing nav entry, wrong API route). Swept all 20 console
+      pages in a browser first: 19 clean, the 20th a 503 from a hub with no device
+      engine, which is honest. testGatesAreFresh flagged my new gate because it read
+      a quoted LABEL as an invocation — fixed the parser to strip quoted spans, and
+      its own control still catches a genuinely missing -count=1.
+
 - [x] THE tsc GATE WAS CHECKING NOTHING, and it hid six real type errors in a page I
       shipped earlier this session. tsconfig.json is a solution file ("files": [] +
       references), so `npx tsc --noEmit` builds an empty program and exits 0 on any

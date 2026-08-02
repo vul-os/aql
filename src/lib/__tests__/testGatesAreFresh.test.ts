@@ -48,7 +48,16 @@ function goTestLines(): Array<{ file: string; line: number; text: string }> {
         // A YAML step NAME can be "go test" and is not a command. Matching it
         // demanded the flag inside a label, which was this test's first result.
         if (/^\s*-?\s*name:/.test(text)) return;
-        if (!/\bgo test\b/.test(text)) return;
+        // Quoted strings are LABELS, not commands. check.sh's helpers take a
+        // display name first — `run "go test -tags ble" controller go test
+        // -count=1 …` — and one of them takes only a name, with the real
+        // invocation inside the function. Matching the label reported a gate as
+        // cache-serving when the command it dispatches carries the flag.
+        //
+        // Stripping quoted spans leaves exactly the executable part of the
+        // line, so both shapes are judged on what actually runs.
+        const command = text.replace(/"[^"]*"/g, '').replace(/'[^']*'/g, '');
+        if (!/\bgo test\b/.test(command)) return;
         out.push({ file: rel, line: i + 1, text: text.trim() });
       });
   }
