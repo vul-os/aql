@@ -288,6 +288,60 @@ refusal they cannot act on.`,
 });
 
 
+describe('the schema a parity entry reads is the one the database uses', () => {
+  // A sqlFile entry names ONE migration, and migrations supersede each other.
+  //
+  // SQLite cannot ALTER a CHECK, so this repo changes one by rebuilding: create
+  // `<table>_next` with the new constraint, copy, DROP the original, rename.
+  // 0029 does exactly that to automation_rules, which is why trigger_kind
+  // appears with three values in 0010 and four in 0029 — not a drift, a
+  // replacement.
+  //
+  // The trap that leaves is quiet. A parity entry pinned to 0001 keeps reading
+  // 0001 after the table it describes has been rebuilt in 0031, and compares Go
+  // against a definition the database dropped. It would pass, on dead schema,
+  // for as long as the old text sat in the old file.
+  it('no table a sqlPattern reads has been rebuilt in a later migration', () => {
+    const files = execFileSync('git', ['ls-files', 'hub/internal/store/migrations/*.sql'], {
+      cwd: root,
+      encoding: 'utf8',
+    })
+      .split('\n')
+      .filter(Boolean)
+      .sort();
+
+    const withSql = VOCABULARIES.filter((v) => v.sqlFile);
+    expect(withSql.length, 'no vocabulary reads the schema — this check is moot')
+      .toBeGreaterThanOrEqual(2);
+
+    const stale: string[] = [];
+    for (const v of withSql) {
+      const text = read(v.sqlFile!);
+      const m = v.sqlPattern!.exec(text);
+      if (!m) throw new Error(`${v.name}: sqlPattern matched nothing in ${v.sqlFile}`);
+      // The CREATE TABLE this CHECK sits inside.
+      const before = text.slice(0, m.index);
+      const table = [...before.matchAll(/CREATE TABLE (?:IF NOT EXISTS )?([a-z_]+)/g)].pop()?.[1];
+      if (!table) throw new Error(`${v.name}: no CREATE TABLE above the CHECK in ${v.sqlFile}`);
+
+      for (const f of files.filter((f) => f > v.sqlFile!)) {
+        const later = read(f);
+        if (
+          new RegExp(`DROP TABLE\\s+(?:IF EXISTS\\s+)?${table}\\b`).test(later) ||
+          new RegExp(`RENAME TO\\s+${table}\\b`).test(later)
+        ) {
+          stale.push(`${v.name} reads ${table} from ${v.sqlFile}, but ${f} rebuilds it`);
+        }
+      }
+    }
+    expect(
+      stale,
+      'a parity entry is comparing Go against a CREATE TABLE the database has ' +
+        'since replaced. Point sqlFile at the migration that rebuilt it.',
+    ).toEqual([]);
+  });
+});
+
 describe('a vocabulary written into several migrations stays one vocabulary', () => {
   // `role` is CHECKed in THREE places — 0001_baseline.sql once and
   // 0002_members_invites_settings.sql twice. The parity entry above reads one
