@@ -2513,8 +2513,31 @@ export type AuditVerifyResult = {
     table: string;
     rows_checked: number;
     ok: boolean;
+    /**
+     * The chain's last row hash — the half of the anchor that matters.
+     *
+     * Recorded off the box alongside rows_checked, it makes a truncated history
+     * noticeable: the chain cannot see its own tail being cut off, because what
+     * remains still chains correctly. A row count alone is not an anchor, since
+     * ordinary activity refills it.
+     */
+    head: string;
     broken_at?: { index: number; row_id: string; reason: string };
   }>;
+  /**
+   * The other question, answered separately: does the log describe things that
+   * happened?
+   *
+   * The chain proves nobody edited a row. It is silent about a row that should
+   * never have been written — a bug upstream leaves entries that verify
+   * perfectly, because nobody did edit them. Every audit row claiming a
+   * controller origin should have the signed event behind it; one that does not
+   * is counted here.
+   *
+   * Deliberately NOT folded into `ok`: a chain break says the log was changed,
+   * an orphan says it over-reports, and the responses differ.
+   */
+  cross_check: { ok: boolean; orphaned_audit_rows: number; ids?: string[] };
 };
 
 export type AccountRow = {

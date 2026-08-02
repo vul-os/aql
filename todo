@@ -840,6 +840,22 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] Gave the HTTP surface the same answer as the CLI. verify-audit prints three
+      lines; GET /v1/admin/audit/verify ran only the two chains, so an operator
+      reading the console got a WEAKER answer than one with shell access and nothing
+      said so. Same two-surfaces gap as the webhook vocabulary, and the same shape as
+      `head`, which the API had returned for days while the console's TYPE never
+      mentioned it — the anchor the docs tell operators to write down was not on the
+      screen they read.
+      Both are on the page now: the head under each chain, and the cross-check as its
+      own row, phrased as a different question ("Matched" vs "Intact") rather than
+      folded into the chain verdict. It also does NOT set the 409: a chain break says
+      the log was changed, an orphan says it over-reports, and a caller has to be
+      able to tell which it got.
+      The HTTP test asserts the WIRING (shape, verdict, count) and deliberately not
+      zero-orphans, which would pass equally against a hardcoded field; the
+      store-level test owns the positive case. Both tampers CAUGHT.
+
 - [x] I CREATED THE DEFECT I KEEP FINDING, in the previous commit: wrote that "an
       auditor can compare controller_events against access_logs" and shipped no way
       to do it. A documented procedure with no tooling is the exact shape of every

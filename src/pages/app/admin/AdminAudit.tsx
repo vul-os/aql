@@ -364,6 +364,12 @@ function ChainVerify() {
               <span className="text-sm text-ink/60">
                 {c.rows_checked.toLocaleString()} row{c.rows_checked === 1 ? '' : 's'} checked
               </span>
+              {/* The head, so this screen can be used the way the docs say:
+                  write down (rows, head) somewhere this box does not control,
+                  and a truncated history stops being invisible. */}
+              <span className="w-full font-mono text-[11px] text-ink/45 break-all">
+                head {c.head}
+              </span>
               {c.broken_at && (
                 <p className="w-full text-sm text-terracotta-deep mt-1" role="alert">
                   First break at row {c.broken_at.index} (id {c.broken_at.row_id}):{' '}
@@ -372,6 +378,27 @@ function ChainVerify() {
               )}
             </li>
           ))}
+          {/* Separate from the chains, because it answers a different question:
+              not "was this edited" but "does it describe what happened". An
+              orphan is an audit row with no signed controller event behind it. */}
+          <li className="py-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="font-mono text-sm text-ink">signed-event cross-check</span>
+            <span
+              className={cn(
+                'inline-flex items-center rounded-full px-2.5 py-1 text-[10px] uppercase tracking-[0.18em]',
+                result.cross_check.ok
+                  ? 'bg-moss/15 text-moss'
+                  : 'bg-terracotta-deep/15 text-terracotta-deep',
+              )}
+            >
+              {result.cross_check.ok ? 'Matched' : 'Unmatched'}
+            </span>
+            <span className="text-sm text-ink/60">
+              {result.cross_check.ok
+                ? 'every controller-sourced row has its signed event'
+                : `${result.cross_check.orphaned_audit_rows.toLocaleString()} row(s) claim a controller origin with no signed event behind them`}
+            </span>
+          </li>
         </ul>
       )}
     </Card>

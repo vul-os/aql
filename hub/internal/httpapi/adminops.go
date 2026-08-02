@@ -480,11 +480,36 @@ func (s *Server) handleAdminAuditVerify(w http.ResponseWriter, r *http.Request) 
 		}
 		chains = append(chains, row)
 	}
+	// The same cross-check the CLI runs, because an operator reading this from
+	// the console must not get a weaker answer than one running verify-audit.
+	//
+	// That gap is not hypothetical in this repository: the console offered two
+	// webhook events while the hub sent four, for as long as automation alerts
+	// had existed, because one of two surfaces was updated.
+	//
+	// Reported as its own field rather than folded into `ok`, and it does NOT
+	// set the 409. A chain break means the audit trail was changed; an orphan
+	// means it over-reports. Both deserve attention and they call for different
+	// responses, so a caller has to be able to tell which one it got.
+	orphans, oerr := s.store.OrphanedControllerAuditRows(r.Context())
+	if oerr != nil {
+		writeErr(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	crossCheck := map[string]any{"ok": len(orphans) == 0, "orphaned_audit_rows": len(orphans)}
+	if len(orphans) > 0 {
+		shown := orphans
+		if len(shown) > 20 {
+			shown = shown[:20]
+		}
+		crossCheck["ids"] = shown
+	}
+
 	status := http.StatusOK
 	if !ok {
 		status = http.StatusConflict // the audit trail itself is in a broken/inconsistent state
 	}
-	writeJSON(w, status, map[string]any{"ok": ok, "chains": chains})
+	writeJSON(w, status, map[string]any{"ok": ok, "chains": chains, "cross_check": crossCheck})
 }
 
 // GET /v1/admin/audit/actions — the admin-action trail.
