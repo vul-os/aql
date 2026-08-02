@@ -35,6 +35,34 @@
 # Data note: /data is baked owned by nonroot (uid 65532). Named volumes inherit
 # that ownership; if you bind-mount a host directory instead, chown it to 65532.
 
+# The console, built first and embedded below.
+#
+# Without this stage the image shipped the PLACEHOLDER page: `go build` with no
+# tags compiles internal/portal/portal_default.go, which serves a static "the
+# portal is not embedded in this build" notice and returns 404 for every console
+# route. Every release tarball and every image did that, while README told people
+# to open localhost:8080 and called it the whole product, and e2e-browser built
+# with `-tags portal` on the grounds that it is "the only faithful way to test
+# what actually ships". Nothing that shipped was built that way.
+#
+# The React bundle cannot be produced by the Go toolchain, which is why the tag
+# exists at all — so the image needs a node stage, and the build needs the
+# repository root as context, which it already required for the jcs module.
+FROM node:20-alpine AS web
+
+WORKDIR /web
+# Manifests first, so a source edit does not re-run npm ci.
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY tsconfig.json tsconfig.app.json tsconfig.node.json vite.config.ts index.html ./
+COPY src/ ./src/
+COPY public/ ./public/
+# `npm run build` is `tsc -b && vite build`: the type check is part of the build
+# on purpose, so an image cannot be produced from a tree whose console does not
+# type-check. That is not hypothetical — six type errors sat in a console page
+# while the local gate ran a `tsc --noEmit` that checked nothing.
+RUN npm run build
+
 FROM golang:1.25-alpine AS build
 
 # BUILD CONTEXT IS THE REPOSITORY ROOT, not hub/.
@@ -62,8 +90,11 @@ COPY jcs/ ./jcs/
 COPY hub/ ./hub/
 WORKDIR /src/hub
 
+# The bundle goes where //go:embed expects it, then the tag selects it.
+COPY --from=web /web/dist ./internal/portal/dist
+
 ARG VERSION=dev
-RUN CGO_ENABLED=0 go build -trimpath \
+RUN CGO_ENABLED=0 go build -trimpath -tags portal \
       -ldflags "-s -w -X main.Version=${VERSION}" \
       -o /out/aql-hub ./cmd/hub
 

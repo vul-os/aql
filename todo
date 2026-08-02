@@ -832,6 +832,32 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] THE tsc GATE WAS CHECKING NOTHING, and it hid six real type errors in a page I
+      shipped earlier this session. tsconfig.json is a solution file ("files": [] +
+      references), so `npx tsc --noEmit` builds an empty program and exits 0 on any
+      tree. ci.yml worked this out long ago, switched to `npm run typecheck`
+      (tsc -b) and left a comment saying "it did exactly that until it was caught" —
+      and scripts/check.sh kept the broken form. The lesson was applied to one of the
+      two runners. Meanwhile `npm run build` FAILED: HazardousCommands.tsx used
+      accountId (AuthState has currentAccount), PageHeader's subtitle (it is
+      description), rendered Date|null as a ReactNode twice, and a Button variant
+      that does not exist. Fixed against the real APIs; guard added asserting both
+      runners use -b, anchored to the reason (the empty root config).
+      Chasing that turned up three more, each verified end to end:
+        · NO SHIPPED ARTIFACT EMBEDDED THE CONSOLE. Release tarballs and the image
+          are plain `go build`, so they serve the placeholder and 404 every console
+          route, while README says "open localhost:8080, that's the whole product"
+          and e2e builds -tags portal as "the only faithful way to test what ships".
+          Dockerfile has a node stage now; image verified serving the real SPA with
+          assets and fallback. release.yml builds the bundle the same way.
+        · `npm ci` FAILED ON LINUX — package-lock.json was missing platform optional
+          deps, so CI's first step would fail. Regenerated the lock INSIDE linux;
+          verified `npm ci` on both linux and darwin.
+        · release.sh tested `[ -f gateway/go.mod ]` — the pre-rename path — and
+          printed "gateway: skipped" on every run, so the MAIN MODULE was never
+          built or tested at release. A skip is honest only when the thing is
+          optional; a missing hub is a failure now.
+
 - [x] Swept the REVERSE direction of the doc checks — strings the docs quote FROM the
       product — and found two. site/docs/linking-whatsapp.md told operators that a
       webhook signature mismatch "logs `whatsapp: bad signature` to the audit log":

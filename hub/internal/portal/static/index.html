@@ -12,8 +12,19 @@
 </head>
 <body>
   <h1>Aql hub</h1>
-  <p>The gateway is running. The management portal is not embedded in this build yet
-     &mdash; this placeholder marks the seam where the Svelte portal bundle will live.</p>
-  <p>API: <code>GET /health</code> &middot; <code>GET /v1/gateway/key</code> &middot; <code>/v1/auth/*</code> &middot; <code>/v1/admin/claim</code></p>
+  <p>
+    The hub is running. This build does not embed the console &mdash; a plain
+    <code>go build</code> compiles the placeholder you are reading.
+  </p>
+  <p>
+    To get the real one, build the React bundle and compile with the tag that
+    embeds it: <code>make portal &amp;&amp; make build-portal</code> from
+    <code>hub/</code>, or use a released binary or the container image, which are
+    built that way.
+  </p>
+  <p>
+    API: <code>GET /health</code> &middot; <code>GET /v1/gateway/key</code>
+    &middot; <code>/v1/auth/*</code> &middot; <code>/v1/admin/claim</code>
+  </p>
 </body>
 </html>

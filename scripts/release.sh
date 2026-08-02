@@ -64,12 +64,20 @@ step "backend: typecheck + unit tests"
   npm run test:unit
 )
 
-if [ -f gateway/go.mod ]; then
-  step "gateway: go vet + go test"
-  (cd gateway && go vet ./... && CGO_ENABLED=0 go build ./... && go test ./...)
-else
-  step "gateway: skipped (gateway/go.mod not found)"
+# The hub module. NOT optional, and not called gateway.
+#
+# This read `if [ -f gateway/go.mod ]` — the pre-rename directory — so it took
+# the else branch on every run and printed "gateway: skipped". The main module
+# went unbuilt and untested at release time, announced by a line that read like
+# a deliberate omission rather than a mistake. A skip is only honest when the
+# thing skipped is genuinely optional; this one never was, so a missing hub is
+# now a failure.
+if [ ! -f hub/go.mod ]; then
+  echo "release: hub/go.mod is missing — this is not an aql checkout" >&2
+  exit 1
 fi
+step "hub: go vet + go build + go test"
+(cd hub && go vet ./... && CGO_ENABLED=0 go build ./... && go test ./...)
 
 if [ -f controller/go.mod ]; then
   step "controller: go vet + go test"

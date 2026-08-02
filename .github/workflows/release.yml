@@ -59,6 +59,25 @@ jobs:
         with:
           go-version-file: hub/go.mod
           cache-dependency-path: hub/go.sum
+      # The console, embedded into every released binary.
+      #
+      # Without it `go build` compiles portal_default.go and the binary serves a
+      # placeholder that says the portal "is not embedded in this build", with
+      # 404 on every console route. That is what every release tarball contained,
+      # while README told people to open localhost:8080 and called it the whole
+      # product. The React bundle cannot come out of the Go toolchain, so the
+      # release has to build it — the same thing hub/Makefile's `portal` target
+      # and e2e-browser's global setup both do.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Build the console
+        run: |
+          npm ci
+          npm run build
+          rm -rf hub/internal/portal/dist
+          cp -r dist hub/internal/portal/dist
       - name: Build
         working-directory: hub
         env:
@@ -68,7 +87,7 @@ jobs:
         run: |
           name="aql-hub_${GITHUB_REF_NAME}_${GOOS}_${GOARCH}"
           mkdir -p dist
-          go build -trimpath \
+          go build -trimpath -tags portal \
             -ldflags "-s -w -X main.Version=${GITHUB_REF_NAME}" \
             -o "dist/${name}/aql-hub" ./cmd/hub
           tar -C dist -czf "dist/${name}.tar.gz" "${name}"

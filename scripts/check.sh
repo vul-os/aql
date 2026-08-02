@@ -123,7 +123,15 @@ echo "wire contracts"
 run      "vector verifier"            proto/vectors node verify.mjs
 
 echo "frontend"
-run      "tsc"                        . npx tsc --noEmit
+# `npm run typecheck`, which is `tsc -b --noEmit`, and NOT `npx tsc --noEmit`.
+#
+# The root tsconfig.json is a solution file: "files": [] plus references. A plain
+# `tsc --noEmit` therefore type-checks NOTHING and exits 0 on any tree at all.
+# ci.yml has said so at its own typecheck step for a long time — "it did exactly
+# that until it was caught" — and this line kept the bug the whole time, so the
+# local gate reported green over six real type errors in a page that could not
+# build. Running what CI runs is the only way the two cannot drift.
+run      "tsc"                        . npm run typecheck
 run      "vitest"                     . npx vitest run
 run      "feature claims"             . npm run check:claims
 

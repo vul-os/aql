@@ -92,7 +92,7 @@ function outcomeText(i: StepUpIntentRow): string | null {
 }
 
 export default function HazardousCommands() {
-  const { accountId } = useAuth();
+  const { currentAccount } = useAuth();
   const [intents, setIntents] = useState<StepUpIntentRow[]>([]);
   const [windows, setWindows] = useState<T4WindowRow[]>([]);
   const [devices, setDevices] = useState<EngineDevice[]>([]);
@@ -108,12 +108,12 @@ export default function HazardousCommands() {
   const [armErr, setArmErr] = useState('');
 
   const load = useCallback(async () => {
-    if (!accountId) return;
+    if (!currentAccount) return;
     setErr('');
     try {
       const [i, w] = await Promise.all([
-        api.stepUpIntents(accountId),
-        api.t4Windows(accountId),
+        api.stepUpIntents(currentAccount.id),
+        api.t4Windows(currentAccount.id),
       ]);
       setIntents(i.stepup_intents ?? []);
       setWindows(w.t4_windows ?? []);
@@ -122,7 +122,7 @@ export default function HazardousCommands() {
     } finally {
       setLoading(false);
     }
-  }, [accountId]);
+  }, [currentAccount]);
 
   useEffect(() => {
     void load();
@@ -147,7 +147,7 @@ export default function HazardousCommands() {
   }, []);
 
   async function decide(intent: StepUpIntentRow, approve: boolean) {
-    if (!accountId) return;
+    if (!currentAccount) return;
     const who = intent.device_key;
     if (
       approve &&
@@ -162,7 +162,7 @@ export default function HazardousCommands() {
     setBusy(intent.id);
     setErr('');
     try {
-      await api.stepUpDecide(accountId, intent.id, approve);
+      await api.stepUpDecide(currentAccount.id, intent.id, approve);
     } catch (e) {
       setErr(friendlyApiError(e));
     } finally {
@@ -173,7 +173,7 @@ export default function HazardousCommands() {
 
   async function arm(e: FormEvent) {
     e.preventDefault();
-    if (!accountId) return;
+    if (!currentAccount) return;
     setArmErr('');
     setBusy('arm');
     try {
@@ -185,7 +185,7 @@ export default function HazardousCommands() {
       const n = Number(maxUses);
       if (maxUses.trim() !== '' && Number.isFinite(n) && n > 0) body.max_uses = n;
       if (notes.trim() !== '') body.notes = notes.trim();
-      await api.t4WindowArm(accountId, body);
+      await api.t4WindowArm(currentAccount.id, body);
       setNotes('');
       setMaxUses('');
       await load();
@@ -197,11 +197,11 @@ export default function HazardousCommands() {
   }
 
   async function disarm(w: T4WindowRow) {
-    if (!accountId) return;
+    if (!currentAccount) return;
     setBusy(w.id);
     setErr('');
     try {
-      await api.t4WindowDisarm(accountId, w.id);
+      await api.t4WindowDisarm(currentAccount.id, w.id);
     } catch (e) {
       setErr(friendlyApiError(e));
     } finally {
@@ -217,7 +217,7 @@ export default function HazardousCommands() {
     <div className="space-y-6">
       <PageHeader
         title="Hazardous commands"
-        subtitle="Approve, or refuse, the commands that can injure — asked for over chat, decided here."
+        description="Approve, or refuse, the commands that can injure — asked for over chat, decided here."
       />
 
       <Card>
@@ -255,14 +255,14 @@ export default function HazardousCommands() {
                   <span className="text-xs text-muted">{remaining(i.expires_at)}</span>
                 </div>
                 <p className="mt-1 text-sm text-muted">
-                  Asked for over {i.source} at {fromUnix(i.created_at)}.
+                  Asked for over {i.source} at {fromUnix(i.created_at)?.toLocaleString() ?? 'an unrecorded time'}.
                 </p>
                 <div className="mt-3 flex gap-2">
                   <Button onClick={() => void decide(i, true)} disabled={busy === i.id}>
                     Approve and run
                   </Button>
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     onClick={() => void decide(i, false)}
                     disabled={busy === i.id}
                   >
@@ -296,7 +296,7 @@ export default function HazardousCommands() {
                     </span>
                   </div>
                   <p className="mt-1 text-muted">
-                    Asked over {i.source} at {fromUnix(i.created_at)}.
+                    Asked over {i.source} at {fromUnix(i.created_at)?.toLocaleString() ?? 'an unrecorded time'}.
                     {outcome ? ` ${outcome}` : ''}
                   </p>
                 </li>
@@ -426,7 +426,7 @@ export default function HazardousCommands() {
                 {w.status === 'active' ? (
                   <div className="mt-2">
                     <Button
-                      variant="secondary"
+                      variant="outline"
                       onClick={() => void disarm(w)}
                       disabled={busy === w.id}
                     >
