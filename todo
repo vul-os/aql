@@ -832,6 +832,25 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] Phone-width CLIPPING is now checked, which main.css made unverifiable by the
+      usual means: `html { overflow-x: clip }` is a deliberate guard whose comment
+      claims it swallows decoration "without cutting real content, which is laid out
+      within the viewport". With clip there is no sideways scroll, so
+      scrollWidth>innerWidth reports nothing and a desktop browser shows nothing —
+      content past the right edge is simply gone, on the surface README calls "where
+      a gate gets opened". Measured per-element instead. 15 pages clean, so the CSS
+      comment's claim holds; it had never been checked.
+      MY FIRST VERSION OF THIS TEST WAS WORTHLESS AND SAID NOTHING ABOUT IT. It
+      waited on `body` being visible plus 500ms — body exists immediately — so it
+      measured pages before their fetches rendered. A planted 900px-wide list was
+      NOT CAUGHT, and the sweep's output looked identical whether it examined a
+      rendered page or a blank one. Fixed with waitForLoadState('networkidle');
+      the same tamper is caught now.
+      Both controls are meaningful: planted clipped content -> CAUGHT; wide content
+      inside overflow-x:auto -> NOT caught, which is the CORRECT result, since a
+      user can scroll to it. tamper.sh prints "NOT CAUGHT" for that one and it means
+      the opposite of a problem.
+
 - [x] Extended the empty-state sweep to BOTH widths: 20 pages x 2 viewports = 40
       visits, all clean. Measured the class first rather than assuming — 11 components
       swap markup at a breakpoint, two of them console pages (ApiTokens, Members),
