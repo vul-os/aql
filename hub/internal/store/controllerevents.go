@@ -101,24 +101,33 @@ func (s *Store) RecordControllerEvent(ctx context.Context, ev ControllerEvent) (
 		return false, "", err
 	}
 
-	// The audit row first, so the controller_events row can point at it.
-	// If this fails, nothing is stored and the event will be redelivered on
-	// the next reconnect (the controller only drops an event once the frame
-	// write succeeds, and this hub has not yet acted on it).
-	if cmd, ok := accessKinds[ev.Kind]; ok {
-		logID, err = s.appendEventAuditRow(ctx, ev, cmd)
-		if err != nil {
-			return false, "", err
-		}
-	}
-
+	// The INSERT is the CLAIM, and it comes first.
+	//
+	// The audit row used to be appended before it, so the event row could carry
+	// its id in one statement. Under two concurrent redeliveries of one event
+	// that appended an audit row EACH: measured at six concurrent calls, one
+	// controller_events row and six access_logs rows — six opens in the
+	// tamper-evident trail for one gate movement. The pre-check above narrows
+	// the window and cannot close it, which its own comment says ("ordering,
+	// not trust").
+	//
+	// Insert first and the PRIMARY KEY decides the winner atomically. Everyone
+	// else sees zero rows affected and appends nothing.
+	//
+	// The cost is that the event row's access_log_id is filled by an UPDATE a
+	// moment later, so a reader between the two sees an event with no audit
+	// pointer. That state is already normal here — a device with no access
+	// point stores its raw event and no audit row at all — and it is the
+	// better failure: an event without its audit row under-reports one open in
+	// a log that still holds the raw signed evidence, where the old order
+	// over-reported opens that never happened.
 	res, err := s.db.ExecContext(ctx,
 		`INSERT INTO controller_events
 		   (event_id, device_id, device_id_snapshot, kind, ts, data, sig, envelope, received_at, access_log_id)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
 		 ON CONFLICT(event_id) DO NOTHING`,
 		ev.EventID, nullable(ev.DeviceID), ev.DeviceID, ev.Kind, ev.TS,
-		string(dataJSON), ev.Sig, string(ev.Envelope), now(), nullable(logID))
+		string(dataJSON), ev.Sig, string(ev.Envelope), now())
 	if err != nil {
 		return false, "", err
 	}
@@ -126,7 +135,25 @@ func (s *Store) RecordControllerEvent(ctx context.Context, ev ControllerEvent) (
 	if err != nil {
 		return false, "", err
 	}
-	return n > 0, logID, nil
+	if n == 0 {
+		// A redelivery. Nothing further happens, and in particular no audit row.
+		return false, "", nil
+	}
+
+	if cmd, ok := accessKinds[ev.Kind]; ok {
+		logID, err = s.appendEventAuditRow(ctx, ev, cmd)
+		if err != nil {
+			return false, "", err
+		}
+		if logID != "" {
+			if _, err := s.db.ExecContext(ctx,
+				`UPDATE controller_events SET access_log_id = ? WHERE event_id = ?`,
+				logID, ev.EventID); err != nil {
+				return false, "", err
+			}
+		}
+	}
+	return true, logID, nil
 }
 
 // appendEventAuditRow maps an access-kind event onto the audit log.

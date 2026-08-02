@@ -840,6 +840,25 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] Took the same shape to the DATABASE, where the equivalent of a lock is a
+      transaction, and found the audit log over-reporting. RecordControllerEvent
+      appended the access_logs row BEFORE the controller_events insert so the event
+      could carry its id; the pre-check above it narrowed the window and its own
+      comment said what that was worth ("ordering, not trust"). Under concurrent
+      redeliveries of one event_id every caller passed the pre-check and appended:
+      measured at 6 concurrent calls -> 1 controller_events row, SIX access_logs
+      rows. Six opens in the tamper-evident trail for one gate movement, all
+      hash-chained, all verifying perfectly — the chain proves nobody edited them,
+      not that they happened.
+      Fixed by making the INSERT the claim: the PRIMARY KEY picks one winner, only
+      the winner appends, and the event's access_log_id is filled by a following
+      UPDATE. Now 1/1/1 every run; tamper CAUGHT.
+      MY DETECTOR WAS TOO COARSE FIRST and nearly accused working code:
+      RedeemConfirmation flags as read+write but is exactly right — a conditional
+      UPDATE checking RowsAffected, which IS a compare-and-swap in SQL. Order
+      matters, so the scan now flags read-BEFORE-write only, which cut 9 candidates
+      to 5.
+
 - [x] The lock-twice sweep is now a PERMANENT guard rather than something I happened
       to run once. It found two live security defects, and both were invisible to
       every other check here: each side is internally consistent, the race detector
