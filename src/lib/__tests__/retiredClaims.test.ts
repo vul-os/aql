@@ -130,7 +130,10 @@ const RETIRED: Retired[] = [
     phrase: /not implemented:[^.\n]*\banalytics\b|\bthe entire device engine\b/i,
     truth:
       'The device engine ships with five drivers (off by default), and analytics and ' +
-      'password reset both have routes. Google OAuth is the one that is genuinely absent.',
+      'password reset both have routes. Google OAuth is absent by DECISION rather ' +
+      'than by omission — ROADMAP records why: identity is a local username, and a ' +
+      'hub that needs a remote identity provider to open your own gate during an ' +
+      'outage has given away the thing it exists for.',
   },
   {
     phrase: /aql-gateway|Dockerfile`?\s*\n?\s*>?\s*in `gateway\//i,

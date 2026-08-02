@@ -278,7 +278,15 @@ hub's issuance endpoint):
 - [x] Analytics and per-access-point maintenance — both backends ship (three analytics
       routes over `httpapi/analytics.go`, two maintenance routes over `httpapi/maintenance.go`
       and migration 0017), and the console's Analytics screen consumes them
-- [ ] Google OAuth
+- [ ] ~~**Google OAuth**~~ — **not planned**, for the reason email verification was
+      removed rather than deferred: identity here is a local username in the hub's own
+      database (`0001_baseline.sql`), and this product's whole claim is that it keeps
+      working when the internet does not. Signing in through Google puts a remote
+      party, a live connection and an account nobody in the household controls on the
+      path to opening a gate during an outage. Nothing is built — no route, no
+      `oauth_identities` table, no console affordance — so this is a decision, not a
+      gap. A deployment that wants federated identity puts a proxy in front, which is
+      also how TLS is handled here.
 - [x] **2FA (TOTP)** — opt-in per user, enrol-prove-activate so a half-enrolled secret
       never gates login, ±1 step of skew, replay refused by a monotonic last-step, and ten
       single-use recovery codes minted in the same transaction as activation so 2FA is

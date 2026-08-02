@@ -28,8 +28,9 @@ polling) and Discord (dial-out Gateway — not in the Workers backend at all)**
 all funnel opens through the same open-path choke point. See **Chat
 channels** below.
 
-Remaining (not blocking the core): device-fed movement metering and Google
-OAuth. The Vite bundle used to be on this list: it now goes into
+Remaining (not blocking the core): device-fed movement metering — a controller
+reports that a relay pulsed, not how far a leaf travelled, so `meter.movement_m`
+is null rather than a fabricated zero. The Vite bundle used to be on this list: it now goes into
 `internal/portal/dist/` in the container build and the release workflow, so
 every shipped artifact serves the real console rather than the placeholder. See the
 porting map below. (Phone verification, analytics, maintenance records and
@@ -196,7 +197,9 @@ reads *before* writing a migration.
   triggers for `access_logs` and `admin_audit_log` — see **Tamper-evident
   audit log** below.
 
-Still deferred: countries, oauth_identities (Google OAuth is not built),
+Still deferred: countries. `oauth_identities` is NOT deferred — Google OAuth is not
+planned (ROADMAP says why: identity is a local username, and a gate must open during
+an outage),
 device_commands (dispatch is in-memory via the hub for now), and
 access_point_meters (device-fed movement metering). `auth_recovery_tokens`
 (`0009_auth_recovery.sql`) and `maintenance_events` (`0017_maintenance.sql`)
@@ -560,7 +563,7 @@ trigger.
 
 | Backend (spec) | Hub | Status |
 | --- | --- | --- |
-| `routes/auth.ts` register/login/refresh/logout/me | `internal/httpapi/auth.go` | core done — password reset (`authrecovery.go`) and profile patch (`profile.go`) also done; Google OAuth still pending. There is no email to verify: identity is a local username (`0001_baseline.sql`), and email verification was **removed**, not deferred |
+| `routes/auth.ts` register/login/refresh/logout/me | `internal/httpapi/auth.go` | core done — password reset (`authrecovery.go`) and profile patch (`profile.go`) also done. Google OAuth is **not planned**, for the same reason email verification was **removed** rather than deferred: identity is a local username (`0001_baseline.sql`), and a hub that needs a remote identity provider to let you through your own gate has given away the thing it exists for |
 | `routes/admin.ts` claim | `internal/httpapi/admin.go` | done |
 | `routes/admin.ts` overview/accounts/users/limits(+kill-switch)/audit | `internal/httpapi/adminops.go` + `store/admin.go` | **done** |
 | `routes/accounts.ts` (list/create/get/rename, members, invites) | `internal/httpapi/accounts.go` + `store/{members,invites}.go` | **done** (accept never auto-verifies phones) |

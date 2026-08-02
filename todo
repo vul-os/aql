@@ -832,6 +832,24 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] Google OAuth is now recorded as NOT PLANNED rather than pending, which is what
+      the rest of the product already implies. hub/README's own porting table said
+      "Google OAuth still pending" in the same sentence as "There is no email to
+      verify: identity is a local username, and email verification was REMOVED, not
+      deferred". Same argument applies: signing in through a remote identity provider
+      puts a live connection and an account nobody in the household controls on the
+      path to opening a gate DURING AN OUTAGE, which is the case this product exists
+      for. Nothing was half-built — no route, no oauth_identities table, no console
+      affordance — so it is a decision, not a gap, and a deployment that wants
+      federated identity puts a proxy in front, as it already does for TLS.
+      Used the house style for a withdrawn item (`- [ ] ~~**...**~~`, two precedents
+      in ROADMAP) after first inventing a `- [~]` marker — a third checkbox state the
+      claims tooling does not know, which is how a vocabulary quietly forks.
+      Also swept the class behind the movement fix: 35 literal constants in API
+      responses, all legitimate (boolean flags, set membership, a zero-initialised
+      tally that is then filled from real data, a protocol version field). The
+      fabricated measurement was a one-off.
+
 - [x] The console showed "Movement 0 m" for a distance NOTHING MEASURES, and the
       contradiction sat ten lines apart in one function. accessPointJSON sent
       `movement_m: 0`, defended in its own comment as "0 is what the hub actually
