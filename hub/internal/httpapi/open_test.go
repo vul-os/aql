@@ -244,3 +244,72 @@ func TestGrantRoutes(t *testing.T) {
 		t.Errorf("bad window: %d %v", rec.Code, out)
 	}
 }
+
+// A denied open must not reach the device.
+//
+// This is the worst thing this product could do, and until this test nothing
+// stopped it. Adding a dispatchCommandWithPayload call inside the `if
+// !verdict.Allowed` branch of handleOpen — so every refusal signs an envelope
+// and pushes it to the gate — passed the ENTIRE hub suite. The response is
+// still 429 or 403, and every assertion anywhere looked at the response.
+//
+// The reason it went unnoticed for so long is worth stating: most open-path
+// tests use an access point with no controller attached, and
+// dispatchCommandWithPayload returns "no_device" before touching anything when
+// DeviceID is empty. The mutation is invisible without a paired device, so the
+// fixture here pairs one for real over /pair/redeem and leaves it offline.
+//
+// The assertion is a row count. A dispatch against an offline device records a
+// followup access-log row ("undelivered", store.RecordDispatchOutcome), so a
+// denial that dispatches leaves TWO rows where an honest refusal leaves one.
+func TestADeniedOpenNeverReachesTheDevice(t *testing.T) {
+	f := setupOfflineGrantFixture(t)
+
+	countLogs := func() int {
+		_, total, err := f.st.AdminAudit(context.Background(), "all", 1, 0)
+		if err != nil {
+			t.Fatalf("count access logs: %v", err)
+		}
+		return total
+	}
+
+	// First open succeeds and arms the cooldown.
+	if rec, _ := doJSON(t, f.h, "POST", "/v1/access-points/"+f.apID+"/open", f.accessA, map[string]any{}); rec.Code != 200 {
+		t.Fatalf("first open: %d", rec.Code)
+	}
+
+	// Drain what the ALLOWED open legitimately queued, or the assertion below
+	// cannot tell a refused command from the real one. Getting this wrong is
+	// how the first version of this test failed against correct code.
+	if q := f.srv.hub.DrainQueue(f.deviceID); len(q) != 1 {
+		t.Fatalf("the allowed open queued %d commands, want 1 — this test's premise "+
+			"is that an allowed open reaches the gate", len(q))
+	}
+
+	before := countLogs()
+
+	// Second open is refused by the cooldown.
+	rec, _ := doJSON(t, f.h, "POST", "/v1/access-points/"+f.apID+"/open", f.accessA, map[string]any{})
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("second open: %d, want 429 (the cooldown denial this test needs)", rec.Code)
+	}
+
+	// One row for the refusal.
+	if added := countLogs() - before; added != 1 {
+		t.Errorf("a denied open wrote %d access-log rows, want 1; the extra row is a "+
+			"dispatch outcome, which means the refused command was sent to the device", added)
+	}
+
+	// And nothing is waiting for the gate.
+	//
+	// The row count alone does NOT catch this, which is the whole reason this
+	// second assertion exists: Hub.Dispatch to a device with no live socket
+	// QUEUES the envelope and returns "queued", and "queued" is not one of the
+	// cases that records a followup row. So a denial that dispatches writes no
+	// extra row at all — it silently parks a signed open command that the gate
+	// collects the moment it reconnects. A refusal now, an open later.
+	if queued := f.srv.hub.DrainQueue(f.deviceID); len(queued) != 0 {
+		t.Errorf("a denied open left %d command(s) queued for the gate; it will "+
+			"actuate as soon as the controller reconnects", len(queued))
+	}
+}

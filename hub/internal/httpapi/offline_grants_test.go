@@ -27,6 +27,7 @@ func genAppPubkey(t *testing.T) string {
 // (stranger, owns its own AP).
 type offlineGrantFixture struct {
 	h            http.Handler
+	srv          *Server
 	st           *store.Store
 	accessA      string // owner
 	accessB      string // stranger, own account
@@ -43,8 +44,8 @@ type offlineGrantFixture struct {
 
 func setupOfflineGrantFixture(t *testing.T) *offlineGrantFixture {
 	t.Helper()
-	h, st := newTestServerWithStore(t, "")
-	f := &offlineGrantFixture{h: h, st: st}
+	srv, h, st := newTestServerFull(t, "")
+	f := &offlineGrantFixture{h: h, st: st, srv: srv}
 	f.accessA, _ = register(t, h, "owner-og@op.com")
 	f.accessB, _ = register(t, h, "stranger-og@op.com")
 	f.acctA, f.locA = tenantIDs(t, h, f.accessA)

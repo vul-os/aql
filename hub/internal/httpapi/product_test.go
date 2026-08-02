@@ -13,7 +13,16 @@ import (
 
 // newTestServerWithStore is newTestServer but hands back the store too, for
 // tests that need the admin handle (invite token recovery, direct checks).
+// newTestServerWithStore keeps the two things most tests want. Tests that need
+// to look INSIDE the server — at the command queue, say — use
+// newTestServerFull, because a router alone cannot answer "was anything sent to
+// the gate".
 func newTestServerWithStore(t *testing.T, claimToken string) (http.Handler, *store.Store) {
+	_, h, st := newTestServerFull(t, claimToken)
+	return h, st
+}
+
+func newTestServerFull(t *testing.T, claimToken string) (*Server, http.Handler, *store.Store) {
 	t.Helper()
 	dir := t.TempDir()
 	st, err := store.Open(dir)
@@ -30,7 +39,7 @@ func newTestServerWithStore(t *testing.T, claimToken string) (http.Handler, *sto
 		AdminClaimToken: claimToken,
 		JWTSecret:       []byte("0123456789abcdef0123456789abcdef"),
 	}, st, ks, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)))
-	return s.Router(), st
+	return s, s.Router(), st
 }
 
 // tenantIDs pulls the caller's (account, location) from /v1/auth/me + list.
