@@ -215,3 +215,64 @@ describe('the repo-layout tree', () => {
     expect(empty, 'marked 🟢 but empty or absent').toEqual([]);
   });
 });
+
+describe('every build constraint is compiled by some gate', () => {
+  /**
+   * A file behind a build tag the local machine does not satisfy is invisible.
+   * Not "untested" — invisible: nothing typechecks it, so a plain type error
+   * lives there indefinitely while every gate prints ok.
+   *
+   * It happened twice, one module apart. `go test -tags ble` ran 296 tests on
+   * darwin and so did no tag at all, because the only file behind that tag is
+   * `ble && (linux || windows)`. And `!unix` in hub/internal/recording never
+   * compiles on a Mac, since darwin IS unix. A type error appended to either
+   * passed the whole suite.
+   *
+   * check.sh now cross-vets for the platforms those files belong to. This test
+   * is the part that does not rot: it fails when a NEW constraint appears, so
+   * the person adding one has to say which gate compiles it rather than
+   * discovering months later that nothing does.
+   */
+  const COVERED_BY: Record<string, string> = {
+    // tag → the gate that compiles files under it
+    'gpio': 'controller: go test -tags gpio (darwin)',
+    'gpio && linux': 'controller: go vet (linux, -tags gpio)',
+    'gpio && !linux': 'controller: go test -tags gpio (darwin)',
+    '!gpio': 'controller: go test (no tags)',
+    'ble && (linux || windows)': 'controller: go vet (linux/windows, -tags ble)',
+    '!ble || (ble && !linux && !windows)': 'controller: go test, and -tags ble on darwin',
+    'portal': 'hub: go test -tags portal',
+    '!portal': 'hub: go test (no tags)',
+    'unix': 'hub: go test (darwin is unix)',
+    '!unix': 'hub: go vet (windows)',
+  };
+
+  it('no build constraint exists that no gate compiles', () => {
+    const out = execFileSync(
+      'grep',
+      ['-rh', '--include=*.go', '^//go:build', 'hub', 'controller', 'e2e', 'jcs'],
+      { cwd: root, encoding: 'utf8' },
+    );
+    const found = new Set(
+      out
+        .split('\n')
+        .filter(Boolean)
+        .map((l) => l.replace(/^\/\/go:build\s*/, '').trim()),
+    );
+
+    const unknown = [...found].filter((c) => !(c in COVERED_BY)).sort();
+    expect(
+      unknown,
+      'these build constraints are new — add the gate in scripts/check.sh that ' +
+        'compiles them, then list it in COVERED_BY. A file no gate compiles is ' +
+        'not merely untested: nothing typechecks it at all.',
+    ).toEqual([]);
+
+    // And the reverse, so the map does not accumulate entries for tags that no
+    // longer exist and quietly stop describing this repo.
+    const stale = Object.keys(COVERED_BY).filter((c) => !found.has(c)).sort();
+    expect(stale, 'COVERED_BY lists constraints that no file uses any more').toEqual([]);
+
+    expect(found.size, 'no build constraints parsed — the grep has drifted').toBeGreaterThan(8);
+  });
+});
