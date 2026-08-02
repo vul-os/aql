@@ -40,6 +40,29 @@ function flat(s: string): string {
   return s.replace(/\s+/g, ' ');
 }
 
+/**
+ * flat(), with comments removed first.
+ *
+ * Every assertion in this file matches against SOURCE TEXT, and a comment is
+ * source text. AppLayout.tsx explains its own wording in a JSX comment —
+ * "this says a controller is responding and stops short of saying the gate
+ * will open" — which contains the exact phrase the guard below looks for. With
+ * plain flat(), deleting the real copy left the comment behind and the test
+ * passed. It was NOT CAUGHT until the tamper said so.
+ *
+ * A guard that a comment can satisfy is measuring the explanation rather than
+ * the thing explained, and the better a file documents itself the more likely
+ * that is.
+ */
+function code(s: string): string {
+  return flat(
+    s
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ') // {/* JSX comment */}
+      .replace(/\/\*[\s\S]*?\*\//g, ' ') //     /* block */
+      .replace(/^\s*\/\/.*$/gm, ' '), //           // line
+  );
+}
+
 describe('a geofence is never presented as a security control', () => {
   // hub/internal/httpapi/geofence.go, at length: the position a fence is tested
   // against comes from the CLIENT and nothing verifies it. Anyone who can call
@@ -265,6 +288,52 @@ describe('discovery does not present found devices as trusted', () => {
         'browse. A list of found devices is exactly where someone reaches for a ' +
         'one-click add.',
     ).toBe(true);
+  });
+});
+
+describe('the offline banner says what the probe actually proved', () => {
+  const src = code(read('src/pages/app/AppLayout.tsx'));
+
+  // useEmergencyOffer.ts states the rule and cannot enforce it: "gatesInRange
+  // counts gates whose ADDRESS answered a probe. probeController cannot prove
+  // the thing that answered is the paired controller — nothing on that request
+  // is signed — so the copy this feeds must say a controller is answering,
+  // never that a gate is ready to open. The proof happens at redemption."
+  //
+  // The banner is the only consumer of gatesInRange, and its wording was
+  // correct with nothing holding it there. "3 gates are ready to open" is a
+  // natural edit for someone tightening copy, reads better, and promises
+  // something no unsigned probe can know — in the one banner a person reads
+  // while standing at a gate that will not open.
+  // Both branches, separately. A single /controllers? (is|are) responding/
+  // passes while ONE of them says something else — rewriting just the
+  // singular case to "access is available" was NOT CAUGHT by that version.
+  it('reports a controller responding, in the singular case', () => {
+    expect(
+      /a controller is responding/i.test(src),
+      'AppLayout.tsx no longer says a CONTROLLER is responding when one answered. ' +
+        'gatesInRange counts unsigned probe answers; whether a gate opens is only ' +
+        'known at redemption.',
+    ).toBe(true);
+  });
+
+  it('reports controllers responding, in the plural case', () => {
+    expect(
+      /controllers are responding/i.test(src),
+      'AppLayout.tsx no longer says CONTROLLERS are responding when several answered.',
+    ).toBe(true);
+  });
+
+  it('never promises the gate is ready, open, or unlocked', () => {
+    // The other direction, so rewording to "N gates are ready" fails even if
+    // the word "controller" survives elsewhere in the file.
+    const overclaims = /gates? (is|are) (ready|open|unlocked|available to open)/i;
+    expect(
+      overclaims.test(src),
+      'AppLayout.tsx promises a gate is ready. Nothing on the probe is signed, ' +
+        'so that is a claim the console cannot make until the controller has ' +
+        'verified a grant.',
+    ).toBe(false);
   });
 });
 
