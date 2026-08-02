@@ -23,8 +23,8 @@ Chromium, and it never touches the controller or the device-pairing
 protocol. Putting browser tests inside a Go module would mean either faking a
 `go.mod` around npm tooling or awkwardly nesting an npm project inside one —
 neither is how this repo organizes anything else. `e2e-browser/` is a plain
-sibling top-level directory instead, matching how `backend/`, `gateway/`,
-`controller/`, and `src/` are already separated by toolchain.
+sibling top-level directory instead, matching how `hub/`, `controller/`, `jcs/`
+and `src/` are already separated by toolchain.
 
 ## What "real gateway" means here
 

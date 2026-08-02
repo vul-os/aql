@@ -238,6 +238,60 @@ describe('documentation citations', () => {
     }
   });
 
+  // Two directory names that no longer exist, and must not be written as if
+  // they do.
+  //
+  // ARCHITECTURE.md states the rule itself — "There is no `backend/`. […] Any
+  // comment or doc still referring to it is stale" — and a sweep recorded in
+  // CHANGELOG fixed a batch of them. Three survived that sweep and were still
+  // there months later: hub/README opened by calling the deleted Workers
+  // backend "the behavioral spec this is being ported from", cited a file inside
+  // it, and e2e-browser/README listed `backend/` and `gateway/` among the
+  // directories this repository is organised into.
+  //
+  // docCitations cannot see any of that: it requires a file EXTENSION, so a bare
+  // directory reference is invisible to it. The gateway→hub rename is the same
+  // shape, which is why both names are checked here.
+  //
+  // Files that explain the deletion, or record it as history, are exempt by name
+  // — a rule that forbade the words outright would forbid saying they are gone.
+  it('no document presents a deleted directory as one that exists', () => {
+    const gone = ['backend/', 'gateway/'];
+    const explains = new Set([
+      'ARCHITECTURE.md', // states the rule
+      'site/docs/architecture.md', // repeats it for the site
+      'CHANGELOG.md', // records the deletion and the earlier sweep
+      'docs/CHAT-COMMANDS.md', // §2.2's historical passages, already annotated
+      'docs/EPHOR-CHAT-SEAM.md', // another repository's gateway/, cited as theirs
+    ]);
+
+    const offenders: string[] = [];
+    let scanned = 0;
+    for (const doc of docFiles()) {
+      if (explains.has(doc)) continue;
+      scanned++;
+      readFileSync(resolve(root, doc), 'utf8')
+        .split('\n')
+        .forEach((line, i) => {
+          for (const dir of gone) {
+            if (line.includes('`' + dir + '`') || line.includes('`../' + dir + '`')) {
+              offenders.push(`${doc}:${i + 1}  ${line.trim().slice(0, 100)}`);
+            }
+          }
+        });
+    }
+
+    // The floor: this must be reading real documents, not an empty list.
+    expect(scanned, 'no documents scanned').toBeGreaterThan(10);
+    expect(
+      offenders,
+      `these name a directory that was deleted. ARCHITECTURE.md §2: "There is no
+\`backend/\`. […] Any comment or doc still referring to it is stale." If the
+mention is deliberately historical, say so in the sentence and add the file to
+the exempt list with that reason.`,
+    ).toEqual([]);
+  });
+
   it('every historical exemption is still a file that does not exist', () => {
     // An exemption for a path that resolves again is an exemption doing
     // nothing, and the next reader would trust it as evidence the citation was

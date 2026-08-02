@@ -832,6 +832,23 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] hub/README opened by calling a DELETED directory the behavioural spec: "the
+      Cloudflare Workers backend in `../backend/` is the behavioral spec this is
+      being ported from". ARCHITECTURE.md §2 says the opposite in as many words —
+      "There is no `backend/`. […] Any doc still referring to it is stale" — and
+      CHANGELOG records a sweep that fixed a batch and missed these. docCitations
+      could not see them: it requires a file EXTENSION, so a bare directory
+      reference is invisible, and gateway/->hub/ is the same shape.
+      Fixed 5 sites and guarded both names with an argued 5-file exemption for the
+      documents that EXPLAIN the deletion. The guard immediately found a sixth I had
+      not: KOTVA-ALIGNMENT claimed "grep for tariff/exposure/descriptor/authz across
+      `gateway/` returns nothing" — wrong twice, since that path does not exist (so
+      the grep is trivially empty) and against the real tree `tariff` and `exposure`
+      DO appear, in unrelated senses. Now says which terms appear where.
+      Also cleared the stale "Remaining: dropping the real Vite bundle into
+      internal/portal/dist/" — that shipped this week in both the image and the
+      release workflow.
+
 - [x] I BROKE 12 e2e SPECS LAST TURN AND SHIPPED IT. The first-run fix removed the
       gateway picker for the embedded console — correct — and every spec's helper
       began by filling in "Hub URL" and clicking Connect. I ran two specs after the

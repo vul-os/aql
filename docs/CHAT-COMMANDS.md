@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > **Status: mostly proposal, and no longer entirely.** What *is* built is the
-> single-verb chat access path folded in from lintel (`gateway/`, `controller/`,
+> single-verb chat access path folded in from lintel (`hub/`, `controller/`,
 > `proto/`) — described here as it exists, with `file:line` citations — plus
 > two pieces of §1.2 and §3 that have since landed in the device engine:
 >

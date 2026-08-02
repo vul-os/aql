@@ -6,8 +6,12 @@
 
 The whole hub as **one Go binary**: channels, rules, portal, API,
 device hub, audit — backed by **one SQLite file**. See `../ARCHITECTURE.md`
-for the full picture; the Cloudflare Workers backend in `../backend/` is the
-behavioral spec this is being ported from.
+for the full picture.
+
+There is no `backend/`. A Cloudflare Workers + Postgres backend was the
+behavioural reference this was ported from and has been deleted; `ARCHITECTURE.md`
+§2 says so, and this paragraph claimed the opposite for long enough to survive
+the sweep that fixed the others.
 
 ## Status: product core ported
 
@@ -24,8 +28,10 @@ polling) and Discord (dial-out Gateway — not in the Workers backend at all)**
 all funnel opens through the same open-path choke point. See **Chat
 channels** below.
 
-Remaining (not blocking the core): device-fed movement metering, Google OAuth,
-and dropping the real Vite bundle into `internal/portal/dist/`. See the
+Remaining (not blocking the core): device-fed movement metering and Google
+OAuth. The Vite bundle used to be on this list: it now goes into
+`internal/portal/dist/` in the container build and the release workflow, so
+every shipped artifact serves the real console rather than the placeholder. See the
 porting map below. (Phone verification, analytics, maintenance records and
 password reset all shipped since the paragraph above was last true — see
 **Chat channels** and the porting map.)
@@ -229,8 +235,8 @@ account itself.
 | Telegram | `POST /webhooks/telegram`, **or dial-out long-poll** (`AQL_TELEGRAM_ENGINE=polling`) | `X-Telegram-Bot-Api-Secret-Token` on the webhook; the bot token itself authenticates `getUpdates` on the poll path | telegram user id |
 | Discord | dial-out Gateway WebSocket only — no webhook, no inbound port at all | `Authorization: Bot <token>`; the bot token is the entire trust root on the way in | discord snowflake |
 
-- **WhatsApp** ports the full conversational contract from
-  `backend/src/routes/whatsapp.ts`: interactive **list picker** for multiple
+- **WhatsApp** ports the full conversational contract from the retired Workers
+  backend's `routes/whatsapp.ts` (deleted — see `../ARCHITECTURE.md` §2): interactive **list picker** for multiple
   access points, location select, welcome / linked-locations copy, unlinked
   **signup prompt**, **visitor grants** (consume + refund-on-denial), honest
   denial replies (`rate_limited`/`quota_exceeded`/`account_suspended`/

@@ -418,7 +418,7 @@ Aql can copy that decision table as data rather than re-deriving §26 from prose
 |---|---|---|
 | **kotva spec** | **CLOSED** | §18.8a.3 defines `GatewayAuthz` (`18-wire-format.md:1968-2020`), CDDL at `:1995-2002`; a per-rail grant is a `CapabilityToken` with `Capability.resource = "gw-rail:"+rail+":"+remote_id`, `ability = "send-as"` (`18-wire-format.md:1983-1991`; `26-legacy-adapters.md:84-89`). `26-legacy-adapters.md:441-445` marks it "Resolved". |
 | **ephor impl** | **OPEN** | `ephor/BACKLOG.md:29` — `[ ] E1.4 Authz — authenticated-sender + per-address/per-rail scope (GatewayAuthz shape, §7.11.2/§26)`, unchecked. What exists is a **per-domain** policy trait: `fn authorize(&self, direction: BridgeDirection, domain: &str) -> AuthzDecision` (`ephor/crates/gateway/src/provenance.rs:438-440`), with a domain→account allowlist (`:442-468`). **There is no rail dimension and no `CapabilityToken` grant handling anywhere in ephor.** `ephor/COORDINATION.md:136-140` still describes it as open wire debt — that note is now itself stale on the spec half. |
-| **aql** | **N/A** | No authorisation-scope concept exists in any form; grep for tariff/exposure/descriptor/authz across `gateway/` returns nothing. |
+| **aql** | **N/A** | No authorisation-scope concept exists in any form. Across `hub/`, `descriptor` and `authz` appear nowhere; `tariff` and `exposure` appear only in unrelated senses — time-of-use tariff periods in `internal/energy/`, and what a chat rail may disclose in `internal/httpapi/disclosure.go`. |
 
 ### 3.2 Multi-tenant scenarios this blocks
 
