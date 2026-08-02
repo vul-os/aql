@@ -400,7 +400,11 @@ cannot see: an attacker who edits the database and recomputes every hash
 forward, and — much cheaper — one who simply deletes the most recent rows,
 since what remains still chains correctly. `verify-audit` therefore prints the
 row count and chain head; recorded somewhere the box does not control, those
-two make a truncated history noticeable.
+two make a truncated history noticeable. And a third, which is not about
+attackers: the chain proves nobody edited a row, not that the row was right when
+written — a bug that logged one gate movement six times would produce six
+entries that all verify. For controller-sourced rows the signed event is kept
+beside them, so the two can be compared.
 
 **The camera pipeline** goes RTSP → H.264 depacketization → SPS parsing →
 access-unit assembly → fMP4 → disk, with per-camera retention, a `camera:view`

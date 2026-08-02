@@ -35,6 +35,23 @@ package store
 // history that no longer exists.
 // TestTruncatingTheMostRecentRowsIsNotVisibleToTheChain pins this.
 //
+// AND THE LIMIT THAT IS NOT ABOUT ATTACKERS AT ALL: the chain says nothing
+// about whether a row was CORRECT when it was written. It covers integrity
+// after the fact — nobody edited this — and a bug upstream produces rows that
+// verify perfectly because nobody did.
+//
+// That is not hypothetical. RecordControllerEvent used to append the audit row
+// before claiming the event id, so concurrent redeliveries of one controller
+// event wrote one row EACH: six opens in this chain for one movement of one
+// gate, every one of them hashing correctly. `verify-audit` would have called
+// that log intact, and it was — intact and wrong.
+//
+// What covers it, for the rows that come from a controller, is that the signed
+// event is kept beside them: controller_events holds the envelope the device
+// signed and points at the audit row it produced. An auditor with reason to
+// doubt a count can compare the two, which is a different question from "has
+// this been edited" and needs different evidence.
+//
 // WHAT'S COVERED vs NOT — access_logs:
 //   COVERED:     id, command, source, lat, long, distance_m, success, error,
 //                ts, created_at, reconciles_log_id, and the four *_snapshot

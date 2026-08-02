@@ -840,6 +840,19 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] Wrote down the limit the duplicate-audit bug exposed, which is not about
+      attackers at all: the hash chain proves nobody EDITED a row, not that the row
+      was correct when written. Six audit rows for one gate movement hashed perfectly
+      and `verify-audit` would have called that log intact — and it was, intact and
+      wrong. The existing honesty paragraphs covered edit-and-recompute and
+      truncation; neither covered a bug upstream.
+      Said what DOES cover it, and checked the schema before claiming it:
+      controller_events keeps `envelope` (the bytes the device signed) and
+      `access_log_id` pointing at the row it produced, so an auditor doubting a count
+      can compare the two — a different question from "has this been edited", needing
+      different evidence. The link itself is tamper-verified: break the UPDATE and
+      the redelivery test goes red.
+
 - [x] Both forms of check-then-act are now ONE guard (renamed checkThenAct): over a
       mutex, and over the database. They are the same defect in different clothes —
       something read, something decided from it, and the act happening after the
