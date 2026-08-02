@@ -136,9 +136,31 @@ These are documented by tests here; the fixes belong in `hub/` /
    Both defects above fail it — a rail that never dispatches, and an unsigned
    webhook that pulses the relay before its signature is checked.
 
-   Still uncovered here: WhatsApp, Slack and Discord. They share `finishOpen`,
-   so the open path itself is now exercised, but each has its own signature
-   scheme and its own inbound parser, and neither is touched by this harness.
+   **Closed for the three webhook rails.**
+   `TestChatRail_WhatsAppAndSlackReachARealGate` covers the other two, each
+   through its own signature scheme (Meta's `X-Hub-Signature-256` over the raw
+   body; Slack's `v0:timestamp:body` with a replay window) and its own linking
+   ceremony — WhatsApp by VERIFIED PHONE via `/v1/phones/me/link`, because
+   `channels/me/link` answers `unsupported_channel` for it on purpose
+   (channellink.go: offering both would be a second, weaker path to the same
+   access).
+
+   Discord stays uncovered and cannot be covered the same way: it has no
+   inbound webhook at all, being bot-token dial-out over the gateway socket.
+
+   Three things about the rails that only writing this surfaced, all of which
+   made a working rail look broken:
+
+   - Slack NEVER opens from a message. "open" always renders a picker, and the
+     open is a block interaction posted form-encoded to
+     `/webhooks/slack/interactions`. Telegram opens directly when there is one
+     gate. Same product verb, different plumbing.
+   - Slack dedupes inbound by `event.ts`, so two messages stamped with the same
+     second are one message as far as the hub is concerned.
+   - The open cooldown is keyed (subject | access point) and defaults to 10s,
+     so a second rail opening the same gate as the same member is refused. Set
+     `RATE_OPEN_COOLDOWN_S=0` when the subject under test is the rail rather
+     than the limit.
 
    One note for whoever extends it. The unsigned probe in that test posts a body
    that WOULD open the gate, sent by a linked user. The first version posted
