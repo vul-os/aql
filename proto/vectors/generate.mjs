@@ -1004,6 +1004,14 @@ console.log('wrote keys.json');
   );
   vectors.push(
     wh(
+      'access-held-open',
+      'A controller\'s position sensor has not reported the gate closed for longer than that controller\'s threshold. The only event here raised by hardware rather than by somebody asking for something. The field is named `seconds_since_reported_closed` and not `seconds_open` on purpose: an unreadable sensor line reports not-closed too, and the controller does not guess which it is — a receiver that finds the gate shut has learned the sensor is broken, which is worth knowing.',
+      'access.held_open',
+      '{"device_id":"dev_000000000001","event":"access.held_open","event_id":"evt_000000000001","seconds_since_reported_closed":300,"ts":1789000000}'
+    )
+  );
+  vectors.push(
+    wh(
       'same-body-different-timestamp',
       'The timestamp is INSIDE the preimage: the same body one second later signs differently. This is what makes a captured delivery non-replayable at a receiver that checks skew.',
       'access.opened',

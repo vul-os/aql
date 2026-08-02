@@ -88,7 +88,7 @@ controllers ship is not.
 | `grant_redeemed` | full offline-redemption record (grant_id, cnonce, proof) | audit continuity for offline opens | **sent** |
 | `boot` | `{fw, reason}` | fleet health, update tracking | **sent** |
 | `button` | `{button_id}` | **intercom-lite**: the hub notifies the resident's chat — "Someone is at the gate. Reply OPEN." | reserved — no button input exists |
-| `held_open` | `{seconds}` | gate-left-open alerts | **sent**, when a position sensor is present and `-held-open-after` is set. `seconds` is how long the sensor has NOT REPORTED CLOSED, which is not the same claim as "the gate was open": an unreadable line reports not-closed too, deliberately, and the controller does not guess which it is |
+| `held_open` | `{seconds}` | gate-left-open alerts, as the `access.held_open` webhook | **sent**, when a position sensor is present and `-held-open-after` is set. `seconds` is how long the sensor has NOT REPORTED CLOSED, which is not the same claim as "the gate was open": an unreadable line reports not-closed too, deliberately, and the controller does not guess which it is |
 | `tamper` | `{sensor}` | enclosure opened / supply cut alerts | reserved — no tamper sensing exists |
 | `power` | `{source: "mains"\|"battery", level}` | battery/outage telemetry (load-shedding reality) | reserved — no power monitoring exists |
 | `net` | `{iface: "wifi"\|"gsm", rssi}` | connectivity telemetry, `last_seen_at` | reserved — no radio telemetry exists |

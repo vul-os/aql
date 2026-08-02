@@ -67,6 +67,22 @@
       }
     },
     {
+      "name": "access-held-open",
+      "desc": "A controller's position sensor has not reported the gate closed for longer than that controller's threshold. The only event here raised by hardware rather than by somebody asking for something. The field is named `seconds_since_reported_closed` and not `seconds_open` on purpose: an unreadable sensor line reports not-closed too, and the controller does not guess which it is — a receiver that finds the gate shut has learned the sensor is broken, which is worth knowing.",
+      "secret": "whsec_aql_test_vector_secret_do_not_use",
+      "event": "access.held_open",
+      "body": "{\"device_id\":\"dev_000000000001\",\"event\":\"access.held_open\",\"event_id\":\"evt_000000000001\",\"seconds_since_reported_closed\":300,\"ts\":1789000000}",
+      "preimage": "1789000000.{\"device_id\":\"dev_000000000001\",\"event\":\"access.held_open\",\"event_id\":\"evt_000000000001\",\"seconds_since_reported_closed\":300,\"ts\":1789000000}",
+      "signature_hex": "552dcae76280427e42f72fad619a4bd827ed8200d2aabc7039838b0dbe4730de",
+      "headers": {
+        "Content-Type": "application/json",
+        "User-Agent": "aql-hub",
+        "X-Aql-Event": "access.held_open",
+        "X-Aql-Timestamp": "1789000000",
+        "X-Aql-Signature-256": "552dcae76280427e42f72fad619a4bd827ed8200d2aabc7039838b0dbe4730de"
+      }
+    },
+    {
       "name": "same-body-different-timestamp",
       "desc": "The timestamp is INSIDE the preimage: the same body one second later signs differently. This is what makes a captured delivery non-replayable at a receiver that checks skew.",
       "secret": "whsec_aql_test_vector_secret_do_not_use",

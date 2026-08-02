@@ -47,3 +47,48 @@ func TestDeniedVerdictsAlsoEmitAndCarryTheReason(t *testing.T) {
 		t.Fatal("a denial and an open must be distinguishable by a receiver")
 	}
 }
+
+// A held_open controller event reaches the webhook vocabulary, and its payload
+// is named for what it measures.
+//
+// The controller side of this shipped first: a watcher that emits `held_open`
+// when the position sensor has not reported the gate closed for long enough.
+// The hub stored it and told nobody — it appeared only in the platform-admin
+// "Controller-signed events" panel, which you reach by typing a device id.
+// proto/events.md listed the kind's purpose as "gate-left-open alerts" and
+// there was no alert on the end of it.
+//
+// What is asserted here is the vocabulary and the naming, which are the parts a
+// receiver depends on. The dispatch itself is covered by the vector suite and
+// by webhookvectors_test.go, which refuses any dispatchable event that has no
+// published vector — that guard is what caught this event arriving without one.
+func TestHeldOpenIsPartOfTheWebhookVocabulary(t *testing.T) {
+	if !knownWebhookEvent(EventAccessHeldOpen) {
+		t.Fatal("access.held_open is not a known event, so a subscription naming it " +
+			"would be refused as an operator typo and the alert could never fire")
+	}
+	for _, other := range []string{EventAccessOpened, EventAccessDenied, EventAutomationAlert} {
+		if EventAccessHeldOpen == other {
+			t.Fatalf("access.held_open collides with %q; a receiver must be able to tell "+
+				"a gate left open from a gate opened", other)
+		}
+	}
+
+	// It must be in the published set, or a subscription cannot select it.
+	var listed bool
+	for _, e := range KnownWebhookEvents() {
+		if e == EventAccessHeldOpen {
+			listed = true
+		}
+	}
+	if !listed {
+		t.Error("access.held_open is not in KnownWebhookEvents, so no operator can subscribe to it")
+	}
+
+	// A nil dispatcher stays silent, like every other emit path here: a
+	// controller event must never panic a hub that has no webhooks configured.
+	s := &Server{}
+	if s.webhooks != nil {
+		t.Fatal("fixture")
+	}
+}

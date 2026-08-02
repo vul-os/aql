@@ -491,6 +491,31 @@ func (s *Server) handleControllerEvent(ctx context.Context, deviceID string, msg
 	}
 	s.log.Info("controller event", "device", deviceID, "kind", ev.Kind,
 		"event_id", ev.EventID, "log_id", logID)
+
+	// A gate that has been open too long is the one controller event somebody
+	// needs to hear about while it is still true. Dispatched only after the
+	// event is STORED — a webhook about something the hub did not record would
+	// be an alert with no audit behind it — and only once, since `stored` is
+	// false for a redelivery.
+	//
+	// Out of band, like every other dispatch here: this runs after the fact and
+	// cannot affect whether any gate opens.
+	if ev.Kind == "held_open" && s.webhooks != nil {
+		accountID, err := s.store.DeviceAccountID(ctx, deviceID)
+		if err != nil || accountID == "" {
+			s.log.Warn("held_open not dispatched: no account for device",
+				"device", deviceID, "err", err)
+			return
+		}
+		seconds, _ := ev.Data["seconds"].(float64)
+		s.webhooks.Dispatch(accountID, EventAccessHeldOpen, map[string]any{
+			"device_id": deviceID,
+			"event_id":  ev.EventID,
+			"ts":        ev.TS,
+			// Named for what it measures rather than what it suggests.
+			"seconds_since_reported_closed": int(seconds),
+		})
+	}
 }
 
 // handleLateAck is reached only after ResolveAck already reported no

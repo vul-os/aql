@@ -72,11 +72,26 @@ const (
 	// hub supplies the rule, the trigger and the time, and the operator's own
 	// message rides alongside.
 	EventAutomationAlert = "automation.alert"
+	// EventAccessHeldOpen carries a controller's `held_open` event: its position
+	// sensor has not reported the gate closed for longer than that controller's
+	// threshold.
+	//
+	// It is the only event here raised by HARDWARE rather than by someone asking
+	// for something. Nothing was subscribed to it before, so a gate propped open
+	// was recorded, signed and inspectable in the admin console and told nobody —
+	// proto/events.md listed the kind's purpose as "gate-left-open alerts" and
+	// there was no alert at the end of it.
+	//
+	// The payload repeats the controller's own careful wording: seconds is how
+	// long the sensor has NOT REPORTED CLOSED, which an unreadable line also
+	// produces. Anyone acting on this should treat a gate that turns out to be
+	// shut as a broken sensor, not a false alarm.
+	EventAccessHeldOpen = "access.held_open"
 )
 
 // KnownWebhookEvents is the closed set.
 func KnownWebhookEvents() []string {
-	return []string{EventAccessOpened, EventAccessDenied, EventAutomationAlert}
+	return []string{EventAccessOpened, EventAccessDenied, EventAutomationAlert, EventAccessHeldOpen}
 }
 
 func knownWebhookEvent(e string) bool {

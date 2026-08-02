@@ -832,6 +832,26 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] held_open now ALERTS, which is what the event was for. Yesterday's commit
+      emitted it and the hub stored it — signed, deduped, inspectable — and told
+      nobody: it surfaced only in the platform-admin "Controller-signed events"
+      panel, which you reach by typing a device id. proto/events.md listed the
+      purpose as "gate-left-open alerts" with no alert on the end of it. Checked
+      first: webhooks had exactly three kinds and none fired on a controller event.
+      Added `access.held_open` as a fourth, dispatched after the event is STORED
+      (never before — a webhook about something unrecorded is an alert with no audit
+      behind it) and only when `stored` is true, so a redelivery does not re-alert.
+      Payload field is `seconds_since_reported_closed`, not `seconds_open`, carrying
+      the controller's own distinction forward.
+      A GUARD I DID NOT KNOW ABOUT CAUGHT ME: every dispatchable event must have a
+      published vector, so the new kind failed until proto/vectors gained one. That
+      is the right rule — an integrator needs the payload shape, not just a name.
+      Then MY OWN tamper found the real gap: deleting the dispatch entirely was NOT
+      CAUGHT, because the vocabulary tests prove the name exists and is subscribable,
+      which is a different claim from "anything ever raises it". Added an end-to-end
+      test — real subscription, real receiver, real delivery — and both tampers
+      (dispatch removed, payload renamed) are caught now.
+
 - [x] BUILT held_open, the gate-left-open event proto/events.md had reserved since
       the beginning. Yesterday established the missing piece was not a sensor — the
       GPIO driver has one — but EDGE WATCHING: a poll answers "closed now", an alert

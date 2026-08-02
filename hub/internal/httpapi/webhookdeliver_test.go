@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -206,5 +207,73 @@ func TestASuccessfulDeliveryResetsTheFailureCount(t *testing.T) {
 	}
 	if !cur.Enabled {
 		t.Error("a receiver that succeeded in between was retired — the failure count did not reset")
+	}
+}
+
+// A stored held_open controller event actually dispatches.
+//
+// Removing the dispatch call entirely was NOT CAUGHT by the vocabulary tests:
+// they prove the event name exists and is subscribable, which is a different
+// claim from "anything ever raises it". That is the same gap this repository
+// keeps finding — a complete implementation with no line that reaches it — and
+// it was live for the length of one commit.
+//
+// This drives handleControllerEvent and asserts a real receiver got a real
+// delivery, because everything short of that has already been shown to pass
+// while the feature does nothing.
+func TestAHeldOpenEventReachesASubscriber(t *testing.T) {
+	var got atomic.Int32
+	var event string
+	var body []byte
+	d, st, w, srv := deliverEnv(t, func(rw http.ResponseWriter, r *http.Request) {
+		got.Add(1)
+		event = r.Header.Get("X-Aql-Event")
+		body, _ = io.ReadAll(r.Body)
+		rw.WriteHeader(http.StatusOK)
+	})
+	ctx := context.Background()
+
+	// A subscription that WANTS this event: deliverEnv's own webhook listens for
+	// gate.opened, so without this the test would prove only that nothing was
+	// sent to someone who never asked.
+	if _, err := st.CreateWebhook(ctx, store.CreateWebhookArgs{
+		AccountID: w.AccountID, Name: "held-open", URL: srv.URL,
+		Secret: "s3cret-value-long-enough", Events: []string{EventAccessHeldOpen},
+		AllowPrivate: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// A device the hub can attribute to that account, which is what the dispatch
+	// path looks up before sending anything.
+	locID, err := st.CreateLocationFull(ctx, w.AccountID, store.CreateLocationArgs{Name: "Held Open House", Type: "house"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dev, err := st.CreateDeviceWithClaim(ctx, w.AccountID, locID, "gate-ctl", "hash", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s := &Server{store: st, webhooks: d, log: quietLogger()}
+	msg := []byte(`{"event_id":"evt_held_1","device_id":"` + dev.ID +
+		`","kind":"held_open","ts":1789000000,"data":{"seconds":300},"sig":"x"}`)
+	s.handleControllerEvent(ctx, dev.ID, msg)
+
+	deadline := time.Now().Add(3 * time.Second)
+	for got.Load() == 0 && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+	if got.Load() == 0 {
+		t.Fatal("a held_open event was stored and nobody was told")
+	}
+	if event != EventAccessHeldOpen {
+		t.Errorf("X-Aql-Event = %q, want %q", event, EventAccessHeldOpen)
+	}
+	if !strings.Contains(string(body), "seconds_since_reported_closed") {
+		t.Errorf("payload does not name what it measures: %s", body)
+	}
+	if strings.Contains(string(body), "seconds_open") {
+		t.Errorf("payload claims the gate was open, which the controller does not know: %s", body)
 	}
 }
