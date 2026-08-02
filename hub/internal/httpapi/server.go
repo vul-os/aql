@@ -543,7 +543,65 @@ func (s *Server) Router() http.Handler {
 	// embedded portal seam — everything unmatched falls through to it
 	mux.Handle("/", portal.Handler())
 
-	return mux
+	return withSecurityHeaders(mux)
+}
+
+// withSecurityHeaders sets the headers a browser needs to be told, on every
+// response this server makes.
+//
+// # Why this exists now
+//
+// It did not before because no shipped artifact contained the console: release
+// tarballs and the image were built without `-tags portal`, so what they served
+// at / was a static placeholder and there was no admin UI in a browser to
+// protect. Embedding the real bundle made this surface live, and a console that
+// opens gates is worth a moment's thought about what a page on another site can
+// do to it.
+//
+// # frame-ancestors, which is the one that matters here
+//
+// Any page anywhere could iframe this console and position an invisible overlay
+// over it. A signed-in operator clicking what looks like a video player clicks
+// "open" instead — clickjacking, against a product whose buttons move physical
+// barriers. `frame-ancestors 'none'` ends that, and X-Frame-Options says the
+// same thing to anything too old to read CSP.
+//
+// # What is deliberately NOT restricted
+//
+// connect-src. The console is designed to talk to a hub it was not served by:
+// the gateway picker, the ?gateway= deep link and the desktop shell all depend
+// on it, and a static deployment of this same bundle talks to every hub its
+// users own. Locking connect-src to 'self' would break the feature this
+// repository documents most carefully, and would do it silently — a blocked
+// fetch looks exactly like a hub that is down. Everything else IS locked: the
+// bundle loads no third-party script, style, font or image.
+//
+// style-src allows 'unsafe-inline' because the build emits inline styles for
+// critical CSS and React sets style attributes. That is the standard, weak
+// concession; it does not admit scripts.
+func withSecurityHeaders(next http.Handler) http.Handler {
+	const csp = "default-src 'self'; " +
+		"script-src 'self'; " +
+		"style-src 'self' 'unsafe-inline'; " +
+		"img-src 'self' data: blob:; " +
+		// Clips are fMP4 fed through MSE, which is a blob URL.
+		"media-src 'self' blob:; " +
+		"font-src 'self'; " +
+		"object-src 'none'; " +
+		"base-uri 'self'; " +
+		"form-action 'self'; " +
+		"frame-ancestors 'none'"
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("Content-Security-Policy", csp)
+		h.Set("X-Frame-Options", "DENY")
+		h.Set("X-Content-Type-Options", "nosniff")
+		// no-referrer rather than same-origin: a hub's URL can itself be
+		// sensitive (a home's hostname or a tunnel address), and nothing here
+		// needs a Referer to work.
+		h.Set("Referrer-Policy", "no-referrer")
+		next.ServeHTTP(w, r)
+	})
 }
 
 // ---------------------------------------------------------------------------

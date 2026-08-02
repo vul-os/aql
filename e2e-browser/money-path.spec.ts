@@ -41,9 +41,12 @@ test('sign up, sign in, create a location + access point, attempt an open, read 
   // first-run UX for the embedded portal, not a test seam, so it's driven
   // for real here rather than pre-seeding localStorage.
   await page.goto(gw.url('/signup'));
-  await expect(page.getByRole('heading', { name: 'Connect to your hub' })).toBeVisible();
-  await page.getByLabel('Hub URL', { exact: true }).fill(gw.baseUrl);
-  await page.getByRole('button', { name: 'Connect', exact: true }).click();
+  // No picker: the embedded console connects to the hub that served it. This
+  // used to assert the opposite — "Connect to your hub" visible, then fill and
+  // click — because that WAS the first-run UX, and it was wrong: the operator
+  // was being asked for the address they had just typed into the address bar.
+  // first-run.spec.ts covers the rule directly.
+  await expect(page.getByRole('heading', { name: 'Connect to your hub' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Create your account' })).toBeVisible();
 
   // ── Step 1/3 — account basics ─────────────────────────────────────────

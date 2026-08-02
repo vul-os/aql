@@ -29,8 +29,6 @@ async function connectAndSignUp(
   username: string,
 ): Promise<void> {
   await page.goto(gw.url('/signup'));
-  await page.getByLabel('Hub URL', { exact: true }).fill(gw.baseUrl);
-  await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await page.getByLabel('Your name', { exact: true }).fill('Auth Flow Tester');
   await page.getByLabel('Username', { exact: true }).fill(username);
   await page.getByRole('textbox', { name: 'Password' }).fill('correct horse battery staple 1');
@@ -287,6 +285,22 @@ test('a non-https avatar is refused in the console, without asking the hub', asy
   await connectAndSignUp(page, `e2e-avatar-${Date.now()}`);
   await page.goto(gw.url('/app/settings'));
 
+  // A THIRD enforcement joined the two this test describes: the hub now serves
+  // a Content-Security-Policy with `img-src 'self' data: blob:`, so Chromium
+  // refuses to fetch the image at all and logs a violation. That is the policy
+  // working — an avatar URL that reached the DOM despite both checks still does
+  // not load — but the violation is a console error, and this suite treats
+  // console errors as failures.
+  //
+  // Allowed narrowly, by matching the directive rather than the word "image",
+  // so a violation of any OTHER directive still fails the run.
+  const cspBlocked: string[] = [];
+  allowExpectedConsoleError(page, (text) => {
+    const isBlock = text.includes('Content Security Policy') && text.includes("img-src 'self'");
+    if (isBlock) cspBlocked.push(text);
+    return isBlock;
+  });
+
   let asked = false;
   page.on('request', (r) => {
     if (r.url().endsWith('/v1/auth/me/profile')) asked = true;
@@ -297,4 +311,12 @@ test('a non-https avatar is refused in the console, without asking the hub', asy
 
   await expect(page.getByRole('alert')).toHaveText(/https/i);
   expect(asked, 'the console sent a request it had already decided was invalid').toBe(false);
+
+  // And the browser refused the fetch independently of either check. This is
+  // the belt the other two do not provide: it holds even for an avatar that
+  // arrived from somewhere this console never validated.
+  expect(
+    cspBlocked.length,
+    'the CSP did not block a third-party image — check img-src in withSecurityHeaders',
+  ).toBeGreaterThan(0);
 });

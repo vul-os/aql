@@ -32,8 +32,6 @@ async function connectAndSignUp(
   username: string,
 ): Promise<void> {
   await page.goto(gw.url('/signup'));
-  await page.getByLabel('Hub URL', { exact: true }).fill(gw.baseUrl);
-  await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await page.getByLabel('Your name', { exact: true }).fill('Safety Copy Tester');
   await page.getByLabel('Username', { exact: true }).fill(username);
   await page.getByRole('textbox', { name: 'Password' }).fill('correct horse battery staple 1');

@@ -832,6 +832,29 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] I BROKE 12 e2e SPECS LAST TURN AND SHIPPED IT. The first-run fix removed the
+      gateway picker for the embedded console — correct — and every spec's helper
+      began by filling in "Hub URL" and clicking Connect. I ran two specs after the
+      change, not the suite, and committed. Found it only because the CSP work made
+      me run everything. Symptom was disguised: 12 tests timing out at 150s each,
+      a 16-MINUTE suite, and a summary reading "5 passed, 4 did not run" with exit
+      code 0 and NO failure count — I nearly read that as a pass. Two things hid the
+      truth: I piped the run through `tail -8`, so the captured log had no detail,
+      and I started a second run concurrently. Specs updated; suite is 22 passed in
+      37s. RULE: a change to boot/first-run behaviour means the WHOLE browser suite,
+      not the specs I happen to be thinking about.
+- [x] Security headers on every response — CSP, X-Frame-Options, nosniff,
+      Referrer-Policy. There were NONE, and nothing in any doc claimed otherwise.
+      `frame-ancestors 'none'` is the one with teeth: any page could iframe this
+      console, float something over it, and a signed-in operator's click opens a
+      gate. connect-src is deliberately NOT restricted and a test pins that
+      decision with the reason — the picker, ?gateway= and the desktop shell all
+      talk to hubs that did not serve them, and a blocked fetch is indistinguishable
+      from a hub that is down. The suite then found the policy working: a
+      third-party avatar image is blocked by img-src, which that test now allows
+      NARROWLY (matching the directive) and asserts, because it is a third
+      enforcement of a rule the console and the hub each already keep.
+
 - [x] The embedded console asked the operator for the address of the server that had
       just served it. Hub-URL resolution was stored -> VITE_API_BASE_URL ->
       http://localhost:8787, and the boot probe only tried that dev port — SAME-ORIGIN
