@@ -176,8 +176,20 @@ func (s *Server) handleTopLevelLocationCreate(w http.ResponseWriter, r *http.Req
 	}
 	patch := store.LocationPatch{Lat: req.Lat, Long: req.Long}
 	if req.Type != "house" {
-		// anchor defaults to house; adjust via direct update
-		_ = s.store.UpdateLocationType(r.Context(), acct.ID, loc.ID, req.Type)
+		// The anchor is created as a house (CreateAccountWithOwner has no type
+		// parameter), so a caller asking for anything else needs this update to
+		// land. req.Type was validated against locationTypes above, so an error
+		// here is a storage failure and not a bad request.
+		//
+		// This used to discard the error, one line above a sibling call that
+		// returns 500 for the same class of failure. The asymmetry answered 201
+		// for an account whose location was silently left a house — the type is
+		// not echoed in the response, so the first sign would be the console
+		// showing the wrong kind of place some time later.
+		if err := s.store.UpdateLocationType(r.Context(), acct.ID, loc.ID, req.Type); err != nil {
+			writeErr(w, http.StatusInternalServerError, "internal")
+			return
+		}
 	}
 	if req.Address != nil {
 		aj := marshalAddress(req.Address)
