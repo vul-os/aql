@@ -837,12 +837,18 @@ cannot catch what both implementations get wrong together.
       began by filling in "Hub URL" and clicking Connect. I ran two specs after the
       change, not the suite, and committed. Found it only because the CSP work made
       me run everything. Symptom was disguised: 12 tests timing out at 150s each,
-      a 16-MINUTE suite, and a summary reading "5 passed, 4 did not run" with exit
-      code 0 and NO failure count — I nearly read that as a pass. Two things hid the
-      truth: I piped the run through `tail -8`, so the captured log had no detail,
-      and I started a second run concurrently. Specs updated; suite is 22 passed in
-      37s. RULE: a change to boot/first-run behaviour means the WHOLE browser suite,
-      not the specs I happen to be thinking about.
+      a 16-MINUTE suite, and the tail of the summary reading "4 did not run / 5
+      passed" — I nearly read that as a pass.
+      CORRECTION, checked afterwards: I blamed the tooling and the tooling was
+      right. The summary DID say "13 failed", thirteen lines above the tail I looked
+      at, and Playwright DOES exit 1 on failure — measured with a deliberately
+      failing spec. My "exit code 0" came from `; echo $?` after the command, which
+      reports echo's status, not Playwright's. Both misreadings were mine: piping
+      through `tail -8` so the captured log held only the last lines, and running two
+      suites concurrently. Nothing needs fixing in the harness.
+      Specs updated; suite is 22 passed in 37s. RULE: a change to boot/first-run
+      behaviour means the WHOLE browser suite, not the specs I happen to be thinking
+      about — and read the whole summary, not its tail.
 - [x] Security headers on every response — CSP, X-Frame-Options, nosniff,
       Referrer-Policy. There were NONE, and nothing in any doc claimed otherwise.
       `frame-ancestors 'none'` is the one with teeth: any page could iframe this
