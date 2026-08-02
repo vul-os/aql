@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"testing"
@@ -109,5 +110,58 @@ func TestTelegramDedupe(t *testing.T) {
 	tgPost(e.h, body)
 	if got := len(e.tg.all()); got != 1 {
 		t.Fatalf("dedupe: want 1 reply, got %d", got)
+	}
+}
+
+// A rejected webhook must not have DONE anything first.
+//
+// TestTelegramSecretTokenFailClosed asserts the status code, and a 403 is
+// exactly what a handler that parses, acts, and THEN verifies would also
+// return. Moving the Verify call below processTGUpdate — so an unsigned body
+// reaches the open path and only afterwards gets its 403 — passes every test
+// in this package. That was checked by making the change, not by reading:
+// `NOT CAUGHT`.
+//
+// So this asserts the absence of the work instead of the presence of the
+// refusal. The body is the same linked-user "open" that
+// TestTelegramDirectOpenReachesVerdict drives to a real verdict, so if it is
+// processed there is a reply to find and an access-log row to count.
+func TestAnUnsignedTelegramWebhookDoesNothingAtAll(t *testing.T) {
+	e := setupChannels(t, permissiveRL())
+	body := tgMessage(testTGUID, testTGChat, 1, "open")
+
+	countLogs := func() int {
+		_, total, err := e.st.AdminAudit(context.Background(), "all", 1, 0)
+		if err != nil {
+			t.Fatalf("count access logs: %v", err)
+		}
+		return total
+	}
+	before := countLogs()
+
+	for _, tc := range []struct {
+		name    string
+		headers map[string]string
+	}{
+		{"no token", map[string]string{"Content-Type": "application/json"}},
+		{"wrong token", map[string]string{"X-Telegram-Bot-Api-Secret-Token": "nope"}},
+	} {
+		rec := rawPost(e.h, "/webhooks/telegram", body, tc.headers)
+		if rec.Code != http.StatusForbidden {
+			t.Fatalf("%s: %d, want 403", tc.name, rec.Code)
+		}
+	}
+
+	e.tg.mu.Lock()
+	sent, callbacks := len(e.tg.sent), e.tg.callbacks
+	e.tg.mu.Unlock()
+	if sent != 0 || callbacks != 0 {
+		t.Errorf("an unsigned webhook produced %d message(s) and %d callback(s); "+
+			"the body was processed before its signature was checked", sent, callbacks)
+	}
+
+	if after := countLogs(); after != before {
+		t.Errorf("an unsigned webhook added %d access-log row(s) — it reached the open path",
+			after-before)
 	}
 }

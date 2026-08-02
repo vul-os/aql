@@ -473,3 +473,56 @@ func TestAQuestionOnlyReportsGatesTheAskerCouldOpen(t *testing.T) {
 		}
 	}
 }
+
+// The WhatsApp half of the same property: a rejected webhook must not have
+// already acted. See the Telegram equivalent for why a 403 alone is not enough
+// — a handler that parses, replies, and verifies afterwards returns exactly
+// the same status, and the fail-closed test above cannot tell the difference.
+func TestAnUnsignedWhatsAppWebhookDoesNothingAtAll(t *testing.T) {
+	e := setupChannels(t, permissiveRL())
+	// A linked sender saying "hi", which on the signed path draws a reply.
+	body := waTextMsg(testPhoneRaw, "wamid.unsigned", "hi", waPhoneID)
+
+	for _, tc := range []struct {
+		name    string
+		headers map[string]string
+	}{
+		{"missing signature", map[string]string{"Content-Type": "application/json"}},
+		{"bad signature", map[string]string{"X-Hub-Signature-256": "sha256=deadbeef"}},
+	} {
+		if rec := rawPost(e.h, "/webhooks/whatsapp", body, tc.headers); rec.Code != http.StatusForbidden {
+			t.Fatalf("%s: %d, want 403", tc.name, rec.Code)
+		}
+	}
+
+	e.wa.mu.Lock()
+	sent := len(e.wa.sent)
+	e.wa.mu.Unlock()
+	if sent != 0 {
+		t.Errorf("an unsigned webhook sent %d WhatsApp message(s); the body was "+
+			"processed before its signature was checked", sent)
+	}
+
+	// And nothing was WRITTEN either, which the reply count alone cannot show.
+	//
+	// processWhatsAppMessage upserts a chat row, stores the inbound body and
+	// meters the sender before any reply is built, so a handler that verifies
+	// just before SENDING still persists an unsigned stranger's message and
+	// leaves no visible trace. Moving the Verify call to exactly there was NOT
+	// CAUGHT by the reply assertion above.
+	//
+	// The probe is the dedupe: message ids are single-use, so if the unsigned
+	// body was recorded, the same id arriving legitimately is dropped as a
+	// redelivery. That is the harm stated plainly — an attacker who knows a
+	// message id can silence the real message by racing it unsigned.
+	if rec := waPost(e.h, body); rec.Code != http.StatusOK {
+		t.Fatalf("the signed retry: %d", rec.Code)
+	}
+	e.wa.mu.Lock()
+	afterSigned := len(e.wa.sent)
+	e.wa.mu.Unlock()
+	if afterSigned == 0 {
+		t.Error("the signed message drew no reply — the unsigned attempt had already " +
+			"recorded its id, so the real one was dropped as a duplicate")
+	}
+}
