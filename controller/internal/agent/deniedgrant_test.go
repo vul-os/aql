@@ -2,6 +2,7 @@ package agent
 
 import (
 	"crypto/ed25519"
+	"encoding/json"
 	"log/slog"
 	"os"
 	"sync/atomic"
@@ -10,7 +11,9 @@ import (
 
 	"github.com/vul-os/aql/controller/internal/clock"
 	"github.com/vul-os/aql/controller/internal/events"
+	"github.com/vul-os/aql/controller/internal/grants"
 	"github.com/vul-os/aql/controller/internal/relay"
+	"github.com/vul-os/aql/controller/internal/state"
 )
 
 // countingRelay records actuation without doing any.
@@ -73,5 +76,70 @@ func TestADeniedGrantNeverMovesTheRelay(t *testing.T) {
 	}
 	if n := r.pulses.Load(); n != 0 {
 		t.Fatalf("denied grants pulsed the relay %d time(s)", n)
+	}
+}
+
+// The other half: a REDEEMED grant must open the gate.
+//
+// TestADeniedGrantNeverMovesTheRelay above asserts a pulse count of zero, and
+// on its own that is satisfied by an agent which never pulses at all — a
+// removed Pulse call, a relay wired to nothing. Both tests would pass, and the
+// suite would report that emergency access is safe when it is merely broken.
+//
+// e2e covers the real redemption against real binaries, but `cd controller &&
+// go test ./...` is a normal thing to run and answered `ok` to that. This is
+// the premise the denial test needs: the same agent, the same relay, one pulse
+// when the grant is good.
+func TestARedeemedGrantOpensTheGate(t *testing.T) {
+	dir := t.TempDir()
+	st, err := state.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	q, err := events.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, priv, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := &countingRelay{}
+	a := &Agent{
+		Relay: r,
+		St:    st,
+		Recorder: &events.Recorder{
+			Priv: priv, DeviceID: "dev-redeemed",
+			Clock: clock.NewSynced(1_700_000_000, nil), Queue: q,
+		},
+		Log: slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError})),
+	}
+
+	a.OnRedeemed(
+		&grants.Grant{GrantID: "grant-ok"},
+		&grants.Proof{Cnonce: "cn-1", AccessPoint: "gate", Sig: "sig"},
+	)
+
+	if n := r.pulses.Load(); n != 1 {
+		t.Fatalf("a redeemed grant pulsed the relay %d time(s), want exactly 1 — "+
+			"the offline path is the one with no hub to fall back on", n)
+	}
+
+	// And it left the trail. RecordGrantRedeemed goes to the reserved
+	// partition BEFORE actuation on purpose (agent.go): an emergency open that
+	// nobody can point at afterwards is the failure this ordering prevents.
+	drained := q.Drain(16)
+	kinds := map[string]int{}
+	for _, pe := range drained {
+		var ev struct {
+			Kind string `json:"kind"`
+		}
+		if err := json.Unmarshal(pe.Raw, &ev); err != nil {
+			t.Fatalf("event unparseable: %v", err)
+		}
+		kinds[ev.Kind]++
+	}
+	if kinds["grant_redeemed"] != 1 || kinds["opened"] != 1 {
+		t.Errorf("events after a redemption: %v — want one grant_redeemed and one opened", kinds)
 	}
 }
