@@ -1003,9 +1003,11 @@ the one the system genuinely cannot answer.
 - `last_seen_at` for the controller (`store/devices.go:150-155`).
 
 Real position requires controller I/O — the `held_open` event, which
-`proto/events.md`'s Kinds table marks *"reserved — needs a position sensor"*
-(`proto/events.md`), and which the roadmap lists as protocol-supported but
-unshipped (`../ARCHITECTURE.md`).
+`proto/events.md`'s Kinds table still marks reserved, though its reason has
+narrowed: a position sensor now exists in the GPIO relay driver
+(`-tags gpio`, Linux), and what is missing is edge watching, so nothing
+measures how long a gate stood open. The roadmap lists it as
+protocol-supported but unshipped (`../ARCHITECTURE.md`).
 
 **BUILT, in that shape.** Never "The gate is closed." What it says is *"Main
 gate: last open command acked about 3 h ago"* followed by *"I can't confirm

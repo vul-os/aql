@@ -832,6 +832,27 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] "STUB: the reference controller has no sensor driver" was stale, and three
+      documents inherited it. relay.go said the Sensors seam was empty; gpio.go two
+      files away says the position input "is all that is implemented", gpio_linux.go
+      reserves a real line for it, GateClosed reads it with fail-closed semantics ("a
+      sensor we cannot read must not be allowed to assert that the gate is shut"),
+      and two tests cover it. So half the seam is wired and the comment said none of
+      it was.
+      proto/events.md's `held_open` therefore named the WRONG missing piece —
+      "reserved — needs a position sensor" — when the sensor exists under -tags gpio
+      and what is actually missing is EDGE WATCHING: a poll returns the level now,
+      an event needs someone watching it change. Corrected in relay.go,
+      proto/events.md, hub/README and docs/CHAT-COMMANDS.md.
+      THE CITATION GUARD EARNED ITS KEEP: changing events.md broke a quote in
+      CHAT-COMMANDS I did not know existed, and named the file, the quote and the
+      fact it no longer says that. I had verified minutes earlier that the guard
+      covers that quote — by tampering it — and then tripped it for real.
+      Also established that device-fed movement metering is blocked on HARDWARE, not
+      unwritten Go: no table, no protocol event (not even a reserved one), no sensor.
+      hub/README now says that instead of listing it beside things that were merely
+      unwritten.
+
 - [x] The baseline migration's "Deliberately DEFERRED" list was wrong about NINE
       tables. A reader of the schema would conclude admin_audit_log, account_invites,
       temporary_access_grants, maintenance_events, the chat tables and the

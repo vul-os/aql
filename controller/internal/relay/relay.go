@@ -30,10 +30,21 @@ type Relay interface {
 	State() string
 }
 
-// Sensors exposes position/tamper inputs. STUB: the reference controller
-// has no sensor driver; the mock returns static values. Wire real
-// debounced GPIO inputs here (position → held_open events, enclosure →
-// tamper events).
+// Sensors exposes position/tamper inputs.
+//
+// Position is IMPLEMENTED by the GPIO driver (`-tags gpio`, Linux): GateClosed
+// reads a real line and refuses to claim the gate is shut when it cannot read
+// one — see gpio.go. Mock returns (true, false), meaning "no sensor present",
+// which is what a build without that driver reports.
+//
+// This comment used to say "STUB: the reference controller has no sensor
+// driver". That was true before gpio.go and stayed after it, which is how a
+// reader would conclude the seam is empty when half of it is wired.
+//
+// Tamper is NOT implemented anywhere, and neither is edge watching: nothing
+// tracks the position line over time, so held_open events are still not
+// emitted (proto/events.md). A poll returns the level now; an event needs
+// someone watching it change.
 type Sensors interface {
 	// GateClosed reports the position sensor (true = closed), and whether
 	// a position sensor is present at all.

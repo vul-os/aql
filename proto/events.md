@@ -88,7 +88,7 @@ controllers ship is not.
 | `grant_redeemed` | full offline-redemption record (grant_id, cnonce, proof) | audit continuity for offline opens | **sent** |
 | `boot` | `{fw, reason}` | fleet health, update tracking | **sent** |
 | `button` | `{button_id}` | **intercom-lite**: the hub notifies the resident's chat — "Someone is at the gate. Reply OPEN." | reserved — no button input exists |
-| `held_open` | `{seconds}` | gate-left-open alerts | reserved — needs a position sensor |
+| `held_open` | `{seconds}` | gate-left-open alerts | reserved — the position sensor EXISTS (GPIO driver, `-tags gpio`, Linux); what is missing is edge watching, so nothing measures how long |
 | `tamper` | `{sensor}` | enclosure opened / supply cut alerts | reserved — no tamper sensing exists |
 | `power` | `{source: "mains"\|"battery", level}` | battery/outage telemetry (load-shedding reality) | reserved — no power monitoring exists |
 | `net` | `{iface: "wifi"\|"gsm", rssi}` | connectivity telemetry, `last_seen_at` | reserved — no radio telemetry exists |
