@@ -225,7 +225,7 @@ fi
 # what you meant, and silence there is how the false verdicts happened.
 if [ -n "${EXPECT:-}" ]; then
   if printf '%s' "$out" | grep -qF -- "$EXPECT"; then
-    echo "CAUGHT  — applied, ${compiled}and the output contains: $EXPECT"
+    echo "CAUGHT  — applied, ${compiled}the output contains: $EXPECT"
     exit 0
   fi
   echo "RED, BUT NOT BY THE EXPECTED ASSERTION — the command failed and \"$EXPECT\" is"

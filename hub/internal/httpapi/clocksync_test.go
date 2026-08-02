@@ -22,6 +22,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"net/http"
 	"os"
 	"regexp"
 	"strconv"
@@ -281,5 +282,131 @@ This number is sent to clients so they do not hard-code it. If the controller's
 limit moved, keys.StaleClockLimitSeconds must move with it — the two modules
 cannot import each other, so nothing but this test connects them.`,
 			keys.StaleClockLimitSeconds, real)
+	}
+}
+
+// proved:true always carries age_s. The console depends on it.
+//
+// ClockFreshness.tsx filters with `!r.proved || (r.age_s ?? 0) >= warnAfter`
+// and renders `Last confirmed ${humanAge(r.age_s ?? 0)} ago`. Both `?? 0` are
+// unreachable ONLY because this handler never emits proved without an age. If
+// it ever did, a controller whose age is unknown would score 0 — the freshest
+// possible reading — and be filtered OUT of a panel headed "Offline access at
+// risk". A fail-open on the display that tells an operator their emergency
+// grants have stopped working.
+//
+// Nothing stated that coupling until this test. The handler is six obvious
+// lines; the point is that the console reads them from another repository
+// directory and cannot see them change.
+func TestClockFreshnessNeverReportsProvedWithoutAnAge(t *testing.T) {
+	h, st := newTestServerWithStore(t, "")
+	access, _ := register(t, h, "clock-freshness@op.com")
+	acct, loc := tenantIDs(t, h, access)
+
+	// Both must be PAIRED: ClockFreshnessByAccount filters on paired_at, so a
+	// merely-created device is invisible here and the test would assert over an
+	// empty list — passing while checking nothing.
+	pair := func(label string) string {
+		t.Helper()
+		rec, out := doJSON(t, h, "POST", "/v1/devices", access, map[string]any{
+			"location_id": loc, "label": label,
+		})
+		if rec.Code != 201 {
+			t.Fatalf("device create: %d %s", rec.Code, rec.Body)
+		}
+		id, claim := out["id"].(string), out["claim_token"].(string)
+		rec, out = doJSON(t, h, "POST", "/pair/redeem", "", map[string]any{
+			"v": 0, "typ": "pair.redeem", "claim_token": claim,
+			"controller_pubkey": genAppPubkey(t),
+			"hw":                map[string]any{"model": "test", "fw": "0.0.1", "ifaces": []string{"wifi"}},
+		})
+		if rec.Code != 200 || out["typ"] != "pair.grant" {
+			t.Fatalf("pair redeem: %d %s", rec.Code, rec.Body)
+		}
+		return id
+	}
+	pair("never-synced")
+	out := map[string]any{"id": pair("synced")}
+	syncedID := out["id"].(string)
+	// The real ceremony: a ping is dispatched, the controller acks it. Writing
+	// synced_at directly would prove the handler formats a row, not that the
+	// row a real sync produces carries an age.
+	ctx := context.Background()
+	if err := st.RecordPingDispatched(ctx, syncedID, "nonce-freshness"); err != nil {
+		t.Fatalf("record ping: %v", err)
+	}
+	if ok, err := st.RecordAckIfPing(ctx, syncedID, "nonce-freshness"); err != nil || !ok {
+		t.Fatalf("record ack: ok=%v err=%v", ok, err)
+	}
+
+	rec, body := doJSON(t, h, "GET", "/v1/accounts/"+acct+"/controllers/clock-freshness", access, nil)
+	if rec.Code != 200 {
+		t.Fatalf("clock-freshness: %d %s", rec.Code, rec.Body)
+	}
+	rows, _ := body["controllers"].([]any)
+	if len(rows) != 2 {
+		t.Fatalf("got %d controllers, want 2: %s", len(rows), rec.Body)
+	}
+
+	sawProved, sawUnproved := false, false
+	for _, r := range rows {
+		m := r.(map[string]any)
+		proved, _ := m["proved"].(bool)
+		_, hasAge := m["age_s"]
+		if proved {
+			sawProved = true
+			if !hasAge {
+				t.Errorf("proved:true with no age_s — the console scores that as 0 seconds "+
+					"old and hides the controller from the at-risk panel: %v", m)
+			}
+		} else {
+			sawUnproved = true
+			// The other direction, so "always send age_s" is not a passing fix:
+			// an unproved controller with an age would render "Last confirmed N
+			// ago" for a sync that never happened.
+			if hasAge {
+				t.Errorf("proved:false carrying an age_s, which reads as a confirmation "+
+					"that never happened: %v", m)
+			}
+		}
+	}
+	if !sawProved || !sawUnproved {
+		t.Fatalf("this test needs one of each to mean anything (proved=%v unproved=%v)",
+			sawProved, sawUnproved)
+	}
+}
+
+// A daily cap below 1 is refused, which is what makes the console's bar honest.
+//
+// LocationLimitsPanel renders `${Math.round((pct ?? 0) * 100)}% of daily cap`
+// inside a `cap !== null` branch, and pct is null exactly when cap is 0. So a
+// location capped at zero opens — fully blocked — would read "0% of daily cap",
+// the same words a location that has used none of a generous cap shows. The
+// console is safe only because parseLimitField rejects n < 1.
+//
+// Filed here rather than in a locations test because the invariant belongs to
+// the pair, not to either side: the hub is free to allow 0 as far as its own
+// tests care, and the console cannot see the bound it depends on.
+func TestADailyCapBelowOneIsRefused(t *testing.T) {
+	h, _ := newTestServerWithStore(t, "")
+	access, _ := register(t, h, "cap-floor@op.com")
+	_, loc := tenantIDs(t, h, access)
+
+	for _, n := range []any{0, -1} {
+		rec, body := doJSON(t, h, "PATCH", "/v1/locations/"+loc+"/limits", access,
+			map[string]any{"max_opens_per_location_per_day": n})
+		if rec.Code != http.StatusBadRequest || body["error"] != "invalid_limit" {
+			t.Errorf("cap %v accepted (%d %s); the console renders a fully blocked "+
+				"location as \"0%% of daily cap\", which reads as unused", n, rec.Code, rec.Body)
+		}
+	}
+
+	// The premise: 1 IS accepted, so the rejections above are the bound doing
+	// its job rather than the route refusing everything.
+	rec, _ := doJSON(t, h, "PATCH", "/v1/locations/"+loc+"/limits", access,
+		map[string]any{"max_opens_per_location_per_day": 1})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("a cap of 1 was refused (%d %s) — this test proves nothing if the "+
+			"route rejects every value", rec.Code, rec.Body)
 	}
 }
