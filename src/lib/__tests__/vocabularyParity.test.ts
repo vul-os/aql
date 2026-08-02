@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -123,6 +124,21 @@ const VOCABULARIES: Array<{
     min: 2,
     sqlFile: 'hub/internal/store/migrations/0012_api_tokens.sql',
     sqlPattern: /scope\s+TEXT NOT NULL CHECK \(scope IN \(([^)]*)\)\)/,
+  },
+  {
+    // Roles decide who may do what, and they were the one vocabulary here with
+    // FOUR surfaces and no comparison between any of them: a Go allowlist, a
+    // console union type, and the same CHECK written out twice in two
+    // migrations. The second SQL copy is covered by the duplicate-CHECK test
+    // below, since a pattern can only read one file.
+    name: 'account roles',
+    goFile: 'hub/internal/httpapi/accounts.go',
+    goPattern: /roleValues\s*=\s*map\[string\]bool\{([^}]*)\}/,
+    tsFile: 'src/lib/api.ts',
+    tsPattern: /role: ('owner'(?:\s*\|\s*'[a-z]+')*);/,
+    min: 4,
+    sqlFile: 'hub/internal/store/migrations/0001_baseline.sql',
+    sqlPattern: /role\s+TEXT NOT NULL CHECK \(role IN \(([^)]*)\)\)/,
   },
   {
     name: 'automation trigger kinds',
@@ -271,6 +287,53 @@ refusal they cannot act on.`,
   });
 });
 
+
+describe('a vocabulary written into several migrations stays one vocabulary', () => {
+  // `role` is CHECKed in THREE places — 0001_baseline.sql once and
+  // 0002_members_invites_settings.sql twice. The parity entry above reads one
+  // file and one match, so the other two could drift with nothing noticing:
+  // memberships would accept a role that invites refuse, or the reverse, and
+  // each table would be internally consistent.
+  //
+  // Deliberately comparing the two SQL sites to EACH OTHER rather than adding
+  // a second parity entry. The failure being guarded is that they disagree —
+  // which side is right is a question for whoever made them differ.
+  it('every role CHECK in every migration is the same set', () => {
+    // Written to find its own sites rather than take a list. The first draft
+    // named two files and compared one CHECK from each; tamper.sh refused the
+    // edit as ambiguous because the text appears TWICE in 0002, which is how
+    // the third site was found. A hand-maintained list of places a pattern
+    // occurs is a list that goes stale the moment someone adds a table.
+    const files = execFileSync('git', ['ls-files', 'hub/internal/store/migrations/*.sql'], {
+      cwd: root,
+      encoding: 'utf8',
+    })
+      .split('\n')
+      .filter(Boolean);
+
+    const sites: Array<{ where: string; roles: string[] }> = [];
+    for (const f of files) {
+      const text = read(f);
+      for (const m of text.matchAll(/role\s+TEXT NOT NULL CHECK \(role IN \(([^)]*)\)\)/g)) {
+        const roles = [...new Set([...m[1].matchAll(/'([a-z]+)'/g)].map((x) => x[1]))].sort();
+        sites.push({ where: `${f}:${text.slice(0, m.index).split('\n').length}`, roles });
+      }
+    }
+
+    expect(sites.length, 'no role CHECK found in any migration — the pattern has drifted')
+      .toBeGreaterThanOrEqual(3);
+
+    const first = sites[0];
+    for (const site of sites.slice(1)) {
+      expect(
+        site.roles,
+        `the role CHECK at ${site.where} [${site.roles.join(', ')}] differs from
+${first.where} [${first.roles.join(', ')}]. One table would accept a role another
+refuses, and each is internally consistent.`,
+      ).toEqual(first.roles);
+    }
+  });
+});
 
 describe('deny reasons are the same set on all three surfaces', () => {
   /**
