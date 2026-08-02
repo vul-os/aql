@@ -339,6 +339,13 @@ func (p *Processor) scheduleRelease(d time.Duration) {
 		// never will. The cost is that a cancel can wait for one relay write —
 		// microseconds of GPIO ioctl — which is the right trade against a gate
 		// that closes by itself.
+		//
+		// Both relay drivers already do this, and this layer did not. GPIO's
+		// holdExpired takes g.mu and re-checks `g.state != StateHeld` before
+		// touching the line; Mock's pulse timer takes m.mu and re-checks
+		// "pulsing". They are the precedent this should have followed — the
+		// hardware layer got the harder version right while the software layer
+		// above it called Stop() and assumed.
 		p.holdMu.Lock()
 		if gen != p.holdGen {
 			p.holdMu.Unlock()

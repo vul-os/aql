@@ -833,6 +833,17 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] Swept the whole class after fixing it: THREE time.AfterFunc sites exist in
+      production code, and only the one I fixed was wrong. GPIO's holdExpired takes
+      the driver mutex and re-checks `g.state != StateHeld` before touching the line;
+      Mock's pulse timer takes its mutex and re-checks "pulsing". Both are the
+      check-and-act-under-one-lock pattern I had to arrive at by failing twice.
+      Worth naming: the HARDWARE drivers got the harder version right, and the
+      software layer above them called Stop() and assumed. command.go now points at
+      them as the precedent it should have followed.
+      Every other timer here is a channel timer read inside a select, which has no
+      separate goroutine to outlive a cancel and cannot have this defect.
+
 - [x] A REAL DEFECT on the actuation path, found by pulling on the concurrency open
       item. time.Timer.Stop() does not wait for a callback that has already started
       and returns false to say so; cancelRelease ignored the return, so after it
