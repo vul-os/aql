@@ -832,6 +832,31 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] BUILT held_open, the gate-left-open event proto/events.md had reserved since
+      the beginning. Yesterday established the missing piece was not a sensor — the
+      GPIO driver has one — but EDGE WATCHING: a poll answers "closed now", an alert
+      needs something looking more than once. That is now controller/internal/agent/
+      heldopen.go, behind `-held-open-after` (0 = off), started only when the relay
+      also implements Sensors and one is actually present. The hub needed NO change:
+      RecordControllerEvent stores any kind verbatim, which I checked before writing
+      anything.
+      The honest part is the payload. `seconds` is how long the sensor has NOT
+      REPORTED CLOSED, which is not "the gate was open that long" — GateClosed
+      returns (false, true) both when the gate is open and when the line cannot be
+      read, deliberately, and the two are indistinguishable through that interface.
+      An operator who reads "not reported closed for 5 minutes" and finds the gate
+      shut has learned something true: the sensor is broken.
+      Fires ONCE per episode and re-arms on a closed reading — the event queue is
+      durable and at-least-once, so a repeat-every-tick alert would fill it with
+      copies of one fact. Three tampers CAUGHT (no re-arm, repeat-every-tick, the
+      absent-sensor branch). Race detector clean over 3 runs.
+      MY TEST WAS RACY AND THE CODE WAS FINE: it advanced the fake clock before the
+      watcher's first tick, so the "not closed since" stamp landed 30s late and the
+      threshold was never reached. Instrumented the watcher directly rather than
+      re-reading my own logic. Two earlier tampers were also junk — one did not
+      compile (unused variable), one hit a fast path whose real guard is the
+      per-tick check.
+
 - [x] "STUB: the reference controller has no sensor driver" was stale, and three
       documents inherited it. relay.go said the Sensors seam was empty; gpio.go two
       files away says the position input "is all that is implemented", gpio_linux.go

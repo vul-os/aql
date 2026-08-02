@@ -38,6 +38,12 @@ type Options struct {
 	AllowInsecure bool   // ws://+http:// endpoints (tests/dev)
 	Firmware      string // reported in hw + boot events
 	EnableBLE     bool   // requires a `-tags ble` build on Linux or Windows
+
+	// HeldOpenAfter is how long the position sensor may go without reporting
+	// the gate closed before a `held_open` event is emitted. Zero disables it,
+	// and so does having no sensor — see heldopen.go for what the number in
+	// that event does and does not claim.
+	HeldOpenAfter time.Duration
 }
 
 // Agent is an assembled controller.
@@ -286,6 +292,20 @@ func (a *Agent) Run(ctx context.Context) error {
 		}
 		go func() { errc <- lan.Serve(ctx, a.Opts.LANAddr) }()
 	}
+	// The gate-left-open watcher. Started only when the relay also implements
+	// Sensors, which the GPIO driver does and the mock does as "no sensor
+	// present" — so on a build with no sensor this returns immediately.
+	if sensors, ok := a.Relay.(relay.Sensors); ok && a.Opts.HeldOpenAfter > 0 {
+		w := &heldOpenWatcher{
+			sensors:   sensors,
+			record:    a.Recorder.Record,
+			threshold: a.Opts.HeldOpenAfter,
+			interval:  5 * time.Second,
+			now:       time.Now,
+		}
+		go w.run(ctx)
+	}
+
 	bleEnabled := true // default on; `config` {"ble_enabled": 0} disables
 	if v, ok := a.St.Config()["ble_enabled"]; ok && v == 0 {
 		bleEnabled = false

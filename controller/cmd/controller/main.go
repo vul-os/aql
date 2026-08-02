@@ -41,6 +41,7 @@ func main() {
 		aps           = flag.String("access-points", "main", "comma-separated access points this controller serves")
 		insecure      = flag.Bool("insecure", false, "allow ws:// and http:// hub endpoints (dev only)")
 		ble           = flag.Bool("ble", false, "enable the BLE peripheral (requires a `-tags ble` build on Linux or Windows)")
+		heldOpenAfter = flag.Duration("held-open-after", 0, "emit a `held_open` event when the position sensor has not reported the gate closed for this long (0 = off; needs a sensor, so a `-tags gpio` build with one configured)")
 		relaySpec     = flag.String("relay", "", "GPIO relay, `<chip>:<line>[,active-low][,bias=pull-up|pull-down|disabled][,sensor=<line>[,sensor-active-low][,sensor-debounce=20ms]]` (requires a `-tags gpio` Linux build); empty uses the mock relay, which actuates nothing")
 	)
 	flag.Parse()
@@ -102,6 +103,7 @@ func main() {
 		AllowInsecure: *insecure,
 		Firmware:      firmware,
 		EnableBLE:     *ble,
+		HeldOpenAfter: *heldOpenAfter,
 		Relay:         rel,
 	})
 	if err != nil {

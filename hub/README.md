@@ -33,8 +33,8 @@ Remaining (not blocking the core): device-fed movement metering. Calling it
 relay pulsed, not how far a leaf travelled. There is no `access_point_meters`
 table, no protocol event that could carry a distance — `proto/events.md` defines
 none, not even a reserved one — and no sensor to produce it. It is blocked on
-hardware, unlike `held_open`, whose position sensor now exists in the GPIO
-driver and which is waiting on edge watching instead. Until then `meter.movement_m` is null rather than a
+hardware, unlike `held_open`, which now ships: the GPIO driver has the position
+sensor and `-held-open-after` starts a watcher that emits the event. Until then `meter.movement_m` is null rather than a
 fabricated zero, and maintenance intervals by distance are refused with
 `movement_not_measured`.
 
