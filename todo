@@ -832,6 +832,23 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] The baseline migration's "Deliberately DEFERRED" list was wrong about NINE
+      tables. A reader of the schema would conclude admin_audit_log, account_invites,
+      temporary_access_grants, maintenance_events, the chat tables and the
+      rate-limit tables are all unbuilt; every one shipped, some renamed
+      (password_reset_tokens -> auth_recovery_tokens in 0009). Two more are now
+      decisions rather than deferrals (oauth_identities, email_verification_tokens),
+      and three genuinely remain (countries, device_commands, access_point_meters —
+      the last is why meter.movement_m is null).
+      ANNOTATED, NOT REWRITTEN: a migration records what was true when it ran, so the
+      original list stays and a dated note follows it, pointing at hub/README's
+      porting map as the live version and saying explicitly not to keep the comment
+      current. Verified migrations are tracked by NAME with no checksum before
+      touching the file, and that a fresh database still migrates and answers
+      ok:true afterwards.
+      Deliberately added NO guard for this — a guard would contradict the note's own
+      instruction that it is dated on purpose.
+
 - [x] Google OAuth is now recorded as NOT PLANNED rather than pending, which is what
       the rest of the product already implies. hub/README's own porting table said
       "Google OAuth still pending" in the same sentence as "There is no email to

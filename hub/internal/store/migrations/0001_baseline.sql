@@ -15,6 +15,29 @@
 --   message tables, access_point_meters, maintenance_events,
 --   temporary_access_grants, rate_limit tables, admin_audit_log.
 --
+-- THE LIST ABOVE IS FROM 2026 AND IS KEPT AS WRITTEN, because a migration is a
+-- record of what was true when it ran. Most of it is no longer true, and a
+-- reader who takes it as current would be wrong about nine tables, so:
+--
+--   SHIPPED SINCE, sometimes under another name — profile_phone_numbers,
+--     account_invites, location_members, location_settings (0002);
+--     temporary_access_grants and the rate-limit tables (0003); admin_audit_log
+--     (0004, now hash-chained by 0007); the chat and message tables, as
+--     channel_chats / channel_messages (0005); password_reset_tokens, as
+--     auth_recovery_tokens (0009); maintenance_events (0017).
+--
+--   NOT COMING, and these are decisions rather than gaps — oauth_identities
+--     (Google OAuth is not planned; ROADMAP says why) and
+--     email_verification_tokens (there is no email in this product; identity is
+--     a local username, and verification was removed rather than deferred).
+--
+--   STILL DEFERRED, genuinely — countries (reference data; country_code stays a
+--     plain 2-letter TEXT), device_commands, and access_point_meters, which is
+--     why meter.movement_m is null rather than a number.
+--
+-- hub/README.md's porting map is the live version of this. Do not try to keep
+-- this comment current; it is dated on purpose.
+--
 -- Postgres RLS does not exist in SQLite. Tenancy is APP-LAYER: every store
 -- method that touches tenant data takes an accountID and scopes its SQL to it
 -- (see internal/store). Conventions: ids are UUIDv4 TEXT, timestamps are
