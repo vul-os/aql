@@ -19,8 +19,12 @@ The product core is ported from the Workers backend onto Go + SQLite: accounts
 / members / invites, locations / quotas, access points, devices + pairing +
 the controller WebSocket hub, **the open path** (verdict → signed envelope →
 device), temporary grants, and the platform-admin console. `go build ./...`,
-`go vet ./...`, `go test ./...` are green (default build); `-tags portal`
-builds and tests green too.
+`go vet ./...`, `go test ./...` are green (default build). `-tags portal`
+builds and tests green **once the bundle exists** — run `make -C hub portal`
+first, or the embed fails with `pattern all:dist: no matching files found`.
+Nothing under `internal/portal/dist/` is committed, on purpose: see
+`internal/portal/portal_embed.go` for why a compile error beats a placeholder
+that would let the wrong page ship quietly.
 
 The chat channels are now ported too, and one exceeds the backend spec:
 **WhatsApp, Slack (Events API + Socket Mode), Telegram (webhook or dial-out
