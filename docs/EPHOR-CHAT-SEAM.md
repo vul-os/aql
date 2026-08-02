@@ -646,7 +646,7 @@ gap"* that *"MUST NOT be described as a limitation a future adapter version will
 **How the hub authorises, unchanged from today.** On every intent, the hub:
 
 1. resolves `(rail, remote_id)` → member or grant holder from its own store —
-   `ResolveChannelIdentity` (`hub/internal/store/channels.go:235`),
+   `ResolveChannelIdentity` (`hub/internal/store/channels.go:267-276`),
    `AvailableAccessPointsByPhone` (`:48`) / `AvailableAccessPointsByProfile` (`:124`),
    `MemberUserIDByPhoneForAP` (`:207`);
 2. resolves the verb and the target from `text` against **that member's authorised set**
@@ -752,8 +752,8 @@ argument, then the table.
 5. **Copy is a safety property here, not presentation.** `DenialMessage`'s strings are *"a
    behavioral contract — a denial never pretends the gate opened"*
    (`hub/internal/channels/reply.go:11-14`); `TruncationNotice` exists so *"a resident is
-   never shown a list that looks complete and is not"* (`:34-39`,
-   `hub/internal/channels/channels.go:335-341`). If the adapter composes prose, a swapped or
+   never shown a list that looks complete and is not"* (`:99-108`,
+   `hub/internal/channels/channels.go:350-352`). If the adapter composes prose, a swapped or
    buggy adapter silently drops the honesty. Hub composes; adapter renders structure. **This is
    my one refinement to the stated prior.**
 

@@ -89,7 +89,7 @@ is a days-of-work feature and hub-to-hub sync is a weeks-of-protocol feature.
 
 ### 2.1 What exists today
 
-`src/lib/offline/vault.ts:95-115` defines `GrantRecord`, keyed by
+`src/lib/offline/vault.ts:148-182` defines `GrantRecord`, keyed by
 `recordId(gatewayUrl, memberId)` = `` `${gatewayUrl}::${memberId}` ``
 (`vault.ts:333-335`), with the comment at `vault.ts:96` already stating the
 invariant: *"grants never cross hubs or members."*
@@ -113,8 +113,8 @@ for (const rec of all) {
 }
 ```
 
-`src/lib/offline/service.ts:53-67` (`loadState`) calls it with the *current*
-hub's URL from `getApiBaseUrl()` (`src/lib/hub.ts:44-48`). And
+`src/lib/offline/service.ts:77-89` (`loadState`) calls it with the *current*
+hub's URL from `getApiBaseUrl()` (`src/lib/hub.ts:79-83`). And
 `hub.ts` (`applyGatewayUrl`) reloads the page on a hub switch. So
 today, switching hubs deletes the other hub's offline grant on the next load.
 **That is the bug that makes multi-hub not work — and it is a one-function fix.**

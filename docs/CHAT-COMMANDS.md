@@ -1291,7 +1291,7 @@ commit `bf99a4d`, module `github.com/vul-os/aql/gateway`).
 
 | Path | Why |
 |---|---|
-| `hub/internal/keys/envelope.go:73-94` (`SignCommand`) | The signed-command path stays exactly as-is |
+| `hub/internal/keys/envelope.go:105-107` (`SignCommand`) | The signed-command path stays exactly as-is |
 | `hub/internal/keys/keys.go` | Signing identity |
 | `hub/internal/hub/hub.go` | Dispatch, ack correlation, `LateAckWindow` (`:41`) |
 | `controller/` (entire module) | Deployed hardware; verification order is `proto/commands.md:49-70` |
@@ -1350,11 +1350,11 @@ security boundary.
 | `hub/internal/httpapi/channels_telegram.go:83-102` | Same substitution (`:84`); the 0/1/many branch becomes the generic narrowing |
 | `hub/internal/httpapi/channels_slack.go:160-163` | `open_gate:` prefix check becomes registry-driven selection-context redemption |
 | `hub/internal/httpapi/channels_telegram.go:108-110` | Same for `open_ap:` |
-| `hub/internal/channels/whatsapp.go:279-284` | `ParseSelection`: **delete the `return "open", id` default**; unknown ids reject (§2.2d) |
+| `hub/internal/channels/whatsapp.go:483-493` | `ParseSelection`: **delete the `return "open", id` default**; unknown ids reject (§2.2d) |
 | `hub/internal/channels/whatsapp.go:170-211`, `:214-228` | `PushGateMenu`/`PushLocationMenu` → generic over `[]Candidate`; add "showing N of M" when truncating at `:189-191` / `:216-218` |
-| `hub/internal/channels/slack.go:88-111` | `AccessBlocks` → generic **and add the missing cap** (§2.2c) |
-| `hub/internal/channels/telegram.go:84-96` | `TelegramGateKeyboard` → generic |
-| `hub/internal/channels/channels.go:272-275` | `textIncludesName` moves into `intent/` and becomes scored, not first-match (§2.2a) |
+| `hub/internal/channels/slack.go:175-222` | `AccessBlocks` → generic **and add the missing cap** (§2.2c) |
+| `hub/internal/channels/telegram.go:102-116` | `TelegramGatePicker` → generic |
+| `hub/internal/channels/channels.go:300-318` | `textIncludesName` moves into `intent/` and becomes scored, not first-match (§2.2a) |
 | `hub/internal/channels/reply.go:15-30` | Add tier-refusal, `not_implemented`, and unresolved-intent copy. Existing strings are a behavioural contract — extend, don't reword |
 | `hub/internal/store/migrations/` | New `0008_*.sql` (current head is `0007_audit_hash_chain.sql`, embedded and applied by `store/store.go:26-27`, `:84-118`): capability/verb columns, the T4 window table, per-tier quota columns. `access_logs.command` already stores a string — no change needed there |
 
