@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -210,6 +210,24 @@ function docFiles(): string[] {
   walk(path.join(repo, 'src'));
   for (const f of ['README.md', 'ROADMAP.md', 'ARCHITECTURE.md', 'SECURITY.md']) {
     out.push(path.join(repo, f));
+  }
+  // The MODULE readmes and CONTRIBUTING, which this walk used to miss entirely.
+  //
+  // hub/README.md is the longest document in the repository and the one whose
+  // claims keep going stale: it opened by calling a deleted directory the
+  // behavioural spec, and listed Google OAuth as pending in the same sentence
+  // that explained why this product has no external identity provider. Neither
+  // was caught here, because the walk covered docs/, site/, proto/ and src/ and
+  // then four files at the root.
+  for (const f of [
+    'CONTRIBUTING.md',
+    'hub/README.md',
+    'controller/README.md',
+    'e2e/README.md',
+    'e2e-browser/README.md',
+  ]) {
+    const p = path.join(repo, f);
+    if (existsSync(p)) out.push(p);
   }
   // CHANGELOG is a dated record of what was true when written. Rewriting history
   // to match today is a different kind of dishonesty, so it is exempt.

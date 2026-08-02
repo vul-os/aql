@@ -832,6 +832,22 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] Swept the OTHER doc guards for the same narrow-scope bug, since one had it.
+      retiredClaims walked docs/, site/, proto/, src/ and four root files — missing
+      CONTRIBUTING and every MODULE README, including hub/README.md, the longest
+      document here and the one whose claims kept going stale (it called a deleted
+      directory the behavioural spec, and listed Google OAuth as pending in the same
+      sentence explaining why this product has no external identity provider).
+      Neither was caught here; nothing was looking.
+      Widened, and it passes — no retired claims hiding in those files today, which
+      is the honest result rather than a haul. Verified the widening is load-bearing
+      rather than trusting a green run: planted a retired claim in hub/README.md and
+      another in controller/README.md, both CAUGHT.
+      sourceCitations needed nothing — it already walks the whole repository and
+      derives its top-level directory list instead of hardcoding one, with a comment
+      saying why. docCounts is deliberately per-file, since each entry names a file
+      and the pattern that carries its number.
+
 - [x] Re-ran every tamper that could have been a false CAUGHT (Go/hub file + vitest
       check). Two were genuine. ONE WAS NOT: the deleted-directory guard, certified
       by tampering hub/README.md, had never scanned that file — docFiles() listed
