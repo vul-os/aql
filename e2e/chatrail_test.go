@@ -128,7 +128,27 @@ func TestChatRail_TelegramOpensARealGate(t *testing.T) {
 		t.Fatalf("a Telegram open never reached the controller; controller log:\n%s\nhub log:\n%s",
 			c.logs.String(), gw.logs.String())
 	}
-	fmt.Fprintf(gw.logs, "chat rail reached the gate\n")
+
+	// And "close" reaches it too.
+	//
+	// channels_slack.go records why this is worth an assertion rather than an
+	// assumption: AccessBlocks minted only open_gate: buttons and the switch
+	// recognised only "open", so a resident who could open a gate from chat had
+	// no way to close one — "close is never harder to reach than open" violated
+	// in the one direction that matters. It has been fixed on all three rails
+	// and regressed on two, which is the definition of something to pin.
+	//
+	// A close is Relay.Release, not a pulse: matching on state=pulsing would
+	// pass on an open and prove nothing about the verb.
+	closesBefore := c.logs.countLines("msg=command", "cmd=close")
+	if st := post(t, message(4, "close")); st != http.StatusOK {
+		t.Fatalf("close webhook: %d", st)
+	}
+	if !c.logs.waitLines(closesBefore+1, 5*time.Second, "msg=command", "cmd=close") {
+		t.Fatalf("a Telegram close never reached the controller; controller log:\n%s",
+			c.logs.String())
+	}
+	fmt.Fprintf(gw.logs, "chat rail reached the gate, both verbs\n")
 }
 
 // WhatsApp and Slack, the two rails left after the Telegram test above.
@@ -319,5 +339,28 @@ func TestChatRail_WhatsAppAndSlackReachARealGate(t *testing.T) {
 	if !c.logs.waitLines(pulses+1, 5*time.Second, "relay", "state=pulsing") {
 		t.Fatalf("a signed Slack interaction never reached the controller; controller log:\n%s\nhub log:\n%s",
 			c.logs.String(), gw.logs.String())
+	}
+
+	// Close, on the rail where "close is never harder to reach than open" was
+	// found violated: AccessBlocks minted only open_gate: buttons and the
+	// switch recognised only "open". Same shape as the open above, with the
+	// close_gate action id, and matched on cmd=close rather than a pulse —
+	// a close is Relay.Release, so waiting for state=pulsing would pass on an
+	// open and prove nothing about the verb.
+	closeForm := func() []byte {
+		payload, _ := json.Marshal(map[string]any{
+			"type":    "block_actions",
+			"user":    map[string]any{"id": "U1"},
+			"channel": map[string]any{"id": "C1"},
+			"actions": []map[string]any{{"action_id": "close_gate:" + ap, "value": ap}},
+		})
+		return []byte(url.Values{"payload": {string(payload)}}.Encode())
+	}()
+	closesBefore := c.logs.countLines("msg=command", "cmd=close")
+	if st := post(t, "/webhooks/slack/interactions", closeForm, formSigned(closeForm)); st != http.StatusOK {
+		t.Fatalf("signed slack close interaction: %d", st)
+	}
+	if !c.logs.waitLines(closesBefore+1, 5*time.Second, "msg=command", "cmd=close") {
+		t.Fatalf("a Slack close never reached the controller; controller log:\n%s", c.logs.String())
 	}
 }

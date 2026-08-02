@@ -148,6 +148,15 @@ These are documented by tests here; the fixes belong in `hub/` /
    Discord stays uncovered and cannot be covered the same way: it has no
    inbound webhook at all, being bot-token dial-out over the gateway socket.
 
+   Both tests also drive **close**, not only open. `channels_slack.go` records
+   why: AccessBlocks once minted only `open_gate:` buttons and the switch
+   recognised only "open", so a resident who could open a gate from chat had no
+   way to close one — "close is never harder to reach than open" violated in
+   the one direction that matters. Fixed on all three rails, regressed on two.
+   Matched on `cmd=close` rather than a relay pulse, because a close is
+   `Relay.Release` and waiting for `state=pulsing` would pass on an open and
+   prove nothing about the verb.
+
    Three things about the rails that only writing this surfaced, all of which
    made a working rail look broken:
 
