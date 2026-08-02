@@ -793,6 +793,18 @@ func clipRelPath(t *testing.T, st *store.Store, id string) string {
 // forever, which is the precise failure the reclaim guard in this repository
 // warns about: "the code was correct and the storage it was meant to bound grew
 // without limit until someone went looking."
+// Mutation-tested on 2026-08-02, because a four-case test that reads well is
+// not the same as one that bites. Each case was broken in turn and each failed
+// by its own message:
+//
+//	OrphanGrace = 0            → "young enough to be mid-write was deleted"
+//	cutoff pushed far past     → "an indexed-nowhere clip survived"
+//	sweep stops reading the index → "an indexed clip inside its retention was deleted"
+//
+// The third is the one that matters most and the least obvious to check by
+// reading: LiveClipPaths is the only thing standing between this sweep and
+// somebody's footage, and a sweep that silently got an empty set would delete
+// every clip on the disk while every other assertion here still passed.
 func TestOrphanedFilesAreReclaimed(t *testing.T) {
 	st := openTestStore(t)
 	ctx := context.Background()
