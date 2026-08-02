@@ -116,3 +116,20 @@ These are documented by tests here; the fixes belong in `hub/` /
    must be configured to *serve that id* (`--access-points <AP_ID>`), not a
    friendly name. The harness reads the id from the create-AP response and
    passes it through.
+
+6. **No chat rail is exercised here, and that is where the gaps were.** Every
+   test in this suite reaches the open path over HTTP or the LAN grant surface.
+   Nothing posts a webhook, so `finishOpen` — the open path shared by WhatsApp,
+   Telegram, Slack and Discord — has no real-binary coverage at all.
+
+   That is not a theoretical gap. Two defects found on 2026-08-02 were both on
+   chat paths, and both were invisible here: a refusal that still dispatched a
+   signed open to the gate (`finishOpen`), and a webhook processed before its
+   signature was verified. The equivalent mutation on the HTTP path is caught
+   immediately, by `TestRateLimit_NeverReachesController` and
+   `TestHold_RateLimitNeverReachesController`. Same property, same hub, one
+   entry point covered and one not.
+
+   Both are now guarded by tests in `hub/internal/httpapi`, which is a weaker
+   place to guard them than here — those drive a handler, not a binary. If this
+   harness ever grows a chat rail, `finishOpen` is the reason.

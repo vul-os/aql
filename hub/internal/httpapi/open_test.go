@@ -247,11 +247,23 @@ func TestGrantRoutes(t *testing.T) {
 
 // A denied open must not reach the device.
 //
-// This is the worst thing this product could do, and until this test nothing
-// stopped it. Adding a dispatchCommandWithPayload call inside the `if
-// !verdict.Allowed` branch of handleOpen — so every refusal signs an envelope
-// and pushes it to the gate — passed the ENTIRE hub suite. The response is
-// still 429 or 403, and every assertion anywhere looked at the response.
+// Adding a dispatchCommandWithPayload call inside the `if !verdict.Allowed`
+// branch of handleOpen — so every refusal signs an envelope and pushes it to
+// the gate — passes the ENTIRE hub suite. The response is still 429 or 403, and
+// every assertion in this module looked at the response.
+//
+// CORRECTION, and it matters because the commit that added this test implied
+// otherwise: the property was NOT unguarded. e2e catches that mutation through
+// TestRateLimit_NeverReachesController and
+// TestHold_RateLimitNeverReachesController, two tests named for exactly this.
+// They were invisible to the check that produced the verdict here, because
+// tamper.sh runs from the tampered file's module root and `go test ./...` in
+// hub/ never enters e2e/. Same trap that produced a false NOT CAUGHT on the
+// controller's OnDenied a commit later; tamper.sh documents it now.
+//
+// So this is defence in depth, not a plugged hole, and the honest reason to
+// keep it is that `cd hub && go test ./...` answers ok to a refusal that opens
+// the gate — and that is a normal thing to run.
 //
 // The reason it went unnoticed for so long is worth stating: most open-path
 // tests use an access point with no controller attached, and
