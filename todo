@@ -832,6 +832,27 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] CI could not tell the console from the placeholder. The image job builds,
+      starts and health-probes — all of which pass identically against a build with
+      NO console, because the failure is not "the server is down", it is "the server
+      serves the wrong thing". Drop the node stage and the placeholder ships again,
+      green. Now asserted three ways plus a control: a hashed bundle reference in
+      the document, a client route answering 200 through the history fallback, and
+      the placeholder's own sentence being ABSENT. Same step also pins the /v1 404
+      JSON and frame-ancestors in the artifact. Tamper = rebuild without
+      `-tags portal` -> CAUGHT.
+      A STRAY PROCESS nearly cost me an hour: my local run of the step failed, and
+      the image looked like it served a placeholder titled "lintel gateway" — a
+      pre-rename binary from an earlier session had been holding port 18080 the
+      whole time, and `docker run -d` prints a container ID even when the port bind
+      later kills it. The step was correct; I was curling something else. Third time
+      this week that "verify what you are actually talking to" was the whole lesson.
+      Also swept the class behind the NaN — every key httpapi writes as nil or only
+      inside a conditional (19 of them) against its TS declaration. All correctly
+      typed; the analytics pair was the only real one. Verified rather than assumed,
+      including one flagged key (`access_point_count`) whose single call site always
+      passes withCounts=true.
+
 - [x] The console showed "NaN% week-over-week" to anyone with a new account, and the
       hub had gone out of its way to prevent exactly that. analytics.go sends NULL
       for opens_prev_7d when the comparison week predates coverage, with the comment

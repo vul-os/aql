@@ -505,6 +505,40 @@ jobs:
           curl -fsS -o /dev/null http://127.0.0.1:18080/
           docker exec aqlci /healthprobe
           docker rm -f aqlci
+      # The image must serve the real console, not the placeholder.
+      #
+      # `go build` with no tags compiles portal_default.go, which serves a
+      # static "this build does not embed the console" page and 404s every
+      # console route. That is what every image and every release tarball
+      # contained until the node stage was added, while README told people to
+      # open localhost:8080 and called it the whole product.
+      #
+      # Nothing here would have noticed. The job builds the image, starts it and
+      # health-probes it, and all of that passes just as well against a
+      # placeholder — the failure is not that the server is down, it is that it
+      # is serving the wrong thing. So this asserts the SPA is present three
+      # ways: a hashed bundle reference in the document, a client route
+      # answering 200 through the history fallback, and the placeholder's own
+      # sentence being absent, which is the control that would catch a check
+      # passing for the wrong reason.
+      - name: the image serves the console, not the placeholder
+        run: |
+          set -eux
+          docker run -d --name aqlconsole -p 18080:8080 aql-hub:ci
+          for _ in $(seq 1 30); do
+            docker logs aqlconsole 2>&1 | grep -q "aql hub" && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:18080/ | grep -qE '/assets/index-[A-Za-z0-9_-]+\.js'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/app/devices)" = 200
+          ! curl -s http://127.0.0.1:18080/ | grep -q "does not embed the console"
+          # An unregistered API path is a 404 with a JSON body, never the console.
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/v1/nope)" = 404
+          curl -s http://127.0.0.1:18080/v1/nope | grep -q '"error"'
+          # And the browser-facing headers survive into the artifact.
+          curl -s -D - -o /dev/null http://127.0.0.1:18080/ | grep -qi "frame-ancestors 'none'"
+          docker rm -f aqlconsole
+
       # The image must be able to mint the key it consumes.
       #
       # gen-data-key exists because hub/README tells an operator to set
