@@ -172,14 +172,23 @@ These are documented by tests here; the fixes belong in `hub/` /
    actuates nothing. Those ids sit in the same allowlist as the ones that DO
    actuate, so the distinction is a table entry rather than a type.
 
-   A note on tampering that rule, because the obvious mutation does not work.
-   Making `LocationCommandVerb` return `isNarrowing=false` does NOT cause an
-   actuation — the handler falls through to "unknown selection" and nothing
-   moves, which is correct, so the e2e assertion rightly passes. It reads as a
-   CAUGHT only because hub/internal/channels unit tests fail on it. The
-   mutation that produces the actual harm replaces the picker render with
-   `waAccessCommand(...)` on the first narrowed gate; that one fails the e2e
-   assertion with "a location tap actuated: commands 2 → 5".
+   Two notes on tampering that rule, both learned the hard way.
+
+   The obvious mutation does not work. Making `LocationCommandVerb` return
+   `isNarrowing=false` does NOT cause an actuation — the handler falls through
+   to "unknown selection" and nothing moves, which is correct, so the assertion
+   rightly passes. The mutation that produces the actual harm replaces the
+   picker render with `waAccessCommand(...)` on the first narrowed gate; that
+   one fails with "a location tap actuated: commands 2 → 5".
+
+   And tamper this suite from the REPOSITORY ROOT: `-- bash -c 'cd e2e && go
+   test ...'`. tamper.sh runs CMD from the module root only when CMD is a Go
+   command, so a `bash -c` wrapper starts at the repo root and `cd ../e2e`
+   resolves outside the checkout. It fails with "No such file or directory",
+   the exit code is non-zero, and the old script called that CAUGHT — for every
+   chat-rail tamper run that way. The guards were fine; the verdicts were not.
+   `EXPECT="assertion text"` now refuses to say CAUGHT unless that text is in
+   the output.
 
    All three rails carry close now, each by its own route: Telegram from the
    typed word, Slack through a `close_gate:` block interaction, WhatsApp

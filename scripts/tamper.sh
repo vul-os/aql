@@ -25,6 +25,10 @@
 #
 # Usage:
 #   scripts/tamper.sh FILE OLD NEW -- CMD...
+#   EXPECT="assertion text" scripts/tamper.sh FILE OLD NEW -- CMD...
+#
+# EXPECT is how a verdict earns the word CAUGHT. Without it, any non-zero exit
+# from CMD reads as caught, including one from a test you were not testing.
 #
 # Example:
 #   scripts/tamper.sh hub/internal/keys/keys.go \
@@ -165,10 +169,39 @@ else
   compiled=""
 fi
 
-if (cd "$root" && "$@" >/dev/null 2>&1); then
+out=$(cd "$root" && "$@" 2>&1)
+rc=$?
+
+if [ "$rc" -eq 0 ]; then
   echo "NOT CAUGHT  — applied, ${compiled}the tests still pass. The guard is blind to this."
   exit 1
 fi
 
+# Red is not the same as caught BY THE GUARD UNDER TEST.
+#
+# Twice this session a tamper reported CAUGHT while the assertion being tested
+# passed: the command was broad enough that something else in it went red. Once
+# it was vitest run from the wrong directory finding no files; once it was a
+# package's unit tests failing on a mutation that left the e2e assertion
+# correctly green. Both times the verdict certified a guard that never ran.
+#
+# EXPECT=... makes the tamper name what it expects to see in the output. Without
+# it the verdict still says CAUGHT, but says which command produced it and warns
+# that nothing checked WHICH assertion failed — because a script cannot know
+# what you meant, and silence there is how the two false verdicts happened.
+if [ -n "${EXPECT:-}" ]; then
+  if printf '%s' "$out" | grep -qF -- "$EXPECT"; then
+    echo "CAUGHT  — applied, ${compiled}and the output contains: $EXPECT"
+    exit 0
+  fi
+  echo "RED, BUT NOT BY THE EXPECTED ASSERTION — the command failed and \"$EXPECT\" is"
+  echo "not in its output, so something ELSE went red. This is the shape of a false"
+  echo "CAUGHT: the guard under test may have passed. Failing output follows."
+  printf '%s\n' "$out" | tail -25
+  exit 3
+fi
+
 echo "CAUGHT  — applied, ${compiled}the tests went red."
+echo "         (no EXPECT= given, so nothing checked WHICH assertion failed —"
+echo "          set EXPECT='some assertion text' to rule out an unrelated failure)"
 exit 0
