@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
-// Functions that take a lock, release it, and take it again.
+// Check-then-act, in both forms this codebase has: over a mutex, and over the
+// database.
+//
+// The two are the same defect wearing different clothes. Something is read,
+// something is decided from it, and the act happens after the guarantee was
+// released — a mutex unlocked, or a statement completed with no transaction
+// around the pair. Between them these have cost a single-use grant its
+// single-use, a poll challenge its replay protection, and the tamper-evident
+// audit log six opens for one gate movement.
 //
 // # Why this is a guard and not a one-off sweep
 //
@@ -154,5 +162,76 @@ before adding it here:
       'these no longer take a lock twice — remove them rather than leaving an ' +
         'exemption that covers nothing',
     ).toEqual([]);
+  });
+});
+
+// The database half: a Store method that reads before it writes, with no
+// transaction holding the pair together.
+//
+// ORDER IS THE WHOLE SIGNAL, and getting that wrong nearly accused working code.
+// RedeemConfirmation reads and writes without a transaction and is exactly
+// right: it does a conditional UPDATE first and checks RowsAffected, which is a
+// compare-and-swap in SQL. Flagging "reads and writes" caught it; flagging
+// "reads BEFORE it writes" does not, and cut the candidates from nine to five.
+const STORE_REVIEWED: Record<string, string> = {
+  RecordControllerEvent:
+    'FIXED: the INSERT is the claim now — the PRIMARY KEY picks one winner and ' +
+    'only the winner appends the audit row. It used to append first, which gave ' +
+    'six access_logs rows for one gate movement under concurrent redelivery',
+  CreateAccessPointFull:
+    'the read VALIDATES ownership (is this device at this location) rather than ' +
+    'claiming anything. Racing a device relocation binds an access point to a ' +
+    'device that has just moved — narrow, admin-versus-admin, and bounded',
+  MaintenanceCreate: 'the read only checks the access point exists; nothing is claimed',
+  MintChannelLinkCode:
+    'a live-code cap, so two concurrent mints can both pass it and a user ends up ' +
+    'one or two over their own limit. Each code is still independently verified ' +
+    'and single-use, so the cap is an abuse limit rather than a security boundary — ' +
+    'recorded rather than fixed, because a transaction or partial unique index is ' +
+    'more machinery than the consequence warrants',
+  MintPhoneLinkCode: 'same cap, same reasoning as MintChannelLinkCode',
+};
+
+function storeReadBeforeWrite(): string[] {
+  const dir = join(root, 'hub', 'internal', 'store');
+  const found: string[] = [];
+  for (const abs of goFiles(dir)) {
+    const src = readFileSync(abs, 'utf8');
+    for (const m of src.matchAll(/\nfunc \(s \*Store\) (\w+)\([\s\S]*?\n\}/g)) {
+      const body = m[0];
+      if (/BeginTx|\.Begin\(/.test(body)) continue;
+      const read = body.search(/QueryRowContext|QueryContext/);
+      const write = body.search(/ExecContext/);
+      if (read >= 0 && write >= 0 && read < write) found.push(m[1]);
+    }
+  }
+  return [...new Set(found)].sort();
+}
+
+describe('store methods that read before they write', () => {
+  it('are all reviewed, with the reason recorded', () => {
+    const found = storeReadBeforeWrite();
+    expect(found.length, 'no read-before-write methods found; the scan is broken').toBeGreaterThanOrEqual(4);
+
+    const unreviewed = found.filter((fn) => STORE_REVIEWED[fn] === undefined);
+    expect(
+      unreviewed,
+      `these read a row and then write, with nothing holding the pair together. Decide
+which kind it is:
+
+  A CLAIM on something single-use — an invite, a token, a code, a challenge —
+  must be a conditional UPDATE checked by RowsAffected, or an INSERT whose
+  uniqueness constraint picks the winner. RedeemConfirmation is the example to
+  copy.
+
+  A VALIDATION read, or a cap whose worst case is bounded, can stay — say so
+  here, with what the worst case actually is.`,
+    ).toEqual([]);
+  });
+
+  it('has no stale entries', () => {
+    const live = new Set(storeReadBeforeWrite());
+    const stale = Object.keys(STORE_REVIEWED).filter((fn) => !live.has(fn));
+    expect(stale, 'these no longer read before writing — remove them').toEqual([]);
   });
 });

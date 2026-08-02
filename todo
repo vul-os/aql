@@ -840,6 +840,23 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] Both forms of check-then-act are now ONE guard (renamed checkThenAct): over a
+      mutex, and over the database. They are the same defect in different clothes —
+      something read, something decided from it, and the act happening after the
+      guarantee was released, whether that is an unlocked mutex or a statement that
+      ended with no transaction around the pair. Between them they cost a single-use
+      grant its single-use, a poll challenge its replay protection, and the audit log
+      six opens for one gate movement.
+      Verdicts on all five store candidates recorded, not just the fixed one:
+      CreateAccessPointFull and MaintenanceCreate read to VALIDATE (nothing is
+      claimed); the two Mint* methods check a live-code CAP, so two concurrent mints
+      can leave a user one or two over their own limit — recorded rather than fixed,
+      because each code is still independently verified and single-use, so the cap is
+      an abuse limit and not a security boundary, and a transaction is more machinery
+      than that warrants.
+      Controls both ways on the new half: a planted read-then-write method -> CAUGHT,
+      a stale entry -> CAUGHT.
+
 - [x] Took the same shape to the DATABASE, where the equivalent of a lock is a
       transaction, and found the audit log over-reporting. RecordControllerEvent
       appended the access_logs row BEFORE the controller_events insert so the event
