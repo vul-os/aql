@@ -304,7 +304,29 @@ func (x *Exchange) HandleProof(raw []byte, env Env) (*Result, *Grant, *Proof) {
 		return deny(wire.ReasonNotYetValid)
 	}
 	// Consume the cnonce (single-use), remembered until expiry + skew.
+	//
+	// The pending entry is RE-CHECKED here, and that is what makes single-use
+	// true. The `wasUsed` read at the top of this function happens before every
+	// validation step, and the lock is not held across them — so two proofs
+	// carrying the same cnonce could both find it unused, both validate, and
+	// both arrive here. Measured before this existed: eight concurrent posts of
+	// one proof returned "opened" eight times and redeemed the grant eight
+	// times.
+	//
+	// That is reachable in normal operation rather than theoretical. A phone can
+	// reach this exchange over BLE and over the LAN server at once, and both
+	// paths call HandleProof on the same Exchange.
+	//
+	// So the consume is a compare-and-swap: whoever finds the pending entry
+	// still there wins and takes it; anyone else is a replay, which is what a
+	// second use of a single-use grant IS. Same lesson as the hold timer in
+	// internal/command — a check whose action happens outside the lock is not a
+	// check — with a worse failure at the end of it.
 	x.mu.Lock()
+	if _, stillPending := x.pending[p.Cnonce]; !stillPending {
+		x.mu.Unlock()
+		return deny(wire.ReasonCnonceReplay)
+	}
 	delete(x.pending, p.Cnonce)
 	x.used[p.Cnonce] = ch.EXP + wire.ClockSkewSeconds
 	x.mu.Unlock()

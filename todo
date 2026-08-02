@@ -840,6 +840,23 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] A SINGLE-USE EMERGENCY GRANT COULD BE REDEEMED EIGHT TIMES. HandleProof read
+      `used[cnonce]` at the top, released the lock, ran every validation step, and
+      only then consumed the cnonce — so two proofs with the same cnonce could both
+      find it unused, both validate, and both consume. Measured before changing
+      anything: eight concurrent posts of ONE proof returned "opened" eight times and
+      called OnRedeemed eight times. Eight relay pulses and eight grant_redeemed
+      events for one grant.
+      Reachable in ordinary operation: a phone can reach the same Exchange over BLE
+      and over the LAN server at once, and the agent wires both to one instance.
+      Fixed as a compare-and-swap at the consume — whoever still finds the pending
+      entry wins, everyone else gets cnonce_replay, which is what a second use of a
+      single-use grant IS. Now exactly 1 opened in every run; tamper removing the
+      swap -> CAUGHT; module race-clean; 119 wire vectors still pass.
+      THIRD INSTANCE OF ONE SHAPE THIS WEEK — a check whose action happens outside
+      the lock. The hold timer, my own first fix for it, and now this. The other two
+      cost a gate closing itself; this one cost single-use.
+
 - [x] Second events pairing tested, which is the one the RUNNER actually creates and
       the first test did not: appends from several goroutines while the delivery loop
       drains, acks and COMPACTS. Compaction rewrites the log file, so an append
