@@ -185,10 +185,44 @@ fi
 # package's unit tests failing on a mutation that left the e2e assertion
 # correctly green. Both times the verdict certified a guard that never ran.
 #
+# Before any verdict: did the command RUN?
+#
+# A command that could not start fails the same way a red test does — non-zero
+# — and every false CAUGHT this script has produced was that, not a guard being
+# tested. `-- bash -c 'cd ../e2e && go test ...'` resolves outside the checkout
+# (this script only cds to the module root for GO commands), so it died on
+# "No such file or directory" and six tampers across four commits were recorded
+# as CAUGHT without executing a single test.
+#
+# The test is NOT "does the output mention a missing file". A real guard
+# failure often does — `t.Fatalf("...: %v", err)` on a file it expected to
+# exist reads exactly like a broken harness, and an earlier version of this
+# check called that INVALID, which is the same lie in the other direction: it
+# tells you your evidence proves nothing when the guard actually fired.
+#
+# The signal is whether a RUNNER EVER STARTED. Go prints ok/FAIL/--- FAIL per
+# package; vitest and playwright print their own summaries. None of that
+# appears when the shell could not find the directory.
+runner_started=0
+case "$out" in
+  *"--- FAIL"*|*"--- PASS"*|*$'\nok  '*|*"FAIL\t"*|*"PASS\n"*|\
+  *"Test Files"*|*"Tests  "*|*"passed"*|*"failed"*|*"✓"*|*"×"*)
+    runner_started=1 ;;
+esac
+
+if [ "$runner_started" -eq 0 ]; then
+  echo "INVALID  — nothing that looks like a test runner produced output, so the"
+  echo "           command almost certainly never reached the subject. This is NOT"
+  echo "           evidence about the guard. CMD runs from the module root only for"
+  echo "           go/gofmt, and from the repository root otherwise."
+  printf '%s\n' "$out" | tail -10
+  exit 2
+fi
+
 # EXPECT=... makes the tamper name what it expects to see in the output. Without
 # it the verdict still says CAUGHT, but says which command produced it and warns
 # that nothing checked WHICH assertion failed — because a script cannot know
-# what you meant, and silence there is how the two false verdicts happened.
+# what you meant, and silence there is how the false verdicts happened.
 if [ -n "${EXPECT:-}" ]; then
   if printf '%s' "$out" | grep -qF -- "$EXPECT"; then
     echo "CAUGHT  — applied, ${compiled}and the output contains: $EXPECT"

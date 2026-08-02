@@ -188,7 +188,8 @@ These are documented by tests here; the fixes belong in `hub/` /
    the exit code is non-zero, and the old script called that CAUGHT — for every
    chat-rail tamper run that way. The guards were fine; the verdicts were not.
    `EXPECT="assertion text"` now refuses to say CAUGHT unless that text is in
-   the output.
+   the output, and the script reports INVALID when nothing that looks like a
+   test runner produced output at all.
 
    All three rails carry close now, each by its own route: Telegram from the
    typed word, Slack through a `close_gate:` block interaction, WhatsApp
