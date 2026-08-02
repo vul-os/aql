@@ -639,3 +639,69 @@ describe('documentation cited from source', () => {
     expect(checked, 'the section-citation scan has narrowed').toBeGreaterThan(90);
   });
 });
+
+
+describe('identifiers named beside the file they live in', () => {
+  /**
+   * A doc can name a function that no longer exists, and every check here will
+   * still pass: the path resolves, the file exists, the line range is in
+   * bounds. Only the NAME is dead.
+   *
+   * docs/CHAT-COMMANDS.md's migration table told an implementer to make
+   * `TelegramGateKeyboard` generic. There is no such function — it was renamed
+   * to `TelegramGatePicker` — so the instruction sent whoever picked it up
+   * grepping for something that does not exist.
+   *
+   * Attribution is nearest-citation-to-the-right, because docs write
+   * `Ident` (`file.go`), falling back to the left. The set of citations used
+   * for attribution includes .md and .rs — files this never opens — because a
+   * comparison table reads `Aql \`grant\` (\`grant.go\`) | KOTVA
+   * \`CapabilityToken\` (\`18-wire-format.md\`)`, and an attribution blind to
+   * the .md claims CapabilityToken for grant.go and reports a defect that is
+   * not there. Same mistake the external checker made with bare line ranges.
+   */
+  const ANY_PATH = /`([A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:go|ts|tsx|md|sql|mjs|rs|toml))(?::\d+(?:-\d+)?)?`/g;
+  const IDENT = /`([A-Za-z][A-Za-z0-9_]{4,})\(?\)?`/g;
+  /** Looks like a code symbol rather than prose: camelCase or CamelCase. */
+  const LOOKS_LIKE_SYMBOL = /^[a-z]+[A-Z]|^[A-Z][a-z]+[A-Z]/;
+  const CHECKABLE = ['.go', '.ts', '.tsx'];
+
+  it('every symbol named beside a source file exists in that file', () => {
+    const offenders: string[] = [];
+    let checked = 0;
+
+    for (const doc of docFiles()) {
+      const text = readFileSync(resolve(root, doc), 'utf8');
+      text.split('\n').forEach((line, i) => {
+        const marks = [...line.matchAll(ANY_PATH)].map((m) => ({
+          at: m.index ?? 0,
+          path: m[1],
+        }));
+        if (!marks.length) return;
+
+        for (const m of line.matchAll(IDENT)) {
+          const ident = m[1];
+          if (!LOOKS_LIKE_SYMBOL.test(ident)) continue;
+          const at = m.index ?? 0;
+          const right = marks.find((k) => k.at > at);
+          const near = right ?? [...marks].reverse().find((k) => k.at < at);
+          if (!near) continue;
+          if (!CHECKABLE.some((e) => near.path.endsWith(e))) continue;
+          const full = resolve(root, near.path);
+          if (!existsSync(full)) continue; // the path check above owns that
+          checked++;
+          if (!readFileSync(full, 'utf8').includes(ident)) {
+            offenders.push(`${doc}:${i + 1} names \`${ident}\`, which is not in ${near.path}`);
+          }
+        }
+      });
+    }
+
+    expect(offenders).toEqual([]);
+    // Near the real count (33), not a token floor. This scan is deliberately
+    // narrow — it only fires on symbol-shaped names sitting beside a source
+    // path — so a pattern that stops matching would otherwise look identical to
+    // a clean sweep.
+    expect(checked, 'the symbol/citation pairing has stopped matching').toBeGreaterThan(28);
+  });
+});

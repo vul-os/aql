@@ -61,7 +61,7 @@ with [`keys.SignGrant`](https://github.com/vul-os/aql/blob/main/hub/internal/key
 `grant-redeem-valid` fixture. TTL is fixed at the proto default (7 days) and is not
 caller-extendable, and every issuance is written to the admin audit trail. The
 cross-module e2e test that exercises the LAN redemption path
-(`e2e/harness_test.go` / `TestOfflineGrant_Redeem`) now calls this real endpoint
+(`e2e/e2e_test.go` / `TestOfflineGrant_Redeem`) now calls this real endpoint
 instead of self-signing a grant with the hub's key, as it used to — the
 hub → controller half of the path is proven end to end against real issuance.
 
