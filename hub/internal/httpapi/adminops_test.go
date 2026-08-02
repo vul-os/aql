@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/vul-os/aql/hub/internal/store"
 )
 
 // claimAdmin registers a user and wins the first-run claim, returning their
@@ -334,6 +336,36 @@ func TestAdminAuditFilters(t *testing.T) {
 	rec, _ = doJSON(t, h, "GET", "/v1/admin/audit?kind=bogus", adminAccess, nil)
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("bad kind: %d", rec.Code)
+	}
+
+	// Every reason the open path can record is selectable.
+	//
+	// This filter used to accept four of the eleven. The store behind it has
+	// always matched on the error column, so the schedule and geofence denials
+	// were in access_logs and queryable — the allowlist in front of it was the
+	// only thing saying no, and a 400 is indistinguishable from "no such
+	// reason exists" to whoever is looking.
+	//
+	// Asserting 200 rather than a row count on purpose: this fixture produces a
+	// cooldown denial and nothing outside a time window, so most of these return
+	// an empty page. An empty page is the correct answer to "show me the
+	// geofence refusals" when there are none; a 400 is not.
+	for _, reason := range store.DenyReasons {
+		rec, body := doJSON(t, h, "GET", "/v1/admin/audit?kind="+reason, adminAccess, nil)
+		if rec.Code != 200 {
+			t.Errorf("kind=%s: %d — the open path records this reason but the filter refuses it",
+				reason, rec.Code)
+			continue
+		}
+		for _, e := range body["entries"].([]any) {
+			if got := e.(map[string]any)["error"]; got != reason {
+				t.Errorf("kind=%s returned a row with error=%v", reason, got)
+			}
+		}
+	}
+	if len(store.DenyReasons) < 11 {
+		t.Fatalf("store.DenyReasons has %d entries — this loop is checking less than it was written for",
+			len(store.DenyReasons))
 	}
 }
 

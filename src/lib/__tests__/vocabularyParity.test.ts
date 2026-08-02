@@ -239,3 +239,96 @@ refusal they cannot act on.`,
     ).toEqual([]);
   });
 });
+
+
+describe('deny reasons are the same set on all three surfaces', () => {
+  /**
+   * Three surfaces, one vocabulary — and until this test they disagreed.
+   *
+   * The open path records eleven deny reasons. The hub's audit filter accepted
+   * four of them; the console's union type named three; the console's filter
+   * offered those same three. Nobody was wrong in a way that errors: the store
+   * query has always matched any reason string, so the seven missing ones were
+   * recorded, indexed and queryable, and simply could not be asked for. That is
+   * the exact shape this file exists to catch, and deny reasons were not on its
+   * list.
+   */
+
+  /** store.DenyReasons, with constant references resolved to their values. */
+  function hubDenyReasons(): string[] {
+    const openpath = read('hub/internal/store/openpath.go');
+    const m = /var DenyReasons = \[\]string\{([\s\S]*?)\n\}/.exec(openpath);
+    if (!m) throw new Error('store.DenyReasons: pattern matched nothing — this guard cannot read it');
+    // Strip comments first, or a reason named in prose counts as a member.
+    const body = m[1].replace(/\/\/[^\n]*/g, '');
+
+    const out: string[] = [];
+    for (const line of body.split('\n')) {
+      const quoted = /"([a-z_]+)"/.exec(line);
+      if (quoted) {
+        out.push(quoted[1]);
+        continue;
+      }
+      const ident = /^\s*(Reason[A-Za-z]+),/.exec(line);
+      if (!ident) continue;
+      // Resolve `ReasonX = "x"` from the store package rather than trusting the
+      // identifier's spelling to match its value.
+      const pattern = new RegExp(`\\b${ident[1]}\\s*=\\s*"([a-z_]+)"`);
+      const decl =
+        pattern.exec(read('hub/internal/store/timewindows.go')) ??
+        pattern.exec(read('hub/internal/store/geofence.go'));
+      if (!decl) throw new Error(`${ident[1]} is in DenyReasons but declared nowhere this guard reads`);
+      out.push(decl[1]);
+    }
+    return [...new Set(out)].sort();
+  }
+
+  /** The reasons the console's filter actually offers. */
+  function consoleOfferedReasons(): string[] {
+    const src = read('src/pages/app/admin/AdminAudit.tsx');
+    const m = /const DENY_REASONS[\s\S]*?\n\];/.exec(src);
+    if (!m) throw new Error('DENY_REASONS: pattern matched nothing — this guard cannot read it');
+    return [...new Set([...m[0].matchAll(/kind: '([a-z_]+)'/g)].map((x) => x[1]))].sort();
+  }
+
+  /** AdminAuditKind, minus the five generic selectors that are not reasons. */
+  function consoleTypedReasons(): string[] {
+    const src = read('src/lib/api.ts');
+    const m = /export type AdminAuditKind =([\s\S]*?);/.exec(src);
+    if (!m) throw new Error('AdminAuditKind: pattern matched nothing — this guard cannot read it');
+    const generic = new Set(['all', 'denied', 'success', 'open', 'close']);
+    return [...new Set([...m[1].matchAll(/'([a-z_]+)'/g)].map((x) => x[1]))]
+      .filter((k) => !generic.has(k))
+      .sort();
+  }
+
+  it('the hub, the console type and the console filter all list the same reasons', () => {
+    const hub = hubDenyReasons();
+    const typed = consoleTypedReasons();
+    const offered = consoleOfferedReasons();
+
+    // Floors, so three patterns that stop matching cannot agree about nothing.
+    expect(hub.length, `parsed ${hub.length} from store.DenyReasons`).toBeGreaterThanOrEqual(11);
+    expect(typed.length, `parsed ${typed.length} from AdminAuditKind`).toBeGreaterThanOrEqual(11);
+    expect(offered.length, `parsed ${offered.length} from DENY_REASONS`).toBeGreaterThanOrEqual(11);
+
+    expect(typed, 'AdminAuditKind does not match store.DenyReasons').toEqual(hub);
+    expect(offered, 'the filter offers a different set than the type allows').toEqual(hub);
+  });
+
+  it('the audit filter accepts every reason the open path can record', () => {
+    // The allowlist is built from store.DenyReasons, so this checks the wiring
+    // rather than a copy: a future edit that hand-lists reasons here again
+    // fails, which is how it got to four out of eleven.
+    const adminops = read('hub/internal/httpapi/adminops.go');
+    const m = /var auditKinds = func\(\) map\[string\]bool \{([\s\S]*?)\n\}\(\)/.exec(adminops);
+    if (!m) throw new Error('auditKinds: pattern matched nothing — this guard cannot read it');
+    expect(m[1], 'auditKinds must be built from store.DenyReasons, not re-typed').toContain(
+      'store.DenyReasons',
+    );
+    // And the generic selectors are still there beside them.
+    for (const generic of ['all', 'denied', 'success', 'open', 'close']) {
+      expect(m[1], `auditKinds no longer accepts ${generic}`).toContain(`"${generic}"`);
+    }
+  });
+});

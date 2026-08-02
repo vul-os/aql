@@ -216,6 +216,39 @@ type LogAccessArgs struct {
 	Lat, Long     *float64
 }
 
+// DenyReasons is that vocabulary as a list, in one place.
+//
+// The comment below has described these eleven strings for as long as they have
+// existed, and three separate surfaces then re-typed them by hand: the admin
+// audit filter's allowlist, the console's filter dropdown, and the console's
+// union type. The prose was right and the surfaces were not — the audit filter
+// accepted four of the eleven, so an operator could select a throttle but not
+// the schedule lockout or the fence the comment promises they can tell apart.
+//
+// Nothing here is new behaviour. AdminAudit has always passed an unrecognised
+// kind through as an `error` column match (admin.go), so every one of these was
+// already a working query; the allowlist in front of it simply refused seven of
+// them. This exists so the next reason added to the open path has ONE list to
+// join rather than three to remember.
+var DenyReasons = []string{
+	// The backend's four. Bare literals at their call sites (openpath.go's
+	// deny(), the limits decision), not constants — listed rather than
+	// referenced, which is why the parity test also checks they still appear.
+	"rate_limited",
+	"quota_exceeded",
+	"account_suspended",
+	"user_disabled",
+
+	ReasonOutsideTimeWindow,
+	ReasonTimeWindowInvalid,
+	ReasonTimeWindowUnavailable,
+
+	ReasonOutsideGeofence,
+	ReasonGeofenceLocationRequired,
+	ReasonGeofenceInvalid,
+	ReasonGeofenceUnavailable,
+}
+
 // LogAccessResult is the verdict. Every attempt — allowed or denied — leaves
 // an access_logs row (LogID); on denial Reason is one of the backend's exact
 // vocabulary: rate_limited | quota_exceeded | account_suspended |

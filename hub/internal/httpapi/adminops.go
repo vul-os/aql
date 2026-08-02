@@ -424,10 +424,24 @@ func auditEntriesJSON(entries []store.AuditLogEntry) []map[string]any {
 	return out
 }
 
-var auditKinds = map[string]bool{
-	"": true, "all": true, "denied": true, "success": true, "open": true, "close": true,
-	"rate_limited": true, "quota_exceeded": true, "account_suspended": true, "user_disabled": true,
-}
+// auditKinds is what ?kind= accepts: the generic selectors, plus every deny
+// reason the open path can record.
+//
+// The deny half is built from store.DenyReasons rather than re-typed. It used
+// to list four of the eleven, which meant an operator could filter the audit
+// log for a throttle but not for the schedule lockout or the geofence refusal
+// that openpath.go says are kept as separate strings "precisely so an operator
+// can tell a schedule lockout from a fence from a throttle". The query behind
+// it already worked for all eleven; only this map said no.
+var auditKinds = func() map[string]bool {
+	m := map[string]bool{
+		"": true, "all": true, "denied": true, "success": true, "open": true, "close": true,
+	}
+	for _, r := range store.DenyReasons {
+		m[r] = true
+	}
+	return m
+}()
 
 // GET /v1/admin/audit — cross-account access_logs.
 func (s *Server) handleAdminAudit(w http.ResponseWriter, r *http.Request) {

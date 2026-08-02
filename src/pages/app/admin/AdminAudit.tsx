@@ -36,16 +36,53 @@ import {
 
 const PAGE = 50;
 
+// The generic selectors stay pills. Every specific deny reason moved into the
+// select beside them: there are eleven, and eleven more pills is a wall rather
+// than a filter. Three of them used to be pills and the other eight were not
+// offered at all, which is the drift this arrangement is meant to stop — one
+// control, one list, no room for a reason to be quietly left out.
 const KINDS: Array<{ kind: AdminAuditKind; label: string }> = [
   { kind: 'all', label: 'All' },
   { kind: 'success', label: 'Success' },
   { kind: 'denied', label: 'Denied' },
   { kind: 'open', label: 'Opens' },
   { kind: 'close', label: 'Closes' },
-  { kind: 'rate_limited', label: 'Rate limited' },
-  { kind: 'quota_exceeded', label: 'Quota' },
-  { kind: 'account_suspended', label: 'Suspended' },
 ];
+
+/**
+ * Every deny reason, grouped the way the open path produces them. Same order
+ * as `store.DenyReasons`; vocabularyParity fails if the two sets diverge.
+ */
+const DENY_REASONS: Array<{ group: string; reasons: Array<{ kind: AdminAuditKind; label: string }> }> = [
+  {
+    group: 'Limits and account',
+    reasons: [
+      { kind: 'rate_limited', label: 'Rate limited' },
+      { kind: 'quota_exceeded', label: 'Quota exceeded' },
+      { kind: 'account_suspended', label: 'Account suspended' },
+      { kind: 'user_disabled', label: 'User disabled' },
+    ],
+  },
+  {
+    group: 'Schedule',
+    reasons: [
+      { kind: 'outside_time_window', label: 'Outside time window' },
+      { kind: 'time_window_invalid', label: 'Time window invalid' },
+      { kind: 'time_window_unavailable', label: 'Time window unavailable' },
+    ],
+  },
+  {
+    group: 'Geofence',
+    reasons: [
+      { kind: 'outside_geofence', label: 'Outside geofence' },
+      { kind: 'geofence_location_required', label: 'Location required' },
+      { kind: 'geofence_invalid', label: 'Geofence invalid' },
+      { kind: 'geofence_unavailable', label: 'Geofence unavailable' },
+    ],
+  },
+];
+
+const REASON_KINDS = new Set<string>(DENY_REASONS.flatMap((g) => g.reasons.map((r) => r.kind)));
 
 export default function AdminAudit() {
   const [tab, setTab] = useState<'access' | 'actions' | 'integrity'>('access');
@@ -115,6 +152,34 @@ function AccessLog() {
             {k.label}
           </button>
         ))}
+
+        <select
+          aria-label="Filter by deny reason"
+          className={cn(
+            'h-8 rounded-full border px-3 text-xs transition-colors bg-transparent',
+            REASON_KINDS.has(kind)
+              ? 'bg-ink text-paper border-ink'
+              : 'text-ink/60 border-ink/15 hover:border-ink/40 hover:text-ink',
+          )}
+          value={REASON_KINDS.has(kind) ? kind : ''}
+          onChange={(e) => {
+            // Empty is "no reason selected", which means the whole log rather
+            // than a filter matching nothing.
+            setKind((e.target.value || 'all') as AdminAuditKind);
+            setOffset(0);
+          }}
+        >
+          <option value="">Any reason…</option>
+          {DENY_REASONS.map((g) => (
+            <optgroup key={g.group} label={g.group}>
+              {g.reasons.map((r) => (
+                <option key={r.kind} value={r.kind}>
+                  {r.label}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
       </div>
 
       <Card className="p-0 overflow-hidden">

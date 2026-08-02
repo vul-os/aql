@@ -2068,6 +2068,20 @@ export type AdminLimitsPatch = Partial<Record<AdminLimitField, number | null>> &
   confirm_kill_switch?: boolean;
 };
 
+/**
+ * What `?kind=` accepts on the admin audit log: the generic selectors, then
+ * every deny reason the open path records.
+ *
+ * The deny half used to stop after `account_suspended`, listing three of
+ * eleven. The hub's own allowlist listed four, and the store behind it has
+ * always accepted any of them — so the schedule lockouts and geofence refusals
+ * were in the table, queryable, and unreachable from here. `openpath.go` keeps
+ * them as separate strings "precisely so an operator can tell a schedule
+ * lockout from a fence from a throttle"; this is the half of that sentence the
+ * console was not holding up.
+ *
+ * Kept in the same order as `store.DenyReasons`, which vocabularyParity checks.
+ */
 export type AdminAuditKind =
   | 'all'
   | 'denied'
@@ -2076,7 +2090,15 @@ export type AdminAuditKind =
   | 'close'
   | 'rate_limited'
   | 'quota_exceeded'
-  | 'account_suspended';
+  | 'account_suspended'
+  | 'user_disabled'
+  | 'outside_time_window'
+  | 'time_window_invalid'
+  | 'time_window_unavailable'
+  | 'outside_geofence'
+  | 'geofence_location_required'
+  | 'geofence_invalid'
+  | 'geofence_unavailable';
 
 export type AdminAuditResponse = {
   entries: AdminAccessLogEntry[];
