@@ -309,6 +309,36 @@ func TestChatRail_WhatsAppAndSlackReachARealGate(t *testing.T) {
 		return b
 	}
 
+	// hold: reachable over chat, and reachable by nothing a member can type.
+	//
+	// This is the state of the third verb, established by driving it rather
+	// than by reading: a hold_ap: selection actuates. The controller records
+	// cmd=hold and the gate stays open until something closes it — the most
+	// consequential thing this rail can do.
+	//
+	// No rail produces one. There is no "hold" command word in any of the
+	// three handlers (open, close and gates are the vocabulary), and nothing
+	// mints a hold_ap: button, so an auditor reading the command words would
+	// conclude chat cannot hold a gate. The plumbing behind it is complete:
+	// selectionCommands allows hold_ap, SelectionCommandVerb maps it to "hold",
+	// and verb.go can render a hold picker. A feature staged but not wired,
+	// not a hole — the signature check means only the platform can deliver a
+	// selection, and the platform only echoes ids the bot minted.
+	//
+	// Pinned so that either direction is a decision. Wiring hold to a command
+	// word should turn this into a two-line change with a test already
+	// watching; closing it off should fail here and be argued for.
+	holdsBefore := c.logs.countLines("msg=command", "cmd=hold")
+	waHold := waInteractive("wamid.hold1", "hold_ap:"+ap)
+	if st := post(t, "/webhooks/whatsapp", waHold, waSigned(waHold)); st != http.StatusOK {
+		t.Fatalf("whatsapp hold selection: %d", st)
+	}
+	if !c.logs.waitLines(holdsBefore+1, 5*time.Second, "msg=command", "cmd=hold") {
+		t.Fatalf("a hold_ap: selection did not reach the controller. If hold was "+
+			"deliberately closed off on this rail, this test is the place to say so; "+
+			"controller log:\n%s", c.logs.String())
+	}
+
 	waCloses := c.logs.countLines("msg=command", "cmd=close")
 	waClose := waInteractive("wamid.close1", "close_ap:"+ap)
 	if st := post(t, "/webhooks/whatsapp", waClose, waSigned(waClose)); st != http.StatusOK {

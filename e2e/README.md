@@ -157,6 +157,16 @@ These are documented by tests here; the fixes belong in `hub/` /
    `Relay.Release` and waiting for `state=pulsing` would pass on an open and
    prove nothing about the verb.
 
+   **hold** is covered too, and what it revealed is worth reading before
+   changing that rail. A `hold_ap:` selection ACTUATES — the controller records
+   `cmd=hold` and the gate stays open until something closes it — while no rail
+   produces one: there is no "hold" command word in any handler (the vocabulary
+   is open, close, gates) and nothing mints a hold button. So an auditor reading
+   the command words concludes chat cannot hold a gate, and the plumbing behind
+   it is complete. Staged, not holed: only the platform can deliver a selection
+   and it only echoes ids the bot minted. Pinned so that wiring hold up, or
+   closing it off, is a decision someone makes rather than discovers.
+
    All three rails carry close now, each by its own route: Telegram from the
    typed word, Slack through a `close_gate:` block interaction, WhatsApp
    through the `close_ap:` BUTTON that opening pushes (there is no typed
