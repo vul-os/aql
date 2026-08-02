@@ -307,6 +307,16 @@ func (rn *Runner) tickThreshold(ctx context.Context, r Rule, cache *readCache) e
 		val, perr = numericReading(readings, th.DeviceKey, th.Metric)
 	}
 
+	// Read, decide and write the edge state under ONE acquisition, below.
+	//
+	// This used to read here, release the lock, compute, and write in a second
+	// acquisition. Nothing calls Tick concurrently today — Run serialises it on
+	// one goroutine and the only other caller is a test — so the window was
+	// latent rather than live. It is closed anyway: this is the shape that cost
+	// a single-use grant its single-use and the long-poll path its replay
+	// protection in the same week, and here the act at the end of it is Fire,
+	// which actuates. A mutex that does not make its own transition atomic is
+	// an invitation to the next person adding an event-driven trigger.
 	rn.mu.Lock()
 	st := rn.level[r.ID]
 	rn.mu.Unlock()
@@ -334,9 +344,24 @@ func (rn *Runner) tickThreshold(ctx context.Context, r Rule, cache *readCache) e
 	}
 
 	satisfied := th.Op.Holds(val, th.Value)
-	fire := st.known && !st.satisfied && satisfied
 
+	// One acquisition: re-read the edge state, decide, and record the new one.
+	// Whoever wins the lock owns the edge; a second caller sees the state this
+	// one wrote and does not fire again on the same crossing.
+	//
+	// NO TEST IS KEPT FOR THIS, deliberately. Six concurrent Ticks against a
+	// deliberately re-split version could not produce a double fire: they
+	// serialise on the store before they ever reach this decision, so the
+	// window does not open even when it is there. A test that passes against
+	// the defect is decoration — the same conclusion transport/ws.go reached
+	// about frame interleaving, recorded the same way.
+	//
+	// The change stays because it costs nothing and removes a trap: the next
+	// person to add an event-driven trigger gets a second caller for free, and
+	// would inherit a mutex that did not make its own transition atomic.
 	rn.mu.Lock()
+	cur := rn.level[r.ID]
+	fire := cur.known && !cur.satisfied && satisfied
 	rn.level[r.ID] = levelState{known: true, satisfied: satisfied}
 	rn.mu.Unlock()
 

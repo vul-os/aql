@@ -840,6 +840,24 @@ cannot catch what both implementations get wrong together.
       wrapper (syncRecorder) plus Broadcaster.Viewers, which takes the broadcaster's own
       lock, to wait for attachment. Whole httpapi package now green under -race.
 
+- [x] Finished examining what the detector found rather than stopping at the first
+      hit. automations tickThreshold has the same read-decide-write split, and the
+      act at the end of it is Fire — an actuation. But it is LATENT, not live: Run
+      serialises Tick on one goroutine and the only other caller is a test. Said so
+      rather than implying a third live defect.
+      Closed it anyway (costs nothing; the next person adding an event-driven trigger
+      inherits a mutex that did not make its own transition atomic) and then DELETED
+      MY OWN TEST for it. Six concurrent Ticks against a deliberately re-split
+      version could not produce a double fire — they serialise on the store before
+      reaching the decision — so the test passed against the defect. A test that
+      cannot fail is decoration; transport/ws.go reached the same conclusion about
+      frame interleaving and recorded it the same way.
+      Two wrong turns on the way, both caught by tampering: the first version of that
+      test inlined a COPY of the decision (passed against a tampered runner — the
+      "two constants agreeing about a third thing" trap), and the second used the
+      registry key where the fake driver wants a bare device id, so it saw no
+      crossing at all and reported zero for a reason unrelated to concurrency.
+
 - [x] FOURTH INSTANCE, found by DETECTING the shape instead of stumbling on it: wrote
       a sweep for functions that take a lock more than once (lock, read, unlock,
       act) — 10 across both modules. One name stood out immediately,
