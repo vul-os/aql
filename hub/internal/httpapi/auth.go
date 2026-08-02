@@ -219,7 +219,16 @@ func (s *Server) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	}
 	if rt.RevokedAt.Valid || rt.ReplacedBy.Valid {
 		// Reuse of a rotated token: kill the family.
-		_ = s.store.RevokeRefreshFamily(r.Context(), rt.FamilyID)
+		//
+		// The 401 below is correct whether or not this revoke lands — the
+		// presented token is dead either way. What is NOT correct is being
+		// quiet about a failure: reuse means the token was copied, this is the
+		// response to that, and a revoke that silently did not happen leaves
+		// the thief's whole family live while the answer reads as handled.
+		if err := s.store.RevokeRefreshFamily(r.Context(), rt.FamilyID); err != nil {
+			s.log.Error("refresh family revoke failed after token reuse — the family may "+
+				"still be live", "family_id", rt.FamilyID, "err", err)
+		}
 		writeErr(w, http.StatusUnauthorized, "refresh_token_reused")
 		return
 	}
@@ -257,7 +266,13 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if rt, err := s.store.RefreshTokenByHash(r.Context(), hashToken(req.RefreshToken)); err == nil {
-		_ = s.store.RevokeRefreshFamily(r.Context(), rt.FamilyID)
+		// Same reasoning as the reuse path: the 200 below is idempotent and
+		// stays 200, but a logout that did not revoke is a session the user
+		// believes is closed.
+		if err := s.store.RevokeRefreshFamily(r.Context(), rt.FamilyID); err != nil {
+			s.log.Error("refresh family revoke failed on logout — the session may still "+
+				"be live", "family_id", rt.FamilyID, "err", err)
+		}
 	}
 	// Idempotent: unknown tokens still get 200 (nothing to enumerate).
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})

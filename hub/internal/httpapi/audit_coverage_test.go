@@ -165,7 +165,7 @@ func TestAuditCoverageOnlineVisitorGrants(t *testing.T) {
 	}
 }
 
-// No route may drop an audit write on the floor without saying why.
+// No route may drop a record it exists to leave, without saying why.
 //
 // 55 call sites write the admin trail; 46 of them log on failure with the same
 // shape — s.log.Error("<action> audit write failed", ...). Four in adminops.go
@@ -184,7 +184,7 @@ func TestAuditCoverageOnlineVisitorGrants(t *testing.T) {
 // leave the trail disagreeing with the world" — and that is a different
 // package with a different rule. A guard that swept it up would be asserting a
 // policy nobody chose.
-func TestNoHandlerDiscardsAnAuditWrite(t *testing.T) {
+func TestNoHandlerDiscardsARecordItIsMeantToLeave(t *testing.T) {
 	entries, err := os.ReadDir(".")
 	if err != nil {
 		t.Fatal(err)
@@ -201,7 +201,16 @@ func TestNoHandlerDiscardsAnAuditWrite(t *testing.T) {
 			t.Fatal(err)
 		}
 		for i, line := range strings.Split(string(body), "\n") {
-			if !strings.Contains(line, "WriteAdminAudit(") {
+			// Three writes whose whole point is leaving a record. A discarded
+			// error on any of them is a record that silently is not there:
+			//
+			//	WriteAdminAudit      the admin trail
+			//	RecordDelivery       the only place an operator sees a webhook fired
+			//	RevokeRefreshFamily  not a record — a SECURITY CONTROL, and the
+			//	                     reuse path answers 401 as though it landed
+			if !strings.Contains(line, "WriteAdminAudit(") &&
+				!strings.Contains(line, "RecordDelivery(") &&
+				!strings.Contains(line, "RevokeRefreshFamily(") {
 				continue
 			}
 			checked++

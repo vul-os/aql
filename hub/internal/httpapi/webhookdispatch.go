@@ -187,8 +187,14 @@ func (d *webhookDispatcher) deliverOne(ctx context.Context, w store.Webhook, eve
 		code, err := d.attempt(ctx, w, event, body, secret)
 		lastCode = code
 		if err == nil {
-			_ = d.store.RecordDelivery(ctx, w.AccountID, w.ID, event, string(body),
-				attempt, "delivered", code, "")
+			// The delivery log is the only place an operator can see that this
+			// fired. A dropped row makes a webhook that WAS delivered look
+			// like one that never was.
+			if rerr := d.store.RecordDelivery(ctx, w.AccountID, w.ID, event, string(body),
+				attempt, "delivered", code, ""); rerr != nil {
+				d.log.Error("webhook delivery record failed", "webhook_id", w.ID,
+					"event", event, "err", rerr)
+			}
 			d.failures[w.ID] = 0
 			return
 		}
@@ -202,8 +208,13 @@ func (d *webhookDispatcher) deliverOne(ctx context.Context, w store.Webhook, eve
 		}
 	}
 
-	_ = d.store.RecordDelivery(ctx, w.AccountID, w.ID, event, string(body),
-		webhookMaxAttempts, "failed", lastCode, lastErr)
+	if rerr := d.store.RecordDelivery(ctx, w.AccountID, w.ID, event, string(body),
+		webhookMaxAttempts, "failed", lastCode, lastErr); rerr != nil {
+		// Worse than the delivered case: this row is the evidence that the
+		// endpoint is broken, and the disable counter below acts on it.
+		d.log.Error("webhook failure record failed", "webhook_id", w.ID,
+			"event", event, "err", rerr)
+	}
 
 	d.failures[w.ID]++
 	if d.failures[w.ID] >= webhookMaxFailuresBeforeDisable {
