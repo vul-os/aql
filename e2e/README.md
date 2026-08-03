@@ -193,7 +193,10 @@ These are documented by tests here; the fixes belong in `hub/` /
 
    Related, for whoever runs `scripts/check-external-citations.mjs`: it verifies
    the siblings that ARE checked out and names the count it could not reach,
-   exiting non-zero either way. That partial path was first added because `ephor`
+   exiting non-zero either way. (This paragraph is the one place in the repo that
+   still spells the old sibling name, deliberately: naming it is the whole point
+   of the note, and a rename you cannot name is a lesson you cannot pass on.)
+   That partial path was first added because `ephor`
    looked absent; it had in fact been RENAMED to `pier`, so the sibling was there
    all along under a new name and the 42 "unchecked" citations were unreachable
    only because the checker was still looking for the old one. With `EXTERNAL`
