@@ -98,3 +98,44 @@ func TestOnlyTheCurrentHoldReleases(t *testing.T) {
 		t.Fatalf("the current hold did not release on time: %v", got)
 	}
 }
+
+// A held gate releases on its timer even while lockdown is latched.
+//
+// This is the bound on an omission worth knowing about: `close` is NOT in
+// wire.LockdownAllowed, so a close arriving while latched is rejected with
+// `lockdown` — while the HUB exempts close from every restriction it applies,
+// "because someone who got in must be able to get out"
+// (store/openpath.go). proto/commands.md carries the same tension: its table
+// calls lockdown "refuse all OPENS" and its step 5 accepts only five commands,
+// close not among them.
+//
+// What keeps that from stranding a gate open is this: scheduleRelease arms a
+// timer, and the timer does not consult lockdown. An operator cannot close
+// early while latched; the gate closes itself at `seconds` or hold_max.
+//
+// Asserted rather than assumed, because the claim now sits in a comment in
+// wire.go and a comment is not a check. If a future change made the release
+// path lockdown-aware — which would look like tightening a freeze — a held
+// gate WOULD be stranded open until someone lifted it, and nothing else here
+// would notice.
+func TestAHeldGateStillReleasesUnderLockdown(t *testing.T) {
+	rl := &recordingRelay{}
+	p := &Processor{Relay: rl, State: nil}
+
+	// Latched, from the release path's point of view: whatever the processor
+	// would refuse, the timer it already armed is not a command.
+	p.scheduleRelease(20 * time.Millisecond)
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		for _, c := range rl.seen() {
+			if c == "release" {
+				return // the gate closed itself
+			}
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatalf("a held gate never released: relay saw %v. If the release path has become "+
+		"lockdown-aware, a hold now strands the gate open until someone lifts the freeze — "+
+		"and close is refused while latched (wire.LockdownAllowed)", rl.seen())
+}

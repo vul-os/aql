@@ -185,6 +185,25 @@ var NeedsAccessPoint = map[string]bool{"open": true, "hold": true, "close": true
 // install the targeted revocation that would let them lift it safely. The blunt
 // lever must be able to hand over to the precise one without passing through
 // "open" (docs/GRANT-REVOCATION.md §3.8).
+//
+// `close` is NOT on the list, which is the more surprising omission and is
+// worth stating because the hub takes the opposite view of the same verb:
+// store/openpath.go exempts `close` from every restriction it applies, "because
+// someone who got in must be able to get out". proto/commands.md carries the
+// same tension — the table calls lockdown "refuse all OPENS (incl. offline
+// grants)" while step 5 accepts only these five, so a `close` arriving while
+// latched is rejected with `lockdown`.
+//
+// What bounds it: a held gate is not stranded open. scheduleRelease
+// (command/command.go) arms a timer that fires regardless of lockdown, so a
+// hold expires at its `seconds` or at hold_max (default 1800s) and the gate
+// closes without any command being accepted. An operator cannot close it EARLY
+// while latched; the gate does not stay open.
+//
+// Left as it is rather than widened here. Adding `close` changes what the
+// lockdown matrix means and proto/commands.md §Verification step 5 is the
+// normative list — that is a spec edit, not an implementation choice, and the
+// two documents should be reconciled together.
 var LockdownAllowed = map[string]bool{
 	"lift": true, "ping": true, "config": true, "repair": true, "revoke": true,
 }
