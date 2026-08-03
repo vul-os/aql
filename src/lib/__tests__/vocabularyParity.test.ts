@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { OPEN_DENIAL_REASONS, openDenialMessage } from '../api';
+import { describeDelivery } from '../../components/access/delivery';
 
 // Closed vocabularies must be the same set on both sides of the language border.
 //
@@ -211,6 +212,66 @@ accepts that Go does not know is a row nothing can render.`,
 // Verb, which is only true for rows with no Arg — so `set` and `hold`, both
 // plainly actuating, came back classified as read-only. The implausible answer
 // is what exposed the pattern.
+// What the hub says happened to a command, and what the console makes of it.
+//
+// `delivery` crosses the border on every open, close and hold, and it had no
+// parity check. The console's five branches were tested in isolation two
+// commits ago — including that an unrecognised value degrades safely — but
+// nothing established that its four known values are the four the hub sends.
+//
+// A rename is the failure that matters, and it is silent in the worst way. Turn
+// `acked` into `confirmed` in the transport and describeDelivery stops
+// recognising success entirely: every completed open renders through the
+// unrecognised branch as "The hub reported ..., which this console does not
+// recognise. Check the gate." Nothing errors, nothing logs, and the product
+// stops being able to say a gate opened.
+//
+// The vocabulary has no single registry in Go — three values come from the
+// transport as AckOutcome literals and no_device from the dispatcher — so this
+// reads both producers rather than a list somebody has to remember to update.
+describe('delivery outcomes', () => {
+  function hubDeliveryValues(): string[] {
+    const hub = read('hub/internal/hub/hub.go');
+    const transport = [...hub.matchAll(/AckOutcome\{Delivery:\s*"([a-z_]+)"/g)].map((m) => m[1]);
+    const open = read('hub/internal/httpapi/open.go');
+    const fn = /func \(s \*Server\) dispatchCommandWithPayload[\s\S]*?\n\}\n/.exec(open);
+    if (!fn) throw new Error('dispatchCommandWithPayload: pattern matched nothing — this guard cannot read it');
+    const dispatcher = [...fn[0].matchAll(/return "([a-z_]+)"/g)].map((m) => m[1]);
+    // Floors on each producer separately: one pattern going quiet must not be
+    // covered by the other still matching.
+    expect(transport.length, `parsed ${transport.length} AckOutcome deliveries`).toBeGreaterThanOrEqual(3);
+    expect(dispatcher.length, `parsed ${dispatcher.length} dispatcher returns`).toBeGreaterThanOrEqual(2);
+    return [...new Set([...transport, ...dispatcher])].sort();
+  }
+
+  it('the console recognises every value the hub can send', () => {
+    const hub = hubDeliveryValues();
+    expect(hub.length).toBeGreaterThanOrEqual(4);
+    for (const value of hub) {
+      const got = describeDelivery(value, 'opened');
+      expect(got.kind, `the hub sends ${value} and the console does not recognise it`).not.toBe(
+        'unrecognised',
+      );
+    }
+    // Exactly one of them may be reported as confirmed. This is the rename
+    // guard: if `acked` were renamed and the console kept the old spelling,
+    // nothing here would be confirmed at all.
+    const confirmed = hub.filter((v) => describeDelivery(v, 'opened').confirmed);
+    expect(confirmed, 'exactly one delivery value means the controller confirmed').toEqual(['acked']);
+  });
+
+  it('the console has no branch for a value the hub never sends', () => {
+    // The other direction: a case left behind by a rename is dead code that
+    // reads as coverage, and it is how someone concludes a value is handled.
+    const ts = read('src/components/access/delivery.ts');
+    const cases = [...new Set([...ts.matchAll(/case '([a-z_]+)':/g)].map((m) => m[1]))].sort();
+    expect(cases.length, `parsed ${cases.length} cases from describeDelivery`).toBeGreaterThanOrEqual(4);
+    expect(cases, 'describeDelivery branches on a value the hub cannot produce').toEqual(
+      hubDeliveryValues(),
+    );
+  });
+});
+
 describe('device verbs', () => {
   it('every actuating verb has a console control', () => {
     const go = read('hub/internal/devices/capability.go');
