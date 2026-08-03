@@ -130,11 +130,13 @@ carries exactly one `Visibility` (`kotva/18-wire-format.md:1888`, `:1915`), so o
 cannot honestly cover three rails at two modes. Everything rail-specific rides `policy`
 (key 5), which is exactly what that field exists for: *"Opaque deterministic-CBOR operator
 policy (region, capabilities, contact, and every kind-specific field §7.5/§26.3.1 already
-enumerate for `gateway`)"* (`kotva/18-wire-format.md:1915`).
+enumerate for `gateway`)"* (`kotva/18-wire-format.md:1916`).
 
 **Naming.** `kotva/STYLE.md:65-66` is explicit: *"the **mail adapter is the "gateway"** — keep
 that name for it, and do **not** use "gateway" as the umbrella"*. The wire `kind` string must
-be `"gateway"` (the CDDL enumerates no alternative, `kotva/18-wire-format.md:1912`), but the
+be `"gateway"` (the eleven canonical kind strings are enumerated at
+`kotva/18-wire-format.md:1913`, which is authoritative and which "no other document may
+re-enumerate differently"; the CDDL itself is only `2 => tstr`, `:1886`), but the
 crate, the type, the docs and the operator UI must all say **chat adapter**, never "gateway".
 That collision is uncomfortable and worth reporting to the spec session — it is the first
 instance where the wire vocabulary and the prose vocabulary disagree by construction.
@@ -410,7 +412,7 @@ GatewayAuthz = {
 ```
 
 Applied here: `identity` is the **served hub's** substrate IK. `mode = 2` (key-registered,
-`kotva/18-wire-format.md:2008`) — an Pier operator should never run `mode = 1` open admission
+`kotva/18-wire-format.md:2009`) — an Pier operator should never run `mode = 1` open admission
 for a rail that actuates gates. `grants` holds the content-addresses of the per-rail
 `CapabilityToken`s.
 
