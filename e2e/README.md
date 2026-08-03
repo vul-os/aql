@@ -191,6 +191,12 @@ These are documented by tests here; the fixes belong in `hub/` /
    the output, and the script reports INVALID when nothing that looks like a
    test runner produced output at all.
 
+   Related, for whoever runs `scripts/check-external-citations.mjs`: it verifies
+   the siblings that ARE checked out and names the count it could not reach,
+   exiting non-zero either way. As of 2026-08-03 kotva is present and ephor is
+   not, so it reports 91 verified and 42 unchecked rather than refusing to look
+   at anything.
+
    All three rails carry close now, each by its own route: Telegram from the
    typed word, Slack through a `close_gate:` block interaction, WhatsApp
    through the `close_ap:` BUTTON that opening pushes (there is no typed

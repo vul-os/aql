@@ -121,17 +121,24 @@ for (const doc of trackedDocs()) {
   });
 }
 
-if (absent.length) {
-  console.error(
-    `NOT CHECKED — ${absent.join(', ')} ${absent.length === 1 ? 'is' : 'are'} not checked out beside this repo.\n` +
-      `${found.length} external citations went unverified. Clone them next to aql/ and run this again.`,
-  );
-  process.exit(2);
-}
+// Check what IS here, and be loud about what is not.
+//
+// This refused outright when any sibling was missing, which was right about
+// the honesty and wrong about the work: ephor moved out of the tree on
+// 2026-08-03 and kotva did not, so 100% of the citations went unverified to
+// avoid overstating the ~40% that could not be. Partial verification is worth
+// having as long as the gap is stated in the same breath — the failure this
+// guards against is a SKIP being mistaken for a PASS, and naming the count
+// prevents that just as well as refusing does.
+//
+// Absence still exits non-zero. A run that could not see everything has not
+// checked everything, whatever it managed.
+const skipped = found.filter((c) => absent.some((r) => c.path.startsWith(`${r}/`)));
+const checkable = found.filter((c) => !skipped.includes(c));
 
 const problems = [];
 let verified = 0;
-for (const c of found) {
+for (const c of checkable) {
   const full = join(siblings, c.path);
   if (!existsSync(full)) {
     // An absence can be the claim itself: EPHOR-CHAT-SEAM §0.1 is titled
@@ -168,6 +175,23 @@ if (problems.length) {
 
 // A floor, because "0 citations verified" would otherwise print the same
 // cheerful line as a real sweep.
+
+
+
+
+if (absent.length) {
+  console.error(
+    `\nPARTIAL — ${verified} citations verified against ${EXTERNAL.filter((r) => !absent.includes(r)).join(', ') || 'nothing'}, ` +
+      `but ${skipped.length} into ${absent.join(', ')} went UNCHECKED: not checked out beside this repo.\n` +
+      `Clone them next to aql/ and run this again. Exiting non-zero because a run that ` +
+      `could not see everything has not checked everything.`,
+  );
+  process.exit(2);
+}
+
+// The floor only means anything when every sibling is present: with one
+// missing, the checkable population is smaller by design and a fixed number
+// would report drift that is really absence.
 if (verified < 120) {
   console.error(
     `only ${verified} external citations were verified — the pattern has drifted. ` +
