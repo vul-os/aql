@@ -84,6 +84,19 @@ a{color:inherit}
 .search-wrap .s-ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-faint);pointer-events:none}
 .search-wrap kbd{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-family:var(--font-mono);font-size:10px;color:var(--ink-faint);border:1px solid var(--ink-whisper);border-radius:4px;padding:1px 5px}
 @media(max-width:600px){.search-wrap kbd{display:none}.search-wrap input{padding-right:10px}}
+/* At phone widths this bar was carrying brand + "docs" badge + search + theme +
+   menu + the Vulos mark inside 350px of usable width, and the one flexible item
+   — the search field — was what gave: MEASURED 72px at a 390px viewport, which
+   showed "Se" of the placeholder and clipped a four-letter query to two visible
+   characters. The badge is decoration and goes, the gaps tighten, and the field
+   gets a hard floor so it can never be squeezed to nothing again. The floor is
+   a min-width on the flex item, not a flex-basis: basis is a starting size that
+   flex-shrink is free to eat, min-width is not. */
+@media(max-width:640px){
+  .topbar-in{gap:9px;padding:0 14px}
+  .brand-docs{display:none}
+  .search-wrap{min-width:150px}
+}
 .top-links{display:none;align-items:center;gap:18px}
 @media(min-width:900px){.top-links{display:flex}}
 .top-links a{font-size:13.5px;text-decoration:none;color:var(--ink-faint)}
@@ -97,8 +110,15 @@ a{color:inherit}
 .side-btn{display:grid}
 @media(min-width:1000px){.side-btn{display:none}}
 
-/* ————— layout ————— */
-.doc-hero{max-width:1180px;margin:0 auto;padding:22px 24px 0;color:var(--ink-faint)}
+/* ————— layout —————
+   Docs is a reading application, not a marketing page, so the shell is packed
+   LEFT on explicit tracks rather than inheriting the landing's centred column.
+   The middle track is a fixed measure, NOT `1fr`: with a flexible track the
+   prose stays measured at 46rem but the TRACK keeps growing, which flings the
+   on-this-page rail hundreds of pixels away from the text it indexes. Only
+   past 1900px, where a left-packed shell starts to look marooned, does it
+   centre. 252 + 830 + 208 + 2x20 of padding = 1330. */
+.doc-hero{max-width:1330px;margin:0;padding:22px 20px 0;color:var(--ink-faint)}
 .doc-hero svg{display:block;width:100%;height:auto;max-height:132px}
 .doc-hero-cap{display:flex;justify-content:space-between;gap:16px;margin:6px 2px 0;
   font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint)}
@@ -107,17 +127,28 @@ a{color:inherit}
    wrapped into an unreadable stack. */
 @media(max-width:720px){.doc-hero-cap span:first-child,.doc-hero-cap span:last-child{display:none}
   .doc-hero-cap{justify-content:center}}
-.shell{max-width:1440px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:0;padding:0 20px}
-@media(min-width:1000px){.shell{grid-template-columns:250px minmax(0,1fr)}}
-@media(min-width:1240px){.shell{grid-template-columns:250px minmax(0,1fr) 210px}}
+.shell{max-width:1330px;margin:0;display:grid;grid-template-columns:minmax(0,1fr);gap:0;padding:0 20px;justify-content:start}
+@media(min-width:1000px){.shell{grid-template-columns:252px minmax(0,830px)}}
+@media(min-width:1240px){.shell{grid-template-columns:252px minmax(0,830px) 208px}}
+@media(min-width:1900px){.shell{margin:0 auto;justify-content:center}.doc-hero{margin:0 auto}}
 
-/* sidebar */
-.sidebar{display:none;position:fixed;inset:58px 0 0 0;z-index:30;background:var(--paper);padding:20px;overflow-y:auto}
-.sidebar.open{display:block}
+/* sidebar
+   The sticky element is the COLUMN (.side-col), not the <nav> inside it, and
+   it carries a real height. A sticky box whose parent is auto-height and
+   exactly as tall as itself has no room to slide and simply scrolls away with
+   the page — which is precisely what this file did: the rule below used to
+   read `position:sticky;top:58px;inset:auto`, and `inset:auto` — later in the
+   same block — reset `top` straight back to auto, so the sidebar never
+   stuck at all. Order matters inside a declaration block. */
+.side-col{display:none;position:fixed;inset:58px 0 0 0;z-index:30;background:var(--paper)}
+.side-col.open{display:block}
 @media(min-width:1000px){
-  .sidebar{display:block;position:sticky;top:58px;inset:auto;height:calc(100vh - 58px);background:transparent;
-    padding:28px 20px 40px 0;border-right:1px solid var(--paper-edge)}
+  .side-col{display:block;background:transparent;inset:auto;
+    position:sticky;top:58px;height:calc(100vh - 58px);border-right:1px solid var(--paper-edge)}
 }
+.sidebar{height:100%;overflow-y:auto;overscroll-behavior:contain;padding:20px;
+  scrollbar-width:thin;scrollbar-color:var(--ink-whisper) transparent}
+@media(min-width:1000px){.sidebar{padding:28px 20px 40px 0}}
 .sidebar details{margin-bottom:6px}
 .sidebar summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;
   font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);
@@ -139,8 +170,13 @@ a{color:inherit}
 .doc h1{font-family:var(--font-display);font-variation-settings:"SOFT" 0;letter-spacing:-.02em;font-weight:440;font-size:clamp(2rem,5vw,2.9rem);line-height:1.05;margin:0 0 22px}
 .doc h2{font-family:var(--font-display);font-variation-settings:"SOFT" 30;font-weight:450;font-size:1.45rem;line-height:1.2;margin:44px 0 14px;padding-top:10px}
 .doc h3{font-family:var(--font-display);font-variation-settings:"SOFT" 30;font-weight:480;font-size:1.15rem;margin:30px 0 10px}
+/* The section link is revealed on hover on a pointer device. On a touch screen
+   there is no hover state to enter, so the control would simply not exist —
+   the @media(hover:none) branch keeps it permanently visible there. */
 .doc h2 a.anchor,.doc h3 a.anchor{text-decoration:none;color:transparent;margin-left:8px;font-size:.8em}
-.doc h2:hover a.anchor,.doc h3:hover a.anchor{color:var(--terracotta)}
+.doc h2:hover a.anchor,.doc h3:hover a.anchor,
+.doc h2 a.anchor:focus-visible,.doc h3 a.anchor:focus-visible{color:var(--terracotta)}
+@media(hover:none){.doc h2 a.anchor,.doc h3 a.anchor{color:color-mix(in srgb,var(--terracotta) 60%,transparent)}}
 .doc p{margin:0 0 14px;color:var(--ink-soft)}
 .doc ul,.doc ol{margin:0 0 16px;padding-left:24px;color:var(--ink-soft)}
 .doc li{margin-bottom:6px}
@@ -153,9 +189,81 @@ a{color:inherit}
 .doc pre{background:var(--code-block);color:var(--code-block-text);border-radius:12px;padding:16px 18px;overflow-x:auto;
   margin:0 0 18px;box-shadow:var(--shadow-paper)}
 .doc pre code{background:transparent;border:0;padding:0;font-size:12.5px;line-height:1.7;color:inherit}
+
+/* ————— code blocks: chrome ————— */
+.codewrap{position:relative;margin:0 0 18px;border-radius:12px;background:var(--code-block);
+  box-shadow:var(--shadow-paper);overflow:hidden}
+.codewrap pre{margin:0;border-radius:0;box-shadow:none;padding:14px 18px 16px}
+.cw-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:8px 12px 8px 18px;border-bottom:1px solid rgba(239,232,219,.10)}
+.cw-lang{font-family:var(--font-mono);font-size:10px;letter-spacing:.17em;text-transform:uppercase;
+  color:#bfb4a6}
+/* The copy button must not be hover-revealed: on a touch screen there is no
+   hover to enter, so a hover-only control does not exist at all. It is always
+   painted; hover and focus only change its emphasis. */
+.cw-copy{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:#bfb4a6;background:transparent;border:1px solid rgba(239,232,219,.18);border-radius:6px;
+  padding:3px 9px;cursor:pointer;transition:color .15s,border-color .15s,background .15s}
+.cw-copy:hover,.cw-copy:focus-visible{color:#efe8db;border-color:rgba(239,232,219,.45)}
+.cw-copy[data-done="1"]{color:#a8cfae;border-color:#a8cfae}
+@media(hover:none){.cw-copy{color:#efe8db;border-color:rgba(239,232,219,.35)}}
+
+/* ————— syntax tokens —————
+   Both themes put code on a DARK slab (--code-block is #141210 in light and
+   #0e0c0a in dark), so one palette serves both — but that is a fact to be
+   measured, not assumed. Every colour below was computed against BOTH
+   backgrounds with the WCAG relative-luminance formula; the weakest is the
+   comment grey at 6.58:1, and check-render.mjs re-measures the rendered
+   colours in the browser so the palette cannot drift back under 4.5:1. */
+.hljs{color:var(--code-block-text);background:transparent}
+.hljs-comment,.hljs-quote,.hljs-meta{color:#a2988a;font-style:italic}
+.hljs-keyword,.hljs-selector-tag,.hljs-literal,.hljs-type,.hljs-name{color:#f2a97e}
+.hljs-string,.hljs-addition,.hljs-regexp,.hljs-selector-attr{color:#a8cfae}
+.hljs-number,.hljs-symbol,.hljs-bullet,.hljs-selector-pseudo{color:#e8c37a}
+.hljs-title,.hljs-section,.hljs-selector-id,.hljs-doctag{color:#f4d9a8}
+.hljs-built_in,.hljs-class,.hljs-variable,.hljs-template-variable{color:#e3b3d6}
+.hljs-attr,.hljs-attribute,.hljs-property,.hljs-params{color:#c9c0ee}
+.hljs-deletion{color:#f09b8f}
+.hljs-emphasis{font-style:italic}
+.hljs-strong{font-weight:600}
+.hljs-link{text-decoration:underline}
 .doc blockquote{margin:0 0 16px;padding:12px 18px;border-left:3px solid var(--gold);background:var(--paper-warm);border-radius:0 10px 10px 0;color:var(--ink-soft)}
 .doc blockquote p:last-child{margin:0}
-.doc table{width:100%;border-collapse:collapse;margin:0 0 20px;font-size:13.5px;display:block;overflow-x:auto}
+.doc table{width:100%;border-collapse:collapse;margin:0;font-size:13.5px;display:block;overflow-x:auto}
+
+/* ————— things wider than the phone reading them —————
+   Code fences and tables in these chapters are wider than a 390px column, and
+   they scrolled with no cue at all: MEASURED at 390px, three fences and one
+   table on the Run-a-hub chapter alone were cut mid-token with nothing to say
+   there was more. Identical mechanism and identical class names to the
+   landing's figures, so there is one behaviour to learn and one to check.
+
+   The three rules, each of them a check in check-render:
+   · the fade appears only when scrollWidth - clientWidth > 8. A fade over
+     something that already fits reads as a clipped layout, so it is driven by
+     a measurement and never by a media query guessing at the width.
+   · it goes at the end of the scroll, or it claims there is more to see.
+   · the hint is a static element, not a hover reveal — the devices that need
+     it have no hover. */
+.illo-vp{position:relative}
+.illo-fade{position:absolute;top:0;right:0;bottom:0;width:48px;pointer-events:none;opacity:0;
+  transition:opacity .18s ease;background:linear-gradient(to right,rgba(0,0,0,0),var(--il-bg) 80%)}
+.illo-hint{display:none;margin:0;font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink-faint)}
+.illo-hint span{color:var(--terracotta)}
+/* Specificity climbs with the state (0,2,0 → 0,3,0) instead of leaning on
+   source order, and none of it sits inside a media query — a media query adds
+   no specificity and would lose to any later rule of the same weight. */
+.figscroll.is-scrollable .illo-fade{opacity:1}
+.figscroll.is-scrollable.at-end .illo-fade{opacity:0}
+.figscroll.is-scrollable .illo-hint{display:block}
+.figscroll.is-scrollable.at-end .illo-hint{display:none}
+@media(prefers-reduced-motion:reduce){.illo-fade{transition:none}}
+.codewrap{--il-bg:var(--code-block)}
+.codewrap .illo-hint{padding:0 18px 13px;color:rgba(239,232,219,.5)}
+.tablewrap{--il-bg:var(--paper);margin:0 0 20px}
+.tablewrap .illo-hint{margin-top:9px}
+.doc pre:focus-visible,.doc table:focus-visible{outline:2px solid var(--terracotta);outline-offset:2px}
 .doc th{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);text-align:left;padding:8px 12px;border-bottom:2px solid var(--ink-whisper)}
 .doc td{padding:9px 12px;border-bottom:1px solid var(--paper-edge);color:var(--ink-soft);vertical-align:top}
 .doc img{max-width:100%;height:auto;border-radius:12px;border:1px solid var(--paper-edge);box-shadow:var(--shadow-paper);margin:4px 0 8px}
@@ -286,18 +394,22 @@ a{color:inherit}
 </div>
 
 <div class="shell">
-  <nav class="sidebar" id="sidebar" aria-label="Documentation"></nav>
+  <div class="side-col" id="sideCol">
+    <nav class="sidebar" id="sidebar" aria-label="Documentation"></nav>
+  </div>
   <main class="content" id="content"><p class="loading">loading…</p></main>
   <aside class="toc" id="toc" aria-label="On this page"></aside>
 </div>
 
 <script src="docs/vendor/marked.min.js"></script>
+<script src="docs/vendor/highlight.min.js"></script>
 <script>
 (function(){
   'use strict';
   var root = document.documentElement;
   var contentEl = document.getElementById('content');
   var sidebarEl = document.getElementById('sidebar');
+  var sideColEl = document.getElementById('sideCol');
   var tocEl = document.getElementById('toc');
   var searchEl = document.getElementById('search');
   var manifest = null;
@@ -316,7 +428,7 @@ a{color:inherit}
   /* ---------- mobile sidebar ---------- */
   var sideBtn = document.getElementById('sideBtn');
   sideBtn.addEventListener('click', function(){
-    var open = sidebarEl.classList.toggle('open');
+    var open = sideColEl.classList.toggle('open');
     sideBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
   });
 
@@ -393,7 +505,7 @@ a{color:inherit}
   function route(){
     var r = currentRoute();
     if (!pageById[r.id]) { location.hash = '#/' + order[0]; return; }
-    sidebarEl.classList.remove('open');
+    sideColEl.classList.remove('open');
     sideBtn.setAttribute('aria-expanded','false');
     if (searchEl.value) { searchEl.value = ''; }
     renderPage(r.id, r.anchor);
@@ -454,6 +566,143 @@ a{color:inherit}
       var href = a.getAttribute('href');
       var m = href && href.match(/^([a-z0-9-]+)\.md(#.*)?$/i);
       if (m) a.setAttribute('href', '#/' + m[1] + (m[2] || ''));
+    });
+    decorateCode(art);
+    decorateTables(art);
+    syncFigs();
+  }
+
+  /* Tables get the same affordance as code fences. .doc table is itself the
+     scroller (display:block;overflow-x:auto), so it is the element that carries
+     .illo-scroll's job and the wrapper only exists to position the fade. */
+  function decorateTables(root){
+    Array.prototype.forEach.call(root.querySelectorAll('table'), function(t){
+      if (t.parentNode && t.parentNode.classList.contains('illo-vp')) return;
+      var wrap = document.createElement('div');
+      wrap.className = 'tablewrap figscroll';
+      var vp = document.createElement('div');
+      vp.className = 'illo-vp';
+      t.parentNode.insertBefore(wrap, t);
+      vp.appendChild(t);
+      t.setAttribute('tabindex', '0');
+      var fade = document.createElement('span');
+      fade.className = 'illo-fade'; fade.setAttribute('aria-hidden', 'true');
+      vp.appendChild(fade);
+      wrap.appendChild(vp);
+      var hint = document.createElement('p');
+      hint.className = 'illo-hint'; hint.setAttribute('aria-hidden', 'true');
+      hint.innerHTML = 'Drag or scroll sideways to see the rest of this table <span>\u2192</span>';
+      wrap.appendChild(hint);
+    });
+  }
+
+  /* State is MEASURED every time, never assumed: the overflow appears and
+     disappears with the viewport, and a chapter is re-rendered on every route
+     change, so this runs after render, on resize and on every scroll. */
+  function scrollerIn(card){ return card.querySelector('.illo-vp > pre, .illo-vp > table, .illo-scroll'); }
+  function syncFig(card){
+    var sc = scrollerIn(card);
+    if (!sc) return;
+    var over = sc.scrollWidth - sc.clientWidth;
+    card.classList.toggle('is-scrollable', over > 8);
+    card.classList.toggle('at-end', over > 8 && sc.scrollLeft >= over - 8);
+    if (!sc.hasAttribute('data-fs')) {
+      sc.setAttribute('data-fs', '1');
+      sc.addEventListener('scroll', function(){ syncFig(card); }, { passive: true });
+    }
+  }
+  function syncFigs(){
+    Array.prototype.forEach.call(document.querySelectorAll('.figscroll'), syncFig);
+  }
+  window.addEventListener('resize', syncFigs);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(syncFigs);
+
+  /* ---------- code blocks ----------
+     The vendored highlight.js build registers a fixed set of grammars. A fence
+     may name a spelling that IS one of them under another name (`sh` is bash,
+     `yml` is yaml, `html` is xml) — those are mapped here rather than silently
+     falling through to plain text. A fence naming a grammar this build does
+     NOT carry, and an untagged fence, are left unhighlighted on purpose: the
+     ASCII topology diagrams and the route tables in these docs are genuinely
+     plain text, and colouring them by guesswork invents structure that is not
+     there. */
+  var LANG_ALIAS = {
+    jsonc:'json', json5:'json', toml:'ini', cfg:'ini', conf:'ini',
+    sh:'bash', zsh:'bash', shell:'bash', console:'bash', 'shell-session':'bash',
+    yml:'yaml', html:'xml', htm:'xml', svg:'xml', js:'javascript', mjs:'javascript',
+    golang:'go', text:'plaintext', txt:'plaintext', curl:'bash', docker:'dockerfile',
+    patch:'diff'
+  };
+
+  function decorateCode(root){
+    var haveHljs = (typeof hljs !== 'undefined');
+    Array.prototype.forEach.call(root.querySelectorAll('pre > code'), function(code){
+      var pre = code.parentNode;
+      if (pre.parentNode && pre.parentNode.classList.contains('codewrap')) return;
+
+      var raw = '';
+      Array.prototype.forEach.call(code.classList, function(c){
+        if (c.indexOf('language-') === 0) raw = c.slice(9).toLowerCase();
+      });
+      var lang = LANG_ALIAS[raw] || raw;
+      var known = haveHljs && lang && hljs.getLanguage(lang);
+
+      if (known) {
+        try {
+          code.innerHTML = hljs.highlight(code.textContent, { language: lang, ignoreIllegals: true }).value;
+          code.classList.add('hljs');
+        } catch (e) { known = false; }
+      }
+
+      var wrap = document.createElement('div');
+      wrap.className = 'codewrap';
+      wrap.setAttribute('data-lang', known ? lang : 'text');
+      var bar = document.createElement('div');
+      bar.className = 'cw-bar';
+      var chip = document.createElement('span');
+      chip.className = 'cw-lang';
+      chip.textContent = known ? lang : 'text';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cw-copy';
+      btn.textContent = 'Copy';
+      btn.setAttribute('aria-label', 'Copy this code block');
+      bar.appendChild(chip); bar.appendChild(btn);
+
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(bar);
+      var vp = document.createElement('div');
+      vp.className = 'illo-vp';
+      vp.appendChild(pre);
+      pre.setAttribute('tabindex', '0');
+      var fade = document.createElement('span');
+      fade.className = 'illo-fade'; fade.setAttribute('aria-hidden', 'true');
+      vp.appendChild(fade);
+      wrap.appendChild(vp);
+      wrap.classList.add('figscroll');
+      var hint = document.createElement('p');
+      hint.className = 'illo-hint'; hint.setAttribute('aria-hidden', 'true');
+      hint.innerHTML = 'Drag or scroll sideways for the ends of these lines <span>\u2192</span>';
+      wrap.appendChild(hint);
+
+      btn.addEventListener('click', function(){
+        var text = code.textContent;
+        var done = function(){
+          btn.textContent = 'Copied';
+          btn.setAttribute('data-done', '1');
+          setTimeout(function(){ btn.textContent = 'Copy'; btn.removeAttribute('data-done'); }, 1600);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, function(){});
+        } else {
+          var ta = document.createElement('textarea');
+          ta.value = text; ta.setAttribute('readonly','');
+          ta.style.cssText = 'position:absolute;left:-9999px';
+          document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); done(); } catch (e) {}
+          document.body.removeChild(ta);
+        }
+      });
     });
   }
 

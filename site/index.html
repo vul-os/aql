@@ -82,6 +82,7 @@
   --band:#141210;                   /* the dark editorial band (aside surface) */
   --band-text:#fafaf8;
   --band-edge:rgba(250,250,248,.15);
+  --illo-band:#1e1c1a;              /* --band lifted by 4.5% --band-text: the figure card ON the band */
   --shadow-paper:0 1px 2px rgba(14,12,10,.04),0 8px 24px -8px rgba(14,12,10,.10);
   --shadow-deep:0 20px 40px -14px rgba(14,12,10,.20);
   --glow-a:color-mix(in srgb,var(--terracotta) 9%,transparent);
@@ -115,6 +116,7 @@
   --band:#1a1714;                   /* aside surface, dark — a touch warmer than --paper */
   --band-text:#f5efe6;
   --band-edge:rgba(245,239,230,.12);
+  --illo-band:#24211e;              /* --band lifted by 4.5% --band-text: the figure card ON the band */
   --shadow-paper:0 1px 0 rgba(255,255,255,.03),0 16px 48px -16px rgba(0,0,0,.55);
   --shadow-deep:0 32px 64px -24px rgba(0,0,0,.80);
   --glow-a:color-mix(in srgb,var(--terracotta) 15%,transparent);
@@ -253,8 +255,8 @@ code{font-family:var(--font-mono);font-size:.88em}
 @media(min-width:1024px){.hero-visual .corner{display:block}}
 .corner-tl{left:-6px;top:-6px;border-left:2px solid;border-top:2px solid}
 .corner-br{right:-6px;bottom:26px;border-right:2px solid;border-bottom:2px solid}
-.hub-figure{max-width:560px;margin:0 auto;position:relative}
-.drift{animation:drift 9s ease-in-out infinite;overflow-x:auto}
+.hub-figure{--il-bg:var(--paper);max-width:560px;margin:0 auto;position:relative}
+.drift{animation:drift 9s ease-in-out infinite;position:relative}
 @keyframes drift{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 .hub-svg{display:block;width:100%;height:auto}
 .hub-orbit{fill:none;stroke:var(--ink-faint);stroke-opacity:.17;stroke-width:1.2}
@@ -270,7 +272,7 @@ code{font-family:var(--font-mono);font-size:.88em}
 .hub-label{font-family:var(--font-sans);font-size:19px;font-weight:500;fill:var(--ink);opacity:.78}
 .hub-label-live{opacity:1;font-weight:600}
 .hub-sub{font-family:var(--font-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;fill:var(--terracotta-deep)}
-@media(max-width:1023px){.hub-label{font-size:22px}.hub-sub{font-size:14px}.hub-svg{min-width:540px}}
+@media(max-width:1023px){.hub-label{font-size:22px}.hub-sub{font-size:14px}.illo-scroll>.hub-svg{min-width:540px}}
 .fig-caption{margin-top:14px;display:flex;justify-content:space-between;gap:6px 12px;flex-wrap:wrap;font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint)}
 
 /* editorial strip */
@@ -287,11 +289,35 @@ code{font-family:var(--font-mono);font-size:.88em}
 @media(min-width:1024px){.section{padding:60px 0}}
 .section-warm{background:var(--paper-warm)}
 .section-head{display:grid;gap:16px;margin-bottom:30px}
-@media(min-width:1024px){.section-head{grid-template-columns:7fr 5fr;align-items:end}}
+/* Both columns start at the section's top edge. They used to be bottom-aligned
+   (`align-items:end`), which pinned the heading to the BOTTOM of whichever
+   column was taller — so the taller the lede, the further down the page the
+   heading fell. Measured across the ten sections that put the eyebrow at
+   18, 78, 89, 114 and 312px below their own section top: the left edges all
+   agreed at x=120, but no two sections started at the same HEIGHT, and the
+   long lede in #hub left a 240px hole above its own title. */
+@media(min-width:1024px){.section-head{grid-template-columns:7fr 5fr;align-items:start}}
 .section-head h2{font-size:clamp(1.7rem,3.1vw,2.5rem);line-height:1.04}
 .section-head h2 em{font-style:italic;color:var(--terracotta);font-variation-settings:"SOFT" 100}
 .section-head .lede{max-width:30rem;color:var(--ink-faint);line-height:1.65;font-size:15px;justify-self:start}
 @media(min-width:1024px){.section-head .lede{justify-self:end}}
+/* A head that carries more than a heading's worth of copy. #hub had a 164-word
+   lede against 36–77 everywhere else: top-aligning the columns moved its void
+   from above the heading to below it, 227px of nothing under a two-line title
+   while a fourteen-line wall of text ran down the right. Splitting the copy is
+   only half the fix — the other half is a grid that has somewhere to put the
+   second half. The lede spans both rows in column 2, the caveat sits in the
+   space column 1 was wasting, and SOURCE ORDER is heading → lede → caveat, so
+   the single-column stack below 1024 still reads in that order. */
+.head-note{border-top:1px solid var(--ink-whisper);margin-top:10px;padding-top:15px;max-width:34rem}
+.head-note p{margin:9px 0 0;font-size:14px;line-height:1.65;color:var(--ink-faint)}
+.head-note b{color:var(--ink);font-weight:600}
+.head-note a{color:var(--terracotta)}
+@media(min-width:1024px){
+  .section-head.has-note>:first-child{grid-column:1;grid-row:1}
+  .section-head.has-note>.lede{grid-column:2;grid-row:1/span 2;align-self:start}
+  .section-head.has-note>.head-note{grid-column:1;grid-row:2;margin-top:0}
+}
 .kicker{display:block;margin-bottom:12px}
 
 /* status tags — the honesty vocabulary, used everywhere on this page */
@@ -375,8 +401,8 @@ code{font-family:var(--font-mono);font-size:.88em}
 .typing{align-self:flex-end;font-family:var(--font-mono);font-size:10.5px;color:var(--ink-faint);letter-spacing:.06em}
 
 /* how it works */
-.how-illo{border-radius:20px;background:var(--paper-warm);border:1px solid var(--paper-edge);padding:22px;overflow-x:auto}
-.section .how-illo svg{display:block;width:100%;height:auto;min-width:920px}
+.how-illo{--il-bg:var(--paper-warm);border-radius:20px;background:var(--il-bg);border:1px solid var(--paper-edge);padding:22px}
+.section .how-illo .illo-scroll>svg{display:block;width:100%;height:auto;min-width:920px}
 .steps{list-style:none;margin:48px 0 0;padding:0;display:grid;gap:32px}
 @media(min-width:768px){.steps{grid-template-columns:repeat(3,1fr);gap:28px}}
 .steps li{position:relative}
@@ -390,7 +416,10 @@ code{font-family:var(--font-mono);font-size:.88em}
 .steps p code{background:var(--paper-warm);border:1px solid var(--paper-edge);padding:1px 5px;border-radius:5px}
 
 /* offline / emergency */
-.off-grid{display:grid;gap:32px;align-items:stretch}
+/* Same reason as .ledger, and this one was explicit: align-items:stretch pulled
+   the five-step card down to match the phone + status-panel column beside it,
+   drawing a 1050px bordered card round 503px of steps — 547px of empty card. */
+.off-grid{display:grid;gap:32px;align-items:start}
 @media(min-width:1024px){.off-grid{grid-template-columns:6fr 5fr}}
 .off-side{display:flex;flex-direction:column}
 .off-side .off-note{margin-top:auto;padding-top:18px}
@@ -425,11 +454,24 @@ code{font-family:var(--font-mono);font-size:.88em}
 .codeblock .cb-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--band-edge);font-family:var(--font-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:rgba(250,250,248,.5)}
 .codeblock .cb-bar i{width:8px;height:8px;border-radius:999px;background:var(--terracotta);font-style:normal}
 .codeblock pre{margin:0;padding:16px 16px 18px;overflow-x:auto;font-family:var(--font-mono);font-size:12px;line-height:1.7;color:#efe8db}
+/* Same treatment as the figures, and for the same reason: at 390px this block
+   showed 340 of its 435px and cut the clone URL and four other lines mid-token,
+   with nothing to say there was more. The type cannot get smaller — 12px is the
+   floor — so the block scrolls and says so. --il-bg is the terminal's own
+   background, not the band's, or the fade would be a grey bar over black. */
+.codeblock{--il-bg:#0e0c0a}
+.codeblock .illo-hint{margin:0;padding:0 16px 15px;color:rgba(250,250,248,.5)}
+.codeblock .illo-hint span{color:var(--terracotta)}
 .codeblock pre code{font-size:1em}
 .codeblock .c{color:rgba(250,250,248,.4)}
 .codeblock .g{color:#8fd0b2}
 .codeblock .o{color:var(--gold-soft)}
-.selfhost-points{list-style:none;margin:28px 0 0;padding:0;display:grid;gap:18px}
+/* The four points used to sit under the diagram INSIDE the left column of
+   .selfhost-grid, which made that column 1178px tall against a 555px terminal
+   on the right — roughly 620px of dead black on the right-hand half. They are
+   a full-width row of their own now, so both grid columns end together. */
+.selfhost-points{list-style:none;margin:40px 0 0;padding:0;display:grid;gap:18px 40px}
+@media(min-width:1024px){.selfhost-points{grid-template-columns:repeat(2,minmax(0,1fr));gap:26px 40px}}
 .selfhost-points li{display:flex;gap:14px}
 .selfhost-points .pt-ic{flex:none;display:grid;place-items:center;width:34px;height:34px;border-radius:11px;border:1px solid var(--band-edge);color:var(--terracotta-soft)}
 :root[data-theme='dark'] .selfhost-points .pt-ic{color:var(--terracotta)}
@@ -439,7 +481,13 @@ code{font-family:var(--font-mono);font-size:.88em}
 .mit-badge i{font-style:normal;width:8px;height:8px;border-radius:999px;background:var(--gold)}
 
 /* the ledger */
-.ledger{display:grid;gap:16px}
+/* align-items:start, not the grid default. "Built & tested" carries roughly
+   twice the entries of "Not built yet", so stretching the two cards to a shared
+   height drew a 1271px card round 621px of list and left 650px of empty bordered
+   box on the right of the section — measured, not estimated. A card ends where
+   its content ends; a ragged bottom edge between two lists of different lengths
+   is what an honest ledger looks like. */
+.ledger{display:grid;gap:16px;align-items:start}
 @media(min-width:900px){.ledger{grid-template-columns:1fr 1fr;gap:20px}}
 .ledger-col{border-radius:20px;border:1px solid var(--paper-edge);background:var(--paper-cool);padding:24px 22px}
 .ledger-col h3{font-family:var(--font-display);font-variation-settings:"SOFT" 30;font-size:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
@@ -456,7 +504,10 @@ code{font-family:var(--font-mono);font-size:.88em}
 .zana h2{font-size:clamp(1.8rem,3.3vw,2.6rem);line-height:1.04}
 .zana h2 em{font-style:italic;color:var(--terracotta);font-variation-settings:"SOFT" 100}
 .pair{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;max-width:420px;margin-left:auto}
-@media(max-width:899px){.pair{margin-left:0}}
+/* Centred, not flush-left, once the grid collapses. Pinned left it sat in a
+   420px block at the left edge of a 728px column at 768px wide, leaving 300px
+   of nothing beside it and reading as a layout that had fallen over. */
+@media(max-width:899px){.pair{margin-left:auto;margin-right:auto}}
 .pair-card{border-radius:20px;border:1px solid var(--paper-edge);background:var(--paper-cool);padding:22px 18px;text-align:center}
 .pair-card .p-ic{display:grid;place-items:center;width:40px;height:40px;margin:0 auto 12px;border-radius:var(--radius-arch);border:1.5px solid var(--ink-whisper);color:var(--terracotta)}
 .pair-card b{display:block;font-family:var(--font-display);font-variation-settings:"SOFT" 30;font-size:19px}
@@ -498,11 +549,11 @@ code{font-family:var(--font-mono);font-size:.88em}
    Type floor: every SVG here is authored on a viewBox whose width is at or
    below the container's min-width, so the smallest label (12 units) never
    renders below 12px, even at 390px where the container scrolls. */
-.illo{border-radius:20px;background:var(--paper-warm);border:1px solid var(--paper-edge);padding:20px;overflow-x:auto}
-.section-warm .illo{background:var(--paper-cool)}
-.illo>svg{display:block;width:100%;height:auto}
-.illo-wide>svg{min-width:920px}
-.illo-mid>svg{min-width:440px}
+.illo{--il-bg:var(--paper-warm);border-radius:20px;background:var(--il-bg);border:1px solid var(--paper-edge);padding:20px}
+.section-warm .illo{--il-bg:var(--paper-cool)}
+.illo-scroll>svg{display:block;width:100%;height:auto}
+.illo-wide .illo-scroll>svg{min-width:920px}
+.illo-mid .illo-scroll>svg{min-width:440px}
 .il-ground{fill:none;stroke:var(--ink-faint);stroke-opacity:.35;stroke-width:1.2}
 .il-s{fill:none;stroke:var(--ink-soft);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:.78}
 .il-s-faint{fill:none;stroke:var(--ink-faint);stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;opacity:.55}
@@ -523,10 +574,24 @@ code{font-family:var(--font-mono);font-size:.88em}
    crossing the glyphs. Rather than hand-nudging coordinates that would drift
    again at the next copy edit, every label paints a halo of the background
    colour BEHIND its own glyphs (paint-order: stroke, then fill), which knocks
-   the wire out where it would otherwise cut through the word. --il-bg follows
-   whichever surface the illustration is sitting on. */
+   the wire out where it would otherwise cut through the word.
+
+   --il-bg is declared ON THE CARD and the card paints itself with it, so the
+   halo is the card's own colour by construction. It used to be declared on the
+   SECTION instead, one level up, and every single figure on the page was drawn
+   with a halo of the wrong colour: the card is --paper-warm (#f2ede6) while the
+   section handed it --paper (#fafaf8), and inside .section-warm the card is
+   --paper-cool (#fdfdfc) while the section handed it --paper-warm — a visible
+   pale smudge round every label in light theme and a dark one in dark theme.
+   Same defect in both themes, and the fix has to stay structural: any new
+   figure that overrides its background must override --il-bg in the same rule.
+   check-render's halo-matches-surface check reads the PAINTED pixel and the
+   computed stroke, so a card that forgets fails the gate. */
 :root{--il-bg:var(--paper)}
-.section-warm{--il-bg:var(--paper-warm)}
+.selfhost .il-lbl,.selfhost .il-note,.selfhost .il-tag{fill:var(--band-text)}
+.selfhost .il-lbl-live,.selfhost .il-tag-live{fill:var(--terracotta-soft)}
+:root[data-theme='dark'] .selfhost .il-lbl-live,
+:root[data-theme='dark'] .selfhost .il-tag-live{fill:var(--terracotta)}
 .il-lbl,.il-lbl-live,.il-note,.il-tag,.il-tag-live{
   paint-order:stroke fill;
   stroke:var(--il-bg);
@@ -540,6 +605,47 @@ code{font-family:var(--font-mono);font-size:.88em}
 .il-tag{font-family:var(--font-mono);font-size:12px;letter-spacing:.09em;fill:var(--ink);opacity:.48}
 .il-tag-live{font-family:var(--font-mono);font-size:12px;letter-spacing:.09em;fill:var(--terracotta-deep)}
 .il-on-band{fill:var(--band-text)}
+/* ————— figures that are wider than the phone they're read on —————
+   Every figure is authored on a 900-unit viewBox with a 920px floor so its
+   smallest label never renders below 12px. Below about 1024px that floor is
+   wider than the card, so the card scrolls — and it did so with no affordance
+   at all: at 390px the property figure showed 340 of its 960px and cut
+   "Heating & cooling" mid-word, reading as a broken layout rather than a
+   scrollable one.
+
+   Three rules this has to obey, and each one is a check in check-render:
+   · the fade only appears when the figure ACTUALLY overflows. A fade over
+     something that already fits is itself a broken-layout signal, so the class
+     is driven by a measured scrollWidth - clientWidth > 8, never by a media
+     query guessing at it.
+   · it goes away at the end of the scroll, or it claims there is more to see
+     when there isn't.
+   · the hint is a static element, not a hover reveal — there is no hover on
+     the devices that need it.
+
+   The scroller is an inner element, not the card: the legend and the hint sit
+   outside it so they stay put while the drawing moves, and .illo-vp gives the
+   fade something to be absolutely positioned against. */
+.illo-vp{position:relative}
+.illo-scroll{overflow-x:auto;overscroll-behavior-x:contain}
+.illo-scroll:focus-visible{outline:2px solid var(--terracotta);outline-offset:3px;border-radius:8px}
+.illo-fade{position:absolute;top:0;right:0;bottom:0;width:56px;pointer-events:none;opacity:0;
+  transition:opacity .18s ease;
+  background:linear-gradient(to right,rgba(0,0,0,0),var(--il-bg) 78%)}
+.illo-hint{display:none;margin:11px 0 0;font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink-faint)}
+.illo-hint span{color:var(--terracotta)}
+/* .is-scrollable / .at-end are written by the script below onto the CARD, so a
+   single class pair drives both the fade and the hint. Specificity climbs with
+   each state (0,1,0 → 0,2,0 → 0,3,0) rather than relying on source order, and
+   none of it is inside a media query — a media query adds no specificity and
+   would lose to any later rule at the same weight. */
+.figscroll.is-scrollable .illo-fade{opacity:1}
+.figscroll.is-scrollable.at-end .illo-fade{opacity:0}
+.figscroll.is-scrollable .illo-hint{display:block}
+.figscroll.is-scrollable.at-end .illo-hint{display:none}
+@media(prefers-reduced-motion:reduce){.illo-fade{transition:none}}
+
 /* the key that tells you how to read the strokes */
 .il-key{list-style:none;display:flex;flex-wrap:wrap;gap:9px 24px;margin:15px 0 0;padding:0;font-size:12.5px;line-height:1.5;color:var(--ink-faint)}
 .il-key li{display:flex;align-items:center;gap:9px}
@@ -547,7 +653,13 @@ code{font-family:var(--font-mono);font-size:.88em}
 .il-key .k-built{color:var(--terracotta)}
 .il-key .k-soon i{border-top-style:dashed}
 /* the dark band gets its own ink, or the drawing disappears into it */
-.selfhost .illo{background:rgba(250,250,248,.045);border-color:var(--band-edge)}
+/* Opaque on purpose. This used to be rgba(250,250,248,.045) over the band, which
+   paints the right colour but gives --il-bg nothing to name: a translucent card
+   has no single value a label halo can be set to, and the halo was left holding
+   the band's own colour, one shade darker than the card it sits on. --illo-band
+   is that composite written out (band + 4.5% band-text, per theme), so the card
+   and the halo are literally the same declaration. */
+.selfhost .illo{--il-bg:var(--illo-band);background:var(--il-bg);border-color:var(--band-edge)}
 .selfhost .illo .il-s,.selfhost .illo .il-s-faint,.selfhost .illo .il-wire,.selfhost .illo .il-wire-off,.selfhost .illo .il-ic,.selfhost .illo .il-ground,.selfhost .illo .il-panel-off{stroke:var(--band-text)}
 .selfhost .illo .il-panel,.selfhost .illo .il-node{fill:transparent;stroke:var(--band-text);stroke-opacity:.4}
 .selfhost .illo .il-lbl,.selfhost .illo .il-note,.selfhost .illo .il-tag{fill:var(--band-text)}
@@ -714,8 +826,9 @@ code{font-family:var(--font-mono);font-size:.88em}
       </div>
 
       <div class="hero-visual">
-        <div class="hub-figure">
+        <div class="hub-figure figscroll">
         <div class="drift">
+          <div class="illo-scroll" tabindex="0">
           <!-- One hub, the seven device kinds on one orbit. Every kind is drawn at the
                same weight — the hub is for all of them. The terracotta accent marks the
                one module that runs end to end today; it is a state, not a hierarchy. -->
@@ -813,7 +926,10 @@ code{font-family:var(--font-mono);font-size:.88em}
               </g>
             </g>
           </svg>
+          </div>
+          <span class="illo-fade" aria-hidden="true"></span>
         </div>
+        <p class="illo-hint" aria-hidden="true">Drag or scroll sideways to see the rest of the figure <span>&rarr;</span></p>
         <span class="corner corner-tl" aria-hidden="true"></span>
         <span class="corner corner-br" aria-hidden="true"></span>
         <div class="fig-caption" aria-hidden="true">
@@ -839,7 +955,7 @@ code{font-family:var(--font-mono);font-size:.88em}
 <!-- ————————————————— the hub owns everything ————————————————— -->
 <section class="section" id="hub">
   <div class="wrap">
-    <div class="section-head reveal">
+    <div class="section-head has-note reveal">
       <div>
         <span class="eyebrow kicker">One control plane</span>
         <h2 class="display-tight">One hub owns<br><em>everything</em>.</h2>
@@ -849,15 +965,19 @@ code{font-family:var(--font-mono);font-size:.88em}
         sensors and robots in one place, with one history you can actually read. Most homes
         end up with four apps and four accounts, none of which can tell you who opened the
         gate last night. This is the other shape — one box you own, one screen, one log.
-        It already speaks to a great deal of what you have: anything on Zigbee or Z-Wave
-        through a bridge you may already run, meters and inverters over Modbus, ONVIF
-        cameras, and anything with a web hook. How far each kind gets differs, and the
-        picture below is drawn to say which is which — with one caveat that applies to
-        every line on it: <b style="color:var(--ink);font-weight:600">nothing here has ever
-        been wired to a real device</b>. Every driver is tested against stand-ins, never
-        against a meter, a relay or a camera on a wall. The
-        <a href="#status" style="color:var(--terracotta)">ledger</a> spells the rest out line by line.
+        It already speaks to a good deal of what you have: Zigbee and Z-Wave through a
+        bridge you may already run, meters and inverters over Modbus, ONVIF cameras, and
+        anything with a web hook.
       </p>
+      <div class="head-note">
+        <span class="eyebrow">One caveat, on every line</span>
+        <p>
+          The figure below is drawn to say how far each kind actually gets — and
+          <b>nothing on it has ever been wired to a real device</b>. Every driver is tested
+          against stand-ins, never against a meter, a relay or a camera on a wall. The
+          <a href="#status">ledger</a> spells the rest out, line by line.
+        </p>
+      </div>
     </div>
 
     <!-- Fig. 02 — the property. The stroke carries the honesty vocabulary: solid is a
@@ -866,124 +986,130 @@ code{font-family:var(--font-mono);font-size:.88em}
          thin strokes, palette colours, nothing photographic. Authored on a 900-unit
          viewBox against a 920px min-width, so the smallest label (12 units) never
          renders below 12px even where the container scrolls. -->
-    <div class="illo illo-wide reveal" style="margin-bottom:28px">
-      <svg viewBox="0 0 900 400" role="img" aria-labelledby="propT propD">
-        <title id="propT">One hub in the middle of a property</title>
-        <desc id="propD">A house with the Aql hub drawn inside it, wired outward to a driveway gate, lighting, sensors, a thermostat, an energy meter, a camera and a robot mower, with a second building alongside. The gate is drawn in terracotta as the one path that runs end to end today. The camera and the mower are drawn with dashed lines because those paths are not finished.</desc>
+    <div class="illo illo-wide figscroll reveal" style="margin-bottom:28px">
+      <div class="illo-vp">
+        <div class="illo-scroll" tabindex="0">
+          <svg viewBox="0 0 900 400" role="img" aria-labelledby="propT propD">
+            <title id="propT">One hub in the middle of a property</title>
+            <desc id="propD">A house with the Aql hub drawn inside it, wired outward to a driveway gate, lighting, sensors, a thermostat, an energy meter, a camera and a robot mower, with a second building alongside. The gate is drawn in terracotta as the one path that runs end to end today. The camera and the mower are drawn with dashed lines because those paths are not finished.</desc>
 
-        <path class="il-ground" d="M30 330 H870"/>
+            <path class="il-ground" d="M30 330 H870"/>
 
-        <!-- the house, with the hub cut away inside it -->
-        <g>
-          <path class="il-s" fill="var(--paper-cool)" d="M296 216 L400 148 L504 216 Z"/>
-          <path class="il-s" fill="var(--paper-cool)" d="M306 216 V330 H494 V216"/>
-          <rect class="il-s" fill="none" x="326" y="240" width="36" height="28" rx="3"/>
-          <path class="il-s-faint" d="M344 240 V268 M326 254 H362"/>
-          <path class="il-s" fill="none" d="M442 330 V278 a15 15 0 0 1 30 0 V330"/>
-          <path class="il-s-faint" d="M322 210 L356 188 L400 188 L366 210 Z"/>
-          <path class="il-s-faint" d="M340 199 L384 199"/>
-        </g>
+            <!-- the house, with the hub cut away inside it -->
+            <g>
+              <path class="il-s" fill="var(--paper-cool)" d="M296 216 L400 148 L504 216 Z"/>
+              <path class="il-s" fill="var(--paper-cool)" d="M306 216 V330 H494 V216"/>
+              <rect class="il-s" fill="none" x="326" y="240" width="36" height="28" rx="3"/>
+              <path class="il-s-faint" d="M344 240 V268 M326 254 H362"/>
+              <path class="il-s" fill="none" d="M442 330 V278 a15 15 0 0 1 30 0 V330"/>
+              <path class="il-s-faint" d="M322 210 L356 188 L400 188 L366 210 Z"/>
+              <path class="il-s-faint" d="M340 199 L384 199"/>
+            </g>
 
-        <!-- the second building: a workshop, a plant room, a shop floor -->
-        <g>
-          <path class="il-s" fill="var(--paper-cool)" d="M584 256 L676 214 L768 256 Z"/>
-          <path class="il-s" fill="var(--paper-cool)" d="M596 256 V330 H756 V256"/>
-          <path class="il-s" fill="none" d="M652 330 V286 h48 v44"/>
-        </g>
+            <!-- the second building: a workshop, a plant room, a shop floor -->
+            <g>
+              <path class="il-s" fill="var(--paper-cool)" d="M584 256 L676 214 L768 256 Z"/>
+              <path class="il-s" fill="var(--paper-cool)" d="M596 256 V330 H756 V256"/>
+              <path class="il-s" fill="none" d="M652 330 V286 h48 v44"/>
+            </g>
 
-        <!-- the driveway gate — the one path that is real all the way to the motor -->
-        <g>
-          <path class="il-s-faint" d="M30 330 V294 H80 V330"/>
-          <path class="il-live" d="M96 330 V268 M200 330 V268"/>
-          <g class="il-live">
-            <rect x="104" y="282" width="70" height="48" rx="4" fill="var(--signal-wash)"/>
-            <path d="M121 282 V330 M138 282 V330 M155 282 V330"/>
-          </g>
-          <path class="il-live" d="M180 306 h14 m-6 -5 l6 5 -6 5"/>
-        </g>
+            <!-- the driveway gate — the one path that is real all the way to the motor -->
+            <g>
+              <path class="il-s-faint" d="M30 330 V294 H80 V330"/>
+              <path class="il-live" d="M96 330 V268 M200 330 V268"/>
+              <g class="il-live">
+                <rect x="104" y="282" width="70" height="48" rx="4" fill="var(--signal-wash)"/>
+                <path d="M121 282 V330 M138 282 V330 M155 282 V330"/>
+              </g>
+              <path class="il-live" d="M180 306 h14 m-6 -5 l6 5 -6 5"/>
+            </g>
 
-        <!-- the mower: drawn dashed, because there is nothing behind it yet -->
-        <g>
-          <rect class="il-panel-off" x="506" y="292" width="68" height="38" rx="12"/>
-          <g class="il-ic" transform="translate(540 309) scale(1.35)" opacity=".45">
-            <rect x="-8.5" y="-4" width="17" height="8.5" rx="2.6"/>
-            <circle cx="-4.2" cy="7.2" r="2.1"/><circle cx="4.2" cy="7.2" r="2.1"/>
-            <path d="M-3.4 -4 v-3.4 M3.4 -4 v-3.4"/>
-          </g>
-        </g>
+            <!-- the mower: drawn dashed, because there is nothing behind it yet -->
+            <g>
+              <rect class="il-panel-off" x="506" y="292" width="68" height="38" rx="12"/>
+              <g class="il-ic" transform="translate(540 309) scale(1.35)" opacity=".45">
+                <rect x="-8.5" y="-4" width="17" height="8.5" rx="2.6"/>
+                <circle cx="-4.2" cy="7.2" r="2.1"/><circle cx="4.2" cy="7.2" r="2.1"/>
+                <path d="M-3.4 -4 v-3.4 M3.4 -4 v-3.4"/>
+              </g>
+            </g>
 
-        <!-- what the hub reaches -->
-        <g>
-          <path class="il-wire-live" d="M400 282 L200 300"/>
-          <path class="il-wire" d="M400 282 L140 130"/>
-          <path class="il-wire" d="M400 282 L280 86"/>
-          <path class="il-wire" d="M400 282 L450 66"/>
-          <path class="il-wire" d="M400 282 L790 160"/>
-          <path class="il-wire-off" d="M400 282 L620 110"/>
-          <path class="il-wire-off" d="M400 282 L540 309"/>
-        </g>
+            <!-- what the hub reaches -->
+            <g>
+              <path class="il-wire-live" d="M400 282 L200 300"/>
+              <path class="il-wire" d="M400 282 L140 130"/>
+              <path class="il-wire" d="M400 282 L280 86"/>
+              <path class="il-wire" d="M400 282 L450 66"/>
+              <path class="il-wire" d="M400 282 L790 160"/>
+              <path class="il-wire-off" d="M400 282 L620 110"/>
+              <path class="il-wire-off" d="M400 282 L540 309"/>
+            </g>
 
-        <!-- the kinds -->
-        <g>
-          <circle class="il-node" cx="140" cy="130" r="24"/>
-          <g class="il-ic" transform="translate(140 130) scale(1.5)">
-            <circle cx="0" cy="5" r="1.7"/>
-            <path d="M-3.6 1.4a5.2 5.2 0 0 1 7.2 0"/>
-            <path d="M-6.8 -1.8a9.6 9.6 0 0 1 13.6 0"/>
-          </g>
-          <text class="il-lbl" x="140" y="174" text-anchor="middle">Sensors</text>
+            <!-- the kinds -->
+            <g>
+              <circle class="il-node" cx="140" cy="130" r="24"/>
+              <g class="il-ic" transform="translate(140 130) scale(1.5)">
+                <circle cx="0" cy="5" r="1.7"/>
+                <path d="M-3.6 1.4a5.2 5.2 0 0 1 7.2 0"/>
+                <path d="M-6.8 -1.8a9.6 9.6 0 0 1 13.6 0"/>
+              </g>
+              <text class="il-lbl" x="140" y="174" text-anchor="middle">Sensors</text>
 
-          <circle class="il-node" cx="280" cy="86" r="24"/>
-          <g class="il-ic" transform="translate(280 86) scale(1.5)">
-            <path d="M-2.6 2.6V-6.4a2.6 2.6 0 0 1 5.2 0v9a4.4 4.4 0 1 1-5.2 0Z"/>
-            <path d="M0 -1.4v5"/>
-          </g>
-          <text class="il-lbl" x="280" y="130" text-anchor="middle">Heating &amp; cooling</text>
+              <circle class="il-node" cx="280" cy="86" r="24"/>
+              <g class="il-ic" transform="translate(280 86) scale(1.5)">
+                <path d="M-2.6 2.6V-6.4a2.6 2.6 0 0 1 5.2 0v9a4.4 4.4 0 1 1-5.2 0Z"/>
+                <path d="M0 -1.4v5"/>
+              </g>
+              <text class="il-lbl" x="280" y="130" text-anchor="middle">Heating &amp; cooling</text>
 
-          <circle class="il-node" cx="450" cy="66" r="24"/>
-          <g class="il-ic" transform="translate(450 66) scale(1.5)">
-            <path d="M-4.6 2.6a5.6 5.6 0 1 1 9.2 0 c-1 1.3-1.4 2.2-1.5 3.5h-6.2c-.1-1.3-.5-2.2-1.5-3.5Z"/>
-            <path d="M-2.6 8.8h5.2"/>
-          </g>
-          <text class="il-lbl" x="450" y="110" text-anchor="middle">Lighting</text>
+              <circle class="il-node" cx="450" cy="66" r="24"/>
+              <g class="il-ic" transform="translate(450 66) scale(1.5)">
+                <path d="M-4.6 2.6a5.6 5.6 0 1 1 9.2 0 c-1 1.3-1.4 2.2-1.5 3.5h-6.2c-.1-1.3-.5-2.2-1.5-3.5Z"/>
+                <path d="M-2.6 8.8h5.2"/>
+              </g>
+              <text class="il-lbl" x="450" y="110" text-anchor="middle">Lighting</text>
 
-          <circle class="il-node-off" cx="620" cy="110" r="24"/>
-          <g class="il-ic" transform="translate(620 110) scale(1.5)" opacity=".45">
-            <rect x="-9" y="-5.5" width="18" height="12" rx="2.5"/>
-            <circle cx="0" cy="0.5" r="3.2"/>
-            <path d="M-4.6 -5.5 l1.5 -2.6 h6.2 l1.5 2.6"/>
-          </g>
-          <text class="il-lbl" x="620" y="154" text-anchor="middle" opacity=".6">Cameras</text>
-          <text class="il-note" x="620" y="173" text-anchor="middle">built, never met a camera</text>
+              <circle class="il-node-off" cx="620" cy="110" r="24"/>
+              <g class="il-ic" transform="translate(620 110) scale(1.5)" opacity=".45">
+                <rect x="-9" y="-5.5" width="18" height="12" rx="2.5"/>
+                <circle cx="0" cy="0.5" r="3.2"/>
+                <path d="M-4.6 -5.5 l1.5 -2.6 h6.2 l1.5 2.6"/>
+              </g>
+              <text class="il-lbl" x="620" y="154" text-anchor="middle" opacity=".6">Cameras</text>
+              <text class="il-note" x="620" y="173" text-anchor="middle">built, never met a camera</text>
 
-          <circle class="il-node" cx="790" cy="160" r="24"/>
-          <g class="il-ic" transform="translate(790 160) scale(1.5)">
-            <path d="M-8.4 4.2a8.4 8.4 0 0 1 16.8 0"/>
-            <path d="M0 4.2 L4.8 -1.4"/>
-            <circle cx="0" cy="4.2" r="1.3"/>
-          </g>
-          <text class="il-lbl" x="790" y="204" text-anchor="middle">Power &amp; solar</text>
-        </g>
+              <circle class="il-node" cx="790" cy="160" r="24"/>
+              <g class="il-ic" transform="translate(790 160) scale(1.5)">
+                <path d="M-8.4 4.2a8.4 8.4 0 0 1 16.8 0"/>
+                <path d="M0 4.2 L4.8 -1.4"/>
+                <circle cx="0" cy="4.2" r="1.3"/>
+              </g>
+              <text class="il-lbl" x="790" y="204" text-anchor="middle">Power &amp; solar</text>
+            </g>
 
-        <!-- the hub itself -->
-        <g>
-          <rect x="368" y="250" width="64" height="64" rx="16" fill="var(--band)"/>
-          <g transform="translate(400 282) scale(.62) translate(-32 -32)" fill="none">
-            <path d="M14 50 V32 a18 18 0 0 1 36 0 V50 H40 V32 a8 8 0 0 0 -16 0 V50 Z"
-                  stroke="var(--band-text)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="32" cy="42" r="3.6" fill="var(--terracotta)"/>
-          </g>
-          <path class="il-s-faint" d="M400 314 V344"/>
-        </g>
+            <!-- the hub itself -->
+            <g>
+              <rect x="368" y="250" width="64" height="64" rx="16" fill="var(--band)"/>
+              <g transform="translate(400 282) scale(.62) translate(-32 -32)" fill="none">
+                <path d="M14 50 V32 a18 18 0 0 1 36 0 V50 H40 V32 a8 8 0 0 0 -16 0 V50 Z"
+                      stroke="var(--band-text)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="32" cy="42" r="3.6" fill="var(--terracotta)"/>
+              </g>
+              <path class="il-s-faint" d="M400 314 V344"/>
+            </g>
 
-        <!-- the ground labels -->
-        <text class="il-lbl-live" x="150" y="362" text-anchor="middle">Driveway gate</text>
-        <text class="il-tag-live" x="150" y="382" text-anchor="middle">OPENS TODAY</text>
-        <text class="il-lbl" x="400" y="364" text-anchor="middle">Your hub</text>
-        <text class="il-note" x="400" y="383" text-anchor="middle">the box you own</text>
-        <text class="il-lbl" x="540" y="362" text-anchor="middle" opacity=".55">Robot mower</text>
-        <text class="il-tag" x="540" y="382" text-anchor="middle">NOT BUILT YET</text>
-      </svg>
+            <!-- the ground labels -->
+            <text class="il-lbl-live" x="150" y="362" text-anchor="middle">Driveway gate</text>
+            <text class="il-tag-live" x="150" y="382" text-anchor="middle">OPENS TODAY</text>
+            <text class="il-lbl" x="400" y="364" text-anchor="middle">Your hub</text>
+            <text class="il-note" x="400" y="383" text-anchor="middle">the box you own</text>
+            <text class="il-lbl" x="540" y="362" text-anchor="middle" opacity=".55">Robot mower</text>
+            <text class="il-tag" x="540" y="382" text-anchor="middle">NOT BUILT YET</text>
+          </svg>
+        </div>
+        <span class="illo-fade" aria-hidden="true"></span>
+      </div>
+      <p class="illo-hint" aria-hidden="true">Drag or scroll sideways to see the rest of the figure <span>&rarr;</span></p>
       <ul class="il-key">
         <li class="k-built"><i aria-hidden="true"></i><span style="color:var(--ink-faint)">real all the way to the motor</span></li>
         <li><i aria-hidden="true"></i>built, but never wired to a real device</li>
@@ -1078,7 +1204,7 @@ code{font-family:var(--font-mono);font-size:.88em}
      attribute the toggle writes. Nothing here is a mock-up or a render; the
      caption says what the data behind them is, because the honest answer is
      "sample data" and pretending otherwise is the oldest trick on a landing. -->
-<section class="section" id="console" style="padding-top:0">
+<section class="section" id="console">
   <div class="wrap">
     <div class="section-head reveal">
       <div>
@@ -1163,7 +1289,7 @@ code{font-family:var(--font-mono);font-size:.88em}
         </p>
         <p style="margin-top:16px;max-width:29rem;color:var(--ink-faint);line-height:1.7;font-size:14px">
           Which chat apps carry the messages is moving out of Aql into
-          <a href="https://github.com/vul-os/ephor" rel="noopener" style="color:var(--terracotta)">Ephor</a>,
+          <a href="https://github.com/vul-os/pier" rel="noopener" style="color:var(--terracotta)">Pier</a>,
           a separate piece you run or point at. That move is under way. Either way the accounts
           stay yours, and the hub stays the only thing that decides anything.
         </p>
@@ -1254,96 +1380,102 @@ code{font-family:var(--font-mono);font-size:.88em}
          ask until something seals it, and the seal is what the gate checks — but the
          cryptographic nouns belong in the docs, not here. The lower lane is the same
          drawing with the hub removed, which is the entire point of it. -->
-    <div class="how-illo reveal">
-      <svg viewBox="0 0 900 402" role="img" aria-labelledby="openT openD">
-        <title id="openT">What happens between asking and the gate moving</title>
-        <desc id="openD">Two lanes. In the upper lane someone asks to open, the hub checks who they are, whether they are allowed this gate now, and whether they have used up the day's opens, then seals an instruction that is good for sixty seconds and usable once; the box at the gate checks the seal and the barrier lifts. In the lower lane the hub cannot be reached, so a pass already held on the phone is presented to the gate directly over Wi-Fi or Bluetooth, and the gate performs exactly the same check.</desc>
+    <div class="how-illo figscroll reveal">
+      <div class="illo-vp">
+        <div class="illo-scroll" tabindex="0">
+          <svg viewBox="0 0 900 402" role="img" aria-labelledby="openT openD">
+            <title id="openT">What happens between asking and the gate moving</title>
+            <desc id="openD">Two lanes. In the upper lane someone asks to open, the hub checks who they are, whether they are allowed this gate now, and whether they have used up the day's opens, then seals an instruction that is good for sixty seconds and usable once; the box at the gate checks the seal and the barrier lifts. In the lower lane the hub cannot be reached, so a pass already held on the phone is presented to the gate directly over Wi-Fi or Bluetooth, and the gate performs exactly the same check.</desc>
 
-        <!-- ============ when everything is up ============ -->
-        <text class="il-tag" x="24" y="26">WHEN EVERYTHING IS UP</text>
-        <path class="il-ground" d="M24 38 H876"/>
+            <!-- ============ when everything is up ============ -->
+            <text class="il-tag" x="24" y="26">WHEN EVERYTHING IS UP</text>
+            <path class="il-ground" d="M24 38 H876"/>
 
-        <g>
-          <rect class="il-panel" x="24" y="60" width="178" height="100" rx="14"/>
-          <text class="il-tag-live" x="42" y="86">01 &middot; SOMEONE ASKS</text>
-          <text class="il-lbl" x="42" y="115" font-size="19">&ldquo;open&rdquo;</text>
-          <text class="il-note" x="42" y="137">a text, or one tap</text>
-          <text class="il-note" x="42" y="153">in the app</text>
-        </g>
-        <path class="il-wire" d="M212 110 H238"/>
-        <path class="il-wire" d="M232 105 l7 5 -7 5" fill="none"/>
+            <g>
+              <rect class="il-panel" x="24" y="60" width="178" height="100" rx="14"/>
+              <text class="il-tag-live" x="42" y="86">01 &middot; SOMEONE ASKS</text>
+              <text class="il-lbl" x="42" y="115" font-size="19">&ldquo;open&rdquo;</text>
+              <text class="il-note" x="42" y="137">a text, or one tap</text>
+              <text class="il-note" x="42" y="153">in the app</text>
+            </g>
+            <path class="il-wire" d="M212 110 H238"/>
+            <path class="il-wire" d="M232 105 l7 5 -7 5" fill="none"/>
 
-        <g>
-          <rect x="248" y="44" width="250" height="132" rx="14" fill="var(--band)"/>
-          <text x="266" y="72" font-family="var(--font-mono)" font-size="12" letter-spacing="1.1" fill="var(--gold)">02 &middot; YOUR HUB DECIDES</text>
-          <text x="266" y="98" font-size="13" fill="var(--band-text)">is this someone you added?</text>
-          <text x="266" y="120" font-size="13" fill="var(--band-text)">allowed this gate, right now?</text>
-          <text x="266" y="142" font-size="13" fill="var(--band-text)">any opens left for today?</text>
-          <path d="M266 154 H480" stroke="var(--band-text)" stroke-width="1" opacity=".25"/>
-          <text x="266" y="170" font-size="12.5" fill="var(--gold)">only then does it seal an order</text>
-        </g>
-        <path class="il-wire" d="M508 110 H534"/>
-        <path class="il-wire" d="M528 105 l7 5 -7 5" fill="none"/>
+            <g>
+              <rect x="248" y="44" width="250" height="132" rx="14" fill="var(--band)"/>
+              <text x="266" y="72" font-family="var(--font-mono)" font-size="12" letter-spacing="1.1" fill="var(--gold)">02 &middot; YOUR HUB DECIDES</text>
+              <text x="266" y="98" font-size="13" fill="var(--band-text)">is this someone you added?</text>
+              <text x="266" y="120" font-size="13" fill="var(--band-text)">allowed this gate, right now?</text>
+              <text x="266" y="142" font-size="13" fill="var(--band-text)">any opens left for today?</text>
+              <path d="M266 154 H480" stroke="var(--band-text)" stroke-width="1" opacity=".25"/>
+              <text x="266" y="170" font-size="12.5" fill="var(--gold)">only then does it seal an order</text>
+            </g>
+            <path class="il-wire" d="M508 110 H534"/>
+            <path class="il-wire" d="M528 105 l7 5 -7 5" fill="none"/>
 
-        <g>
-          <rect class="il-panel-live" x="544" y="60" width="178" height="100" rx="14"/>
-          <text class="il-tag-live" x="562" y="84">03 &middot; A SEALED ORDER</text>
-          <text class="il-note" x="562" y="108">good for 60 seconds</text>
-          <text class="il-note" x="562" y="126">usable exactly once</text>
-          <g class="il-live" transform="translate(699 141)">
-            <rect x="-17" y="-11" width="34" height="23" rx="3" fill="none"/>
-            <path d="M-17 -8.5 L0 3 L17 -8.5"/>
-            <circle cx="0" cy="8" r="4.2" fill="var(--signal-wash)"/>
-          </g>
-        </g>
-        <path class="il-wire" d="M732 110 H758"/>
-        <path class="il-wire" d="M752 105 l7 5 -7 5" fill="none"/>
+            <g>
+              <rect class="il-panel-live" x="544" y="60" width="178" height="100" rx="14"/>
+              <text class="il-tag-live" x="562" y="84">03 &middot; A SEALED ORDER</text>
+              <text class="il-note" x="562" y="108">good for 60 seconds</text>
+              <text class="il-note" x="562" y="126">usable exactly once</text>
+              <g class="il-live" transform="translate(699 141)">
+                <rect x="-17" y="-11" width="34" height="23" rx="3" fill="none"/>
+                <path d="M-17 -8.5 L0 3 L17 -8.5"/>
+                <circle cx="0" cy="8" r="4.2" fill="var(--signal-wash)"/>
+              </g>
+            </g>
+            <path class="il-wire" d="M732 110 H758"/>
+            <path class="il-wire" d="M752 105 l7 5 -7 5" fill="none"/>
 
-        <g>
-          <rect class="il-panel" x="768" y="60" width="108" height="100" rx="14"/>
-          <text class="il-tag-live" x="786" y="86">04</text>
-          <g transform="translate(822 118) scale(1.2)">
-            <path class="il-s-faint" d="M-22 16 H24"/>
-            <path class="il-live" d="M-18 18 V-10"/>
-            <path class="il-live" d="M-18 0 L23 -15"/>
-            <circle class="il-live" cx="-18" cy="0" r="3.2" fill="var(--signal-wash)"/>
-          </g>
-          <text class="il-note" x="822" y="152" text-anchor="middle">it opens</text>
-        </g>
+            <g>
+              <rect class="il-panel" x="768" y="60" width="108" height="100" rx="14"/>
+              <text class="il-tag-live" x="786" y="86">04</text>
+              <g transform="translate(822 118) scale(1.2)">
+                <path class="il-s-faint" d="M-22 16 H24"/>
+                <path class="il-live" d="M-18 18 V-10"/>
+                <path class="il-live" d="M-18 0 L23 -15"/>
+                <circle class="il-live" cx="-18" cy="0" r="3.2" fill="var(--signal-wash)"/>
+              </g>
+              <text class="il-note" x="822" y="152" text-anchor="middle">it opens</text>
+            </g>
 
-        <text class="il-note" x="24" y="206">The box at the gate obeys nothing that isn&rsquo;t sealed by your hub &mdash; not the network, not the sender, not us.</text>
-        <text class="il-note" x="24" y="226">Every open and every refusal is written down the same second, in a record that cannot be quietly edited.</text>
+            <text class="il-note" x="24" y="206">The box at the gate obeys nothing that isn&rsquo;t sealed by your hub &mdash; not the network, not the sender, not us.</text>
+            <text class="il-note" x="24" y="226">Every open and every refusal is written down the same second, in a record that cannot be quietly edited.</text>
 
-        <!-- ============ when the hub cannot be reached ============ -->
-        <path class="il-ground" d="M24 252 H876"/>
-        <text class="il-tag" x="24" y="278">WHEN THE HUB CAN&rsquo;T BE REACHED</text>
+            <!-- ============ when the hub cannot be reached ============ -->
+            <path class="il-ground" d="M24 252 H876"/>
+            <text class="il-tag" x="24" y="278">WHEN THE HUB CAN&rsquo;T BE REACHED</text>
 
-        <g>
-          <rect class="il-panel" x="24" y="294" width="178" height="72" rx="14"/>
-          <text class="il-tag-live" x="42" y="318">YOUR PHONE&rsquo;S PASS</text>
-          <text class="il-note" x="42" y="338">sealed in advance,</text>
-          <text class="il-note" x="42" y="356">with its own expiry</text>
-        </g>
-        <path class="il-wire-off" d="M212 330 H238"/>
-        <path class="il-wire" d="M232 325 l7 5 -7 5" fill="none"/>
+            <g>
+              <rect class="il-panel" x="24" y="294" width="178" height="72" rx="14"/>
+              <text class="il-tag-live" x="42" y="318">YOUR PHONE&rsquo;S PASS</text>
+              <text class="il-note" x="42" y="338">sealed in advance,</text>
+              <text class="il-note" x="42" y="356">with its own expiry</text>
+            </g>
+            <path class="il-wire-off" d="M212 330 H238"/>
+            <path class="il-wire" d="M232 325 l7 5 -7 5" fill="none"/>
 
-        <g>
-          <rect class="il-panel-off" x="248" y="294" width="250" height="72" rx="14"/>
-          <text class="il-tag" x="266" y="318">YOUR HUB ISN&rsquo;T HERE</text>
-          <text class="il-note" x="266" y="338">your phone talks to the gate itself,</text>
-          <text class="il-note" x="266" y="356">over your own Wi-Fi or Bluetooth</text>
-        </g>
-        <path class="il-wire-off" d="M508 330 H758"/>
-        <path class="il-wire" d="M752 325 l7 5 -7 5" fill="none"/>
+            <g>
+              <rect class="il-panel-off" x="248" y="294" width="250" height="72" rx="14"/>
+              <text class="il-tag" x="266" y="318">YOUR HUB ISN&rsquo;T HERE</text>
+              <text class="il-note" x="266" y="338">your phone talks to the gate itself,</text>
+              <text class="il-note" x="266" y="356">over your own Wi-Fi or Bluetooth</text>
+            </g>
+            <path class="il-wire-off" d="M508 330 H758"/>
+            <path class="il-wire" d="M752 325 l7 5 -7 5" fill="none"/>
 
-        <g>
-          <rect class="il-panel-live" x="768" y="294" width="108" height="72" rx="14"/>
-          <text class="il-lbl" x="822" y="324" text-anchor="middle">Same check.</text>
-          <text class="il-note" x="822" y="348" text-anchor="middle">Same gate.</text>
-        </g>
+            <g>
+              <rect class="il-panel-live" x="768" y="294" width="108" height="72" rx="14"/>
+              <text class="il-lbl" x="822" y="324" text-anchor="middle">Same check.</text>
+              <text class="il-note" x="822" y="348" text-anchor="middle">Same gate.</text>
+            </g>
 
-        <text class="il-note" x="24" y="392">The gate checks the same seal against the same key. It never needed the internet to do that.</text>
-      </svg>
+            <text class="il-note" x="24" y="392">The gate checks the same seal against the same key. It never needed the internet to do that.</text>
+          </svg>
+        </div>
+        <span class="illo-fade" aria-hidden="true"></span>
+      </div>
+      <p class="illo-hint" aria-hidden="true">Drag or scroll sideways to see the rest of the figure <span>&rarr;</span></p>
     </div>
 
     <ol class="steps">
@@ -1414,67 +1546,73 @@ code{font-family:var(--font-mono);font-size:.88em}
     <!-- Fig. 04 — the outage, in three moments. The middle panel is the whole
          argument: the hub is drawn dashed and the line to it is broken, because
          what makes this work is that nothing needs to reach it. -->
-    <div class="illo illo-wide reveal" style="margin-bottom:30px">
-      <svg viewBox="0 0 900 220" role="img" aria-labelledby="outT outD">
-        <title id="outT">What happens to the gate when the internet drops</title>
-        <desc id="outD">Three moments. First, while everything works, the hub seals a dated pass and puts it on the phone. Second, the line goes down and the hub cannot be reached at all. Third, at the gate, the phone presents the pass to the gate directly over Wi-Fi or Bluetooth and the barrier lifts, with nobody asked in between.</desc>
+    <div class="illo illo-wide figscroll reveal" style="margin-bottom:30px">
+      <div class="illo-vp">
+        <div class="illo-scroll" tabindex="0">
+          <svg viewBox="0 0 900 220" role="img" aria-labelledby="outT outD">
+            <title id="outT">What happens to the gate when the internet drops</title>
+            <desc id="outD">Three moments. First, while everything works, the hub seals a dated pass and puts it on the phone. Second, the line goes down and the hub cannot be reached at all. Third, at the gate, the phone presents the pass to the gate directly over Wi-Fi or Bluetooth and the barrier lifts, with nobody asked in between.</desc>
 
-        <path class="il-ground" d="M300 24 V196 M600 24 V196"/>
+            <path class="il-ground" d="M300 24 V196 M600 24 V196"/>
 
-        <!-- 1 · earlier, while it worked -->
-        <text class="il-tag" x="24" y="30">1 &middot; EARLIER, WHILE IT WORKED</text>
-        <g>
-          <rect x="44" y="62" width="54" height="54" rx="14" fill="var(--band)"/>
-          <g transform="translate(71 89) scale(.52) translate(-32 -32)" fill="none">
-            <path d="M14 50 V32 a18 18 0 0 1 36 0 V50 H40 V32 a8 8 0 0 0 -16 0 V50 Z"
-                  stroke="var(--band-text)" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round"/>
-          </g>
-          <path class="il-wire-live" d="M110 89 H184"/>
-          <path class="il-wire-live" d="M178 84 l7 5 -7 5" fill="none"/>
-          <rect class="il-panel" x="196" y="56" width="46" height="66" rx="9"/>
-          <rect class="il-live" x="204" y="74" width="30" height="21" rx="4" fill="var(--signal-wash)"/>
-          <path class="il-live" d="M210 82 h18 M210 88 h11"/>
-        </g>
-        <text class="il-note" x="24" y="160">your hub seals a dated pass</text>
-        <text class="il-note" x="24" y="178">and puts it on the phone</text>
+            <!-- 1 · earlier, while it worked -->
+            <text class="il-tag" x="24" y="30">1 &middot; EARLIER, WHILE IT WORKED</text>
+            <g>
+              <rect x="44" y="62" width="54" height="54" rx="14" fill="var(--band)"/>
+              <g transform="translate(71 89) scale(.52) translate(-32 -32)" fill="none">
+                <path d="M14 50 V32 a18 18 0 0 1 36 0 V50 H40 V32 a8 8 0 0 0 -16 0 V50 Z"
+                      stroke="var(--band-text)" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round"/>
+              </g>
+              <path class="il-wire-live" d="M110 89 H184"/>
+              <path class="il-wire-live" d="M178 84 l7 5 -7 5" fill="none"/>
+              <rect class="il-panel" x="196" y="56" width="46" height="66" rx="9"/>
+              <rect class="il-live" x="204" y="74" width="30" height="21" rx="4" fill="var(--signal-wash)"/>
+              <path class="il-live" d="M210 82 h18 M210 88 h11"/>
+            </g>
+            <text class="il-note" x="24" y="160">your hub seals a dated pass</text>
+            <text class="il-note" x="24" y="178">and puts it on the phone</text>
 
-        <!-- 2 · then the line goes -->
-        <text class="il-tag" x="324" y="30">2 &middot; THEN THE LINE GOES</text>
-        <g>
-          <rect class="il-panel-off" x="340" y="62" width="54" height="54" rx="14"/>
-          <g transform="translate(367 89) scale(.52) translate(-32 -32)" fill="none" opacity=".38">
-            <path d="M14 50 V32 a18 18 0 0 1 36 0 V50 H40 V32 a8 8 0 0 0 -16 0 V50 Z"
-                  stroke="var(--ink)" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round"/>
-          </g>
-          <path class="il-wire-off" d="M406 89 H462"/>
-          <path class="il-s" d="M472 76 l18 26 M490 76 l-18 26"/>
-          <path class="il-wire-off" d="M500 89 H520"/>
-          <rect class="il-panel" x="532" y="56" width="46" height="66" rx="9"/>
-          <rect class="il-live" x="540" y="74" width="30" height="21" rx="4" fill="var(--signal-wash)"/>
-          <path class="il-live" d="M546 82 h18 M546 88 h11"/>
-        </g>
-        <text class="il-note" x="324" y="160">the fibre, the power, the router &mdash;</text>
-        <text class="il-note" x="324" y="178">something is down, and the hub is gone</text>
+            <!-- 2 · then the line goes -->
+            <text class="il-tag" x="324" y="30">2 &middot; THEN THE LINE GOES</text>
+            <g>
+              <rect class="il-panel-off" x="340" y="62" width="54" height="54" rx="14"/>
+              <g transform="translate(367 89) scale(.52) translate(-32 -32)" fill="none" opacity=".38">
+                <path d="M14 50 V32 a18 18 0 0 1 36 0 V50 H40 V32 a8 8 0 0 0 -16 0 V50 Z"
+                      stroke="var(--ink)" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round"/>
+              </g>
+              <path class="il-wire-off" d="M406 89 H462"/>
+              <path class="il-s" d="M472 76 l18 26 M490 76 l-18 26"/>
+              <path class="il-wire-off" d="M500 89 H520"/>
+              <rect class="il-panel" x="532" y="56" width="46" height="66" rx="9"/>
+              <rect class="il-live" x="540" y="74" width="30" height="21" rx="4" fill="var(--signal-wash)"/>
+              <path class="il-live" d="M546 82 h18 M546 88 h11"/>
+            </g>
+            <text class="il-note" x="324" y="160">the fibre, the power, the router &mdash;</text>
+            <text class="il-note" x="324" y="178">something is down, and the hub is gone</text>
 
-        <!-- 3 · at the gate -->
-        <text class="il-tag" x="624" y="30">3 &middot; AT THE GATE</text>
-        <g>
-          <rect class="il-panel" x="632" y="56" width="46" height="66" rx="9"/>
-          <rect class="il-live" x="640" y="74" width="30" height="21" rx="4" fill="var(--signal-wash)"/>
-          <path class="il-live" d="M646 82 h18 M646 88 h11"/>
-          <text class="il-tag-live" x="752" y="68" text-anchor="middle">WI&#8209;FI &middot; BLUETOOTH</text>
-          <path class="il-wire-live" d="M690 89 H784"/>
-          <path class="il-wire-live" d="M778 84 l7 5 -7 5" fill="none"/>
-          <g transform="translate(828 94)">
-            <path class="il-s-faint" d="M-22 24 H26"/>
-            <path class="il-live" d="M-18 28 V-4"/>
-            <path class="il-live" d="M-18 6 L25 -11"/>
-            <circle class="il-live" cx="-18" cy="6" r="3.4" fill="var(--signal-wash)"/>
-          </g>
-        </g>
-        <text class="il-note" x="624" y="160">the gate checks the pass itself</text>
-        <text class="il-note" x="624" y="178">and opens. nobody was asked.</text>
-      </svg>
+            <!-- 3 · at the gate -->
+            <text class="il-tag" x="624" y="30">3 &middot; AT THE GATE</text>
+            <g>
+              <rect class="il-panel" x="632" y="56" width="46" height="66" rx="9"/>
+              <rect class="il-live" x="640" y="74" width="30" height="21" rx="4" fill="var(--signal-wash)"/>
+              <path class="il-live" d="M646 82 h18 M646 88 h11"/>
+              <text class="il-tag-live" x="752" y="68" text-anchor="middle">WI&#8209;FI &middot; BLUETOOTH</text>
+              <path class="il-wire-live" d="M690 89 H784"/>
+              <path class="il-wire-live" d="M778 84 l7 5 -7 5" fill="none"/>
+              <g transform="translate(828 94)">
+                <path class="il-s-faint" d="M-22 24 H26"/>
+                <path class="il-live" d="M-18 28 V-4"/>
+                <path class="il-live" d="M-18 6 L25 -11"/>
+                <circle class="il-live" cx="-18" cy="6" r="3.4" fill="var(--signal-wash)"/>
+              </g>
+            </g>
+            <text class="il-note" x="624" y="160">the gate checks the pass itself</text>
+            <text class="il-note" x="624" y="178">and opens. nobody was asked.</text>
+          </svg>
+        </div>
+        <span class="illo-fade" aria-hidden="true"></span>
+      </div>
+      <p class="illo-hint" aria-hidden="true">Drag or scroll sideways to see the rest of the figure <span>&rarr;</span></p>
     </div>
 
     <div class="off-grid">
@@ -1564,77 +1702,47 @@ code{font-family:var(--font-mono);font-size:.88em}
         <!-- Fig. 05 — the same request, twice. The upper row is what the buyer is
              used to; the lower row is what changes. Nothing technical about it — the
              only claim being made is about who is standing in the middle. -->
-        <div class="illo illo-mid reveal" style="margin-top:26px">
-          <svg viewBox="0 0 440 224" role="img" aria-labelledby="pathT pathD">
-            <title id="pathT">Where a request to open your gate actually goes</title>
-            <desc id="pathD">Two rows. The usual way runs from you, through somebody else's cloud service, to your gate — their servers, their account, their outage, their price list. With Aql it runs from you, through your own hub in your own building, to your gate, with nobody else in between.</desc>
+        <div class="illo illo-mid figscroll reveal" style="margin-top:26px">
+          <div class="illo-vp">
+            <div class="illo-scroll" tabindex="0">
+              <svg viewBox="0 0 440 224" role="img" aria-labelledby="pathT pathD">
+                <title id="pathT">Where a request to open your gate actually goes</title>
+                <desc id="pathD">Two rows. The usual way runs from you, through somebody else's cloud service, to your gate — their servers, their account, their outage, their price list. With Aql it runs from you, through your own hub in your own building, to your gate, with nobody else in between.</desc>
 
-            <text class="il-tag" x="0" y="20">THE USUAL WAY</text>
-            <rect class="il-panel" x="0" y="34" width="76" height="40" rx="12"/>
-            <text class="il-lbl" x="38" y="60" text-anchor="middle">You</text>
-            <path class="il-wire" d="M82 54 H100 m-6 -5 l6 5 -6 5"/>
-            <rect class="il-panel-off" x="112" y="34" width="150" height="40" rx="12"/>
-            <text class="il-lbl" x="187" y="60" text-anchor="middle" opacity=".6">someone&rsquo;s cloud</text>
-            <path class="il-wire" d="M268 54 H286 m-6 -5 l6 5 -6 5"/>
-            <rect class="il-panel" x="298" y="34" width="94" height="40" rx="12"/>
-            <text class="il-lbl" x="345" y="60" text-anchor="middle">Your gate</text>
-            <text class="il-note" x="0" y="96">their servers &middot; their account &middot; their outage &middot; their price list</text>
+                <text class="il-tag" x="0" y="20">THE USUAL WAY</text>
+                <rect class="il-panel" x="0" y="34" width="76" height="40" rx="12"/>
+                <text class="il-lbl" x="38" y="60" text-anchor="middle">You</text>
+                <path class="il-wire" d="M82 54 H100 m-6 -5 l6 5 -6 5"/>
+                <rect class="il-panel-off" x="112" y="34" width="150" height="40" rx="12"/>
+                <text class="il-lbl" x="187" y="60" text-anchor="middle" opacity=".6">someone&rsquo;s cloud</text>
+                <path class="il-wire" d="M268 54 H286 m-6 -5 l6 5 -6 5"/>
+                <rect class="il-panel" x="298" y="34" width="94" height="40" rx="12"/>
+                <text class="il-lbl" x="345" y="60" text-anchor="middle">Your gate</text>
+                <text class="il-note" x="0" y="96">their servers &middot; their account &middot; their outage &middot; their price list</text>
 
-            <text class="il-tag-live" x="0" y="134">WITH AQL</text>
-            <rect class="il-panel" x="0" y="148" width="76" height="40" rx="12"/>
-            <text class="il-lbl" x="38" y="174" text-anchor="middle">You</text>
-            <path class="il-wire-live" d="M82 168 H100 m-6 -5 l6 5 -6 5"/>
-            <rect class="il-live" x="112" y="148" width="150" height="40" rx="12" fill="none"/>
-            <text class="il-lbl-live" x="187" y="174" text-anchor="middle">your hub</text>
-            <path class="il-wire-live" d="M268 168 H286 m-6 -5 l6 5 -6 5"/>
-            <rect class="il-panel" x="298" y="148" width="94" height="40" rx="12"/>
-            <text class="il-lbl" x="345" y="174" text-anchor="middle">Your gate</text>
-            <text class="il-note" x="0" y="210">your building &middot; your keys &middot; nobody else in the middle</text>
-          </svg>
+                <text class="il-tag-live" x="0" y="134">WITH AQL</text>
+                <rect class="il-panel" x="0" y="148" width="76" height="40" rx="12"/>
+                <text class="il-lbl" x="38" y="174" text-anchor="middle">You</text>
+                <path class="il-wire-live" d="M82 168 H100 m-6 -5 l6 5 -6 5"/>
+                <rect class="il-live" x="112" y="148" width="150" height="40" rx="12" fill="none"/>
+                <text class="il-lbl-live" x="187" y="174" text-anchor="middle">your hub</text>
+                <path class="il-wire-live" d="M268 168 H286 m-6 -5 l6 5 -6 5"/>
+                <rect class="il-panel" x="298" y="148" width="94" height="40" rx="12"/>
+                <text class="il-lbl" x="345" y="174" text-anchor="middle">Your gate</text>
+                <text class="il-note" x="0" y="210">your building &middot; your keys &middot; nobody else in the middle</text>
+              </svg>
+            </div>
+            <span class="illo-fade" aria-hidden="true"></span>
+          </div>
+          <p class="illo-hint" aria-hidden="true">Drag or scroll sideways to see the rest of the figure <span>&rarr;</span></p>
         </div>
-        <ul class="selfhost-points">
-          <li>
-            <span class="pt-ic" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 8.7 8.7 0 0 1-4-.9L3 20l1.2-5.2a8 8 0 0 1-.7-3.3A8.4 8.4 0 0 1 12 3.2a8.4 8.4 0 0 1 9 8.3Z"/></svg></span>
-            <div><b>Bring your own channel</b>
-            <span>If you want chat, it runs on your own workspace, your own bot, your own
-            business number — billed by whoever provides it, at their price, never through
-            us. The rails themselves are moving to <a href="https://github.com/vul-os/ephor" rel="noopener" style="color:var(--terracotta-soft)">Ephor</a>,
-            a separate piece you can swap out or leave off entirely.</span></div>
-          </li>
-          <li>
-            <span class="pt-ic" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13.5V3.5M8.5 7 12 3.5 15.5 7"/><path d="M5 12v6a2.5 2.5 0 0 0 2.5 2.5h9A2.5 2.5 0 0 0 19 18v-6"/></svg></span>
-            <div><b>No fixed address? Still a full install</b>
-            <span>The box at the gate always dials <em>out</em> to your hub, never the other
-            way round — so a Pi on the house network with nothing forwarded is a complete
-            installation. A landlord's router, a carrier that won't give you a real address,
-            a firewall nobody will open: none of them stop the gate working. What needs a
-            public address is reaching the console from outside.</span></div>
-          </li>
-          <li>
-            <span class="pt-ic" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
-            <div><b>Encryption is yours, on purpose</b>
-            <span>The hub carries no certificate machinery of its own, and flatly refuses to
-            answer anything but your own machine until you tell it something in front is
-            handling that. Put whatever you already trust there — Caddy, nginx, cloudflared,
-            Tailscale. Fewer moving parts, and one less way to serve a login page in the
-            clear by accident.</span></div>
-          </li>
-          <li>
-            <span class="pt-ic" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.4 2.4 4.6-5"/></svg></span>
-            <div><b>Nothing to pay, nothing to report</b>
-            <span>No billing code, no tiers, no licence check, no analytics beacon and no
-            account with us — there is no &ldquo;us&rdquo; anywhere in the running path. Your
-            costs are the box itself and, if you want chat, your own account with whoever
-            carries the messages.</span></div>
-          </li>
-        </ul>
-        <span class="mit-badge"><i aria-hidden="true"></i>MIT or Apache-2.0 &middot; every line</span>
       </div>
 
       <div class="reveal">
-        <div class="codeblock">
+        <div class="codeblock figscroll">
           <div class="cb-bar"><i aria-hidden="true"></i>your-box ~ $</div>
-          <pre><code><span class="c"># one binary, one SQLite file</span>
+          <div class="illo-vp">
+          <pre class="illo-scroll" tabindex="0"><code><span class="c"># one binary, one SQLite file</span>
 git clone https://github.com/vul-os/aql
 cd aql/hub &amp;&amp; go build -o ../aql-hub ./cmd/hub
 
@@ -1647,12 +1755,54 @@ caddy reverse-proxy --to 127.0.0.1:8080
 <span class="g">✓ hub up</span>        console + API on <span class="o">127.0.0.1:8080</span>
 <span class="g">✓ signing key</span>   ./data <span class="c">(ed25519, 0600, first boot)</span>
 <span class="g">✓ audit log</span>     ./data <span class="c">(sqlite, one file to back up)</span></code></pre>
+          <span class="illo-fade" aria-hidden="true"></span>
+          </div>
+          <p class="illo-hint" aria-hidden="true">Drag or scroll sideways for the ends of these lines <span>&rarr;</span></p>
         </div>
         <p style="margin-top:18px;font-size:12.5px;line-height:1.7;color:rgba(250,250,248,.5);font-family:var(--font-mono)">
           pre-1.0 — flags and paths can still move &middot; see <a href="docs.html#/self-host" style="color:rgba(250,250,248,.75)">docs → run your hub</a>
         </p>
       </div>
     </div>
+
+      <ul class="selfhost-points">
+        <li>
+          <span class="pt-ic" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 8.7 8.7 0 0 1-4-.9L3 20l1.2-5.2a8 8 0 0 1-.7-3.3A8.4 8.4 0 0 1 12 3.2a8.4 8.4 0 0 1 9 8.3Z"/></svg></span>
+          <div><b>Bring your own channel</b>
+          <span>If you want chat, it runs on your own workspace, your own bot, your own
+          business number — billed by whoever provides it, at their price, never through
+          us. The rails themselves are moving to <a href="https://github.com/vul-os/pier" rel="noopener" style="color:var(--terracotta-soft)">Pier</a>,
+          a separate piece you can swap out or leave off entirely.</span></div>
+        </li>
+        <li>
+          <span class="pt-ic" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13.5V3.5M8.5 7 12 3.5 15.5 7"/><path d="M5 12v6a2.5 2.5 0 0 0 2.5 2.5h9A2.5 2.5 0 0 0 19 18v-6"/></svg></span>
+          <div><b>No fixed address? Still a full install</b>
+          <span>The box at the gate always dials <em>out</em> to your hub, never the other
+          way round — so a Pi on the house network with nothing forwarded is a complete
+          installation. A landlord's router, a carrier that won't give you a real address,
+          a firewall nobody will open: none of them stop the gate working. What needs a
+          public address is reaching the console from outside.</span></div>
+        </li>
+        <li>
+          <span class="pt-ic" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+          <div><b>Encryption is yours, on purpose</b>
+          <span>The hub carries no certificate machinery of its own, and flatly refuses to
+          answer anything but your own machine until you tell it something in front is
+          handling that. Put whatever you already trust there — Caddy, nginx, cloudflared,
+          Tailscale. Fewer moving parts, and one less way to serve a login page in the
+          clear by accident.</span></div>
+        </li>
+        <li>
+          <span class="pt-ic" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.4 2.4 4.6-5"/></svg></span>
+          <div><b>Nothing to pay, nothing to report</b>
+          <span>No billing code, no tiers, no licence check, no analytics beacon and no
+          account with us — there is no &ldquo;us&rdquo; anywhere in the running path. Your
+          costs are the box itself and, if you want chat, your own account with whoever
+          carries the messages.</span></div>
+        </li>
+      </ul>
+      <span class="mit-badge"><i aria-hidden="true"></i>MIT or Apache-2.0 &middot; every line</span>
+
   </div>
 </section>
 
@@ -1682,7 +1832,7 @@ caddy reverse-proxy --to 127.0.0.1:8080
           <li><i class="i-yes"></i><span><b>The reference controller.</b> Its own Go module, over 120 tests green: dials out, pins the hub's key, verifies in a fixed order. The GPIO relay driver is written — the kernel uAPI layout is asserted at compile time on arm, arm64 and 386 — but the last inch is still unproven: no build in this repo has driven a real relay or a real gate.</span></li>
           <li><i class="i-yes"></i><span><b>Offline-grant issuance.</b> The hub issues a signed 7-day grant through the same authorization gates as a live open, and the controller's eleven-step verification is built and tested.</span></li>
           <li><i class="i-yes"></i><span><b>Conformance vectors.</b> 98 checks in <code>proto/</code> across pairing, commands, grants, events, acks and webhooks, consumed by the implementations and by an independent verifier that trusts none of them.</span></li>
-          <li><i class="i-part"></i><span><b>Chat as an input surface.</b> A message resolves to a member, passes the open path and becomes a signed command — and the per-channel rails are moving out to <a href="https://github.com/vul-os/ephor" rel="noopener" style="color:var(--terracotta)">Ephor</a>. That move is in progress, so read this as the behaviour being real, not as a claim about which binary carries an adapter this week.</span></li>
+          <li><i class="i-part"></i><span><b>Chat as an input surface.</b> A message resolves to a member, passes the open path and becomes a signed command — and the per-channel rails are moving out to <a href="https://github.com/vul-os/pier" rel="noopener" style="color:var(--terracotta)">Pier</a>. That move is in progress, so read this as the behaviour being real, not as a claim about which binary carries an adapter this week.</span></li>
           <li><i class="i-yes"></i><span><b>Rules and audit.</b> Open cooldown, hourly caps, optional per-location quotas — and a SHA-256 hash-chained, append-only log of every open, denial, pairing and config change, verifiable from a cold backup.</span></li>
           <li><i class="i-yes"></i><span><b>Temporary access grants.</b> A dated window for a named person, with an optional use cap, revocable, refunded on a rate-limit denial.</span></li>
           <li><i class="i-yes"></i><span><b>The device engine and four drivers.</b> The registry, the internal model and the capability catalogue that assigns every verb a safety tier — with MQTT (including anything a <code>zigbee2mqtt</code> bridge republishes), Modbus TCP, generic HTTP and ONVIF discovery behind it.</span></li>
@@ -1774,6 +1924,15 @@ caddy reverse-proxy --to 127.0.0.1:8080
         <span class="eyebrow kicker">Common questions</span>
         <h2 class="display-tight">The things<br><em>people ask first.</em></h2>
       </div>
+      <!-- Every other head on this page runs heading | lede across two columns.
+           This one had only the heading, so the right 5fr of the section was
+           empty above an 820px accordion and the whole section read as though
+           it had been shunted into the left third of the page. -->
+      <p class="lede">
+        Answered the way they would be answered in person, in the order people
+        actually ask them — including the ones where the honest answer is that
+        the thing you are asking about isn't built yet.
+      </p>
     </div>
 
     <div class="faq reveal">
@@ -1978,6 +2137,32 @@ caddy reverse-proxy --to 127.0.0.1:8080
       });
     }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
     Array.prototype.forEach.call(els, function(el){ io.observe(el); });
+  }
+
+  /* Scroll affordance for the figures. State is MEASURED, never assumed: a card
+     that fits gets no fade at all, because a fade on something that already fits
+     reads as a clipped layout. Re-measured on resize, on font load and on every
+     scroll, since the overflow appears and disappears with the viewport. */
+  var figs = document.querySelectorAll('.figscroll');
+  function syncFig(card) {
+    var sc = card.querySelector('.illo-scroll');
+    if (!sc) return;
+    var over = sc.scrollWidth - sc.clientWidth;
+    card.classList.toggle('is-scrollable', over > 8);
+    card.classList.toggle('at-end', over > 8 && sc.scrollLeft >= over - 8);
+  }
+  Array.prototype.forEach.call(figs, function (card) {
+    var sc = card.querySelector('.illo-scroll');
+    if (!sc) return;
+    syncFig(card);
+    sc.addEventListener('scroll', function () { syncFig(card); }, { passive: true });
+    if ('ResizeObserver' in window) new ResizeObserver(function () { syncFig(card); }).observe(sc);
+  });
+  window.addEventListener('resize', function () {
+    Array.prototype.forEach.call(figs, syncFig);
+  });
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function () { Array.prototype.forEach.call(figs, syncFig); });
   }
 })();
 </script>

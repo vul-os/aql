@@ -206,6 +206,14 @@ run      "tsc"                        . npm run typecheck
 run      "vitest"                     . npx vitest run
 run      "feature claims"             . npm run check:claims
 run_citations "external citations"
+# The site render gate drives a real browser. If playwright is not installed
+# here it SKIPS loudly rather than reporting green over a gate that never ran.
+if [ -d "$ROOT/node_modules/playwright" ]; then
+  run    "site render"                . npm run check:render
+else
+  printf '  \033[33mSKIP\033[0m  %s (playwright not installed; `npm i` then `npx playwright install chromium`)\n' "site render"
+  SKIPPED=$((SKIPPED + 1))
+fi
 
 echo
 if [ "$FAIL" -eq 0 ]; then

@@ -15,7 +15,7 @@ The API is served by the hub itself — every hub, the same way — under `/v1`.
 `POST /v1/auth/login` / `/v1/auth/refresh` — the same tokens the portal itself uses —
 sent as:
 
-```
+```http
 Authorization: Bearer <session_token>
 ```
 
@@ -94,7 +94,7 @@ identity**, because a webhook target is an address on someone else's network.
 
 Each delivery is signed:
 
-```
+```http
 X-Aql-Event:            access.opened
 X-Aql-Timestamp:        1789000000
 X-Aql-Signature-256:    hex( HMAC-SHA256( secret, timestamp + "." + rawBody ) )

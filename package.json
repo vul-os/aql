@@ -21,6 +21,8 @@
     "test:e2e": "playwright test",
     "screenshotter": "node scripts/screenshotter.mjs",
     "check:claims": "node scripts/check-feature-claims.mjs",
+    "check:render": "node scripts/check-render.mjs",
+    "check:render:selftest": "node scripts/check-render.mjs --selftest",
     "tauri": "tauri",
     "app:dev": "tauri dev",
     "app:build": "tauri build",
