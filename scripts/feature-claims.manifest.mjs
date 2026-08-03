@@ -2,11 +2,28 @@
 // the full design rationale and honesty caveats before trusting anything in
 // here. This file is just the list of claims; it has no logic of its own.
 //
-// Each entry is one feature CLAIM as it currently reads in the docs (README's
-// markers (ARCHITECTURE.md's repository tree and subsystem table — NOT README,
-// which carries none any more), ARCHITECTURE.md's §8 roadmap, site/index.html's `k-soon`
-// badges, or an explicit "Status:" line in a doc). `docStatus` records what
-// the docs say TODAY:
+// Each entry is one feature CLAIM as it currently reads in the docs.
+//
+// WHERE THOSE MARKERS ACTUALLY LIVE, audited 2026-08-03 because this paragraph
+// was wrong about two of them:
+//
+//   site/index.html   the LEDGER — two columns, `<h3>Built &amp; tested</h3>`
+//                     and `<h3>Not built yet</h3>`, each an <li> list whose
+//                     <b> lead-in is the claim. 21 items today. This paragraph
+//                     used to say `k-soon` badges; that class appears exactly
+//                     twice, as a CSS rule and a legend key, and marks nothing.
+//                     A maintainer following the old sentence would have looked
+//                     for badges, found the legend, and missed the ledger — which
+//                     is where the one stale claim was found.
+//   ROADMAP.md        `- [x]` / `- [ ]`. All 24 unchecked items verified accurate
+//                     against code in the same audit.
+//   ARCHITECTURE.md   the repository tree's 🟢 markers — 15, not the "twelve"
+//                     this paragraph claimed, and they are directory-existence
+//                     claims rather than feature claims. The single ✅ in the
+//                     file is a chat bubble inside a mermaid diagram.
+//   docs/, site/docs/ an explicit "**Status:**" line. Three exist.
+//
+// `docStatus` records what the docs say TODAY:
 //
 //   'shipped' — the docs claim this exists and works (no 🔨/soon/"designed,
 //               not implemented" marker attached). Evidence MUST be found,
@@ -1089,6 +1106,29 @@ export const FEATURES = [
   // an earlier attempt at the Modbus RTU entry matched the comment in
   // modbus/doc.go that EXPLAINS its absence, which would have failed the guard
   // on day one and taught everyone to disable it.
+  {
+    id: 'pin-and-qr-passes',
+    label: 'One-time PIN and QR access passes — designed, and the ledger says so',
+    docStatus: 'planned',
+    docRefs: [
+      'site/index.html ledger — "One-time PIN and QR passes."',
+      'ROADMAP.md — today\'s temporary access needs to know who you are granting it to',
+    ],
+    // Added because this ledger claim had NO entry, which is how a negative
+    // claim goes stale: the docs say a thing is not built, the code ships it,
+    // and check:claims stays green because it was never asked. That is exactly
+    // how "chat cannot drive a light" survived on the landing page.
+    //
+    // The evidence is a CREDENTIAL KIND rather than the letters "qr" or "pin".
+    // Both already appear in this tree for unrelated reasons — 2FA renders an
+    // otpauth provisioning URI as a QR, and mDNS uses a QR bit for
+    // query/response — so a looser pattern would report this planned feature as
+    // shipped on the strength of a DNS header flag.
+    evidence: [[
+      { root: 'hub/internal/store', pattern: 'pin_pass|qr_pass|one_time_pin|PinPass|QRPass' },
+      { root: 'hub/internal/httpapi', pattern: 'pin-pass|qr-pass|/passes' },
+    ]],
+  },
   {
     id: 'matter-driver',
     label: 'A Matter/CHIP driver — claimed unbuilt in ten documents',
