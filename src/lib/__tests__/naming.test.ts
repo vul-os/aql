@@ -3,11 +3,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-// no-broker-dep:allow-file: this naming-convention test's own doc comment names Ephor three
-// times explaining WHY "gateway" is retired prose here ("Ephor genuinely is a gateway, and
+// no-broker-dep:allow-file: this naming-convention test's own doc comment names Pier three
+// times explaining WHY "gateway" is retired prose here ("Pier genuinely is a gateway, and
 // this product delegates the chat rail to it") and exempts two docs by path from its stale
 // terminology sweep. It is a test asserting documentation consistency, not a dependency; it
-// imports nothing named ephor.
+// imports nothing named pier.
 
 /**
  * One component, one name.
@@ -15,7 +15,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
  * This repo spent a while calling its Go backend three different things:
  * `gateway/` on disk, "the hub" in prose, and `LINTEL_*` in every environment
  * variable an operator has to type. One of those names belongs to a different
- * product (Ephor is the gateway) and one belongs to a repo that no longer
+ * product (Pier is the gateway) and one belongs to a repo that no longer
  * exists (lintel was folded in and deleted).
  *
  * A name is not cosmetic when an operator has to type it. `LINTEL_ENERGY_TZ`
@@ -32,7 +32,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
  *      `gateway_next`, `gateway_sync`, and the route `/v1/gateway/key`. These
  *      are the frozen protocol a real door controller implements, pinned by
  *      proto/vectors/*.json. Renaming one breaks hardware in the field.
- *   2. EPHOR. Ephor genuinely is a gateway, and this product delegates the chat
+ *   2. PIER. Pier genuinely is a gateway, and this product delegates the chat
  *      rail to it.
  *   3. THIRD PARTIES. The WhatsApp Cloud API and similar are gateways owned by
  *      someone else.
@@ -330,7 +330,7 @@ describe('the backend has one name', () => {
       const rel = path.relative(repo, file);
       if (rel.endsWith('naming.test.ts')) continue;
       // This file's own history is described in prose in these two.
-      if (rel === 'docs/KOTVA-ALIGNMENT.md' || rel === 'docs/EPHOR-CHAT-SEAM.md') continue;
+      if (rel === 'docs/KOTVA-ALIGNMENT.md' || rel === 'docs/PIER-CHAT-SEAM.md') continue;
       // A changelog is an append-only record of what each release SAID. One of
       // its entries is literally the rename announcement, listing the binary
       // among the compat surface still carrying the old name — which was true

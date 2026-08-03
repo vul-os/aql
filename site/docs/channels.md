@@ -19,8 +19,8 @@ design intent, not a shipped capability — see
 >
 > There is a *designed, optional* alternative in which a separate coordinator terminates
 > the rail and hands the hub an authorised command instead — see
-> [`docs/EPHOR-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/EPHOR-CHAT-SEAM.md).
-> **Nothing of it is built**, and [Ephor](https://github.com/vul-os/ephor) is `pre-alpha`
+> [`docs/PIER-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/PIER-CHAT-SEAM.md).
+> **Nothing of it is built**, and [Pier](https://github.com/vul-os/pier) is `pre-alpha`
 > by its own README badge, so it is an experimental path for people who want it, never a
 > requirement and never a replacement for what is documented here. A naming note that
 > often confuses people: Aql's hub is not a KOTVA gateway — it bridges chat rails to its
@@ -295,7 +295,7 @@ Mode is the worked example of the second. If you want Signal, SMS or another rai
 whichever shape matches.
 
 (A separate, unbuilt design puts rail termination in an external coordinator instead —
-[`docs/EPHOR-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/EPHOR-CHAT-SEAM.md).
+[`docs/PIER-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/PIER-CHAT-SEAM.md).
 It is a design for an option, not a reason to hold off building a rail here.)
 
 Contributions and design discussion are welcome on

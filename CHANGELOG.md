@@ -194,7 +194,7 @@ every view audited in a log every member can read.
 The Go server was called three different things at once. `gateway/` on disk,
 "the hub" in every sentence of the docs, and `LINTEL_*` in every environment
 variable an operator has to type. One of those names belongs to a different
-product — Ephor is the gateway — and one belongs to a repo that was folded in
+product — Pier is the gateway — and one belongs to a repo that was folded in
 and deleted.
 
 A name is not cosmetic when someone has to type it. `LINTEL_ENERGY_TZ`
@@ -284,7 +284,7 @@ tamper-evident trail. **It is the first working module, not the product.**
 ### Changed — the server is "the hub", never "the gateway"
 
 In the KOTVA family *gateway* names the §7 coordinator role — the legacy-rail adapter,
-implemented by **[Ephor](https://github.com/vul-os/ephor)**. Aql's Go component is not
+implemented by **[Pier](https://github.com/vul-os/pier)**. Aql's Go component is not
 that: it owns devices, evaluates rules, keeps the audit log and issues signed commands.
 All prose across the README, `ARCHITECTURE.md`, `ROADMAP.md` and the manual now says
 **hub**. Unchanged, because they are compat surface: the `gateway/` directory, the Go
@@ -292,16 +292,16 @@ module path `github.com/vul-os/aql/gateway`, the binary and its `gateway verify-
 subcommand, the `aql-gateway` image, `AQL_*`, `lintel.db`, `_lintel._tcp`, the JWT
 issuer and everything under `proto/vectors/`.
 
-### Changed — the chat rail is moving to Ephor (in progress)
+### Changed — the chat rail is moving to Pier (in progress)
 
 The adapters that terminate WhatsApp, Slack and Telegram are being lifted out of Aql and
-into Ephor. Target shape: a resident texts a channel, Ephor terminates that rail and hands
-the hub an authorised command, and the hub checks the rules, signs, and actuates. Ephor is
+into Pier. Target shape: a resident texts a channel, Pier terminates that rail and hands
+the hub an authorised command, and the hub checks the rules, signs, and actuates. Pier is
 separate and swappable — run your own or point at one.
 
 **The move is not finished, and the docs say so.** Texting a gate open works today; the
 adapter code in `hub/internal/channels/` is transitional and is no longer documented
-as the supported long-term path, and the Ephor-backed path is not presented as shipped
+as the supported long-term path, and the Pier-backed path is not presented as shipped
 either. `scripts/feature-claims.manifest.mjs` still carries `whatsapp-channel`,
 `slack-channel`, `telegram-channel` and `slack-socket-mode` as shipped claims — the code
 genuinely is still present, so those entries remain truthful and were deliberately left

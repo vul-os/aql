@@ -11,7 +11,7 @@ That is the whole chapter. The rest is the detail behind those three sentences:
 2. **One rail needs a URL** — WhatsApp, because Meta's Cloud API is webhook-only.
 3. **Getting a URL is a commodity problem.** ngrok, cloudflared, a Tailscale funnel, a
    $4/month VPS running nginx, a tiny process you deploy anywhere, the Vulos relay,
-   Ephor's reachability adapter — the hub cannot tell them apart.
+   Pier's reachability adapter — the hub cannot tell them apart.
 
 ## 1. Nothing needs a gateway
 
@@ -83,7 +83,7 @@ cannot distinguish them — each one ends with you setting `AQL_PUBLIC_URL`:
 - **A $4/month VPS running nginx or Caddy** — a reverse proxy in front of the hub.
 - **A small process you deploy anywhere** — anything that can forward HTTP to your box.
 - **A self-hosted `vulos-relayd`** — MIT, no account, run the agent yourself.
-- **The Vulos relay**, or **Ephor's reachability adapter** — the same tunnel model,
+- **The Vulos relay**, or **Pier's reachability adapter** — the same tunnel model,
   operated for you if you would rather not operate it.
 
 Configs and trade-offs for each shape are in [Public URL & TLS](ingress.md).
@@ -148,7 +148,7 @@ Two things follow:
 
 Aql has no hard runtime dependency on any Vulos product, ever. It is a standalone,
 MIT-licensed system that runs to completion with nothing but a box and, optionally, your
-own channel credentials. `vulos-relayd`, the Vulos relay and Ephor appear above strictly
+own channel credentials. `vulos-relayd`, the Vulos relay and Pier appear above strictly
 as options on equal footing with cloudflared and nginx, for one feature-scoped job on one
 rail. Nothing breaks, degrades, or nags you if you never touch any of them.
 

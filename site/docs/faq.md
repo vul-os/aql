@@ -51,12 +51,12 @@ No. WhatsApp, Slack and Telegram are **shipped and supported** in the hub
 (`hub/internal/channels/`), they are tested, and nothing is being removed.
 
 There is a designed alternative in which an external coordinator —
-**[Ephor](https://github.com/vul-os/ephor)**, the KOTVA family's rail-bridging component —
+**[Pier](https://github.com/vul-os/pier)**, the KOTVA family's rail-bridging component —
 terminates the rail and hands the hub an authorised command instead. **None of it is
-built**, and Ephor is `pre-alpha` by its own README badge, so it is an optional,
+built**, and Pier is `pre-alpha` by its own README badge, so it is an optional,
 experimental path for people who want it, not a replacement for the rails you can use
 today. The design is
-[`docs/EPHOR-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/EPHOR-CHAT-SEAM.md);
+[`docs/PIER-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/PIER-CHAT-SEAM.md);
 what actually runs is [Chat channels](channels.md).
 
 ### How is it different from Home Assistant?
@@ -151,7 +151,7 @@ Meta's per-conversation fees billed directly to you. Slack and Telegram cost not
 ### Why isn't the hub called a "gateway"?
 
 Because in the KOTVA family "gateway" names a different, separate component's job — the
-legacy-rail coordinator role, filled by [Ephor](https://github.com/vul-os/ephor). Aql's
+legacy-rail coordinator role, filled by [Pier](https://github.com/vul-os/pier). Aql's
 hub is not that: it bridges chat rails into its own local domain. The backend used to live
 in `gateway/` and build as `cmd/gateway`; it has since been renamed to `hub/` and `cmd/hub`
 (binary: `aql-hub`) so that distinction is the default reading, not something you have to

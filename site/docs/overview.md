@@ -52,7 +52,7 @@ actually in each.
 >
 > **Aql's hub is not a KOTVA gateway.** In the KOTVA family that word names the
 > legacy-rail coordinator role — a separate job, filled by
-> [Ephor](https://github.com/vul-os/ephor). Aql's hub bridges chat rails into its own
+> [Pier](https://github.com/vul-os/pier). Aql's hub bridges chat rails into its own
 > local domain; it is not that component. The backend lives in `hub/`, builds as
 > `cmd/hub`, and ships as the `aql-hub` binary — renamed from `gateway/` /
 > `cmd/gateway` so that distinction is the default reading, not a footnote.
@@ -100,7 +100,7 @@ the roadmap, not a shipped capability.
 > **The WhatsApp, Slack and Telegram rails are shipped and supported.** They live in the
 > hub, in `hub/internal/channels/`, and they are what [Chat channels](channels.md)
 > documents. A *designed but unbuilt* alternative would move rail termination into an
-> external coordinator — [`docs/EPHOR-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/EPHOR-CHAT-SEAM.md)
+> external coordinator — [`docs/PIER-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/PIER-CHAT-SEAM.md)
 > — and that is an optional, experimental path, not a replacement for the rails above.
 
 Whichever component terminates the rail, the exposure is the same: the chat platform sees

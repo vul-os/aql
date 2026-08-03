@@ -241,13 +241,13 @@ jobs:
           path: dist-desktop/*
           if-no-files-found: error
 
-  # no-broker-dep:allow-file: the comment below credits vul-os/ephor's RELEASE-TEMPLATE.md as
+  # no-broker-dep:allow-file: the comment below credits vul-os/pier's RELEASE-TEMPLATE.md as
   # the source of this checksum-contract pattern — an attribution, not a dependency; this
-  # workflow fetches from and builds against nothing named ephor.
+  # workflow fetches from and builds against nothing named pier.
   #
   # ===========================================================================
   # RELEASE SIGNING — this job and scripts/verify.sh are a matched pair,
-  # copied from vul-os/ephor's RELEASE-TEMPLATE.md. This job is the only thing
+  # copied from vul-os/pier's RELEASE-TEMPLATE.md. This job is the only thing
   # that writes SHA256SUMS, verify.sh is the only thing that reads it, and this
   # job runs verify.sh against its own output before publishing, so the
   # producer and the consumer cannot drift apart silently.

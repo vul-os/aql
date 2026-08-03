@@ -985,7 +985,7 @@ and none has met physical hardware.
       that can dial out rather than receive webhooks
 - [ ] A considered story for reaching your hub from outside the LAN beyond "run a tunnel",
       off by default, with its own threat-model addendum
-- [ ] Chat rails move to **[Ephor](https://github.com/vul-os/ephor)**, the coordinator
+- [ ] Chat rails move to **[Pier](https://github.com/vul-os/pier)**, the coordinator
       implementation in the KOTVA family, so the hub consumes a rail terminator instead of
       implementing adapters. In progress; the adapters currently in `hub/internal/
       channels/` are transitional and neither half of that move is finished
@@ -1015,5 +1015,5 @@ and none has met physical hardware.
 - **Aql** (this repo) — the software command centre
 - **[Zana](https://github.com/vul-os/zana)** — open-hardware designs for the devices Aql is
   meant to control
-- **[Ephor](https://github.com/vul-os/ephor)** — the coordinator/gateway implementation in
+- **[Pier](https://github.com/vul-os/pier)** — the coordinator/gateway implementation in
   the KOTVA family, and where Aql's chat rail is heading

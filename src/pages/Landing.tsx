@@ -1,7 +1,7 @@
-// no-broker-dep:allow-file: this page's copy names Ephor twice — an external link
-// (https://github.com/vul-os/ephor) and honest in-progress framing ("the channel rails
-// themselves are moving out of Aql and into Ephor... That move is in progress"). Rendered
-// text and an anchor tag, no fetch, no default endpoint, no import of anything named ephor.
+// no-broker-dep:allow-file: this page's copy names Pier twice — an external link
+// (https://github.com/vul-os/pier) and honest in-progress framing ("the channel rails
+// themselves are moving out of Aql and into Pier... That move is in progress"). Rendered
+// text and an anchor tag, no fetch, no default endpoint, no import of anything named pier.
 //
 // The in-app landing — what a browser gets at `/` from a self-hosted hub
 // binary.
@@ -274,12 +274,12 @@ function Notes() {
             <p className="mt-4 text-[15px] leading-relaxed text-ink/70">
               The channel rails themselves are moving out of Aql and into{' '}
               <a
-                href="https://github.com/vul-os/ephor"
+                href="https://github.com/vul-os/pier"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline underline-offset-4 decoration-terracotta text-ink/85 hover:text-ink"
               >
-                Ephor
+                Pier
               </a>
               , a separate component you run or point at. That move is in progress. Whichever side
               carries the rail, the hub is the only authority: it checks the rules, signs the
@@ -313,9 +313,9 @@ const OUTWARD: { label: string; note: string; to?: string; href?: string }[] = [
     href: 'https://github.com/vul-os/zana',
   },
   {
-    label: 'Ephor — the coordinator',
+    label: 'Pier — the coordinator',
     note: 'Where the chat rails are moving. Separate, swappable, yours to run.',
-    href: 'https://github.com/vul-os/ephor',
+    href: 'https://github.com/vul-os/pier',
   },
 ];
 

@@ -1,5 +1,5 @@
-<!-- no-broker-dep:allow-file: three task-list entries name Ephor: the naming-convention rule
-     ("the gateway... is Ephor's job"), the chat-rail migration ("needs a kotva retag and a
+<!-- no-broker-dep:allow-file: three task-list entries name Pier: the naming-convention rule
+     ("the gateway... is Pier's job"), the chat-rail migration ("needs a kotva retag and a
      crate that does not exist yet"), and a filed cross-repo spec issue (COORD-2). All describe
      future/external work, not anything this repo builds or depends on today. -->
 
@@ -19,7 +19,7 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
 
 ## naming, settled
 - The hub is a **hub**. Never "the gateway" in prose — in the KOTVA family that word is
-  the legacy-rail coordinator role, which is Ephor's job. The directory is `hub/`.
+  the legacy-rail coordinator role, which is Pier's job. The directory is `hub/`.
 - Still spelled the old way, on purpose, as compat surface: `LINTEL_*` env vars (read
   behind `lookupEnv`, with a startup warning), `lintel.db`, `_lintel._tcp`,
   `lintel.offline-access` (an IndexedDB rename orphans rather than migrates), and
@@ -238,24 +238,24 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       nobody has exercised on real footage. Recording is also one RTSP session per
       window rather than one held open: worse on a real camera, and honest about what
       has been verified.
-- [ ] Ephor chat-rail migration steps 1–7 (docs/EPHOR-CHAT-SEAM.md) — needs a kotva retag
+- [ ] Pier chat-rail migration steps 1–7 (docs/PIER-CHAT-SEAM.md) — needs a kotva retag
       and a crate that does not exist yet.
-- [ ] COORD-2 — filed to ephor/COORDINATION.md, awaiting a spec ruling. `LockIn` has two
+- [ ] COORD-2 — filed to pier/COORDINATION.md, awaiting a spec ruling. `LockIn` has two
       states and cannot express mode-dependent lock-in. Pinned by a test that fails when
       the answer changes.
 
-## chat rail → Ephor (in progress)
-- [x] COORD-3 examined. It is a DECISION already worked out in docs/EPHOR-CHAT-SEAM.md
+## chat rail → Pier (in progress)
+- [x] COORD-3 examined. It is a DECISION already worked out in docs/PIER-CHAT-SEAM.md
       §1.5 (declare SelfHost::Backstop, refuse the ScarceReachabilityException the
       harness would grant), not a blocked question like COORD-2 — but the declaration
-      lives in an Ephor crate that does not exist yet, so nothing to implement here.
+      lives in an Pier crate that does not exist yet, so nothing to implement here.
       What WAS actionable: Aql's own §26.3 disclosure disagreed with §1.5's transport
       analysis for Telegram. Fixed.
 - [ ] COORD-6: none of the four Gate variants is honest for this adapter (§1.6). Has a
       proposal (Gate::Authorization + a rustdoc disclosure in node mode, and propose
       Gate::AuthorizationDelegated upstream). Same blocker — needs the crate.
-- [ ] the WhatsApp / Slack / Telegram adapters move OUT of Aql and into Ephor
-      (github.com/vul-os/ephor). Target shape: Ephor terminates the rail and hands the hub
+- [ ] the WhatsApp / Slack / Telegram adapters move OUT of Aql and into Pier
+      (github.com/vul-os/pier). Target shape: Pier terminates the rail and hands the hub
       an authorised command; the hub checks rules, signs, actuates. Swappable — run one or
       point at one.
 - [ ] `hub/internal/channels/` is transitional until that lands. Don't document it as
@@ -273,7 +273,7 @@ Scratch list. The structured version is ROADMAP.md; this is the running one.
       server.go, with `discord-channel` a shipped manifest claim carrying three pieces
       of evidence — the adapter, the DISCORD_BOT_TOKEN read, and the registration.
       ARCHITECTURE.md's rails diagram carried the same stale "(not built)" until
-      2026-08-01. Whose seam it ends up in is still the Ephor question below.
+      2026-08-01. Whose seam it ends up in is still the Pier question below.
 - [x] extend the intent vocabulary past `open`/`close` so chat reaches the other kinds
       — DONE. `chatSendableVerbs` carries set/on/off/toggle/stop/pause/resume, which
       reaches CapSwitch, CapDimmable, CapSetpoint and CapJob: lighting, climate and

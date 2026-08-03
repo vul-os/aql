@@ -103,12 +103,12 @@ locally; don't point a raw passthrough tunnel straight at the hub's listener.
 ## (c) A tunnel someone else operates
 
 If you'd rather not run and monitor a tunnel yourself, someone can operate one for you.
-The **Vulos relay** and **[Ephor](https://github.com/vul-os/ephor)'s reachability
+The **Vulos relay** and **[Pier](https://github.com/vul-os/pier)'s reachability
 adapter** are the in-family versions of the same `vulos-relayd` model — the broker your
 box dials out to. Point the hub at one the same way you'd point it at any other tunnel.
 
 Both are open source and self-hostable, so you can just as well run your own instead.
-Note that Ephor is **`pre-alpha` by its own README badge**; treat it as an experimental
+Note that Pier is **`pre-alpha` by its own README badge**; treat it as an experimental
 option, not a recommended default, and prefer (a) or (b) for anything you depend on.
 
 - Costs: nothing if you self-host; whatever the operator charges if you use a hosted
@@ -122,7 +122,7 @@ option, not a recommended default, and prefer (a) or (b) for anything you depend
 
 Aql has no hard runtime dependency on any Vulos product, ever — it is a standalone,
 MIT-licensed system that runs to completion with nothing but a box and, optionally,
-your own channel credentials. `vulos-relayd`, the Vulos relay and Ephor show up here
+your own channel credentials. `vulos-relayd`, the Vulos relay and Pier show up here
 strictly as *feature-scoped* options for a single rail (WhatsApp), competing on equal
 footing with cloudflared, nginx and a port-forward. Nothing breaks, degrades, or nags you
 if you never touch them.

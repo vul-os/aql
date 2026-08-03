@@ -187,11 +187,11 @@ console copy says so rather than treating it as a convenience string.
   victim's linking. Per-user limits do not have that problem, per-phone limits
   do, and both are wanted.
 - **Slack.** `slackUpdate()` had the same shape and the same absence. Slack has
-  no phone-like identifier and the chat rail is moving to Ephor
-  (`docs/EPHOR-CHAT-SEAM.md`), so whether the hub should hold a Slack identity
+  no phone-like identifier and the chat rail is moving to Pier
+  (`docs/PIER-CHAT-SEAM.md`), so whether the hub should hold a Slack identity
   at all is a question for that migration, not this document.
-- **Does this belong in the hub after Ephor?** If Ephor terminates the rail and
-  hands the hub an authorised command, then Ephor knows the sender and the hub
+- **Does this belong in the hub after Pier?** If Pier terminates the rail and
+  hands the hub an authorised command, then Pier knows the sender and the hub
   may not need a phone table at all. Building the ceremony here and moving it
   later is real work done twice. Deciding that is a prerequisite to step 3, not
   a detail of it.

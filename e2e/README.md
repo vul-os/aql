@@ -193,9 +193,13 @@ These are documented by tests here; the fixes belong in `hub/` /
 
    Related, for whoever runs `scripts/check-external-citations.mjs`: it verifies
    the siblings that ARE checked out and names the count it could not reach,
-   exiting non-zero either way. As of 2026-08-03 kotva is present and ephor is
-   not, so it reports 91 verified and 42 unchecked rather than refusing to look
-   at anything.
+   exiting non-zero either way. That partial path was first added because `ephor`
+   looked absent; it had in fact been RENAMED to `pier`, so the sibling was there
+   all along under a new name and the 42 "unchecked" citations were unreachable
+   only because the checker was still looking for the old one. With `EXTERNAL`
+   corrected, all 133 resolve and it exits 0. A genuinely absent sibling still
+   exits 2; a renamed one is a stale `EXTERNAL` entry, and only fixing the entry
+   checks those citations again.
 
    All three rails carry close now, each by its own route: Telegram from the
    typed word, Slack through a `close_gate:` block interaction, WhatsApp

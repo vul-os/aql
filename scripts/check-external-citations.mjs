@@ -9,7 +9,7 @@
 // exempts exactly these, because the sibling repos are not part of this
 // checkout and a test that depends on them would fail in CI for a reason that
 // has nothing to do with this repo. So they were never checked at all — 75
-// citations in docs/EPHOR-CHAT-SEAM.md alone, several of them load-bearing for
+// citations in docs/PIER-CHAT-SEAM.md alone, several of them load-bearing for
 // a design decision.
 //
 // The first run found two that had drifted (line numbers as they stood then,
@@ -45,12 +45,12 @@ const wantList = process.argv.includes('--list');
 /**
  * Repos cited from this one that live beside it rather than inside it.
  *
- * `ephor` was renamed to `pier` on 2026-08-03 (pier commit c192ca4, "rename:
- * ephor -> pier across the Rust workspace, crates included") — the repo did not
+ * `pier` was renamed to `pier` on 2026-08-03 (pier commit c192ca4, "rename:
+ * pier -> pier across the Rust workspace, crates included") — the repo did not
  * leave the tree, it changed name, and its crates were renamed with it
  * (`broker-economics` -> `pier-economics`, `gateway` -> `pier-gateway`,
  * `broker-conformance` -> `pier-conformance`). Reading this as an absence was
- * worse than reading it as a rename: `../ephor` can never appear again, so the
+ * worse than reading it as a rename: `../pier` can never appear again, so the
  * partial-run path below would have exited 2 forever while 42 citations stayed
  * permanently unverified behind advice ("clone them next to aql/") that could
  * not be followed.
@@ -61,7 +61,7 @@ const CITATION =
   /`((?:pier|kotva)\/[A-Za-z0-9_./-]+\.(?:rs|md|toml|go|ts))(?::(\d+)(?:-(\d+))?)?`/g;
 
 // A bare `:148-160` — a line range with no path, meaning "the file I just
-// named". EPHOR-CHAT-SEAM's conformance table is written almost entirely this
+// named". PIER-CHAT-SEAM's conformance table is written almost entirely this
 // way, so the first version of this script validated none of those rows.
 //
 // It resolves against the NEAREST PRECEDING fully-qualified external path,
@@ -144,7 +144,7 @@ for (const doc of trackedDocs()) {
 // prevents that just as well as refusing does.
 //
 // It is NOT a substitute for keeping the names right, though. This path was
-// introduced to absorb "ephor is gone", when what had actually happened was a
+// introduced to absorb "pier is gone", when what had actually happened was a
 // rename to `pier`; the partial run then reported a stable-looking 91/42 that
 // no amount of cloning could ever resolve. A sibling that is genuinely absent
 // is a transient condition; a sibling that has been renamed is a stale
@@ -160,7 +160,7 @@ let verified = 0;
 for (const c of checkable) {
   const full = join(siblings, c.path);
   if (!existsSync(full)) {
-    // An absence can be the claim itself: EPHOR-CHAT-SEAM §0.1 is titled
+    // An absence can be the claim itself: PIER-CHAT-SEAM §0.1 is titled
     // "`pier/coordinator/CONTRACT.md` does not exist" and says so twice on
     // purpose. Those are correct and must not be "fixed" into a live path.
     const context = readFileSync(join(repo, c.doc), 'utf8').split('\n')[c.line - 1] ?? '';

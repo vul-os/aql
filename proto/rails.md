@@ -1,4 +1,4 @@
-<!-- no-broker-dep:allow-file: links to docs/EPHOR-CHAT-SEAM.md, a design analysis of gateway-mode
+<!-- no-broker-dep:allow-file: links to docs/PIER-CHAT-SEAM.md, a design analysis of gateway-mode
      authorisation "including the parts that are designed but not built" — spec-analysis prose,
      not a build or startup path. -->
 
@@ -88,7 +88,7 @@ declared above because nothing can currently arrive on it.
 A deployment serving more than one identity through an adapter — an estate operator running
 one WhatsApp number for many residents — is in **gateway mode**, and §26.2.1 requires an
 authorisation layer that node mode does not. Aql's per-account model plus its member table
-covers the "who may act" half. See [`../docs/EPHOR-CHAT-SEAM.md`](../docs/EPHOR-CHAT-SEAM.md)
+covers the "who may act" half. See [`../docs/PIER-CHAT-SEAM.md`](../docs/PIER-CHAT-SEAM.md)
 for the full analysis, including the parts that are designed but not built.
 
 [s26]: https://github.com/vul-os/kotva/blob/main/26-legacy-adapters.md

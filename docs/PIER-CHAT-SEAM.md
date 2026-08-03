@@ -1,7 +1,7 @@
-# The Ephor chat seam — moving the rails out of Aql's hub
+# The Pier chat seam — moving the rails out of Aql's hub
 
 > **Status: design specification for a decided direction.** The direction —
-> **Ephor does the chat layer; Aql's hub consumes it** — is a founder decision and is not
+> **Pier does the chat layer; Aql's hub consumes it** — is a founder decision and is not
 > re-litigated here. What is settled by a specification is cited. What is my proposal is
 > labelled **PROPOSAL**. What I could not settle by reading is labelled
 > **uncertain — needs verification**, with what would settle it.
@@ -18,7 +18,7 @@
 |---|---|---|
 | aql | `/Users/pc/code/vulos/aql` | working tree as read |
 | kotva | `/Users/pc/code/vulos/kotva` | `f2d5385` |
-| ephor | `/Users/pc/code/vulos/ephor` | working tree as read |
+| pier | `/Users/pc/code/vulos/pier` | working tree as read |
 
 **Citation convention.** Every load-bearing claim is `file:line`, relative to the repo named
 in the path. Kotva spec sections are cited by both `§` and line so a section renumber is
@@ -38,12 +38,12 @@ Stated first because each changes the work.
 
 ### 0.1 `pier/coordinator/CONTRACT.md` does not exist
 
-There is no `coordinator/` directory in the ephor repo. The contract lives only at
-`kotva/coordinator/CONTRACT.md` (294 lines), and Ephor consumes it by reference: its
+There is no `coordinator/` directory in the pier repo. The contract lives only at
+`kotva/coordinator/CONTRACT.md` (294 lines), and Pier consumes it by reference: its
 guardrails say *"**Read** the kotva spec (`coordinator/CONTRACT.md`, …) — never edit it"*
 (`pier/BACKLOG.md:17-18`), and each kind crate restates its own clause posture in rustdoc
 (e.g. `pier/crates/pier-gateway/src/coordinator.rs:1-9`). **Every CONTRACT citation in this
-document is to `kotva/coordinator/CONTRACT.md`.** If a mirror is wanted in ephor, it should
+document is to `kotva/coordinator/CONTRACT.md`.** If a mirror is wanted in pier, it should
 be created as an explicit copy with a pinned provenance line — an unmarked mirror of a
 normative document is a second source of truth.
 
@@ -58,7 +58,7 @@ stake is verified on-rail"*, `:293`) have **no counterpart** in
 adapter — a free rail is not staked, and COORD-9 is satisfied by charging nothing — but the
 gap should be named rather than inherited silently.
 
-### 0.3 Kotva already ships four §26 rail adapters — but **not at the tag Ephor pins**
+### 0.3 Kotva already ships four §26 rail adapters — but **not at the tag Pier pins**
 
 `kotva/crates/kotva-mail/src/adapters/` contains a real §26 framework plus four sanctioned
 rail modules: `mod.rs` (400 lines — the four-field declaration types at `:82-146`, the
@@ -69,7 +69,7 @@ platform-asserted `Headers.ext` key §26.5.1 requires is already a constant
 (`adapters/mod.rs:35`), and the per-rail mapping honours it
 (`adapters/slack.rs:68-80`: empty `from`, empty `sig`, `verifiable = false`).
 
-**But Ephor pins `kotva-core`/`kotva-mail` by tag `core-v0.2.0`**
+**But Pier pins `kotva-core`/`kotva-mail` by tag `core-v0.2.0`**
 (`pier/crates/pier-gateway/Cargo.toml:25-29`; the isango guardrail, `pier/BACKLOG.md:10`), and
 **that tag predates the adapters**. Verified: `git ls-tree -r core-v0.2.0` lists sixteen
 `crates/kotva-mail/src/*` paths and **no `adapters/` entry**; the tag is commit `a4a6ca5`
@@ -89,13 +89,13 @@ implements COORD-1..8 only; and there is still no `chat-adapter` crate in `pier/
 So steps 1 and 2 are both unstarted and step 1 remains the blocker.
 
 Worth re-checking rather than assuming, because nothing in this repository can verify a claim
-about a sibling one — `npm run check:claims` cannot see into kotva or ephor, so every
+about a sibling one — `npm run check:claims` cannot see into kotva or pier, so every
 cross-repo fact in this document is asserted on the day it was written and unguarded
 thereafter. Dating the re-verification is the only honest substitute for a test.
 
 ---
 
-## 1. What Ephor gains
+## 1. What Pier gains
 
 ### 1.1 Not a new coordinator kind — a new *instance* of `gateway`
 
@@ -145,7 +145,7 @@ instance where the wire vocabulary and the prose vocabulary disagree by construc
 Visibility { class: "terminating", level: "declared" }
 ```
 
-`ContentVisibility::new(VisibilityClass::Terminating, AssuranceLevel::Declared)` in Ephor's
+`ContentVisibility::new(VisibilityClass::Terminating, AssuranceLevel::Declared)` in Pier's
 own types (`pier/crates/pier-economics/src/visibility.rs:13-25`, `:29-41`).
 
 There is **no other legal value**, and that is worth spelling out rather than presenting the
@@ -160,7 +160,7 @@ choice as virtuous restraint:
    there is no `"structural"` assurance for a plaintext-terminating role"*
    (`kotva/18-wire-format.md:1896-1898`, restated normatively at `:1915`). `declared` is the
    weakest of the three: *"The operator **promises** it is blind; nothing structurally
-   prevents cheating"* (`kotva/coordinator/CONTRACT.md:138`), and Ephor's own code agrees —
+   prevents cheating"* (`kotva/coordinator/CONTRACT.md:138`), and Pier's own code agrees —
    `AssuranceLevel::Declared.is_verifiable()` is `false`
    (`pier/crates/pier-economics/src/visibility.rs:50-51`).
 3. **The pair still understates the exposure, and the honest declaration must say so
@@ -188,9 +188,9 @@ choice as virtuous restraint:
 4. **Aql already says this out loud, in both halves** — *"The chat rail is not private. Meta,
    Slack and Telegram see the plaintext of every message"* (`ARCHITECTURE.md:180-182`) and,
    already written against this very direction, *"Whichever component terminates the rail, the
-   exposure is the same … Moving the rail to Ephor relocates *where* the plaintext is handled;
+   exposure is the same … Moving the rail to Pier relocates *where* the plaintext is handled;
    it does not remove a third party from the loop"* (`ARCHITECTURE.md:191-194`). Moving the
-   rails into Ephor must not lose those sentences; it must move them into the descriptor where
+   rails into Pier must not lose those sentences; it must move them into the descriptor where
    a machine can read them.
 
 ### 1.3 What `broker-conformance` will and will not check
@@ -232,7 +232,7 @@ model"* (`kotva/coordinator/CONTRACT.md:54-59`).
 > `kotva/26-legacy-adapters.md:280-285`
 
 These do not agree. In **node mode** they do: the homeowner's WABA is the homeowner's, so
-swapping Ephor for another adapter is config-only and the number survives — `LockIn::None`,
+swapping Pier for another adapter is config-only and the number survives — `LockIn::None`,
 honest `Pass`. In **gateway mode** the rail identity belongs to the operator, and leaving
 destroys the channel — which is lock-in in §2.2's own terms, and the harness's `LockIn` enum
 has exactly two states, so the honest declaration
@@ -248,7 +248,7 @@ I do not think this is mine to resolve, and I have not resolved it. Two readings
   platform-mediated rail, where the "identity" a user would carry away is a phone number they
   never owned.
 
-**Action: report to `pier/COORDINATION.md`'s Ephor→Spec section** (the documented channel for
+**Action: report to `pier/COORDINATION.md`'s Pier→Spec section** (the documented channel for
 exactly this: *"questions · blockers · spec-gaps found while implementing"*,
 `pier/COORDINATION.md:15`). Do not paper over it by declaring `LockIn::None` for a
 gateway-mode chat adapter — that would be the misrepresentation §2.4 names.
@@ -279,7 +279,7 @@ legacy-rail adapters report kind=gateway while needing no scarce resource at all
 alone is not evidence"* — but that message sits in the `else` branch, which the
 gateway+`SmtpEgress` combination never reaches. The check knows about the hole and cannot
 close it from where it stands; closing it needs something the kind alone does not supply.
-That is an observation about Ephor's crate, not a change Aql makes to it. The disclosed exception is
+That is an observation about Pier's crate, not a change Aql makes to it. The disclosed exception is
 *"a reputable IP + unblocked port 25 for legacy SMTP egress"*
 (`kotva/coordinator/CONTRACT.md:67-70`); a WhatsApp adapter needs no such thing.
 
@@ -292,7 +292,7 @@ exception class for it is a spec change, not an implementation choice.
 One nuance to declare rather than hide: WhatsApp's inbound transport class is `webhook`
 (`kotva/26-legacy-adapters.md:128-130`; `kotva/crates/kotva-mail/src/adapters/mod.rs:283-301`), so
 a self-hosting user needs a reachable HTTPS endpoint. That need is met by **hiring a
-`reachability-adapter`** — a different coordinator kind that already exists in Ephor
+`reachability-adapter`** — a different coordinator kind that already exists in Pier
 (`pier/crates/pier-reachability-adapter/`, `blind-routing`) — not by the chat adapter claiming
 scarcity it does not have. Telegram and Slack are `outbound-persistent`
 (`kotva/26-legacy-adapters.md:125-127`) and need nothing.
@@ -329,15 +329,15 @@ machine-readable rather than a comment. Report alongside §1.4.
 §26.2's table separates the modes on one countable fact — *"Identities served: exactly one /
 many"* (`kotva/26-legacy-adapters.md:54-59`).
 
-**PROPOSAL (the counting rule).** The identity Ephor serves is **the hub it terminates the rail
+**PROPOSAL (the counting rule).** The identity Pier serves is **the hub it terminates the rail
 for**, not the resident who texts. A resident is the *remote party* on the far side of the
 rail; they hold no rail credential, present as nothing, and cannot cause an outbound send that
-claims an identity. Under the §3 wire, Ephor never even learns which member a remote id maps
-to. So the count is: *how many distinct Aql hubs' rail credentials does this Ephor process
+claims an identity. Under the §3 wire, Pier never even learns which member a remote id maps
+to. So the count is: *how many distinct Aql hubs' rail credentials does this Pier process
 hold?*
 
 This reading is narrower — and I think sharper — than KOTVA-ALIGNMENT's Reading A/Reading B
-pair (`docs/KOTVA-ALIGNMENT.md:310-330`), because the Ephor split makes the boundary physical:
+pair (`docs/KOTVA-ALIGNMENT.md:310-330`), because the Pier split makes the boundary physical:
 identity resolution moves *out* of the rail terminator, so "many residents" stops being
 evidence of "many identities served". **This is my proposal, not a spec ruling.**
 **Uncertain — needs verification** by the same founder call KOTVA-ALIGNMENT already asked for
@@ -345,9 +345,9 @@ evidence of "many identities served". **This is my proposal, not a spec ruling.*
 
 | Shape | Rail credential | Hubs served | Mode | §26.2.1 authz layer |
 |---|---|---|---|---|
-| **Homeowner** — own WABA / own bot, Ephor co-located with the hub on their own box | theirs | 1 | **node** | none required (`:59`) |
+| **Homeowner** — own WABA / own bot, Pier co-located with the hub on their own box | theirs | 1 | **node** | none required (`:59`) |
 | **Estate operator** — one estate, one WhatsApp number, many residents | the estate's | 1 | **node** (by the rule above) | none required — but see §2.2 |
-| **Hosted Ephor** — one deployment, several estates' numbers/bots | the operator's | many | **gateway** | **all four of §26.2.1 REQUIRED** |
+| **Hosted Pier** — one deployment, several estates' numbers/bots | the operator's | many | **gateway** | **all four of §26.2.1 REQUIRED** |
 
 ### 2.2 Node mode — including the estate operator, which is the subtle case
 
@@ -364,7 +364,7 @@ on the estate's number. A resident who moves out does not take it; a number the 
 reassigns reaches a stranger — *"a phone number or bot handle a gateway operator reassigns to a
 different tenant does not go silent, it goes to a stranger"* (`:280-285`). ADAPT-6 requires the
 **client** be able to state which of the two a given conversation is (`:526`). That is Aql's UI
-job, not Ephor's, and it is unbuilt today
+job, not Pier's, and it is unbuilt today
 (`docs/KOTVA-ALIGNMENT.md:304`, ADAPT-6 "Not satisfied").
 
 **PROPOSAL.** The hub, not the adapter, renders the portability fact, because the hub is what
@@ -376,7 +376,7 @@ WABA: *"This is your own WhatsApp number; it keeps working if you stop using Aql
 ### 2.3 Gateway mode — the authorisation layer, concretely
 
 Gateway mode adds *"exactly four things"* and *"gateway mode MUST provide all four and MUST NOT
-be represented as providing less"* (`kotva/26-legacy-adapters.md:73-102`). For the hosted-Ephor
+be represented as providing less"* (`kotva/26-legacy-adapters.md:73-102`). For the hosted-Pier
 shape:
 
 **(1) Authorisation scope — `GatewayAuthz`.**
@@ -395,7 +395,7 @@ GatewayAuthz = {
 ```
 
 Applied here: `identity` is the **served hub's** substrate IK. `mode = 2` (key-registered,
-`kotva/18-wire-format.md:2008`) — an Ephor operator should never run `mode = 1` open admission
+`kotva/18-wire-format.md:2008`) — an Pier operator should never run `mode = 1` open admission
 for a rail that actuates gates. `grants` holds the content-addresses of the per-rail
 `CapabilityToken`s.
 
@@ -412,7 +412,7 @@ estate whose WhatsApp Business number is `+27821234567`:
 ```
 resource = "gw-rail:whatsapp:+27821234567"
 ability  = "send-as"
-iss      = the Ephor operator (the adapter operator issues rail grants, §18.8a.3 item 2)
+iss      = the Pier operator (the adapter operator issues rail grants, §18.8a.3 item 2)
 aud      = the estate hub's IK
 exp      = MUST be present — "no non-expiring capability" (18-wire-format.md:1737)
 ```
@@ -423,7 +423,7 @@ Four properties that matter and are easy to lose:
   state** … it is **not mesh-transmitted** and carries **no signature of its own**. Its
   authenticity is not a property of its own bytes but of how it was **populated**"*
   (`kotva/18-wire-format.md:1976-1978`; the signing table records `— (none) … no DMTAP sig` at
-  `:2113`). So Ephor stores it; it does not publish it, and a hub cannot verify it by receiving
+  `:2113`). So Pier stores it; it does not publish it, and a hub cannot verify it by receiving
   it. The verifiable artefacts are the `CapabilityToken`s it references and the §13.3
   `Assertion` that admitted the identity (`:1980-1992`).
 - **Refusal is fail-closed with a named error.** `ERR_ADAPTER_CREDENTIAL_UNAUTHORIZED`
@@ -464,7 +464,7 @@ Gateway mode requires the operator to hold *"a mapping from **(rail, remote part
 number/bot/account)** to a DMTAP identity"*, which the operator *"can corrupt"* and *"can
 leak"*, and which MUST be disclosed (`kotva/26-legacy-adapters.md:296-325`, ADAPT-7 at `:527`).
 
-Because §3 keeps member resolution in the hub, Ephor's map is at the granularity of **which hub
+Because §3 keeps member resolution in the hub, Pier's map is at the granularity of **which hub
 receives this rail's traffic**, not **which resident this remote party is**. That is a real
 privacy win — the aggregate "which of our users talks to which outside parties"
 (`kotva/26-legacy-adapters.md:315-318`) stays in each hub's own SQLite (`channel_identities` /
@@ -472,26 +472,26 @@ privacy win — the aggregate "which of our users talks to which outside parties
 `hub/internal/store/migrations/0005_channels.sql`), where it already is today
 (`docs/KOTVA-ALIGNMENT.md:332-336`).
 
-It is **not** a privacy elimination: Ephor still sees every message body, every remote id, and
+It is **not** a privacy elimination: Pier still sees every message body, every remote id, and
 the full traffic pattern of every estate it serves. Disclose that, not the smaller fact.
 
 ---
 
-## 3. The wire between Ephor and Aql's hub
+## 3. The wire between Pier and Aql's hub
 
 This is the crux, so it is specified as a contract rather than sketched.
 
-### 3.1 Direction of dial: the hub dials Ephor
+### 3.1 Direction of dial: the hub dials Pier
 
 **PROPOSAL, and it is load-bearing.** Aql's hub must keep working with **no inbound
 reachability at all**: *"**Zero-infrastructure mode** — real today … A hub on a LAN Pi with no
 public URL already does chat + LAN console + controllers end to end. Only the WhatsApp and
 Telegram webhooks and remote app access need a public URL. **Which component holds that
-outbound socket is exactly what §3a's move to Ephor is about**"* (`ARCHITECTURE.md:270-275`),
+outbound socket is exactly what §3a's move to Pier is about**"* (`ARCHITECTURE.md:270-275`),
 and the hub refuses to bind a non-loopback address without `-behind-proxy`
-(`ARCHITECTURE.md:257-262`). A hosted Ephor has a public URL by construction.
+(`ARCHITECTURE.md:257-262`). A hosted Pier has a public URL by construction.
 
-So the hub holds an **outbound-persistent** connection to Ephor and receives intents over it —
+So the hub holds an **outbound-persistent** connection to Pier and receives intents over it —
 the shape Aql's seam already has a name and a precedent for:
 
 > *"`DialChannel` is the per-provider seam for a SUBSCRIBE-shaped provider: one that has no
@@ -500,7 +500,7 @@ the shape Aql's seam already has a name and a precedent for:
 
 `SocketMode` (`hub/internal/channels/socketmode.go:52-107`) is the working precedent;
 `DMTAP` (`hub/internal/channels/dmtap.go:143-235`) is the second, generalised one. **The
-Ephor channel is the third instance of a seam that already exists.** That is the strongest
+Pier channel is the third instance of a seam that already exists.** That is the strongest
 engineering argument for this whole direction and it should be stated as such: the split does
 not merely relocate the rails, it makes WhatsApp and Telegram reachable from a hub behind CGNAT,
 which they are not today.
@@ -514,7 +514,7 @@ every signed object (`proto/README.md:27-31`, canonicalisation at
 spec change … A poor *first* substitution to make"* (`docs/KOTVA-ALIGNMENT.md:183-185`) — applies
 with more force here, since this leg is a private link between two processes an operator runs.
 
-**`chat.intent` — Ephor → hub.** One inbound rail message, already authenticated *by the rail's
+**`chat.intent` — Pier → hub.** One inbound rail message, already authenticated *by the rail's
 own means*.
 
 ```json
@@ -551,19 +551,19 @@ Field notes, each with a reason:
   number or platform handle is not)"* (`kotva/26-legacy-adapters.md:266-269`); kotva's Slack
   adapter enforces it by leaving `from` and `sig` empty
   (`kotva/crates/kotva-mail/src/adapters/slack.rs:68-80`).
-- **`text` is rail-de-framed but not intent-resolved.** Ephor strips rail packaging (Slack's
+- **`text` is rail-de-framed but not intent-resolved.** Pier strips rail packaging (Slack's
   `<@U…>` mention wrapper — `hub/internal/channels/channels.go:257-270`) and nothing else.
   It does not resolve the verb, does not match a gate name, does not decide anything. §4 argues
   why.
 - **`selection_id` is an opaque echo.** When the resident taps a picker row, the rail returns
-  the id verbatim; Ephor forwards it without parsing. The allowlist that validates it stays in
+  the id verbatim; Pier forwards it without parsing. The allowlist that validates it stays in
   the hub (`hub/internal/channels/whatsapp.go:459-501`).
 - **What the intent MUST NOT contain:** a member id, a user id, an account id, an access-point
   id resolved from text, a verb, a tier, an authorisation verdict, or any claim that the sender
   is entitled to anything. If a field like that ever appears, the trust boundary has moved and
   §3.4 no longer holds.
 
-**`chat.reply` — hub → Ephor.** A rail-agnostic reply model. The hub authors **all** text.
+**`chat.reply` — hub → Pier.** A rail-agnostic reply model. The hub authors **all** text.
 
 ```json
 {
@@ -577,8 +577,8 @@ Field notes, each with a reason:
 ```
 
 `body` is final prose the hub composed (including the truncation notice —
-`hub/internal/channels/reply.go:40-49`). `choices` is a structure Ephor maps onto a WhatsApp
-interactive list, Slack Block Kit sections, or a Telegram inline keyboard. Ephor renders; it
+`hub/internal/channels/reply.go:40-49`). `choices` is a structure Pier maps onto a WhatsApp
+interactive list, Slack Block Kit sections, or a Telegram inline keyboard. Pier renders; it
 never writes copy. §4 argues why that line and not another.
 
 ### 3.3 Authentication, replay, and failure semantics
@@ -629,11 +629,11 @@ draws between content-address dedupe and a validity window
 | Reply undeliverable | The hub records a `failed:<reason>` outbound row rather than dropping it, so an operator can see the channel tried and could not speak — the existing precedent (`hub/internal/httpapi/channels_dmtap.go:159-165`). |
 | Ack/dispatch outcome | Unchanged. `undelivered` remains *"a **dispatch outcome, not a negative result**"* and the reply stays non-committal (`proto/commands.md`, quoted at `docs/KOTVA-ALIGNMENT.md:262-266`). The seam adds no new certainty and must not imply any. |
 
-### 3.4 The trust boundary — and containment of a compromised or substituted Ephor
+### 3.4 The trust boundary — and containment of a compromised or substituted Pier
 
 **The rule, stated once.**
 
-> **An Ephor-asserted identity is evidence of what a platform's backend said, relayed by a
+> **An Pier-asserted identity is evidence of what a platform's backend said, relayed by a
 > component the operator can swap. The hub MUST resolve identity and authorise the action
 > itself, from its own state, on every single intent. An intent is a question. It is never a
 > permission.**
@@ -667,7 +667,7 @@ gap"* that *"MUST NOT be described as a limitation a future adapter version will
 Steps 1–4 are exactly what happens today (`hub/internal/httpapi/channels_open.go:50-142`).
 **Nothing about them changes.** That is the design.
 
-**What a compromised or substituted Ephor gains.** Stated in full, because a containment claim
+**What a compromised or substituted Pier gains.** Stated in full, because a containment claim
 that lists only the good news is not a containment claim:
 
 - It can **forge an inbound origin** on any rail it is enrolled for — assert that
@@ -708,14 +708,14 @@ that lists only the good news is not a containment claim:
    migration (head is `0007_audit_hash_chain.sql`).
 3. **A per-adapter ceiling** independent of the per-subject limiters, so a compromised adapter
    cannot spread a burst across many residents and stay under every individual cap.
-4. **Node-mode co-location as the default posture.** For the homeowner shape, Ephor runs on the
+4. **Node-mode co-location as the default posture.** For the homeowner shape, Pier runs on the
    same box as the hub and the link never leaves loopback. The trust boundary is unchanged in
    principle; the attack surface is much smaller in practice.
 
 **The residual, not softened.** After all of this, a physical gate still opens on the strength
 of a platform assertion relayed by a swappable component. That was true before this design —
 it is Aql's largest disclosed exposure (`ARCHITECTURE.md:180-182`,
-`docs/CHAT-COMMANDS.md:640-658`) — and moving the rails into Ephor does not reduce it by one bit.
+`docs/CHAT-COMMANDS.md:640-658`) — and moving the rails into Pier does not reduce it by one bit.
 `ARCHITECTURE.md:191-194` already says exactly this about exactly this move.
 What the seam buys is that the exposure becomes **declarable** (§1.2), the assertion becomes
 **labelled** (`platform_asserted`, §3.2), and the component becomes **swappable and
@@ -735,7 +735,7 @@ argument, then the table.
 1. **The hub's own package contract already says it.** *"A channel decides how to ask and how to
    reply; it NEVER decides whether the gate may open"* — and the same rule is restated for
    dial-out channels so a subscribe-shaped provider cannot claim an exception
-   (`hub/internal/channels/channels.go:6-11`, `:88-96`). Ephor is a dial-out channel behind
+   (`hub/internal/channels/channels.go:6-11`, `:88-96`). Pier is a dial-out channel behind
    the same seam. The invariant is inherited, not renegotiated.
 2. **CONTRACT §4 forbids the adapter reading content to decide what reaches the hub.**
    *"Every gate a coordinator applies **on a delivery path** … MUST be an **authorisation**
@@ -747,7 +747,7 @@ argument, then the table.
 3. **Authorisation needs data the adapter must not have.** The authorised set is a join over
    memberships, visitor grants, locations, account status and grant windows
    (`hub/internal/store/channels.go:48-119`); the limit ladder is keyed on account, location
-   and member (`hub/internal/store/openpath.go:57-190`). Replicating any of it into Ephor
+   and member (`hub/internal/store/openpath.go:57-190`). Replicating any of it into Pier
    would replicate the tenant graph into the component with the widest blast radius.
 4. **Disambiguation needs the candidate list, which is authorisation output.** `FindMentionedGate`
    scans the caller's authorised access points (`hub/internal/channels/whatsapp.go:419-434`).
@@ -764,12 +764,12 @@ argument, then the table.
 
 | Capability | Today | Owner after the seam | Why |
 |---|---|---|---|
-| Rail credentials (`WHATSAPP_APP_SECRET`, bot tokens, `SLACK_APP_TOKEN`) | hub (`channels.go:112-174`) | **Ephor** | The whole point: the hub stops holding platform secrets |
-| Webhook authentication (Meta HMAC, Slack v0 sig + 300 s window, Telegram secret token) | hub (`channels.go:192-246`) | **Ephor** | Belongs with the credential; fail-closed contract carries over verbatim |
-| Connection-native auth (Slack Socket Mode app token) | hub (`socketmode.go:74`, `:179-211`) | **Ephor** | Same |
-| Public HTTPS endpoint for webhook rails | hub, or a proxy in front | **Ephor** | Removes Aql's only remaining reason to need ingress for WhatsApp/Telegram (`ARCHITECTURE.md:270-275`) |
-| Inbound wire parsing (`WAPayload`, `SlackEnvelope`, `TGUpdate`) | hub (`whatsapp.go:47-114`, `slack.go:31-59`, `telegram.go:32-89`) | **Ephor** | Pure platform shape; churns with vendor APIs (ADAPT-10, `26-legacy-adapters.md:363-369`) |
-| Rail de-framing (strip `<@U…>` mentions) | hub (`channels.go:257-270`) | **Ephor** | Platform packaging, not meaning |
+| Rail credentials (`WHATSAPP_APP_SECRET`, bot tokens, `SLACK_APP_TOKEN`) | hub (`channels.go:112-174`) | **Pier** | The whole point: the hub stops holding platform secrets |
+| Webhook authentication (Meta HMAC, Slack v0 sig + 300 s window, Telegram secret token) | hub (`channels.go:192-246`) | **Pier** | Belongs with the credential; fail-closed contract carries over verbatim |
+| Connection-native auth (Slack Socket Mode app token) | hub (`socketmode.go:74`, `:179-211`) | **Pier** | Same |
+| Public HTTPS endpoint for webhook rails | hub, or a proxy in front | **Pier** | Removes Aql's only remaining reason to need ingress for WhatsApp/Telegram (`ARCHITECTURE.md:270-275`) |
+| Inbound wire parsing (`WAPayload`, `SlackEnvelope`, `TGUpdate`) | hub (`whatsapp.go:47-114`, `slack.go:31-59`, `telegram.go:32-89`) | **Pier** | Pure platform shape; churns with vendor APIs (ADAPT-10, `26-legacy-adapters.md:363-369`) |
+| Rail de-framing (strip `<@U…>` mentions) | hub (`channels.go:257-270`) | **Pier** | Platform packaging, not meaning |
 | Message-id dedupe | hub (`channels_whatsapp.go:90-97`) | **hub** (adapter forwards the id) | Dedupe is an audit-integrity property; the store holds the unique index |
 | Flood throttle (`chat_1m`) | hub (`store/ratelimit.go:275+`) | **hub** authoritative; adapter MAY self-protect | A limiter in a swappable component is not a limiter |
 | Identity resolution `(rail, remote_id)` → member | hub (`store/channels.go:235`, `:48`, `:124`, `:207`) | **hub — never moves** | §3.4. The single most important row in this table |
@@ -782,19 +782,19 @@ argument, then the table.
 | Audit row + hash chain | hub (`openpath.go:251-261`, `:298-306`, `audithash.go`) | **hub — never moves** | A log the rail terminator could edit is not evidence |
 | Signed controller envelope + dispatch | hub (`keys/envelope.go:73-94`, `hub/hub.go:291-340`) | **hub — never moves** | Controller pins the hub key |
 | Reply **text** (denials, truncation notices, honest copy) | hub (`reply.go:11-49`) | **hub** | Point 5 |
-| Reply **structure** (interactive list / Block Kit / inline keyboard) | hub (`whatsapp.go:197-305`, `slack.go:96-134`, `telegram.go:91-105`) | **Ephor** | Rail widget shapes; the adapter is the thing that knows them |
-| Per-rail picker capacity (`PickerCapacity = 10`, `SlackMaxBlocks = 50`) | hub constants (`channels.go:329-347`) | **declared by Ephor, enforced by the hub** | The adapter knows its rail's ceiling; the hub must be the one that truncates, because the truncation notice is hub-authored copy |
-| Outbound HTTP to the platform | hub (`send.go:94-166`, `:393-434`, `:476-525`) | **Ephor** | Follows the credential |
+| Reply **structure** (interactive list / Block Kit / inline keyboard) | hub (`whatsapp.go:197-305`, `slack.go:96-134`, `telegram.go:91-105`) | **Pier** | Rail widget shapes; the adapter is the thing that knows them |
+| Per-rail picker capacity (`PickerCapacity = 10`, `SlackMaxBlocks = 50`) | hub constants (`channels.go:329-347`) | **declared by Pier, enforced by the hub** | The adapter knows its rail's ceiling; the hub must be the one that truncates, because the truncation notice is hub-authored copy |
+| Outbound HTTP to the platform | hub (`send.go:94-166`, `:393-434`, `:476-525`) | **Pier** | Follows the credential |
 | Chat transcript (`channel_chats`, inbound/outbound rows) | hub (`store/channels.go:295-370`) | **hub** | Operator-visible record; also the dedupe index |
-| §26.7 reply-routing map | n/a | **Ephor**, at hub granularity only (§2.4) | Minimised by construction |
-| §26.3 four-field declaration + descriptor | nowhere | **Ephor** | It is the coordinator; it is what publishes descriptors |
+| §26.7 reply-routing map | n/a | **Pier**, at hub granularity only (§2.4) | Minimised by construction |
+| §26.3 four-field declaration + descriptor | nowhere | **Pier** | It is the coordinator; it is what publishes descriptors |
 | ADAPT-5/ADAPT-6 rendering (platform-asserted marker, node-vs-gateway portability) | nowhere | **hub** | The resident's account is with the hub; the adapter supplies the facts, the hub shows them |
 
 **One conclusion I did not expect and will state plainly:** under this split, `verb.go`,
 `reply.go`, the `MatchOutcome` machinery, `ParseSelection` and the DMTAP scaffold **all stay in
 Aql's Go tree**. What moves is roughly `whatsapp.go` + `slack.go` + `telegram.go` +
 `socketmode.go` + `send.go` and the `Verify*` primitives. That is a smaller move than "the chat
-layer moves to Ephor" sounds like, and it is the right size: the parts with recent
+layer moves to Pier" sounds like, and it is the right size: the parts with recent
 safety-critical work stay where their tests are.
 
 ---
@@ -804,7 +804,7 @@ safety-critical work stay where their tests are.
 The constraint is absolute: **the product must never sit in a state where chat is simply gone.**
 Every step below leaves a working system.
 
-**Step 0 — Aql declares the four §26 fields, with no Ephor involved. — DONE (2026-07-27).**
+**Step 0 — Aql declares the four §26 fields, with no Pier involved. — DONE (2026-07-27).**
 `hub/internal/channels/disclosure.go` declares all four for WhatsApp, Telegram, Slack and
 Discord, per-direction where asymmetric; `GET /v1/rails/disclosure` serves them
 unauthenticated. In Go rather than markdown on purpose — a disclosure table is exactly the
@@ -813,20 +813,20 @@ claims privacy the rail does not have, or if a rail declares it can cold-initiat
 Documentation and product UI only, per §26.3's node-mode allowance
 (`kotva/26-legacy-adapters.md:105-108`). This is KOTVA-ALIGNMENT work-list item 1
 (`docs/KOTVA-ALIGNMENT.md:601-605`), it discharges ADAPT-2/ADAPT-11 and most of ADAPT-6, and it
-is worth doing **whether or not** the Ephor split ever happens. Working system: unchanged.
+is worth doing **whether or not** the Pier split ever happens. Working system: unchanged.
 
 **Step 1 — kotva retag.** `crates/kotva-mail/src/adapters/` exists only on HEAD (§0.3). Cut a
-tag (or bump the pin under review) so Ephor can depend on the §26 framework and the four rail
+tag (or bump the pin under review) so Pier can depend on the §26 framework and the four rail
 modules. No user-visible change. Working system: unchanged.
 
-**Step 2 — Ephor `chat-adapter` crate, contract-only.** Descriptor, visibility declaration, the
+**Step 2 — Pier `chat-adapter` crate, contract-only.** Descriptor, visibility declaration, the
 four-clause posture, `broker-conformance` wiring, per-rail policy blobs from
 `kotva-mail::adapters`. No network, no credentials, no Aql integration. Green `cargo test`.
 Ship the §1.4/§1.6 findings to `pier/COORDINATION.md` at this point, not later. Working system:
 unchanged.
 
 **Step 3 — Aql grows the seam, off by default.** Add `chat.intent`/`chat.reply`, the
-`chat_adapters` enrollment, and an `EphorChannel` implementing the existing `DialChannel`
+`chat_adapters` enrollment, and an `PierChannel` implementing the existing `DialChannel`
 interface (`hub/internal/channels/channels.go:97-108`) — plus the **one rail-agnostic hub
 handler** the whole design turns on. That handler already exists in miniature:
 `hub/internal/httpapi/channels_dmtap.go:26-123` is a rail-agnostic conversation flow that
@@ -834,7 +834,7 @@ resolves an identity from an external id, dedupes, throttles, resolves verb and 
 funnels through `profileOpen`. It is the template. Wired behind config, defaulting **off**.
 Working system: all three Go rails still default and untouched.
 
-**Step 4 — Ephor implements Telegram, end to end.** Telegram first for four reasons, all
+**Step 4 — Pier implements Telegram, end to end.** Telegram first for four reasons, all
 verifiable: `outbound-persistent` so no public endpoint is needed
 (`kotva/26-legacy-adapters.md:125-127`), free (`:187`), the smallest Go surface being replaced
 (`telegram.go` is 112 lines), and §26.4.2's "cannot initiate at all" ceiling
@@ -846,12 +846,12 @@ in a staging install and diff behaviour against
 proven: `ResolveWhatsAppEngine` fails closed toward the safe default and refuses to switch on
 anything but the exact opt-in string (`hub/internal/channels/send.go:217-228`), with an
 operator-facing warning constant for the risky choice (`:238-246`). Reuse it verbatim:
-`AQL_TELEGRAM_ENGINE=ephor|builtin`, then the same for Slack and WhatsApp. Working system:
+`AQL_TELEGRAM_ENGINE=pier|builtin`, then the same for Slack and WhatsApp. Working system:
 every install picks, and the default keeps working.
 
 **Step 6 — Slack, then WhatsApp.** Slack second: Socket Mode is already dial-out on both sides,
 so the shape is familiar and `socketmode.go`'s reconnect/backoff behaviour has a direct Rust
-counterpart. WhatsApp last, because it is where Ephor actually earns its keep — the adapter
+counterpart. WhatsApp last, because it is where Pier actually earns its keep — the adapter
 takes the app secret, the webhook endpoint and the reachability requirement off the hub — and
 because it is the rail with the §26.8.2 conflict to resolve first (§6.3). Working system: mixed,
 per-rail, per-install.
@@ -865,20 +865,20 @@ a one-env-var rollback.
 `send.go`'s three senders, and `hub/internal/httpapi/channels_{whatsapp,slack,telegram}.go`
 may be **deleted only when all six hold**:
 
-1. Every shipped rail has an Ephor implementation that has been the **default** for at least one
+1. Every shipped rail has an Pier implementation that has been the **default** for at least one
    full release cycle, in production, with no fallback use observed.
 2. The per-rail engine toggle has had **no `builtin` selections** for a release.
 3. Those files have **no non-test callers** (verify by build, not by reading — the lesson
    recorded in the housekeeping notes is that dead-code claims must be build-verified).
-4. The `e2e/` and `e2e-browser/` suites exercise the Ephor path, not the Go path.
-5. **The `BridgeWhatsAppSender` question is settled** (§6.3). It cannot ride into Ephor: kotva's
+4. The `e2e/` and `e2e-browser/` suites exercise the Pier path, not the Go path.
+5. **The `BridgeWhatsAppSender` question is settled** (§6.3). It cannot ride into Pier: kotva's
    own framework classifies an unofficial bridge as `Sanctioning::Unsanctioned` and
    `permits_mode` returns false for gateway mode
    (`kotva/crates/kotva-mail/src/adapters/mod.rs:137-146`, `:176-182`), while §26.8.2's MUST NOT
    is unconditional (`kotva/26-legacy-adapters.md:344-359`). Deleting the Go WhatsApp channel
    deletes the bridge with it. That may be the right outcome — it is not a decision to make by
    accident during a refactor.
-6. **A homeowner can run Ephor in node mode with one command, co-located with the hub.** If they
+6. **A homeowner can run Pier in node mode with one command, co-located with the hub.** If they
    cannot, deleting the Go channels makes Aql's primary access path depend on a hosted third
    party — which breaks CONTRACT §2.3's self-host backstop at the *product* level even while the
    coordinator crate honestly declares `SelfHost::Backstop`
@@ -933,13 +933,13 @@ to end (`ARCHITECTURE.md:272-275`).
 
 After the split, a homeowner runs: a Go hub, a Rust adapter, an enrollment between them, two
 upgrade cycles, and a new failure mode (schema skew between `chat.intent` versions) on the path
-that opens their gate. For the **hosted** shape this is a clear win — Ephor already exists and
-already runs. For the **node-mode homeowner** it is a straight loss unless Ephor ships as a
+that opens their gate. For the **hosted** shape this is a clear win — Pier already exists and
+already runs. For the **node-mode homeowner** it is a straight loss unless Pier ships as a
 co-located sidecar with a one-command install, which is why that is migration gate 6.
 
-Note also that Aql's docs position Ephor as *"the same tunnel model as a convenience, never a
+Note also that Aql's docs position Pier as *"the same tunnel model as a convenience, never a
 requirement"* (`ARCHITECTURE.md:266-269`). This design makes it a requirement for chat unless
-gate 6 holds. That is a change in the product's stated relationship to Ephor and should be made
+gate 6 holds. That is a change in the product's stated relationship to Pier and should be made
 deliberately, in the docs, at the same time.
 
 ### 6.3 The §26.8.2 conflict with `BridgeWhatsAppSender`
@@ -954,7 +954,7 @@ It is still squarely against an unconditional MUST NOT: *"a conformant implement
 offer either as a WhatsApp credential path: **Unofficial WhatsApp libraries**…"*
 (`kotva/26-legacy-adapters.md:344-359`, ADAPT-9 at `:529`).
 
-The seam **forces the decision** rather than resolving it, because Ephor is a coordinator and
+The seam **forces the decision** rather than resolving it, because Pier is a coordinator and
 cannot carry it: kotva's own framework makes `Unsanctioned` rails node-mode-only by construction
 (`kotva/crates/kotva-mail/src/adapters/mod.rs:137-146`, `:176-182`). Three outcomes, all real:
 
@@ -978,9 +978,9 @@ changes which outcome is correct.
   and adds one hop; it does not reduce it (§3.4). Any framing of this work as a privacy
   improvement is wrong.
 - **Extra latency and a new partition mode** on a path that opens physical gates. Platform →
-  Ephor → WSS → hub → controller, inside a 60 s envelope. Fine on the numbers; the new state is
+  Pier → WSS → hub → controller, inside a 60 s envelope. Fine on the numbers; the new state is
   "chat up, gate unreachable" and its mirror, and both need honest copy.
-- **The COORD-2 gateway-mode lock-in becomes Aql's problem too** (§1.4). A hosted Ephor makes
+- **The COORD-2 gateway-mode lock-in becomes Aql's problem too** (§1.4). A hosted Pier makes
   every resident's channel the operator's, with §26.6's blunt failure mode. Node mode does not
   have this; the product must be able to say which one a user is in.
 - **Docs churn that this design creates.** `docs/CHAT-COMMANDS.md` §6 is a migration map written
@@ -1013,8 +1013,8 @@ changes which outcome is correct.
 |---|---|---|
 | 1 | Is a served *hub* the right unit for §26.2's identity count (§2.1)? | A founder or spec-session ruling. KOTVA-ALIGNMENT asked the adjacent question and left it open (`docs/KOTVA-ALIGNMENT.md:656-660`). My counting rule is a **PROPOSAL**. |
 | 2 | Does CONTRACT §2.2's lock-in prohibition or §26.6's gateway-mode portability disclosure govern for a platform rail (§1.4)? | Spec session, via `pier/COORDINATION.md`. Until then a gateway-mode chat adapter cannot honestly pass COORD-2. |
-| 3 | Should `broker-conformance` gain `LockIn::ModeDependent` and `Gate::AuthorizationDelegated` (§1.4, §1.6)? | Ephor maintainer decision once (2) is answered. Both are **PROPOSAL**. |
+| 3 | Should `broker-conformance` gain `LockIn::ModeDependent` and `Gate::AuthorizationDelegated` (§1.4, §1.6)? | Pier maintainer decision once (2) is answered. Both are **PROPOSAL**. |
 | 4 | Is `BridgeWhatsAppSender` dropped, retained in Go, or declared non-conformant (§6.3)? | Founder call. It gates migration step 6. |
 | 5 | Does kotva intend `Sanctioning::Unsanctioned` (node-mode-only) and §26.8.2's unconditional MUST NOT to be the same rule? | Kotva spec owner. Unchanged since `docs/KOTVA-ALIGNMENT.md:661-663` raised it; it changes the answer to (4). |
 | 6 | Should the descriptor be published at all in node mode? | §26.3.1 makes it a MAY (`kotva/26-legacy-adapters.md:147`), so this is a product choice. **Uncertain — needs verification** whether an Aql homeowner has any use for a discoverable descriptor. |
-| 7 | Is `chat.intent` the right granularity, or should Ephor deliver the raw rail message and let the hub own de-framing too? | A prototype. The argument for de-framing in Ephor is that `<@U…>` stripping is platform packaging; the argument against is that it is the last content-touching step outside the hub. |
+| 7 | Is `chat.intent` the right granularity, or should Pier deliver the raw rail message and let the hub own de-framing too? | A prototype. The argument for de-framing in Pier is that `<@U…>` stripping is platform packaging; the argument against is that it is the last content-touching step outside the hub. |

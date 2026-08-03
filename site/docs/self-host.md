@@ -13,7 +13,7 @@ bills you directly).
 
 > **Naming.** The hub's directory, Go module and binary are `hub/`,
 > `github.com/vul-os/aql/hub` and `aql-hub` — not `gateway` (a different product's word:
-> Ephor's, in the KOTVA family) and not `lintel` (a repo that no longer exists). Its
+> Pier's, in the KOTVA family) and not `lintel` (a repo that no longer exists). Its
 > environment variables are `AQL_*`; the old `LINTEL_*` names still work as a deprecated
 > fallback — see **Configuration** below. The SQLite file and the controller's mDNS
 > service kept their pre-merge names outright (`lintel.db`, `_lintel._tcp`): that is not
@@ -128,7 +128,7 @@ ones:
 > **The `WHATSAPP_* / SLACK_* / TELEGRAM_*` variables are the supported way to attach a
 > chat rail.** Those three adapters are shipped and tested in the hub. A designed but
 > **unbuilt** alternative would have an external coordinator terminate the rail instead
-> ([`docs/EPHOR-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/EPHOR-CHAT-SEAM.md));
+> ([`docs/PIER-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/PIER-CHAT-SEAM.md));
 > it is an optional, experimental direction, not something these variables are waiting on.
 
 The five variables above are abuse/quota guards, not billing — semantics, denial
@@ -212,7 +212,7 @@ Pick whichever of these fits your life:
   still-encrypted bytes all the way to the hub, which has nothing to decrypt them
   with — put your own reverse proxy (as above) behind a passthrough tunnel if you want
   that shape. Aql has no structural dependency on any provider — the **Vulos relay** and
-  **Ephor**'s reachability adapter are options among these, never a requirement. Each one
+  **Pier**'s reachability adapter are options among these, never a requirement. Each one
   just ends with you setting `AQL_PUBLIC_URL`; the hub cannot tell them apart.
 - **No public URL at all** — a hub on the estate LAN as a complete installation,
   and this is **real today**. Controllers dial out, and Slack **Socket Mode** ships:

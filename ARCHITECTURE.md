@@ -1,5 +1,5 @@
-<!-- no-broker-dep:allow-file: names Ephor several times describing the chat-rail migration
-     ("in transition. Moving out of Aql into Ephor" — an honest, in-progress design decision,
+<!-- no-broker-dep:allow-file: names Pier several times describing the chat-rail migration
+     ("in transition. Moving out of Aql into Pier" — an honest, in-progress design decision,
      not a completed one) — the adapters it names are still implemented and running inside
      hub/internal/channels/ today. Architecture prose, not a build or startup path; C-DEP's Go
      closures across hub/e2e/jcs/controller are clean. -->
@@ -42,7 +42,7 @@ exist and which are design intent. The condensed operator-facing tour is
 | Web console + desktop shell (`src/`, `src-tauri/`) | **Built.** Admin surfaces, the device / energy / automations screens over the real engine, and an emergency-access screen that requests and stores an offline grant |
 | **Device engine** — drivers, discovery, telemetry, automations, energy | **Built, default off.** Registry behind a driver seam; `http`, `modbus` (TCP), `mqtt`, `camera` (ONVIF) and `access` (gates, read-only) drivers; automations and energy on top. No radio in the hub — Zigbee and Z-Wave arrive over a bridge. No Matter and no dedicated robot driver; the camera driver records and plays back but has never received a frame from real hardware |
 | **Phone-side offline grants** | **Half built.** The console requests and stores a grant (proven end to end against a real hub); *presenting* one still needs the LAN or BLE, which a browser tab cannot do |
-| Chat rail | **In transition.** Moving out of Aql into [Ephor](https://github.com/vul-os/ephor); the adapters in `hub/internal/channels/` are transitional (§3a) |
+| Chat rail | **In transition.** Moving out of Aql into [Pier](https://github.com/vul-os/pier); the adapters in `hub/internal/channels/` are transitional (§3a) |
 | Google OAuth | **Not built** |
 
 ### The seven device kinds
@@ -72,7 +72,7 @@ flowchart LR
         A["🛡️ Admin / staff"]
     end
 
-    subgraph channels ["Chat rail (input surface — moving to Ephor)"]
+    subgraph channels ["Chat rail (input surface — moving to Pier)"]
         WA["WhatsApp<br/>(Meta Cloud API)"]
         TG["Telegram bot<br/>(webhook)"]
         SL["Slack bot<br/>(Events API / Socket Mode)"]
@@ -133,7 +133,7 @@ ports.
 ```
 aql/
 ├── hub/          # 🟢 the hub: Go, the whole product server (auth, open path, device hub, admin)
-│                 #    …plus channels/, the transitional chat adapters moving to Ephor (§3a)
+│                 #    …plus channels/, the transitional chat adapters moving to Pier (§3a)
 │   └── migrations/   # SQLite schema, clean folded baseline (33 migrations, 58 tables)
 ├── controller/   # 🟢 reference gate device agent (own Go module); GPIO/BLE need real hardware
 ├── jcs/         # 🟢 the shared RFC 8785 canonicalizer — its own Go module, required by
@@ -172,18 +172,18 @@ identity, turns a message into an intent, and sends replies. Everything behind t
 is channel-agnostic — a channel decides how to ask and how to reply, never whether the
 gate may open.
 
-> **Where this is going: [Ephor](https://github.com/vul-os/ephor).** The adapters that
-> terminate WhatsApp, Slack and Telegram are being lifted out of Aql and into Ephor, the
+> **Where this is going: [Pier](https://github.com/vul-os/pier).** The adapters that
+> terminate WhatsApp, Slack and Telegram are being lifted out of Aql and into Pier, the
 > coordinator implementation in the KOTVA family — the component whose job is bridging
-> legacy rails. In the target shape a resident texts a channel, Ephor terminates the rail
+> legacy rails. In the target shape a resident texts a channel, Pier terminates the rail
 > and hands the hub an authorised command, and the hub does what only it can do: check the
-> rules, sign it, actuate. Ephor is separate and swappable — run your own or point at one.
+> rules, sign it, actuate. Pier is separate and swappable — run your own or point at one.
 >
 > **That move is in progress.** Texting a gate open works today, but the adapter code in
 > `hub/internal/channels/` is transitional and is not the long-term answer, and the
-> Ephor-backed path is not shipped either. Note also the naming: **Aql's hub is not a KOTVA
+> Pier-backed path is not shipped either. Note also the naming: **Aql's hub is not a KOTVA
 > gateway.** It bridges chat rails into its own local domain; the gateway/coordinator role
-> in that family is Ephor's — which is exactly why this component's own directory
+> in that family is Pier's — which is exactly why this component's own directory
 > (`hub/`), Go module (`github.com/vul-os/aql/hub`) and binary (`aql-hub`) are named for
 > what it is, a hub, rather than for a role that belongs to a different product. See
 > [`docs/KOTVA-ALIGNMENT.md`](docs/KOTVA-ALIGNMENT.md).
@@ -216,7 +216,7 @@ libraries**. It is documented rather than hidden; it is not recommended. See
 
 Whichever component terminates the rail, the exposure is the same: **Meta, Slack and
 Telegram see the plaintext of every message**, because something has to read it to act on
-it. Moving the rail to Ephor relocates *where* the plaintext is handled; it does not remove
+it. Moving the rail to Pier relocates *where* the plaintext is handled; it does not remove
 a third party from the loop. The web console path has no chat platform in it at all.
 
 ```mermaid
@@ -294,14 +294,14 @@ match.
 2. **Any tunnel you already trust** — cloudflared, Tailscale Funnel, ngrok, or a
    self-hosted `vulos-relayd` (open source, no account needed). These terminate TLS at
    their own edge and hand the hub plain HTTP. A tunnel in raw TCP/SNI-passthrough mode
-   does not work directly — put a reverse proxy behind it. The hosted **Ephor** is the
+   does not work directly — put a reverse proxy behind it. The hosted **Pier** is the
    same tunnel model as a convenience, never a requirement.
 3. **Zero-infrastructure mode** — real today. Controllers dial out unconditionally, and
    the Slack rail can dial out too (Socket Mode: set an app-level token and the connection
    is a single outbound WebSocket, no inbound port or URL needed). A hub on a LAN Pi with
    no public URL already does chat + LAN console + controllers end to end. Only the
    WhatsApp and Telegram webhooks and remote app access need a public URL. Which component
-   holds that outbound socket is exactly what §3a's move to Ephor is about.
+   holds that outbound socket is exactly what §3a's move to Pier is about.
 
 Full breakdown: [`site/docs/ingress.md`](site/docs/ingress.md).
 

@@ -30,7 +30,7 @@ import { resolve } from 'node:path';
  * checked, a number cannot.
  *
  * Citations into SIBLING REPOSITORIES (the EXTERNAL_REPOS list below). Those
- * paths cannot be resolved from here — kotva/ and ephor/ are not checked out in
+ * paths cannot be resolved from here — kotva/ and pier/ are not checked out in
  * CI — so they are skipped, and it is worth saying why no guard covers them
  * rather than leaving that looking like an oversight.
  *
@@ -43,7 +43,7 @@ import { resolve } from 'node:path';
  *
  * So they were verified ONCE, by hand, on 2026-08-01, against the local
  * checkouts: 78 unique external citations, all resolving except two deliberate
- * ones (EPHOR-CHAT-SEAM.md §0.1 cites `ephor/coordinator/CONTRACT.md` precisely
+ * ones (PIER-CHAT-SEAM.md §0.1 cites `pier/coordinator/CONTRACT.md` precisely
  * to establish that it does not exist). Quote-and-line pairs were then checked
  * by script, which flagged thirteen — of which twelve were the script
  * mis-pairing a quote with the next citation in the paragraph, and ONE was
@@ -69,7 +69,7 @@ const root = resolve(__dirname, '../../..');
 
 /**
  * Other repositories in the Vulos suite. Aql's docs reference them deliberately
- * — the Ephor seam and the Kotva alignment notes are about work that lives
+ * — the Pier seam and the Kotva alignment notes are about work that lives
  * elsewhere — and those paths cannot be checked from here. Listed by PREFIX so
  * a new file under one of them needs no change, and listed explicitly so
  * "unresolvable" never quietly becomes "ignored".
@@ -306,7 +306,7 @@ describe('documentation citations', () => {
       'site/docs/architecture.md', // repeats it for the site
       'CHANGELOG.md', // records the deletion and the earlier sweep
       'docs/CHAT-COMMANDS.md', // §2.2's historical passages, already annotated
-      'docs/EPHOR-CHAT-SEAM.md', // another repository's gateway/, cited as theirs
+      'docs/PIER-CHAT-SEAM.md', // another repository's gateway/, cited as theirs
       // These three name a deleted directory in order to say it is deleted.
       // Exempting them by name would let a FALSE claim back into the same file,
       // so each is held to its explanation below rather than merely excused.

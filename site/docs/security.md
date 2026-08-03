@@ -211,7 +211,7 @@ deliberately narrow:
 - Aql is not end-to-end encrypted messaging — chat channels are WhatsApp's and
   Slack's infrastructure, and the hub must read messages to act on them. A designed but
   unbuilt alternative would move rail termination into an external coordinator
-  ([`docs/EPHOR-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/EPHOR-CHAT-SEAM.md));
+  ([`docs/PIER-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/PIER-CHAT-SEAM.md));
   that would relocate *where* the plaintext is handled, not whether it's exposed — a third
   party still sees the message either way.
 - Your hub is as secure as the machine it runs on. Back up your data directory —

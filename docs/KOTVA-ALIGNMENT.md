@@ -12,10 +12,10 @@
 |---|---|---|---|
 | aql | `/Users/pc/code/vulos/aql` | `bf99a4d` ("fold: lintel becomes Aql's access + chat engine") | **dirty — 77 modified files**, an in-progress `lintel` → `aql` module-path rename |
 | kotva | `/Users/pc/code/vulos/kotva` | `e99ffd7` | 4 modified files |
-| ephor | `/Users/pc/code/vulos/ephor` | `f57ca81` | clean |
+| pier | `/Users/pc/code/vulos/pier` | `f57ca81` | clean |
 
 **Citation convention.** Every claim about either side is `file:line`. Kotva paths are relative
-to the kotva repo, aql paths to the aql repo, ephor paths to the ephor repo. All line numbers
+to the kotva repo, aql paths to the aql repo, pier paths to the pier repo. All line numbers
 were verified against the working tree at audit time. **Caveat:** the aql tree was being
 modified *during* this audit (the rename touches import lines only, so line numbers are stable,
 but re-verify before quoting this document in a commit message).
@@ -53,7 +53,7 @@ says that today.**
 - Closed by kotva commit `307bf87` ("coordinator+wire: pay the coordinator wire-debt
   (CoordinatorDescriptor/Tariff/UsageReceipt/GatewayAuthz)").
 
-**Ephor E1.4 is still open** (`pier/BACKLOG.md:29`, unchecked), so the *implementation* debt is
+**Pier E1.4 is still open** (`pier/BACKLOG.md:29`, unchecked), so the *implementation* debt is
 real — see §3. But it is implementation debt, not spec debt, and that distinction matters for
 what Aql can build against today.
 
@@ -417,7 +417,7 @@ Aql can copy that decision table as data rather than re-deriving §26 from prose
 | | Status | Evidence |
 |---|---|---|
 | **kotva spec** | **CLOSED** | §18.8a.3 defines `GatewayAuthz` (`18-wire-format.md:1968-2020`), CDDL at `:1995-2002`; a per-rail grant is a `CapabilityToken` with `Capability.resource = "gw-rail:"+rail+":"+remote_id`, `ability = "send-as"` (`18-wire-format.md:1983-1991`; `26-legacy-adapters.md:84-89`). `26-legacy-adapters.md:441-445` marks it "Resolved". |
-| **ephor impl** | **OPEN** | `pier/BACKLOG.md:29` — `[ ] E1.4 Authz — authenticated-sender + per-address/per-rail scope (GatewayAuthz shape, §7.11.2/§26)`, unchecked. What exists is a **per-domain** policy trait: `fn authorize(&self, direction: BridgeDirection, domain: &str) -> AuthzDecision` (`pier/crates/pier-gateway/src/provenance.rs:438-440`), with a domain→account allowlist (`:442-468`). **There is no rail dimension and no `CapabilityToken` grant handling anywhere in ephor.** `pier/COORDINATION.md:136-140` still describes it as open wire debt — that note is now itself stale on the spec half. |
+| **pier impl** | **OPEN** | `pier/BACKLOG.md:29` — `[ ] E1.4 Authz — authenticated-sender + per-address/per-rail scope (GatewayAuthz shape, §7.11.2/§26)`, unchecked. What exists is a **per-domain** policy trait: `fn authorize(&self, direction: BridgeDirection, domain: &str) -> AuthzDecision` (`pier/crates/pier-gateway/src/provenance.rs:438-440`), with a domain→account allowlist (`:442-468`). **There is no rail dimension and no `CapabilityToken` grant handling anywhere in pier.** `pier/COORDINATION.md:136-140` still describes it as open wire debt — that note is now itself stale on the spec half. |
 | **aql** | **N/A** | No authorisation-scope concept exists in any form. Across `hub/`, `descriptor` and `authz` appear nowhere; `tariff` and `exposure` appear only in unrelated senses — time-of-use tariff periods in `internal/energy/`, and what a chat rail may disclose in `internal/httpapi/disclosure.go`. |
 
 ### 3.2 Multi-tenant scenarios this blocks
@@ -665,9 +665,9 @@ been rewritten is worse than none.
     no Go binding for MOTE construction or MLS exists (`proto/dmtap-channel.md:21-49`). Move
     `dmtap.go` out of `internal/channels/` when it lands, per ADAPT-10's independent-versioning
     rule (`26-legacy-adapters.md:348-356`).
-11. **Multi-tenant chat egress with per-account rail identity.** `[blocked on ephor E1.4]` — the
+11. **Multi-tenant chat egress with per-account rail identity.** `[blocked on pier E1.4]` — the
     wire is defined (`18-wire-format.md:1968-2020`, resource `"gw-rail:"+rail+":"+remote_id`,
-    ability `"send-as"`), the implementation is not: ephor's `GatewayAuthz` is a per-**domain**
+    ability `"send-as"`), the implementation is not: pier's `GatewayAuthz` is a per-**domain**
     trait with no rail dimension (`pier/crates/pier-gateway/src/provenance.rs:438-440`) and E1.4 is
     unstarted (`pier/BACKLOG.md:29`). Blocks the three scenarios in §3.2; blocks none of §3.3.
 12. **Mark platform-asserted origins as such in `AuthResults`.**

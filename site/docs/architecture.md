@@ -53,8 +53,8 @@ resident ── "open" ──► chat rail (WhatsApp / Slack / Telegram)
 >
 > There is a separate, **entirely unbuilt** design in which an external coordinator
 > terminates the rail and hands the hub an authorised command instead —
-> [`docs/EPHOR-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/EPHOR-CHAT-SEAM.md).
-> Treat it as an optional, experimental direction ([Ephor](https://github.com/vul-os/ephor)
+> [`docs/PIER-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/PIER-CHAT-SEAM.md).
+> Treat it as an optional, experimental direction ([Pier](https://github.com/vul-os/pier)
 > is `pre-alpha` by its own README badge), not as the successor to the rails above.
 > Note the naming — Aql's hub is *not* a KOTVA gateway; it bridges chat rails into its own
 > local domain, and the gateway/coordinator role in that family is a different component's
