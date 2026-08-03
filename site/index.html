@@ -488,7 +488,9 @@ code{font-family:var(--font-mono);font-size:.88em}
    its content ends; a ragged bottom edge between two lists of different lengths
    is what an honest ledger looks like. */
 .ledger{display:grid;gap:16px;align-items:start}
-@media(min-width:900px){.ledger{grid-template-columns:1fr 1fr;gap:20px}}
+/* Weighted, not even: "built" carries roughly twice the rows of "not built",
+   so equal columns left 645px of empty beside the shorter one. */
+@media(min-width:900px){.ledger{grid-template-columns:1.55fr 1fr;gap:20px}}
 .ledger-col{border-radius:20px;border:1px solid var(--paper-edge);background:var(--paper-cool);padding:24px 22px}
 .ledger-col h3{font-family:var(--font-display);font-variation-settings:"SOFT" 30;font-size:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .ledger-col ul{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:12px}
@@ -989,7 +991,7 @@ code{font-family:var(--font-mono);font-size:.88em}
     <div class="illo illo-wide figscroll reveal" style="margin-bottom:28px">
       <div class="illo-vp">
         <div class="illo-scroll" tabindex="0">
-          <svg viewBox="0 0 900 400" role="img" aria-labelledby="propT propD">
+          <svg viewBox="0 -34 900 434" role="img" aria-labelledby="propT propD">
             <title id="propT">One hub in the middle of a property</title>
             <desc id="propD">A house with the Aql hub drawn inside it, wired outward to a driveway gate, lighting, sensors, a thermostat, an energy meter, a camera and a robot mower, with a second building alongside. The gate is drawn in terracotta as the one path that runs end to end today. The camera and the mower are drawn with dashed lines because those paths are not finished.</desc>
 
@@ -1053,21 +1055,21 @@ code{font-family:var(--font-mono);font-size:.88em}
                 <path d="M-3.6 1.4a5.2 5.2 0 0 1 7.2 0"/>
                 <path d="M-6.8 -1.8a9.6 9.6 0 0 1 13.6 0"/>
               </g>
-              <text class="il-lbl" x="140" y="174" text-anchor="middle">Sensors</text>
+              <text class="il-lbl" x="140" y="92" text-anchor="middle">Sensors</text>
 
               <circle class="il-node" cx="280" cy="86" r="24"/>
               <g class="il-ic" transform="translate(280 86) scale(1.5)">
                 <path d="M-2.6 2.6V-6.4a2.6 2.6 0 0 1 5.2 0v9a4.4 4.4 0 1 1-5.2 0Z"/>
                 <path d="M0 -1.4v5"/>
               </g>
-              <text class="il-lbl" x="280" y="130" text-anchor="middle">Heating &amp; cooling</text>
+              <text class="il-lbl" x="280" y="48" text-anchor="middle">Heating &amp; cooling</text>
 
               <circle class="il-node" cx="450" cy="66" r="24"/>
               <g class="il-ic" transform="translate(450 66) scale(1.5)">
                 <path d="M-4.6 2.6a5.6 5.6 0 1 1 9.2 0 c-1 1.3-1.4 2.2-1.5 3.5h-6.2c-.1-1.3-.5-2.2-1.5-3.5Z"/>
                 <path d="M-2.6 8.8h5.2"/>
               </g>
-              <text class="il-lbl" x="450" y="110" text-anchor="middle">Lighting</text>
+              <text class="il-lbl" x="450" y="28" text-anchor="middle">Lighting</text>
 
               <circle class="il-node-off" cx="620" cy="110" r="24"/>
               <g class="il-ic" transform="translate(620 110) scale(1.5)" opacity=".45">
@@ -1075,8 +1077,8 @@ code{font-family:var(--font-mono);font-size:.88em}
                 <circle cx="0" cy="0.5" r="3.2"/>
                 <path d="M-4.6 -5.5 l1.5 -2.6 h6.2 l1.5 2.6"/>
               </g>
-              <text class="il-lbl" x="620" y="154" text-anchor="middle" opacity=".6">Cameras</text>
-              <text class="il-note" x="620" y="173" text-anchor="middle">built, never met a camera</text>
+              <text class="il-lbl" x="620" y="56" text-anchor="middle" opacity=".6">Cameras</text>
+              <text class="il-note" x="620" y="73" text-anchor="middle">built, never met a camera</text>
 
               <circle class="il-node" cx="790" cy="160" r="24"/>
               <g class="il-ic" transform="translate(790 160) scale(1.5)">
@@ -1084,7 +1086,7 @@ code{font-family:var(--font-mono);font-size:.88em}
                 <path d="M0 4.2 L4.8 -1.4"/>
                 <circle cx="0" cy="4.2" r="1.3"/>
               </g>
-              <text class="il-lbl" x="790" y="204" text-anchor="middle">Power &amp; solar</text>
+              <text class="il-lbl" x="790" y="122" text-anchor="middle">Power &amp; solar</text>
             </g>
 
             <!-- the hub itself -->
