@@ -85,6 +85,33 @@ var allowedUnreachable = map[string]string{
 
 var storeMethodRe = regexp.MustCompile(`^func \(s \*Store\) ([A-Z]\w*)\(`)
 
+// Exported methods on this package's OTHER exported types — Grant, T4Window,
+// StepUpIntent, Coverage, APITokenPrincipal and the rest.
+//
+// Added because two dead methods were found sitting exactly in the gap between
+// this test and the deadcode gate, and neither could see them:
+//
+//   - This test enumerated `func (s *Store)` only, so a method on any other
+//     receiver was never a candidate.
+//   - scripts/deadcode.sh does not report an unreachable METHOD on a type that
+//     is ever assigned to an interface. That was measured rather than assumed:
+//     planting one dead func and one dead method on *StepUpIntent in this
+//     package, the sweep reported the func and stayed silent about the method.
+//
+// StepUpIntent.Approvable was the one that mattered. It duplicated, in Go, a
+// check that ClaimStepUpIntent performs atomically in SQL, so its existence
+// invited exactly the check-then-act the atomic claim was written to prevent —
+// two console tabs both reading "approvable" and both actuating.
+// APITokenPrincipal.ScopeList was the milder kind: a helper whose doc claimed a
+// purpose ("logs, audit detail") that nothing fulfilled, kept alive only by an
+// error-message format string in a test.
+//
+// The transitive pass below is what makes this workable: four methods here are
+// called only from inside internal/store (Coverage.DayObserved and DayPartial,
+// AnalyticsWindow.Previous, GeofenceRule.DeniesOnMissingLocation) and are
+// legitimately reachable through the *Store methods declared beside them.
+var typeMethodRe = regexp.MustCompile(`^func \([a-z]\w* \*?([A-Z]\w*)\) ([A-Z]\w*)\(`)
+
 // hubRoot walks up from this package to the hub module root.
 func hubRoot(t *testing.T) string {
 	t.Helper()
@@ -139,6 +166,14 @@ func TestEveryStoreMethodIsReachableFromProduction(t *testing.T) {
 
 	// Declarations, and the file each one lives in.
 	declFile := map[string]string{}
+	// Counted where the entry is ADDED, not by re-scanning with the regex.
+	//
+	// The first version of this floor re-ran typeMethodRe over the files to
+	// count matches, which measured the regex rather than the enforcement:
+	// disabling the line that puts those methods into declFile left the count
+	// at 17 and the floor silent, so the widened check could be switched off
+	// without failing anything. Verified by tampering exactly that line.
+	onTypes := 0
 	for _, f := range files {
 		// Parse to confirm the file is real Go before trusting a regex over
 		// it; a scan that silently skips unparseable files reports zero.
@@ -148,6 +183,17 @@ func TestEveryStoreMethodIsReachableFromProduction(t *testing.T) {
 		for _, line := range strings.Split(f.body, "\n") {
 			if m := storeMethodRe.FindStringSubmatch(line); m != nil {
 				declFile[m[1]] = f.path
+				continue
+			}
+			// Only inside this package: the rule being enforced is about
+			// store types, and a scan of the whole module would sweep in every
+			// other package's methods under a name-keyed map.
+			if !strings.Contains(filepath.ToSlash(f.path), "/internal/store/") {
+				continue
+			}
+			if m := typeMethodRe.FindStringSubmatch(line); m != nil && m[1] != "Store" {
+				declFile[m[2]] = f.path
+				onTypes++
 			}
 		}
 	}
@@ -155,7 +201,15 @@ func TestEveryStoreMethodIsReachableFromProduction(t *testing.T) {
 	// A scan that found nothing would pass while checking nothing. This repo
 	// has produced that exact vacuous guard before (naming.test.ts).
 	if len(declFile) < 100 {
-		t.Fatalf("found only %d *Store methods; the walk is broken, not the code", len(declFile))
+		t.Fatalf("found only %d store methods; the walk is broken, not the code", len(declFile))
+	}
+	// A separate floor for the widened class. Without it, a regex that stopped
+	// matching non-*Store receivers would leave the total above 100 on the
+	// strength of the *Store methods alone, and this check would go quiet
+	// while covering exactly what it covered before.
+	if onTypes < 15 {
+		t.Fatalf("found only %d exported methods on non-*Store types; there were 17 when "+
+			"this floor was written, so the second regex has stopped matching", onTypes)
 	}
 
 	// Which methods each file mentions.

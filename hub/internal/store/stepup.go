@@ -60,11 +60,6 @@ func (i *StepUpIntent) EffectiveStatus(nowUnix int64) string {
 	}
 }
 
-// Approvable reports whether this intent could still be approved.
-func (i *StepUpIntent) Approvable(nowUnix int64) bool {
-	return i.EffectiveStatus(nowUnix) == "pending"
-}
-
 // ErrIntentInvalid is returned for an intent that could never be approved.
 var ErrIntentInvalid = errors.New("store: invalid step-up intent")
 

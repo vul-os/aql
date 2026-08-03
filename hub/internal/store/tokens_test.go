@@ -118,7 +118,8 @@ func TestAuthenticateAPITokenOneErrorForEveryFailure(t *testing.T) {
 		t.Errorf("principal did not carry live membership: %+v", p)
 	}
 	if !p.Has(ScopeAccessRead) || p.Has(ScopeAccessOpen) {
-		t.Errorf("principal scopes wrong: %v", p.ScopeList())
+		t.Errorf("principal scopes wrong: has %s=%v, %s=%v; want the granted one only",
+			ScopeAccessRead, p.Has(ScopeAccessRead), ScopeAccessOpen, p.Has(ScopeAccessOpen))
 	}
 }
 

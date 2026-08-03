@@ -22,6 +22,24 @@
 # no disclosure path went through, and a store method kept alive in the
 # name-based check purely by that dead wrapper mentioning it.
 #
+# # WHAT THIS DOES NOT SEE: a dead METHOD on a type that reaches an interface
+#
+# Rapid type analysis is conservative about dynamic dispatch. Once a type is
+# assigned to an interface anywhere reachable — `any` in a JSON marshal or a log
+# field is enough — its whole method set is treated as potentially called, and an
+# unreachable method on it is never reported.
+#
+# Measured, not assumed. Planting two symbols in internal/store on 2026-08-03 —
+# `PlantedDeadFunc` and `PlantedDeadMethod` on *StepUpIntent, neither called by
+# anything — this sweep reported the func and stayed silent about the method.
+# That is how StepUpIntent.Approvable and APITokenPrincipal.ScopeList survived:
+# invisible here, and out of scope for store/reachability_test.go, which
+# enumerated `func (s *Store)` receivers only.
+#
+# So "no unreachable functions" below means FUNCTIONS. Dead methods on store
+# types are now covered by that test's second regex; dead methods elsewhere in
+# the tree are still nobody's job, and this comment is the record of it.
+#
 # # Why -test, and why the intersection across configurations
 #
 # -test counts test-only callers as reachable, which makes this STRICTLY about

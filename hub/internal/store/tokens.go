@@ -137,18 +137,6 @@ func (p *APITokenPrincipal) Has(scope APITokenScope) bool {
 	return p.scopes[scope]
 }
 
-// ScopeList returns the granted scopes in canonical order (logs, audit
-// detail, tests).
-func (p *APITokenPrincipal) ScopeList() []APITokenScope {
-	out := make([]APITokenScope, 0, len(p.scopes))
-	for _, s := range APITokenScopes {
-		if p.scopes[s] {
-			out = append(out, s)
-		}
-	}
-	return out
-}
-
 // CreateAPITokenArgs is one issuance.
 type CreateAPITokenArgs struct {
 	AccountID string
