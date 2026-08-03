@@ -35,17 +35,21 @@ import (
 // because a rule enforced in a helper nothing calls is not enforced.
 func TestNoConfiguredDriverMayClaimAReservedID(t *testing.T) {
 	for _, reserved := range devices.ReservedDriverIDs {
-		// Configs where the id is meant to be the only thing wrong. Keeping
-		// four of them genuinely valid across four evolving schemas is not
-		// something a fixture can promise, so the assertion below does not
-		// depend on it: it names the word "reserved" rather than merely
-		// checking for an error, and a config that failed for some other
-		// reason reports as such instead of passing having proved nothing.
+		// Configs where the id is the only thing wrong — the control below
+		// builds all four from these same shapes and asserts they are
+		// ACCEPTED, so that is a checked property rather than a hope. Two of
+		// them were not valid when this was written (no capabilities, no
+		// register blocks) and only the control found it.
+		//
+		// The assertion still names the word "reserved" rather than merely
+		// checking for an error, so that if one of these schemas grows a
+		// requirement, this reports the drift instead of passing on an
+		// unrelated refusal.
 		file := deviceFile{
-			HTTP:   &httpdev.Config{ID: reserved, Devices: []httpdev.DeviceConfig{{ID: "d1", Name: "d1", Kind: devices.KindLighting}}},
+			HTTP:   &httpdev.Config{ID: reserved, Devices: []httpdev.DeviceConfig{{ID: "d1", Name: "d1", Kind: devices.KindLighting, Capabilities: []devices.CapabilityID{devices.CapSwitch}}}},
 			Camera: &camera.Config{ID: reserved},
 			MQTT:   &mqtt.Config{DriverID: reserved, BrokerAddr: "127.0.0.1:1883", CommandQoS: mqtt.QoSAtLeastOnce},
-			Modbus: &modbus.Config{ID: reserved, Devices: []modbus.DeviceConfig{{ID: "d1", Name: "d1", Kind: devices.KindSensor, Address: "127.0.0.1:502"}}},
+			Modbus: &modbus.Config{ID: reserved, Devices: []modbus.DeviceConfig{{ID: "d1", Name: "d1", Kind: devices.KindSensor, Capabilities: []devices.CapabilityID{devices.CapSensorReadCa}, Address: "127.0.0.1:502", Reads: []modbus.ReadSpec{{Function: modbus.FCReadHolding, Start: 100, Count: 2, Metrics: []modbus.Metric{{Metric: "celsius", Address: 100, Type: modbus.TypeF32, Order: modbus.OrderABCD}}}}}}},
 		}
 		for _, name := range []string{deviceDriverHTTP, deviceDriverCamera, deviceDriverMQTT, deviceDriverModbus} {
 			h := &hub{}
@@ -83,10 +87,10 @@ func TestNoConfiguredDriverMayClaimAReservedID(t *testing.T) {
 func TestNoConfiguredDriverAcceptsAColonInItsID(t *testing.T) {
 	const id = "modbus:plantroom" // shaped like the example in modbus's own doc
 	file := deviceFile{
-		HTTP:   &httpdev.Config{ID: id, Devices: []httpdev.DeviceConfig{{ID: "d1", Name: "d1", Kind: devices.KindLighting}}},
+		HTTP:   &httpdev.Config{ID: id, Devices: []httpdev.DeviceConfig{{ID: "d1", Name: "d1", Kind: devices.KindLighting, Capabilities: []devices.CapabilityID{devices.CapSwitch}}}},
 		Camera: &camera.Config{ID: id},
 		MQTT:   &mqtt.Config{DriverID: id, BrokerAddr: "127.0.0.1:1883", CommandQoS: mqtt.QoSAtLeastOnce},
-		Modbus: &modbus.Config{ID: id, Devices: []modbus.DeviceConfig{{ID: "d1", Name: "d1", Kind: devices.KindSensor, Address: "127.0.0.1:502"}}},
+		Modbus: &modbus.Config{ID: id, Devices: []modbus.DeviceConfig{{ID: "d1", Name: "d1", Kind: devices.KindSensor, Capabilities: []devices.CapabilityID{devices.CapSensorReadCa}, Address: "127.0.0.1:502", Reads: []modbus.ReadSpec{{Function: modbus.FCReadHolding, Start: 100, Count: 2, Metrics: []modbus.Metric{{Metric: "celsius", Address: 100, Type: modbus.TypeF32, Order: modbus.OrderABCD}}}}}}},
 	}
 	for _, name := range []string{deviceDriverHTTP, deviceDriverCamera, deviceDriverMQTT, deviceDriverModbus} {
 		h := &hub{}
@@ -102,6 +106,44 @@ func TestNoConfiguredDriverAcceptsAColonInItsID(t *testing.T) {
 		if !strings.Contains(err.Error(), "colon") {
 			t.Errorf("driver %q refused %q for another reason: %v — not evidence the colon "+
 				"rule holds", name, id, err)
+		}
+	}
+}
+
+// The control for the two tests above: an ordinary per-site driver id is
+// ACCEPTED.
+//
+// Both of those assert a refusal, so a ValidateDriverID that rejected
+// everything — an inverted condition, a stray return — would satisfy them
+// completely while taking the device engine off every hub that names its
+// drivers. The four driver packages' own suites would catch it, which is where
+// this was relied on before it was written down; relying on a test in another
+// package to be the control for this one is how a control goes missing when
+// that package is refactored.
+//
+// The ids here are the ones the Config docs give as examples, so this also
+// pins that the documented naming still works.
+func TestAnOrdinaryPerSiteDriverIDIsAccepted(t *testing.T) {
+	const id = "modbus-plantroom"
+	file := deviceFile{
+		HTTP:   &httpdev.Config{ID: id, Devices: []httpdev.DeviceConfig{{ID: "d1", Name: "d1", Kind: devices.KindLighting, Capabilities: []devices.CapabilityID{devices.CapSwitch}}}},
+		Camera: &camera.Config{ID: id},
+		MQTT:   &mqtt.Config{DriverID: id, BrokerAddr: "127.0.0.1:1883", CommandQoS: mqtt.QoSAtLeastOnce},
+		Modbus: &modbus.Config{ID: id, Devices: []modbus.DeviceConfig{{ID: "d1", Name: "d1", Kind: devices.KindSensor, Capabilities: []devices.CapabilityID{devices.CapSensorReadCa}, Address: "127.0.0.1:502", Reads: []modbus.ReadSpec{{Function: modbus.FCReadHolding, Start: 100, Count: 2, Metrics: []modbus.Metric{{Metric: "celsius", Address: 100, Type: modbus.TypeF32, Order: modbus.OrderABCD}}}}}}},
+	}
+	for _, name := range []string{deviceDriverHTTP, deviceDriverCamera, deviceDriverMQTT, deviceDriverModbus} {
+		h := &hub{}
+		drv, err := h.buildDeviceDriver(name, file)
+		if err != nil {
+			t.Errorf("driver %q refused the ordinary id %q: %v", name, id, err)
+			continue
+		}
+		if got := drv.ID(); got != id {
+			t.Errorf("driver %q was built with id %q but reports %q; its device keys would "+
+				"not be the ones anything else expects", name, id, got)
+		}
+		if c, ok := drv.(devices.Closer); ok {
+			_ = c.Close()
 		}
 	}
 }
