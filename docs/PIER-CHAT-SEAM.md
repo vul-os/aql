@@ -283,6 +283,21 @@ That is an observation about Pier's crate, not a change Aql makes to it. The dis
 *"a reputable IP + unblocked port 25 for legacy SMTP egress"*
 (`kotva/coordinator/CONTRACT.md:67-70`); a WhatsApp adapter needs no such thing.
 
+**Pier considers this resolved; it is resolved by half.** `pier/COORDINATION.md`
+records COORD-3 as "resolved and shipped" (`c392fa1`), on the grounds that a claim must now
+name WHICH scarce resource and is checked for plausibility — "so a WhatsApp adapter cannot
+claim port-25 egress it does not need". Verified against the shipped code on 2026-08-03, that
+holds for `PublicIngress` and not for `SmtpEgress`: `plausible_for` is
+`SmtpEgress => kind == Gateway` (`pier/crates/pier-conformance/src/lib.rs:113-118`), and a §26
+legacy-rail adapter reports kind `gateway`. So the resource is now named and the false pass
+survives for the one resource a chat adapter would reach for.
+
+The crate says so itself, in the violation message on the branch that cannot fire for this
+combination: *"§26 legacy-rail adapters report kind=gateway while needing no scarce resource
+at all — the kind alone is not evidence."* The check states the rule and then decides on the
+kind anyway. Closing it needs something the kind does not supply — which is a spec question,
+not an implementation one, and is why the paragraph below still stands.
+
 The honest declaration is **`SelfHost::Backstop`**, and it is true: a user who can obtain their
 own WABA / bot token can run the adapter for themselves and depend on no third party. The
 platform account is a real barrier (Aql says so plainly — *"the WhatsApp number is hard"*,
