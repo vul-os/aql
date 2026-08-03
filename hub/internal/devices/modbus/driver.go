@@ -71,6 +71,13 @@ func New(cfg Config) (*Driver, error) {
 	if id == "" {
 		id = "modbus"
 	}
+	// Config's doc has always said the id may not contain a colon. Nothing
+	// enforced it until this call existed, so `modbus:plantroom` was accepted
+	// and every device it discovered was indexed under the driver id "modbus",
+	// which is a different driver or none at all.
+	if err := devices.ValidateDriverID(id); err != nil {
+		return nil, configErr("%v", err)
+	}
 	if len(cfg.Devices) == 0 {
 		return nil, configErr("no devices configured")
 	}

@@ -1,6 +1,9 @@
 package devices
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 // Kind is one of Aql's seven device kinds. It is presentational — it groups
 // devices in the console and nothing authorises on it. Authority comes from
@@ -80,6 +83,74 @@ type Device struct {
 // Key is the globally-unique device key: driver id and device id joined. Used
 // as the persisted primary key and as the id every API surface speaks.
 func Key(driverID, deviceID string) string { return driverID + ":" + deviceID }
+
+// ReservedDriverIDs are driver ids that other code reasons about BY NAME rather
+// than by asking which driver produced a device. A configured driver may not
+// take one.
+//
+// # Why a reservation rather than a convention
+//
+// Two places in this hub decide something about a device from the spelling of
+// its key alone:
+//
+//   - httpapi's engine scope grants ownership of every `access:<id>` key to the
+//     account owning the access point with that id, because gates are owned
+//     through their location and have no device_ownership row; and
+//   - store.AccountForDeviceKey routes any key with that prefix into the
+//     access_points table, so it answers ownership WITHOUT the claim ceremony
+//     that every other engine device goes through.
+//
+// Both are correct for the read-only `access` driver, which is a compile-time
+// constant and never passes through here. Neither asks which driver produced
+// the key, because at those layers there is no driver to ask — the store must
+// not import a driver package, and the scope works from persisted keys.
+//
+// The driver id of every OTHER driver is config-supplied. So a hub operator
+// naming an MQTT bridge `access` — an entirely natural name for a bridge to an
+// access-control system — hands its devices derived ownership from the
+// access_points table and a path around the claim ceremony, by string
+// coincidence. Nothing else in the config would look wrong.
+//
+// Reserving the name is the cheap half of the fix. The expensive half would be
+// teaching both sites to ask the registry which driver produced a key, which
+// inverts a dependency the store deliberately does not have.
+//
+// If a third by-name site appears, its prefix belongs here too.
+var ReservedDriverIDs = []string{"access"}
+
+// ValidateDriverID checks a config-supplied driver id.
+//
+// It lives here, in the package that owns the key namespace, rather than in
+// each driver: the rules are properties of the namespace, and four copies is
+// how one of them ends up missing. It was — modbus documented the colon rule in
+// its Config doc and enforced nothing, so `modbus:plantroom` was accepted and
+// indexed its devices under a driver id ("modbus") that had a different one
+// registered.
+//
+// Not called by accessdev, whose id is a constant rather than configuration and
+// is the very name being reserved.
+func ValidateDriverID(id string) error {
+	if id == "" {
+		return errInvalid("driver id is empty")
+	}
+	// The registry recovers a driver id by splitting a key at its FIRST colon,
+	// so an id containing one indexes devices under a driver that was never
+	// registered: they appear in the console and cannot be actuated. Whitespace
+	// is refused with it because a key is spoken over HTTP and pasted into
+	// consoles, where a trailing space is invisible and unequal.
+	if strings.ContainsAny(id, ": \t\r\n") {
+		return errInvalid("driver id %q must not contain ':' or whitespace; the registry "+
+			"splits a device key at the first colon to recover the driver id", id)
+	}
+	for _, r := range ReservedDriverIDs {
+		if id == r {
+			return errInvalid("driver id %q is reserved: the hub decides ownership of "+
+				"%q keys from the prefix alone, so a configured driver taking this name "+
+				"would inherit access-point ownership it was never granted", id, Key(r, ""))
+		}
+	}
+	return nil
+}
 
 // Has reports whether the device declares a capability.
 func (d Device) Has(c CapabilityID) bool {

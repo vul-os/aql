@@ -65,9 +65,8 @@ func New(cfg Config) (*Driver, error) {
 	if id == "" {
 		id = DefaultDriverID
 	}
-	if strings.ContainsAny(id, ": \t\r\n") {
-		return nil, configErr("driver id %q must not contain ':' or whitespace; the registry "+
-			"splits a device key at the first colon to recover the driver id", id)
+	if err := devices.ValidateDriverID(id); err != nil {
+		return nil, configErr("%v", err)
 	}
 	timeout := cfg.Timeout
 	if timeout == 0 {

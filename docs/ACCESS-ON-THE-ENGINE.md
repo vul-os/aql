@@ -139,6 +139,26 @@ The Driver contract requires ids stable across restarts for the same physical
 device. Access point ids already are. Deriving from a name would break the moment
 someone renames a gate.
 
+**The `access` driver id is reserved.** Choosing a key prefix means two layers
+now decide something about a device from the spelling of its key alone:
+`engineScopeForUser` grants every `access:<id>` key to the account owning the
+access point with that id (§3.5), and `store.AccountForDeviceKey` answers
+ownership for such keys from `access_points` rather than `device_ownership` —
+around the claim ceremony every other engine device goes through. Neither can
+ask which driver produced the key: the store must not import a driver package,
+and the scope works from persisted keys.
+
+That is correct for this driver, whose id is a compile-time constant. It is a
+trap for every other driver, whose id comes from the device config file, because
+`access` is an entirely natural name for a bridge to an access-control system —
+and nothing in such a config would look wrong. `devices.ValidateDriverID`
+refuses the name at startup (`hub/internal/devices/model.go`), and every
+config-supplied driver calls it. The list of reserved ids is one variable; a
+third by-name site belongs in it.
+
+The same function carries the rule that a driver id may not contain a colon,
+which three of the four drivers enforced and modbus only documented.
+
 ### 3.4 The engine writes no audit row for access
 
 Reading a gate's status through `/v1/engine/devices` is not an access event and

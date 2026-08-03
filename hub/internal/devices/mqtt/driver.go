@@ -195,12 +195,11 @@ var (
 // stop the connection supervisor.
 func New(cfg Config) (*Driver, error) {
 	cfg.applyDefaults()
-	// The registry recovers a driver id by splitting a device key at its FIRST
-	// colon (devices.driverOf), so an id containing one indexes devices under a
-	// driver that is not registered: they would appear in the console and be
-	// unactuatable. Refused here rather than debugged there.
-	if strings.ContainsAny(cfg.DriverID, ": \t\r\n") {
-		return nil, fmt.Errorf("mqtt: invalid config: driver id %q must not contain ':' or whitespace", cfg.DriverID)
+	// Refused at startup rather than debugged at actuation time. The rules —
+	// no colon, no whitespace, not a reserved name — are properties of the key
+	// namespace, so they live with it rather than in a copy per driver.
+	if err := devices.ValidateDriverID(cfg.DriverID); err != nil {
+		return nil, fmt.Errorf("mqtt: invalid config: %w", err)
 	}
 	if err := cfg.validate(); err != nil {
 		return nil, err
