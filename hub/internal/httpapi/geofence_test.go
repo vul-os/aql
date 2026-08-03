@@ -197,17 +197,29 @@ func TestGeofenceRoutes(t *testing.T) {
 	if out["error"] != "geofence_location_required" {
 		t.Errorf("open with no coordinates: %d %v", rec.Code, out)
 	}
-	// open.go maps every non-suspension denial onto 429 + Retry-After; the
-	// BODY carries the honest reason. A geofence denial has no meaningful
-	// retry (waiting does not move you), so the hint is 0 — which is exactly
-	// why this reason wants its own status and its own chat copy. Both live
-	// outside this change's file scope; see the report. Pinned here so the
-	// current behaviour is a recorded fact rather than an assumption.
+	// open.go maps every non-suspension denial onto 429; the BODY carries the
+	// honest reason. This block used to pin `retry_after_s == 0` and said why:
+	// "A geofence denial has no meaningful retry (waiting does not move you),
+	// so the hint is 0 — which is exactly why this reason wants its own status
+	// and its own chat copy. Both live outside this change's file scope."
+	//
+	// Two of those three have since been done. The chat copy exists
+	// (channels.DenialMessage). The hint is now OMITTED rather than sent as
+	// zero, because zero is not "no hint" — RFC 9110 reads it as retry
+	// immediately, which is the one instruction that cannot work here, and it
+	// reached every API consumer rather than only a rail we control.
+	//
+	// The status is still 429 and still arguably wrong for this reason; that
+	// one is a breaking change to a documented contract and stays deferred.
+	// Pinned, as before, so the remaining gap is a recorded fact.
 	if rec.Code != http.StatusTooManyRequests {
 		t.Errorf("current mapping is 429: %d", rec.Code)
 	}
-	if v, ok := out["retry_after_s"].(float64); !ok || v != 0 {
-		t.Errorf("a geofence denial carries no retry hint: %v", out["retry_after_s"])
+	if v, present := out["retry_after_s"]; present {
+		t.Errorf("a geofence denial must carry no retry hint at all, got %v", v)
+	}
+	if got := rec.Header().Get("Retry-After"); got != "" {
+		t.Errorf("Retry-After: %q on a geofence denial", got)
 	}
 
 	// close is NEVER geofence-restricted — the safe direction, from anywhere,

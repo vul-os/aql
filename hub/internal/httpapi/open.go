@@ -83,12 +83,30 @@ func (s *Server) handleOpWithBody(w http.ResponseWriter, r *http.Request, comman
 		switch verdict.Reason {
 		case "account_suspended", "user_disabled":
 			writeErr(w, http.StatusForbidden, verdict.Reason)
-		default: // rate_limited | quota_exceeded → 429 + Retry-After
-			w.Header().Set("Retry-After", strconv.FormatInt(verdict.RetryAfterS, 10))
-			writeJSON(w, http.StatusTooManyRequests, map[string]any{
-				"error":         verdict.Reason,
-				"retry_after_s": verdict.RetryAfterS,
-			})
+		default:
+			// Every other reason: 429, and a retry hint ONLY when there is one.
+			//
+			// This branch carries nine of the open path's eleven reasons, not
+			// the two its comment used to name — the throttles, both time-window
+			// reasons that can name a next opening, and the geofence family.
+			//
+			// The hint is conditional because openpath.go deliberately returns
+			// no seconds for a geofence denial: "waiting does not fix being in
+			// the wrong place, and inventing a number here would render as 'try
+			// again in ~N min' on every chat rail". Sending it anyway undid that
+			// one layer up — `Retry-After: 0` is not "no hint", it is RFC 9110
+			// for RETRY IMMEDIATELY, which is the worst possible advice to give
+			// someone standing outside a fence, and it went to every API
+			// consumer rather than only to a rail we control.
+			//
+			// Omitting a header is safe for any client: absence is the case they
+			// must already handle, and it is the honest one here.
+			body := map[string]any{"error": verdict.Reason}
+			if verdict.RetryAfterS > 0 {
+				w.Header().Set("Retry-After", strconv.FormatInt(verdict.RetryAfterS, 10))
+				body["retry_after_s"] = verdict.RetryAfterS
+			}
+			writeJSON(w, http.StatusTooManyRequests, body)
 		}
 		return
 	}
