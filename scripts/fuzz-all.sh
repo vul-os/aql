@@ -47,9 +47,60 @@ for module in hub controller; do
     # and `go test` inherits that as its stdin and consumes from it — which
     # silently ate loop input and made unrelated targets report failure, a
     # different pair on each run. The tool was wrong, not the parsers.
-    if ! (cd "$module" && go test -run xxx -fuzz "^${name}\$" -fuzztime "${SECS}s" "$pkg" </dev/null); then
+    out=$(cd "$module" && go test -run xxx -fuzz "^${name}\$" -fuzztime "${SECS}s" "$pkg" </dev/null 2>&1)
+    rc=$?
+    printf '%s\n' "$out"
+    if [ "$rc" -ne 0 ]; then
       failed=$((failed + 1))
-      echo "FAILED: $module $name — reproducer in $module/$(dirname "${file#"$module"/}")/testdata/fuzz/$name/"
+      # A crash writes a reproducer. Anything else — the fuzzing engine dying
+      # under load, a worker terminating, a budget too short to finish baseline
+      # coverage — leaves no file, and reporting it as a crash sends someone
+      # hunting a parser bug that is not there.
+      #
+      # This printed an assumed path either way, and twice in one session that
+      # message was mistaken for evidence of a real defect. Different targets
+      # failed on each sweep with no reproducer anywhere, which is the tell:
+      # a genuine crash is reproducible and this was not.
+      # Classify on the OUTPUT, not on whether a reproducer file appeared.
+      #
+      # The first version of this checked for testdata/fuzz/<Target>/ and got it
+      # backwards: a panic on a SEED input writes no new crasher, because the
+      # input is already in the corpus. A planted panic in the modbus decoder
+      # was reported as "NO REPRODUCER", which would send someone away from a
+      # real crash — the exact opposite of the mistake this classification was
+      # added to prevent.
+      dir="$module/$(dirname "${file#"$module"/}")/testdata/fuzz/$name"
+      # `--- FAIL` alone is not a crash signature. Running fifteen targets back
+      # to back, each with eight workers, the engine intermittently exits with
+      # "context deadline exceeded" — its own timeout under load — and prints a
+      # FAIL line while no parser did anything wrong. Classifying on FAIL alone
+      # reported that as a crash on a clean tree, which is how this classifier
+      # got its third rewrite.
+      if printf '%s' "$out" | grep -q 'context deadline exceeded'; then
+        crash=0
+      elif printf '%s' "$out" | grep -qE 'panic:|--- FAIL|failure while testing seed corpus'; then
+        crash=1
+      else
+        crash=0
+      fi
+      if [ "$crash" = 1 ]; then
+        if [ -d "$dir" ]; then
+          echo "FAILED (CRASH): $module $name — reproducer in $dir/"
+        else
+          echo "FAILED (CRASH ON A SEED): $module $name — no new crasher file, because"
+          echo "  the failing input is already in the seed corpus. Reproduce with:"
+          echo "    (cd $module && go test -run $name $pkg)"
+        fi
+      else
+        echo "FAILED (NO CRASH SIGNATURE): $module $name — the engine exited non-zero"
+        echo "  without a panic or a FAIL line. Re-run this target alone before"
+        echo "  believing it; sweeps have produced this transiently under load and a"
+        echo "  different target each time, which is the tell that it is the runner"
+        echo "  and not the parser:"
+        echo "    (cd $module && go test -run xxx -fuzz '^${name}\$' -fuzztime 30s $pkg)"
+      fi
+      echo "  --- last lines of that run ---"
+      printf '%s\n' "$out" | tail -6 | sed 's/^/  /' 
     fi
   done < <(grep -rn '^func Fuzz' --include='*_test.go' "$module" | sed 's/:[0-9]*:/:/')
 done
