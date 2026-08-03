@@ -18,6 +18,7 @@ import { Link } from 'react-router-dom';
 import {
   ApiError,
   api,
+  friendlyApiError,
   rateLimitInfo,
   type AccessPointDetail,
   type RateLimitDenial,
@@ -106,13 +107,10 @@ export function AccessPointAction({
             }
             return;
           }
-          const msg =
-            err instanceof ApiError
-              ? err.detail ?? err.code
-              : err instanceof Error
-                ? err.message
-                : 'Something went wrong.';
-          setErrorMsg(msg);
+          // friendlyApiError, not the bare code: a denial that is not a
+          // throttle (a schedule lockout, a geofence refusal) reaches here now
+          // that rateLimitInfo declines to claim it, and it carries a sentence.
+          setErrorMsg(friendlyApiError(err, 'Something went wrong.'));
           window.setTimeout(() => setStage('idle'), 2400);
         }
       };

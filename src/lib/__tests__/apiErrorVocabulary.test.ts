@@ -158,10 +158,15 @@ describe('rateLimitInfo', () => {
       reason: 'rate_limited',
       retryAfterS: 5,
     });
-    // An unfamiliar 429 code is treated as a rate limit rather than a quota:
-    // the recoverable reading is the safe default for a message that only
-    // advises when to try again.
-    expect(rateLimitInfo(apiErr(429, 'something_new'))?.reason).toBe('rate_limited');
+    // CORRECTED. This previously asserted that an unfamiliar 429 is "treated
+    // as a rate limit, the recoverable reading being the safe default" — which
+    // wrote the bug down as intent. Nine of the open path's eleven denial
+    // reasons arrive as 429, and only two are throttles; the other seven were
+    // being rendered "Too many opens — try again in ~Xs". A 429 this function
+    // does not recognise is now declined so the caller can say something true.
+    expect(rateLimitInfo(apiErr(429, 'something_new'))).toBeNull();
+    expect(rateLimitInfo(apiErr(429, 'outside_geofence'))).toBeNull();
+    expect(rateLimitInfo(apiErr(429, 'outside_time_window'))).toBeNull();
   });
 
   it('never advises a retry of zero or a fraction of a second', () => {

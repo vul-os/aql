@@ -21,6 +21,7 @@ import { useAuth } from '@/lib/auth';
 import {
   ApiError,
   api,
+  friendlyApiError,
   rateLimitInfo,
   type AccessPointDetail,
   type LocationRow,
@@ -139,13 +140,7 @@ export default function AccessPointPage() {
             }
             return;
           }
-          const msg =
-            err instanceof ApiError
-              ? err.detail ?? err.code
-              : err instanceof Error
-                ? err.message
-                : 'Failed to send command.';
-          setActionError(msg);
+          setActionError(friendlyApiError(err, 'Failed to send command.'));
           window.setTimeout(() => setStage('idle'), 2400);
         }
       };

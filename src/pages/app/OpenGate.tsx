@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/auth';
 import {
   ApiError,
   api,
+  friendlyApiError,
   rateLimitInfo,
   type AccessPointDetail,
   type RateLimitDenial,
@@ -76,13 +77,9 @@ export default function OpenGate() {
           return;
         }
         const msg =
-          err instanceof ApiError
-            ? err.code === 'access_point_not_found'
-              ? 'Access point no longer available.'
-              : (err.detail ?? err.code)
-            : err instanceof Error
-              ? err.message
-              : 'Failed to send open command.';
+          err instanceof ApiError && err.code === 'access_point_not_found'
+            ? 'Access point no longer available.'
+            : friendlyApiError(err, 'Failed to send open command.');
         setErrorMsg(msg);
         setStage('denied');
       }

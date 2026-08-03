@@ -106,7 +106,13 @@ export function isUnavailable(err: unknown): boolean {
 /** Friendly, ready-to-render message for any error apiFetch can throw. */
 export function friendlyApiError(err: unknown, fallback = 'Something went wrong.'): string {
   if (isUnavailable(err)) return "This isn't available on this hub yet.";
-  if (err instanceof ApiError) return err.detail ?? err.code;
+  if (err instanceof ApiError) {
+    // An open-path denial has a sentence; without this the console renders the
+    // bare code, and "outside_geofence" is not something to show a resident.
+    const denial = openDenialMessage(err.code, err.retryAfterS ?? 0);
+    if (denial) return denial;
+    return err.detail ?? err.code;
+  }
   if (err instanceof Error) return err.message;
   return fallback;
 }
@@ -174,15 +180,99 @@ export function isHubUnreachable(err: unknown): boolean {
 }
 
 /**
- * Narrow an unknown error to a 429 denial. Returns the denial reason and a
- * clean retry hint (seconds, ≥1) or null when the error is anything else.
+ * Narrow an error to a THROTTLE denial — a 429 that a countdown answers.
+ *
+ * Returns null for every other error, INCLUDING other 429s. That exclusion is
+ * the point, and it was not always there.
+ *
+ * The open path denies for eleven reasons and nine of them leave the hub as a
+ * 429 (openpath.go's DenyReasons; only account_suspended and user_disabled are
+ * 403). This used to map all nine onto `rate_limited` with the same ternary the
+ * chat rails once had — `default: // rate_limited` — so a schedule lockout and a
+ * geofence refusal both rendered as "Too many opens — try again in ~Xs".
+ *
+ * hub/internal/channels/reply.go fixed exactly this on the rails and its comment
+ * says what it cost: "The minutes were right and the cause was a lie, and in the
+ * geofence case it told them to do the one thing that could not possibly work,
+ * because waiting does not move you closer to a gate." The console kept the bug
+ * for the same three features. A default that silently absorbs new reasons is a
+ * fail-open in the copy.
  */
 export function rateLimitInfo(err: unknown): RateLimitDenial | null {
   if (!(err instanceof ApiError) || err.status !== 429) return null;
+  if (err.code !== 'rate_limited' && err.code !== 'quota_exceeded') return null;
   return {
-    reason: err.code === 'quota_exceeded' ? 'quota_exceeded' : 'rate_limited',
+    reason: err.code,
     retryAfterS: Math.max(1, Math.ceil(err.retryAfterS ?? 30)),
   };
+}
+
+/**
+ * Every reason the open path can deny for, mirroring
+ * hub/internal/store/openpath.go's DenyReasons.
+ *
+ * Listed so a test can assert each one has its own message. That is the only
+ * thing that stops a fourth feature quietly reusing someone else's copy, which
+ * is how this went wrong three times on the other surface.
+ */
+export const OPEN_DENIAL_REASONS = [
+  'account_suspended',
+  'user_disabled',
+  'rate_limited',
+  'quota_exceeded',
+  'outside_time_window',
+  'time_window_invalid',
+  'time_window_unavailable',
+  'outside_geofence',
+  'geofence_location_required',
+  'geofence_invalid',
+  'geofence_unavailable',
+] as const;
+
+/**
+ * A sentence for one open-path denial, or null when the reason is not one.
+ *
+ * Deliberately parallel to channels.DenialMessage, so a resident is told the
+ * same thing whether they pressed a button in the console or sent a message on
+ * a chat rail. Two surfaces that disagree about why a gate did not open is how
+ * someone concludes the app is broken.
+ */
+export function openDenialMessage(reason: string, retryAfterS = 0): string | null {
+  const mins = Math.max(1, Math.ceil(retryAfterS / 60));
+  switch (reason) {
+    case 'account_suspended':
+      return 'This account is suspended, so the gate was not opened. Contact your admin.';
+    case 'user_disabled':
+      return 'This account is disabled, so the gate was not opened. Contact your admin.';
+    case 'rate_limited':
+      return `Too many opens — try again in ~${mins} min.`;
+    case 'quota_exceeded':
+      return 'Daily limit reached — contact your admin.';
+    case 'outside_time_window':
+      // The one denial where a countdown is honest: the schedule really does
+      // open again, and retryAfterS is when.
+      return retryAfterS > 0
+        ? `Your access to this gate is not open right now — it opens again in ~${
+            mins < 90 ? `${mins} min` : `${Math.ceil(mins / 60)} h`
+          }.`
+        : 'Your access to this gate is not open right now. Contact your admin if that looks wrong.';
+    case 'time_window_invalid':
+    case 'time_window_unavailable':
+      return "This gate's access schedule could not be checked, so the gate was not opened. This is a setup problem — contact your admin.";
+    case 'outside_geofence':
+      // No duration, ever. Waiting does not move you, so the "~N min" phrasing
+      // every other denial uses would be actively misleading here.
+      return "This gate only opens when you're near it, and your phone says you're not. Try again at the gate.";
+    case 'geofence_location_required':
+      return 'This gate needs your location to open, and none was sent. Turn location on and try again, or ask your admin.';
+    case 'geofence_invalid':
+    case 'geofence_unavailable':
+      return "This gate's location rule could not be checked, so the gate was not opened. This is a setup problem — contact your admin.";
+    default:
+      // NOT a message. An unrecognised reason must not borrow another's copy —
+      // that is the failure this whole function exists to undo.
+      return null;
+  }
 }
 
 export const tokenStore = {
