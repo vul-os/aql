@@ -84,7 +84,7 @@ side. KOTVA-ALIGNMENT flagged the adapters table as copyable
 **Re-verified 2026-07-30, and all three §0 corrections still hold.** `core-v0.2.0` is still
 commit `a4a6ca5` with no `crates/kotva-mail/src/adapters/` entry; six adapter files exist on
 kotva HEAD; no newer `core-*` tag has been cut; `pier/crates/pier-gateway/Cargo.toml` still pins
-`core-v0.2.0`; `pier/coordinator/CONTRACT.md` is still absent; `broker-conformance` still
+`core-v0.2.0`; `pier/coordinator/CONTRACT.md` is still absent; `pier-conformance` still
 implements COORD-1..8 only; and there is still no `chat-adapter` crate in `pier/crates/`.
 So steps 1 and 2 are both unstarted and step 1 remains the blocker.
 
@@ -195,7 +195,7 @@ choice as virtuous restraint:
    rails into Pier must not lose those sentences; it must move them into the descriptor where
    a machine can read them.
 
-### 1.3 What `broker-conformance` will and will not check
+### 1.3 What `pier-conformance` will and will not check
 
 Against `pier/crates/pier-conformance/src/lib.rs:197-309`, for a chat adapter declaring as
 above:
@@ -412,7 +412,7 @@ GatewayAuthz = {
 ```
 
 Applied here: `identity` is the **served hub's** substrate IK. `mode = 2` (key-registered,
-`kotva/18-wire-format.md:2009`) — an Pier operator should never run `mode = 1` open admission
+`kotva/18-wire-format.md:2009`) — a Pier operator should never run `mode = 1` open admission
 for a rail that actuates gates. `grants` holds the content-addresses of the per-rail
 `CapabilityToken`s.
 
@@ -468,7 +468,7 @@ adapter could hit is **WhatsApp outbound outside the service window** — which 
 today (every outbound is a reply to a verified inbound) but which the roadmapped intercom
 feature would need (`docs/KOTVA-ALIGNMENT.md:301`). Until then: publish a `Tariff` with a
 free-shape schedule or omit the field (`tariff` is *"Present **iff** this coordinator charges"*,
-`kotva/18-wire-format.md:1916`), and declare `Metering::NotMetered`. If it ever meters, the
+`kotva/18-wire-format.md:1917`), and declare `Metering::NotMetered`. If it ever meters, the
 receipt is a `UsageReceipt` on a `system` MOTE, `kind = 0x0A`, `Headers.mime =
 application/vnd.dmtap.usage-receipt+cbor`, delivered directly to the payer and never published
 (`kotva/18-wire-format.md:1953-1960`).
@@ -650,7 +650,7 @@ draws between content-address dedupe and a validity window
 
 **The rule, stated once.**
 
-> **An Pier-asserted identity is evidence of what a platform's backend said, relayed by a
+> **A Pier-asserted identity is evidence of what a platform's backend said, relayed by a
 > component the operator can swap. The hub MUST resolve identity and authorise the action
 > itself, from its own state, on every single intent. An intent is a question. It is never a
 > permission.**
@@ -837,7 +837,7 @@ tag (or bump the pin under review) so Pier can depend on the §26 framework and 
 modules. No user-visible change. Working system: unchanged.
 
 **Step 2 — Pier `chat-adapter` crate, contract-only.** Descriptor, visibility declaration, the
-four-clause posture, `broker-conformance` wiring, per-rail policy blobs from
+four-clause posture, `pier-conformance` wiring, per-rail policy blobs from
 `kotva-mail::adapters`. No network, no credentials, no Aql integration. Green `cargo test`.
 Ship the §1.4/§1.6 findings to `pier/COORDINATION.md` at this point, not later. Working system:
 unchanged.
@@ -882,7 +882,7 @@ a one-env-var rollback.
 `send.go`'s three senders, and `hub/internal/httpapi/channels_{whatsapp,slack,telegram}.go`
 may be **deleted only when all six hold**:
 
-1. Every shipped rail has an Pier implementation that has been the **default** for at least one
+1. Every shipped rail has a Pier implementation that has been the **default** for at least one
    full release cycle, in production, with no fallback use observed.
 2. The per-rail engine toggle has had **no `builtin` selections** for a release.
 3. Those files have **no non-test callers** (verify by build, not by reading — the lesson
@@ -1030,7 +1030,7 @@ changes which outcome is correct.
 |---|---|---|
 | 1 | Is a served *hub* the right unit for §26.2's identity count (§2.1)? | A founder or spec-session ruling. KOTVA-ALIGNMENT asked the adjacent question and left it open (`docs/KOTVA-ALIGNMENT.md:656-660`). My counting rule is a **PROPOSAL**. |
 | 2 | Does CONTRACT §2.2's lock-in prohibition or §26.6's gateway-mode portability disclosure govern for a platform rail (§1.4)? | Spec session, via `pier/COORDINATION.md`. Until then a gateway-mode chat adapter cannot honestly pass COORD-2. |
-| 3 | Should `broker-conformance` gain `LockIn::ModeDependent` and `Gate::AuthorizationDelegated` (§1.4, §1.6)? | Pier maintainer decision once (2) is answered. Both are **PROPOSAL**. |
+| 3 | Should `pier-conformance` gain `LockIn::ModeDependent` and `Gate::AuthorizationDelegated` (§1.4, §1.6)? | Pier maintainer decision once (2) is answered. Both are **PROPOSAL**. |
 | 4 | Is `BridgeWhatsAppSender` dropped, retained in Go, or declared non-conformant (§6.3)? | Founder call. It gates migration step 6. |
 | 5 | Does kotva intend `Sanctioning::Unsanctioned` (node-mode-only) and §26.8.2's unconditional MUST NOT to be the same rule? | Kotva spec owner. Unchanged since `docs/KOTVA-ALIGNMENT.md:661-663` raised it; it changes the answer to (4). |
 | 6 | Should the descriptor be published at all in node mode? | §26.3.1 makes it a MAY (`kotva/26-legacy-adapters.md:147`), so this is a product choice. **Uncertain — needs verification** whether an Aql homeowner has any use for a discoverable descriptor. |
