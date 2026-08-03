@@ -45,8 +45,8 @@ const wantList = process.argv.includes('--list');
 /**
  * Repos cited from this one that live beside it rather than inside it.
  *
- * `pier` was renamed to `pier` on 2026-08-03 (pier commit c192ca4, "rename:
- * pier -> pier across the Rust workspace, crates included") — the repo did not
+ * `ephor` was renamed to `pier` on 2026-08-03 (pier commit c192ca4, "rename:
+ * ephor -> pier across the Rust workspace, crates included") — the repo did not
  * leave the tree, it changed name, and its crates were renamed with it
  * (`broker-economics` -> `pier-economics`, `gateway` -> `pier-gateway`,
  * `broker-conformance` -> `pier-conformance`). Reading this as an absence was

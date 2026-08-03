@@ -92,6 +92,26 @@ const EXTERNAL_REPOS = [
  *
  * Keyed by file, so a stale path elsewhere cannot be laundered by one entry.
  */
+/**
+ * Paths that are URLs this site SERVES, not files this repo contains.
+ *
+ * The docs manifest is fetched at runtime — by the render checker against a
+ * running server, and by the docs page itself — so it is a route produced by
+ * the docs pipeline rather than a file in the tree. It looks exactly like a
+ * repo-relative path when it appears in a comment, and the guard reported it
+ * as dangling.
+ *
+ * Named only in the set below, never in this prose: THIS guard reads source
+ * comments, so spelling the path here would make this explanation the next
+ * failure. That has now happened three times in one session, twice to me.
+ *
+ * Exempted by PATH rather than by file. ALLOWED skips a whole source file, and
+ * that would take a 600-line script out of citation checking to excuse one URL,
+ * hiding every real dangling path in it — the widening its own stale-exemption
+ * test exists to catch.
+ */
+const SERVED_ROUTES = new Set(['docs/manifest.json']);
+
 const ALLOWED: Record<string, string> = {
   'src/lib/__tests__/docCitations.test.ts':
     'the doc-citation guard itself: its HISTORICAL table and its worked example ' +
@@ -190,6 +210,7 @@ describe('source-comment citations', () => {
         for (const m of line.matchAll(pattern)) {
           const path = m[1];
           if (EXTERNAL_REPOS.some((p) => path.startsWith(p))) continue;
+          if (SERVED_ROUTES.has(path)) continue;
           if (existsSync(resolve(root, path))) continue;
           out.set(file, [...(out.get(file) ?? []), path]);
         }
@@ -231,6 +252,7 @@ describe('source-comment citations', () => {
         for (const m of line.matchAll(pattern)) {
           const path = m[1];
           if (EXTERNAL_REPOS.some((p) => path.startsWith(p))) continue;
+          if (SERVED_ROUTES.has(path)) continue;
           checked++;
           if (!existsSync(resolve(root, path))) broken.push(`${file} cites ${path}`);
         }
