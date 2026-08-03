@@ -1653,6 +1653,32 @@ export const FEATURES = [
     ],
   },
   {
+    id: 'multi-hub-grant-holding',
+    label: 'The app holds and presents offline grants from several independent hubs, each record self-describing',
+    docStatus: 'shipped',
+    docRefs: [
+      'docs/MULTI-HUB.md § Status',
+    ],
+    // MULTI-HUB.md opened with "design proposal. No code has been written for
+    // it", one sentence before saying everything unmarked describes code that
+    // exists today. A reader who stopped at the first sentence concluded the
+    // app cannot hold grants from more than one hub. It can, and the screen
+    // renders them.
+    //
+    // The evidence is the MULTI-hub read and the isolation rule, not the vault
+    // itself: a vault that stored one record per device would satisfy "offline
+    // grants exist" while making this particular claim false.
+    evidence: [
+      { file: 'src/lib/offline/vault.ts', pattern: 'export async function loadAllGrantRecords' },
+      // The CODE that enforces §2.5 rule 1, not the comment naming it. My first
+      // attempt cited the comment and this checker refused it — "evidence
+      // matches only COMMENTS — prose about a feature is not the feature" —
+      // which is exactly the caveat it exists to enforce, applied to me.
+      { file: 'src/lib/offline/service.ts', pattern: "code: 'record_mismatch'" },
+      { file: 'src/pages/app/EmergencyAccess.tsx', pattern: 'state\\.held' },
+    ],
+  },
+  {
     id: 'chat-device-actuation',
     label: 'Device control from chat, bounded by the tier ladder (reversible runs, consequential confirms, hazardous refused)',
     docStatus: 'shipped',

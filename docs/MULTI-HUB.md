@@ -1,8 +1,20 @@
 # Multi-hub — how the app holds grants from several independent hubs
 
-**Status:** design proposal. No code has been written for it. Everything marked
-**PROPOSAL** is a change being argued for; everything else describes code that
-exists today, with `file:line` citations.
+**Status:** part description, part proposal — and the two sentences that used to
+open this document contradicted each other. It said "No code has been written
+for it" and then, immediately, that everything unmarked "describes code that
+exists today". A reader stopped at the first sentence and concluded the app
+cannot hold grants from more than one hub. It can, and has for a while:
+`loadAllGrantRecords` (`src/lib/offline/vault.ts`) returns every hub's usable
+grant side by side, each record self-describing — its own hub key, member id and
+access points — `presentAtGate` (`src/lib/offline/service.ts`) enforces §2.5
+rule 1 by taking everything it puts on the wire out of ONE record, and
+`EmergencyAccess.tsx` renders them and selects by hub key.
+
+What is NOT built is everything marked **PROPOSAL**: those are changes being
+argued for. Everything else describes code that exists today, with `file:line`
+citations — 46 of them in this document, which is the other reason the flat
+denial above read oddly.
 
 **Licence constraint (binding on everything below):** Aql is MIT OR Apache-2.0
 with no billing code in any binary. Nothing in this document is an "enterprise
