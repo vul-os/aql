@@ -4,6 +4,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { OPEN_DENIAL_REASONS, openDenialMessage } from '../api';
 import { describeDelivery } from '../../components/access/delivery';
+import { consoleShowsEngineDevice, kindLabel } from '../../components/device/engineState';
+import { DEVICE_KINDS, REAL_KIND, suppressEngineRow } from '../deviceKinds';
 
 // Closed vocabularies must be the same set on both sides of the language border.
 //
@@ -229,6 +231,73 @@ accepts that Go does not know is a row nothing can render.`,
 // The vocabulary has no single registry in Go — three values come from the
 // transport as AckOutcome literals and no_device from the dispatcher — so this
 // reads both producers rather than a list somebody has to remember to update.
+// The seven device kinds, held in three places.
+//
+// The hub owns the wire values (devices.Kind). The console owns two derived
+// lists: kindLabel's wire->label map, and DEVICE_KINDS, the labels themselves.
+// Nothing checked that any of the three agreed.
+//
+// The consequence is specific and it has happened. kindLabel falls back to
+// capitalising a kind it does not know — deliberately, so a hub with an eighth
+// kind still shows its devices rather than hiding them. That same fallback is
+// what makes a RENAME dangerous: change `access` to `access_point` in the hub
+// and kindLabel returns "Access_point", which is not in ENGINE_ROW_SUPPRESSED,
+// so every gate starts appearing in the engine fleet. consoleShowsEngineDevice's
+// own doc records what that costs — Overview counted every gate twice in the
+// headline total, and RuleEditor offered gates in an automation's device
+// picker, "the last place a gate should appear".
+//
+// So the assertion that matters is not that the lists match but that the
+// SUPPRESSION survives, which is checked through the real functions rather than
+// through the strings they are built from.
+describe('device kinds', () => {
+  function hubWireKinds(): string[] {
+    const go = read('hub/internal/devices/model.go');
+    const wire = [...go.matchAll(/Kind[A-Za-z]+\s+Kind = "([a-z_]+)"/g)].map((m) => m[1]);
+    expect(wire.length, `parsed ${wire.length} kinds from devices.Kind`).toBeGreaterThanOrEqual(7);
+    return [...new Set(wire)].sort();
+  }
+
+  function consoleLabelMap(): Map<string, string> {
+    const src = read('src/components/device/engineState.ts');
+    const m = /const known: Record<string, string> = \{([\s\S]*?)\};/.exec(src);
+    if (!m) throw new Error('kindLabel: pattern matched nothing — this guard cannot read it');
+    const pairs = [...m[1].matchAll(/(\w+):\s*'([A-Za-z_]+)'/g)];
+    expect(pairs.length, `parsed ${pairs.length} pairs from kindLabel`).toBeGreaterThanOrEqual(7);
+    return new Map(pairs.map((x) => [x[1], x[2]]));
+  }
+
+  it('the console has a label for every kind the hub can send', () => {
+    const hub = hubWireKinds();
+    expect([...consoleLabelMap().keys()].sort(), 'kindLabel has drifted from devices.Kind').toEqual(hub);
+    // And DEVICE_KINDS is those labels, so the two console lists cannot part.
+    expect([...consoleLabelMap().values()].sort()).toEqual([...DEVICE_KINDS].sort());
+  });
+
+  it('a renamed access kind cannot slip gates into the engine fleet', () => {
+    // The whole point. Every hub kind is asked of the real functions: exactly
+    // one is suppressed, and it is the one the hub calls access.
+    const hub = hubWireKinds();
+    const suppressed = hub.filter((k) => !consoleShowsEngineDevice({ kind: k }));
+    expect(
+      suppressed,
+      'exactly one kind may be kept out of the engine fleet, and it is the access kind — ' +
+        'any other answer means gates are being drawn twice or a real device has vanished',
+    ).toEqual(['access']);
+    // Stated the other way, through the label seam that actually decides it.
+    expect(kindLabel('access')).toBe(REAL_KIND);
+    expect(suppressEngineRow(kindLabel('access'))).toBe(true);
+  });
+
+  it('still shows a kind it has never heard of', () => {
+    // The fallback is deliberate and must stay: a hub with an eighth kind shows
+    // its devices rather than hiding them. An unknown device an operator can see
+    // is a question; one they cannot is a gap they never notice.
+    expect(kindLabel('aquarium')).toBe('Aquarium');
+    expect(consoleShowsEngineDevice({ kind: 'aquarium' })).toBe(true);
+  });
+});
+
 describe('delivery outcomes', () => {
   function hubDeliveryValues(): string[] {
     const hub = read('hub/internal/hub/hub.go');
