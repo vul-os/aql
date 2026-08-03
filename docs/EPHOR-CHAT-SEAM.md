@@ -123,7 +123,7 @@ is absent, which is a separate pre-existing gap).
 per (rail, mode)**. §26.3.1's field list is per-rail — `{ adapter_ik, rail, mode,
 initiation_class, inbound_transport_class, price_shape, exposure, credential_model,
 tariff_ref, region }` (`kotva/26-legacy-adapters.md:147-149`) — and `CoordinatorDescriptor`
-carries exactly one `Visibility` (`kotva/18-wire-format.md:1888`, `:1914`), so one descriptor
+carries exactly one `Visibility` (`kotva/18-wire-format.md:1888`, `:1915`), so one descriptor
 cannot honestly cover three rails at two modes. Everything rail-specific rides `policy`
 (key 5), which is exactly what that field exists for: *"Opaque deterministic-CBOR operator
 policy (region, capabilities, contact, and every kind-specific field §7.5/§26.3.1 already
@@ -155,7 +155,7 @@ choice as virtuous restraint:
    available to argue for.
 2. **The level is forced by the wire.** *"a `terminating` class MUST declare `"declared"` —
    there is no `"structural"` assurance for a plaintext-terminating role"*
-   (`kotva/18-wire-format.md:1896-1898`, restated normatively at `:1914`). `declared` is the
+   (`kotva/18-wire-format.md:1896-1898`, restated normatively at `:1915`). `declared` is the
    weakest of the three: *"The operator **promises** it is blind; nothing structurally
    prevents cheating"* (`kotva/coordinator/CONTRACT.md:138`), and Ephor's own code agrees —
    `AssuranceLevel::Declared.is_verifiable()` is `false`
