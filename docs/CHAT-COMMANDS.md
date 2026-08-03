@@ -1344,14 +1344,14 @@ security boundary.
 |---|---|
 | `hub/internal/store/openpath.go:243-245` | Verb allowlist from the registry (above) |
 | `hub/internal/store/openpath.go:285-296` | Limits currently gated on `Command == "open"`; gate on tier instead — T3 keeps today's exact ladder |
-| `hub/internal/httpapi/channels_open.go:50-94`, `:114-142` | `phoneOpen` / `profileOpen` take verb + tier; add the tier gate before the choke point. Their contract — resolve authority, call the choke point, never decide — is unchanged |
-| `hub/internal/httpapi/channels_whatsapp.go:137-181` | Replace the `strings.Contains` branch with one `intent.Resolve` call; `:146-156` becomes generic narrowing. `waAccessCommand` (`:259-280`) keeps its shape |
+| `hub/internal/httpapi/channels_open.go:85-129`, `:149-177` | `phoneOpen` / `profileOpen` take verb + tier; add the tier gate before the choke point. Their contract — resolve authority, call the choke point, never decide — is unchanged |
+| `hub/internal/httpapi/channels_whatsapp.go:364-382` | Replace the `strings.Contains` branch with one `intent.Resolve` call; `:146-156` becomes generic narrowing. `waAccessCommand` (`:259-280`) keeps its shape |
 | `hub/internal/httpapi/channels_slack.go:131-152` | Same substitution for the `txt == "open" \|\| txt == "gates"` switch (`:139`) |
 | `hub/internal/httpapi/channels_telegram.go:83-102` | Same substitution (`:84`); the 0/1/many branch becomes the generic narrowing |
 | `hub/internal/httpapi/channels_slack.go:160-163` | `open_gate:` prefix check becomes registry-driven selection-context redemption |
 | `hub/internal/httpapi/channels_telegram.go:108-110` | Same for `open_ap:` |
 | `hub/internal/channels/whatsapp.go:483-493` | `ParseSelection`: **delete the `return "open", id` default**; unknown ids reject (§2.2d) |
-| `hub/internal/channels/whatsapp.go:170-211`, `:214-228` | `PushGateMenu`/`PushLocationMenu` → generic over `[]Candidate`; add "showing N of M" when truncating at `:189-191` / `:216-218` |
+| `hub/internal/channels/whatsapp.go:197-242`, `:271-290` | `PushGateMenu`/`PushLocationMenu` → generic over `[]Candidate`; add "showing N of M" when truncating at `:233` / `:287` |
 | `hub/internal/channels/slack.go:175-222` | `AccessBlocks` → generic **and add the missing cap** (§2.2c) |
 | `hub/internal/channels/telegram.go:102-116` | `TelegramGatePicker` → generic |
 | `hub/internal/channels/channels.go:300-318` | `textIncludesName` moves into `intent/` and becomes scored, not first-match (§2.2a) |

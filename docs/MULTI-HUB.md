@@ -315,7 +315,7 @@ speaks:
 The app's only cross-hub data structure is `GrantRecord` (`vault.ts:95-115`) — a
 **closed struct with a fixed field list**, and the only hub-supplied content in
 it is `grantRaw`. `grantRaw` is not stored as whatever the hub sent: it is
-validated field by field by `parseGrant` (`src/lib/offline/grant.ts:80-113`),
+validated field by field by `parseGrant` (`src/lib/offline/grant.ts:78-115`),
 which checks `v`, `typ`, `grant_id`, `member`, `app_pubkey` (and that it is
 exactly a 32-byte Ed25519 key, `grant.ts:90`), `devices`, `access_points`,
 `windows`, `iat`, `exp`, `sig` (exactly 64 bytes, `grant.ts:113`) — and
