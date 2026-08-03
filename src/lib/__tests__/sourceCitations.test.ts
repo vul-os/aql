@@ -69,7 +69,7 @@ const SOURCE = /\.(?:go|ts|tsx|mjs)$/;
  * folded out of, and is the correct prefix for a path that was never here.
  */
 const EXTERNAL_REPOS = [
-  'ephor/',
+  'pier/',
   'kotva/',
   'lintel/',
   'substrate/',

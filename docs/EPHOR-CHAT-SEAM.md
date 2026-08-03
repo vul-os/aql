@@ -36,13 +36,13 @@ citations before quoting them in a commit.
 
 Stated first because each changes the work.
 
-### 0.1 `ephor/coordinator/CONTRACT.md` does not exist
+### 0.1 `pier/coordinator/CONTRACT.md` does not exist
 
 There is no `coordinator/` directory in the ephor repo. The contract lives only at
 `kotva/coordinator/CONTRACT.md` (294 lines), and Ephor consumes it by reference: its
 guardrails say *"**Read** the kotva spec (`coordinator/CONTRACT.md`, …) — never edit it"*
-(`ephor/BACKLOG.md:17-18`), and each kind crate restates its own clause posture in rustdoc
-(e.g. `ephor/crates/gateway/src/coordinator.rs:1-9`). **Every CONTRACT citation in this
+(`pier/BACKLOG.md:17-18`), and each kind crate restates its own clause posture in rustdoc
+(e.g. `pier/crates/pier-gateway/src/coordinator.rs:1-9`). **Every CONTRACT citation in this
 document is to `kotva/coordinator/CONTRACT.md`.** If a mirror is wanted in ephor, it should
 be created as an explicit copy with a pinned provenance line — an unmarked mirror of a
 normative document is a second source of truth.
@@ -52,9 +52,9 @@ normative document is a second source of truth.
 `kotva/coordinator/CONTRACT.md:284-293` lists ten rows. `COORD-9` (*"prices service performed
 only, never deliverability or classification"*, `:292`) and `COORD-10` (*"where staked, the
 stake is verified on-rail"*, `:293`) have **no counterpart** in
-`ephor/crates/broker-conformance/src/lib.rs`, whose `check()` pushes exactly eight findings
-(`:148-241`) and whose module doc says *"the COORD-1..8 checklist"* (`:4-5`), as does
-`ephor/crates/README.md:12` and `ephor/BACKLOG.md:46`. This is not a defect for a chat
+`pier/crates/pier-conformance/src/lib.rs`, whose `check()` pushes exactly eight findings
+(`:206-303`) and whose module doc says *"the COORD-1..8 checklist"* (`:4-5`), as does
+`pier/crates/README.md:25` and `pier/BACKLOG.md:46`. This is not a defect for a chat
 adapter — a free rail is not staked, and COORD-9 is satisfied by charging nothing — but the
 gap should be named rather than inherited silently.
 
@@ -70,7 +70,7 @@ platform-asserted `Headers.ext` key §26.5.1 requires is already a constant
 (`adapters/slack.rs:68-80`: empty `from`, empty `sig`, `verifiable = false`).
 
 **But Ephor pins `kotva-core`/`kotva-mail` by tag `core-v0.2.0`**
-(`ephor/crates/gateway/Cargo.toml:25-29`; the isango guardrail, `ephor/BACKLOG.md:10`), and
+(`pier/crates/pier-gateway/Cargo.toml:25-29`; the isango guardrail, `pier/BACKLOG.md:10`), and
 **that tag predates the adapters**. Verified: `git ls-tree -r core-v0.2.0` lists sixteen
 `crates/kotva-mail/src/*` paths and **no `adapters/` entry**; the tag is commit `a4a6ca5`
 ("crates: carve kotva-core + kotva-mail out of envoir"), and the adapter work landed in
@@ -83,9 +83,9 @@ side. KOTVA-ALIGNMENT flagged the adapters table as copyable
 
 **Re-verified 2026-07-30, and all three §0 corrections still hold.** `core-v0.2.0` is still
 commit `a4a6ca5` with no `crates/kotva-mail/src/adapters/` entry; six adapter files exist on
-kotva HEAD; no newer `core-*` tag has been cut; `ephor/crates/gateway/Cargo.toml` still pins
-`core-v0.2.0`; `ephor/coordinator/CONTRACT.md` is still absent; `broker-conformance` still
-implements COORD-1..8 only; and there is still no `chat-adapter` crate in `ephor/crates/`.
+kotva HEAD; no newer `core-*` tag has been cut; `pier/crates/pier-gateway/Cargo.toml` still pins
+`core-v0.2.0`; `pier/coordinator/CONTRACT.md` is still absent; `broker-conformance` still
+implements COORD-1..8 only; and there is still no `chat-adapter` crate in `pier/crates/`.
 So steps 1 and 2 are both unstarted and step 1 remains the blocker.
 
 Worth re-checking rather than assuming, because nothing in this repository can verify a claim
@@ -112,13 +112,16 @@ kinds … and no other document may enumerate a different count or add a kind no
 `kotva/18-wire-format.md:1863-1874` says the same from the wire side, and explicitly retires
 the reserved `DMTAP-ADAPT-v0/…` DS-tags: *"an adapter, being a `gateway`-kind coordinator
 (CONTRACT §5), signs the same object a mail gateway would, never a second parallel scheme"*
-(`:1873-1874`). Ephor's own enum already has exactly eleven variants with no room for a
-twelfth (`ephor/crates/broker-economics/src/kinds.rs:11-36`; `infra-service` from CONTRACT §5
-is absent, which is a separate pre-existing gap).
+(`:1873-1874`). Pier's own enum already has exactly eleven variants with no room for a
+twelfth (`pier/crates/pier-economics/src/kinds.rs:11-46`). The eleven are now the canonical
+set: `infra-service` from CONTRACT §5 is **present** — it was added, and it absorbed the
+former `compute` kind, which is no longer a wire kind at all and is a hard decode-time
+reject. (An earlier revision of this document recorded `infra-service` as absent; that gap
+has since been closed upstream.)
 
 **So: no new kind. A new crate.**
 
-**PROPOSAL.** `ephor/crates/chat-adapter/`, exposing a `ChatAdapterCoordinator` that returns
+**PROPOSAL.** `pier/crates/pier-chat-adapter/`, exposing a `ChatAdapterCoordinator` that returns
 `CoordinatorKind::Gateway` from `Coordinator::kind()` and publishes **one signed descriptor
 per (rail, mode)**. §26.3.1's field list is per-rail — `{ adapter_ik, rail, mode,
 initiation_class, inbound_transport_class, price_shape, exposure, credential_model,
@@ -143,7 +146,7 @@ Visibility { class: "terminating", level: "declared" }
 ```
 
 `ContentVisibility::new(VisibilityClass::Terminating, AssuranceLevel::Declared)` in Ephor's
-own types (`ephor/crates/broker-economics/src/visibility.rs:13-25`, `:29-41`).
+own types (`pier/crates/pier-economics/src/visibility.rs:13-25`, `:29-41`).
 
 There is **no other legal value**, and that is worth spelling out rather than presenting the
 choice as virtuous restraint:
@@ -159,7 +162,7 @@ choice as virtuous restraint:
    weakest of the three: *"The operator **promises** it is blind; nothing structurally
    prevents cheating"* (`kotva/coordinator/CONTRACT.md:138`), and Ephor's own code agrees —
    `AssuranceLevel::Declared.is_verifiable()` is `false`
-   (`ephor/crates/broker-economics/src/visibility.rs:50-51`).
+   (`pier/crates/pier-economics/src/visibility.rs:50-51`).
 3. **The pair still understates the exposure, and the honest declaration must say so
    elsewhere.** `Visibility` has two fields and names only *this* coordinator. It cannot
    express the second plaintext party that never goes away:
@@ -192,15 +195,15 @@ choice as virtuous restraint:
 
 ### 1.3 What `broker-conformance` will and will not check
 
-Against `ephor/crates/broker-conformance/src/lib.rs:139-247`, for a chat adapter declaring as
+Against `pier/crates/pier-conformance/src/lib.rs:197-309`, for a chat adapter declaring as
 above:
 
 | # | Clause | Harness outcome | What it actually proves |
 |---|---|---|---|
-| COORD-1 | §2.1 | `Behavioral` (`:206-218`) — descriptor `kind` must equal operating kind, then defers with *"verify descriptor signature once kotva-core is pinned"* | Shape only. The `Descriptor` type structurally has no score/price-rank/stake field, so the §2.1 exclusion is by construction. **Note:** `kotva-core` **is** pinned now (`ephor/crates/README.md:16`), so this `Behavioral` is stale and could become a real signature check. |
+| COORD-1 | §2.1 | `Behavioral` (`:206-218`) — descriptor `kind` must equal operating kind, then defers with *"verify descriptor signature once kotva-core is pinned"* | Shape only. The `Descriptor` type structurally has no score/price-rank/stake field, so the §2.1 exclusion is by construction. **Note:** `kotva-core` **is** pinned now (`pier/crates/README.md:16`), so this `Behavioral` is stale and could become a real signature check. |
 | COORD-2 | §2.2 | Whatever the crate declares — `LockIn::None` → `Pass`, `LockIn::Requires` → **`Violation`** (`:225-226`) | **This is where the design bites. See §1.4.** |
 | COORD-3 | §2.3 | `Pass` for `SelfHost::Backstop`; also `Pass` for `ScarceReachabilityException` **when `ScarceResource::plausible_for(kind)` allows it — and `SmtpEgress.plausible_for` is exactly `kind == Gateway`** (`:233-251`, `:113-118`) | A chat adapter would be *accepted* claiming the port-25 exception it does not have. **The crate must declare `SelfHost::Backstop` and must not take that false pass.** See §1.5. |
-| COORD-4 | §2.4/§3 | `Pass`, with **no** behavioral follow-up — `must_not_present_as_verified()` is `false` for `terminating` (`ephor/crates/broker-economics/src/visibility.rs:77-81`, pinned by test at `:135-142`) | Only that exactly one class+level was declared. It does **not** check that a client surfaces it, and it does **not** see §26.3's exposure field at all, because that lives in the opaque `policy` blob. **The entire §26 disclosure burden is outside COORD-4.** |
+| COORD-4 | §2.4/§3 | `Pass`, with **no** behavioral follow-up — `must_not_present_as_verified()` is `false` for `terminating` (`pier/crates/pier-economics/src/visibility.rs:77-81`, pinned by test at `:135-142`) | Only that exactly one class+level was declared. It does **not** check that a client surfaces it, and it does **not** see §26.3's exposure field at all, because that lives in the opaque `policy` blob. **The entire §26 disclosure burden is outside COORD-4.** |
 | COORD-5 | §3.2 | Always `Behavioral` (`:267-273`) | Nothing statically. For a chat adapter there is no blind→terminating downgrade to catch (it declares terminating from the start), so the runtime test is near-vacuous. What it does **not** test is whether the adapter retains or logs the plaintext it legitimately reads. |
 | COORD-6 | §4 | `Pass` for `Authorization` / `DerivedViewOnly` / `NoDeliveryPath`; `Violation` for `Classification` (`:217-221`) | See §1.6 — none of the four variants describes this adapter honestly. |
 | COORD-7 | §6 | `Pass` (`NotMetered`) for free rails; a metered WhatsApp-outbound deployment must return `SignedReceiptsToPayer` (`:227-231`) | Posture, not behaviour. Nothing checks a receipt was actually delivered. |
@@ -245,12 +248,12 @@ I do not think this is mine to resolve, and I have not resolved it. Two readings
   platform-mediated rail, where the "identity" a user would carry away is a phone number they
   never owned.
 
-**Action: report to `ephor/COORDINATION.md`'s Ephor→Spec section** (the documented channel for
+**Action: report to `pier/COORDINATION.md`'s Ephor→Spec section** (the documented channel for
 exactly this: *"questions · blockers · spec-gaps found while implementing"*,
-`ephor/COORDINATION.md:16`). Do not paper over it by declaring `LockIn::None` for a
+`pier/COORDINATION.md:15`). Do not paper over it by declaring `LockIn::None` for a
 gateway-mode chat adapter — that would be the misrepresentation §2.4 names.
 
-> **Re-verifying the citations in this document.** Everything below cites `ephor/` and
+> **Re-verifying the citations in this document.** Everything below cites `pier/` and
 > `kotva/`, which are sibling repositories rather than part of this checkout — so
 > `docCitations.test.ts` exempts them and nothing in CI has ever resolved them. Run
 > `node scripts/check-external-citations.mjs` with those repos cloned beside `aql/` to check
@@ -267,7 +270,7 @@ A chat adapter declaring kind `gateway` **could** claim
 The mechanism, checked against the crate rather than assumed: the COORD-3 arm matches
 `SelfHost::ScarceReachabilityException(resource)` and passes when
 `resource.plausible_for(c.kind())` holds
-(`ephor/crates/broker-conformance/src/lib.rs:233-251`), and `SmtpEgress.plausible_for` is
+(`pier/crates/pier-conformance/src/lib.rs:233-251`), and `SmtpEgress.plausible_for` is
 precisely `kind == CoordinatorKind::Gateway` (`:113-118`). So the false pass is live: a
 kind-`gateway` adapter claiming SMTP egress is waved through.
 
@@ -290,14 +293,14 @@ One nuance to declare rather than hide: WhatsApp's inbound transport class is `w
 (`kotva/26-legacy-adapters.md:128-130`; `kotva/crates/kotva-mail/src/adapters/mod.rs:283-301`), so
 a self-hosting user needs a reachable HTTPS endpoint. That need is met by **hiring a
 `reachability-adapter`** — a different coordinator kind that already exists in Ephor
-(`ephor/crates/reachability-adapter/`, `blind-routing`) — not by the chat adapter claiming
+(`pier/crates/pier-reachability-adapter/`, `blind-routing`) — not by the chat adapter claiming
 scarcity it does not have. Telegram and Slack are `outbound-persistent`
 (`kotva/26-legacy-adapters.md:125-127`) and need nothing.
 
 ### 1.6 COORD-6: none of the four `Gate` variants is honest
 
 `Gate` offers `Authorization`, `Classification`, `DerivedViewOnly`, `NoDeliveryPath`
-(`ephor/crates/broker-conformance/src/lib.rs:122-132`). For the chat adapter under §3's design:
+(`pier/crates/pier-conformance/src/lib.rs:122-132`). For the chat adapter under §3's design:
 
 - `NoDeliveryPath` is **false** — inbound rail→hub *is* a delivery path.
 - `Classification` is **false and must stay false** — the adapter runs no spam scoring, no ML
@@ -819,7 +822,7 @@ modules. No user-visible change. Working system: unchanged.
 **Step 2 — Ephor `chat-adapter` crate, contract-only.** Descriptor, visibility declaration, the
 four-clause posture, `broker-conformance` wiring, per-rail policy blobs from
 `kotva-mail::adapters`. No network, no credentials, no Aql integration. Green `cargo test`.
-Ship the §1.4/§1.6 findings to `ephor/COORDINATION.md` at this point, not later. Working system:
+Ship the §1.4/§1.6 findings to `pier/COORDINATION.md` at this point, not later. Working system:
 unchanged.
 
 **Step 3 — Aql grows the seam, off by default.** Add `chat.intent`/`chat.reply`, the
@@ -1009,7 +1012,7 @@ changes which outcome is correct.
 | # | Question | What would settle it |
 |---|---|---|
 | 1 | Is a served *hub* the right unit for §26.2's identity count (§2.1)? | A founder or spec-session ruling. KOTVA-ALIGNMENT asked the adjacent question and left it open (`docs/KOTVA-ALIGNMENT.md:656-660`). My counting rule is a **PROPOSAL**. |
-| 2 | Does CONTRACT §2.2's lock-in prohibition or §26.6's gateway-mode portability disclosure govern for a platform rail (§1.4)? | Spec session, via `ephor/COORDINATION.md`. Until then a gateway-mode chat adapter cannot honestly pass COORD-2. |
+| 2 | Does CONTRACT §2.2's lock-in prohibition or §26.6's gateway-mode portability disclosure govern for a platform rail (§1.4)? | Spec session, via `pier/COORDINATION.md`. Until then a gateway-mode chat adapter cannot honestly pass COORD-2. |
 | 3 | Should `broker-conformance` gain `LockIn::ModeDependent` and `Gate::AuthorizationDelegated` (§1.4, §1.6)? | Ephor maintainer decision once (2) is answered. Both are **PROPOSAL**. |
 | 4 | Is `BridgeWhatsAppSender` dropped, retained in Go, or declared non-conformant (§6.3)? | Founder call. It gates migration step 6. |
 | 5 | Does kotva intend `Sanctioning::Unsanctioned` (node-mode-only) and §26.8.2's unconditional MUST NOT to be the same rule? | Kotva spec owner. Unchanged since `docs/KOTVA-ALIGNMENT.md:661-663` raised it; it changes the answer to (4). |

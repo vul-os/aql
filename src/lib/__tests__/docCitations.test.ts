@@ -75,7 +75,7 @@ const root = resolve(__dirname, '../../..');
  * "unresolvable" never quietly becomes "ignored".
  */
 const EXTERNAL_REPOS = [
-  'ephor/',
+  'pier/',
   'kotva/',
   'substrate/',
   'flowstock/',
@@ -703,5 +703,77 @@ describe('identifiers named beside the file they live in', () => {
     // path — so a pattern that stops matching would otherwise look identical to
     // a clean sweep.
     expect(checked, 'the symbol/citation pairing has stopped matching').toBeGreaterThan(28);
+  });
+});
+
+
+describe('a cited line range contains the symbol it is cited for', () => {
+  /**
+   * The guard above checks a symbol is in the cited FILE. It is not in the
+   * cited RANGE that matters, and the difference is a whole class of drift:
+   * the path resolves, the file is right, the line count is plausible, and the
+   * reader lands a few lines above the thing they were promised.
+   *
+   * Found on 2026-08-03, by hand, after the same shape turned up in a kotva
+   * citation: `parseGrant` cited at grant.ts:80-113 while declared at 78.
+   * Reading the neighbours found four more, including ranges off by two
+   * hundred lines — `waAccessCommand` cited at :137-181, declared at :364.
+   *
+   * ONLY lines with exactly one citation and one symbol. A migration table
+   * writes `file:A-B`, `:C-D` | `symOne`/`symTwo`, and any positional pairing
+   * of those is a guess — the loose version of this scan reported three such
+   * lines as broken when all six ranges were correct. 23 unambiguous pairs is
+   * a smaller net than the 26 the guess covers, and it does not cry wolf.
+   */
+  const CITATION_WITH_RANGE =
+    /`([A-Za-z0-9_][A-Za-z0-9_./-]*\/[A-Za-z0-9_.-]+\.(?:go|ts|tsx|sql|mjs)):(\d+)(?:-(\d+))?`/g;
+  const SYMBOL = /`([A-Za-z_][A-Za-z0-9_]{4,})(?:\(\))?`/g;
+  const LOOKS_LIKE_SYMBOL = /^[a-z]+[A-Z]|^[A-Z][a-z]+[A-Z]|^[A-Z_]{4,}$/;
+
+  it('every unambiguous symbol/range pair lands on the symbol', () => {
+    const offenders: string[] = [];
+    let checked = 0;
+
+    for (const doc of docFiles()) {
+      const text = readFileSync(resolve(root, doc), 'utf8');
+      text.split('\n').forEach((line, i) => {
+        const cits = [...line.matchAll(CITATION_WITH_RANGE)];
+        const syms = [...line.matchAll(SYMBOL)]
+          .map((m) => m[1])
+          .filter((x) => LOOKS_LIKE_SYMBOL.test(x));
+        if (cits.length !== 1 || syms.length !== 1) return;
+
+        // One line where a single citation and a single symbol belong to
+        // DIFFERENT claims. reply.go:11-14 supports the DenialMessage quote
+        // that began on the line above; TruncationNotice belongs to the claim
+        // continuing onto the line below, and has its own citation there.
+        //
+        // Exempted by content rather than by line number, so moving the
+        // paragraph does not silently move the exemption onto something else.
+        // Requiring symbol-before-citation would also exclude it and takes the
+        // population from 23 pairs to 7 — a rule that costs two thirds of the
+        // coverage to avoid one known line is the worse trade.
+        if (line.includes('TruncationNotice') && line.includes('reply.go:11-14')) return;
+
+        const [, path, from, to] = cits[0];
+        const full = resolve(root, path);
+        if (!existsSync(full)) return; // the path guard owns that
+        const lines = readFileSync(full, 'utf8').split('\n');
+        const whole = lines.join('\n');
+        if (!whole.includes(syms[0])) return; // the file guard owns that
+        checked++;
+        const range = lines.slice(Number(from) - 1, Number(to ?? from)).join('\n');
+        if (!range.includes(syms[0])) {
+          const at = lines.findIndex((l) => l.includes(syms[0])) + 1;
+          offenders.push(
+            `${doc}:${i + 1} cites ${path}:${from}${to ? `-${to}` : ''} for \`${syms[0]}\`, ` +
+              `which is at line ${at}`,
+          );
+        }
+      });
+    }
+
+    expect(offenders).toEqual([]);
+    expect(checked, 'no symbol/range pairs parsed — the patterns have drifted').toBeGreaterThan(18);
   });
 });

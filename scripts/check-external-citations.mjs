@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 //
 // check-external-citations.mjs — verify the citations Aql's docs make INTO
-// sibling repos (ephor/, kotva/).
+// sibling repos (pier/, kotva/).
 //
 // # Why this is a script and not a gate
 //
@@ -12,7 +12,8 @@
 // citations in docs/EPHOR-CHAT-SEAM.md alone, several of them load-bearing for
 // a design decision.
 //
-// The first run found two that had drifted: `broker-conformance/src/lib.rs`
+// The first run found two that had drifted (line numbers as they stood then,
+// in the crate since renamed to `pier-conformance`): `broker-conformance/src/lib.rs`
 // was cited at :166-169 for the lock-in verdict (that range holds the `Finding`
 // struct; the verdict is at :225-226) and at :178-187 for the self-host verdict
 // (that range holds `Report::is_conformant`; the verdict is at :233-251). Both
@@ -41,11 +42,23 @@ const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const siblings = resolve(repo, '..');
 const wantList = process.argv.includes('--list');
 
-/** Repos cited from this one that live beside it rather than inside it. */
-const EXTERNAL = ['ephor', 'kotva'];
+/**
+ * Repos cited from this one that live beside it rather than inside it.
+ *
+ * `ephor` was renamed to `pier` on 2026-08-03 (pier commit c192ca4, "rename:
+ * ephor -> pier across the Rust workspace, crates included") — the repo did not
+ * leave the tree, it changed name, and its crates were renamed with it
+ * (`broker-economics` -> `pier-economics`, `gateway` -> `pier-gateway`,
+ * `broker-conformance` -> `pier-conformance`). Reading this as an absence was
+ * worse than reading it as a rename: `../ephor` can never appear again, so the
+ * partial-run path below would have exited 2 forever while 42 citations stayed
+ * permanently unverified behind advice ("clone them next to aql/") that could
+ * not be followed.
+ */
+const EXTERNAL = ['pier', 'kotva'];
 
 const CITATION =
-  /`((?:ephor|kotva)\/[A-Za-z0-9_./-]+\.(?:rs|md|toml|go|ts))(?::(\d+)(?:-(\d+))?)?`/g;
+  /`((?:pier|kotva)\/[A-Za-z0-9_./-]+\.(?:rs|md|toml|go|ts))(?::(\d+)(?:-(\d+))?)?`/g;
 
 // A bare `:148-160` — a line range with no path, meaning "the file I just
 // named". EPHOR-CHAT-SEAM's conformance table is written almost entirely this
@@ -123,13 +136,19 @@ for (const doc of trackedDocs()) {
 
 // Check what IS here, and be loud about what is not.
 //
-// This refused outright when any sibling was missing, which was right about
-// the honesty and wrong about the work: ephor moved out of the tree on
-// 2026-08-03 and kotva did not, so 100% of the citations went unverified to
-// avoid overstating the ~40% that could not be. Partial verification is worth
-// having as long as the gap is stated in the same breath — the failure this
-// guards against is a SKIP being mistaken for a PASS, and naming the count
+// This refused outright when any sibling was missing, which was right about the
+// honesty and wrong about the work: 100% of the citations went unverified to
+// avoid overstating the fraction that could not be. Partial verification is
+// worth having as long as the gap is stated in the same breath — the failure
+// this guards against is a SKIP being mistaken for a PASS, and naming the count
 // prevents that just as well as refusing does.
+//
+// It is NOT a substitute for keeping the names right, though. This path was
+// introduced to absorb "ephor is gone", when what had actually happened was a
+// rename to `pier`; the partial run then reported a stable-looking 91/42 that
+// no amount of cloning could ever resolve. A sibling that is genuinely absent
+// is a transient condition; a sibling that has been renamed is a stale
+// EXTERNAL entry, and only fixing the entry checks those citations again.
 //
 // Absence still exits non-zero. A run that could not see everything has not
 // checked everything, whatever it managed.
@@ -142,7 +161,7 @@ for (const c of checkable) {
   const full = join(siblings, c.path);
   if (!existsSync(full)) {
     // An absence can be the claim itself: EPHOR-CHAT-SEAM §0.1 is titled
-    // "`ephor/coordinator/CONTRACT.md` does not exist" and says so twice on
+    // "`pier/coordinator/CONTRACT.md` does not exist" and says so twice on
     // purpose. Those are correct and must not be "fixed" into a live path.
     const context = readFileSync(join(repo, c.doc), 'utf8').split('\n')[c.line - 1] ?? '';
     if (/does not exist|is still absent|absent|no such file/i.test(context)) {
