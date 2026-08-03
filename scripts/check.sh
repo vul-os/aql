@@ -84,6 +84,23 @@ run_portal() {
   fi
 }
 
+run_citations() {
+  local name="$1" out rc
+  out=$(node "$ROOT/scripts/check-external-citations.mjs" 2>&1); rc=$?
+  case "$rc" in
+    0) printf '  \033[32mok\033[0m    %s\n' "$name"; PASS=$((PASS + 1)) ;;
+    # 2 = a sibling repo is not checked out beside this one. Deliberately NOT a
+    # pass: it prints SKIP and is counted, exactly as the checker intends, since
+    # a skip that looks like a pass is the failure it was written to prevent.
+    # Note a RENAMED sibling is a stale EXTERNAL entry, not this condition.
+    2) printf '  \033[33mSKIP\033[0m  %s (sibling repo not checked out; CI clones them)\n' "$name"
+       SKIPPED=$((SKIPPED + 1)) ;;
+    *) printf '  \033[31mFAIL\033[0m  %s\n' "$name"
+       printf '%s\n' "$out" | sed 's/^/          /'
+       FAIL=$((FAIL + 1)); FAILED_NAMES+=("$name") ;;
+  esac
+}
+
 run_deadcode() {
   local name="$1" out rc
   out=$("$ROOT/scripts/deadcode.sh" 2>&1); rc=$?
@@ -188,6 +205,7 @@ echo "frontend"
 run      "tsc"                        . npm run typecheck
 run      "vitest"                     . npx vitest run
 run      "feature claims"             . npm run check:claims
+run_citations "external citations"
 
 echo
 if [ "$FAIL" -eq 0 ]; then

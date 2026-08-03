@@ -642,3 +642,33 @@ jobs:
       # "aborted with no message" was the real-world bug being guarded against.
       - name: Failure matrix (synthetic origin)
         run: bash scripts/verify.sh --selftest
+
+  # Aql's docs cite line ranges inside two sibling repos (pier/, kotva/). Nothing
+  # in this checkout can validate them, so they were unverified for their whole
+  # life. Both siblings are public, so CI clones them beside the workspace and
+  # the checker runs for real — exit 0 or the build fails. Cloning them is what
+  # makes this a gate rather than a permanent SKIP.
+  external-citations:
+    name: docs cite real lines in pier/ and kotva/
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: aql
+      - uses: actions/checkout@v4
+        with:
+          repository: vul-os/pier
+          path: pier
+      - uses: actions/checkout@v4
+        with:
+          repository: vul-os/kotva
+          path: kotva
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # With both siblings present the checker must exit 0. Exit 2 means one of
+      # the checkouts above silently did not happen, and that must fail the
+      # build rather than read as "nothing to do".
+      - name: External citations resolve
+        run: node aql/scripts/check-external-citations.mjs
