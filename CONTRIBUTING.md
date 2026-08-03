@@ -58,7 +58,7 @@ Run these before opening a PR; CI (`.github/workflows/ci.yml`) runs the same set
 | `npm run build` | root | `tsc -b && vite build` |
 | `npm run check:claims` | root | The docs-vs-code feature-claim guard — fails if the docs claim a feature with no code behind it |
 | `npm run test:e2e` | root | Playwright against a real hub binary with the embedded console (builds it first) |
-| `go test ./...` | `hub/` | 1,461 test functions |
+| `go test ./...` | `hub/` | 1,466 test functions |
 | `go test ./...` | `controller/` | 221 test functions |
 | `go test ./...` | `e2e/` | Cross-module, real binaries over the wire |
 | `cargo fmt --check` / `cargo clippy` | `src-tauri/` | Only if you touched the Rust shell |
