@@ -59,7 +59,7 @@ Run these before opening a PR; CI (`.github/workflows/ci.yml`) runs the same set
 | `npm run check:claims` | root | The docs-vs-code feature-claim guard — fails if the docs claim a feature with no code behind it |
 | `npm run test:e2e` | root | Playwright against a real hub binary with the embedded console (builds it first) |
 | `go test ./...` | `hub/` | 1,440 test functions |
-| `go test ./...` | `controller/` | 211 test functions |
+| `go test ./...` | `controller/` | 213 test functions |
 | `go test ./...` | `e2e/` | Cross-module, real binaries over the wire |
 | `cargo fmt --check` / `cargo clippy` | `src-tauri/` | Only if you touched the Rust shell |
 | `node proto/vectors/verify.mjs` | root | Independently re-verifies all 63 conformance vectors |

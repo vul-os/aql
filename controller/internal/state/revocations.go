@@ -70,22 +70,27 @@ func (s *Store) Revocations() RevocationList {
 // WRITE rather than on read means the persisted file stays small on its own,
 // and a controller that sits offline for a month does not accumulate a list it
 // will never consult.
+//
+// # Why the seq check is inside the mutation
+//
+// It used to read the stored seq under the lock, release the lock, prune, and
+// then call mutate — which takes the same lock again. Two callers could
+// therefore both pass the check against the same stored seq and then write in
+// either order, so the LOWER one could land last and the stored seq would go
+// backwards. That is precisely the rollback the seq exists to prevent, arriving
+// through the guard rather than around it.
+//
+// It was not reachable: commands are dispatched from one goroutine, the
+// WebSocket read loop, and the long-poll fallback only runs after that loop has
+// returned. It is also invisible to `-race`, because both halves take the mutex
+// correctly — the bug is in the gap between them, not in the access. So it
+// would have gone live silently the day a second command path (BLE, LAN) began
+// processing a `revoke`, with no test and no detector able to say so.
+//
+// Doing the comparison inside the mutation makes check and write one atomic
+// step. The cost is a persist of unchanged state on a refusal, which is a
+// wasted write of identical bytes.
 func (s *Store) SetRevocations(list RevocationList, now int64) error {
-	s.mu.Lock()
-	if list.Seq <= s.data.RevocationSeq && s.data.RevocationSeq != 0 {
-		s.mu.Unlock()
-		return ErrRevocationRollback
-	}
-	// A first list with seq 0 is refused too: seq 0 is the "never received
-	// one" sentinel, so accepting it would make the stored state
-	// indistinguishable from absence and every subsequent list would look
-	// like the first.
-	if list.Seq <= 0 {
-		s.mu.Unlock()
-		return ErrRevocationRollback
-	}
-	s.mu.Unlock()
-
 	kept := make([]Revocation, 0, len(list.Entries))
 	for _, e := range list.Entries {
 		if e.GrantID == "" {
@@ -96,11 +101,34 @@ func (s *Store) SetRevocations(list RevocationList, now int64) error {
 		}
 		kept = append(kept, e)
 	}
-	return s.mutate(func(d *persisted) {
+
+	var refused bool
+	err := s.mutate(func(d *persisted) {
+		// Compared against `d`, the live state under the lock that will
+		// perform this very write — not against a value read earlier.
+		if list.Seq <= d.RevocationSeq && d.RevocationSeq != 0 {
+			refused = true
+			return
+		}
+		// A first list with seq 0 is refused too: seq 0 is the "never received
+		// one" sentinel, so accepting it would make the stored state
+		// indistinguishable from absence and every subsequent list would look
+		// like the first.
+		if list.Seq <= 0 {
+			refused = true
+			return
+		}
 		d.RevocationSeq = list.Seq
 		d.RevocationIssuedAt = list.IssuedAt
 		d.Revocations = kept
 	})
+	if refused {
+		// Reported ahead of any persist error: nothing was changed, so a
+		// failure to write the unchanged state is not what the caller needs to
+		// hear about.
+		return ErrRevocationRollback
+	}
+	return err
 }
 
 // RevokedAt reports whether a grant id is on the cached list at time `now`.
