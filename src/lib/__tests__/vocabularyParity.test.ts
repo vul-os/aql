@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { OPEN_DENIAL_REASONS, openDenialMessage } from '../api';
 
 // Closed vocabularies must be the same set on both sides of the language border.
 //
@@ -462,6 +463,63 @@ describe('deny reasons are the same set on all three surfaces', () => {
 
     expect(typed, 'AdminAuditKind does not match store.DenyReasons').toEqual(hub);
     expect(offered, 'the filter offers a different set than the type allows').toEqual(hub);
+  });
+
+  /**
+   * The FOURTH copy, and the newest.
+   *
+   * OPEN_DENIAL_REASONS and openDenialMessage were added to give the console the
+   * honest per-reason copy the chat rails already had — a schedule lockout and a
+   * geofence refusal were both rendering as "Too many opens — try again in ~Xs".
+   * That fix introduced another hand-maintained list of the same eleven strings,
+   * in a file this guard did not read, which is precisely the shape the guard
+   * exists for. Adding it here rather than trusting it is the whole point.
+   *
+   * Imported rather than source-scanned: it is an exported value, so a regex
+   * would be a second thing to keep working for no gain. The three surfaces
+   * above are scanned because a Go slice, a TS union type and a JSX array cannot
+   * be imported.
+   *
+   * The consequence of drift is quiet. openDenialMessage returns null for a
+   * reason it does not know, friendlyApiError then falls back to err.code, and a
+   * resident is shown the string "outside_geofence".
+   */
+  it('the console has a sentence for every reason the hub can deny with', () => {
+    const hub = hubDenyReasons();
+    expect([...OPEN_DENIAL_REASONS].sort(), 'OPEN_DENIAL_REASONS has drifted from store.DenyReasons').toEqual(hub);
+
+    // And the list is not merely the right shape — every member resolves to
+    // copy. A reason present in the array with no case in the switch is the
+    // same failure one step later.
+    for (const reason of hub) {
+      expect(openDenialMessage(reason, 120), `${reason} has no message`).toBeTruthy();
+    }
+  });
+
+  /**
+   * The FIFTH copy: channels.DenialReasons(), the rails' own registry.
+   *
+   * reply_test.go asserts every entry in it has a message — which is the right
+   * check and is only as complete as the list. A reason the hub gains and that
+   * list does not is a reason nothing asserts copy for, and it reaches a
+   * resident through DenialMessage's unknown-reason branch as "The gate was not
+   * opened (outside_whatever)". That branch is a deliberate, honest fallback
+   * rather than a lie, so this is the mildest of the five — but the list is
+   * still an exemption list checked only by itself, which is the pattern this
+   * repository keeps finding.
+   *
+   * Read from source rather than run, because it is Go.
+   */
+  it('the chat rails list the same reasons the hub can deny with', () => {
+    const src = read('hub/internal/channels/reply.go');
+    const m = /func DenialReasons\(\) \[\]string \{[\s\S]*?\n\}/.exec(src);
+    if (!m) throw new Error('DenialReasons: pattern matched nothing — this guard cannot read it');
+    const rails = [...new Set([...m[0].matchAll(/"([a-z_]+)"/g)].map((x) => x[1]))].sort();
+    // A floor, so a pattern that stops matching cannot agree about nothing.
+    expect(rails.length, `parsed ${rails.length} from DenialReasons()`).toBeGreaterThanOrEqual(11);
+    expect(rails, 'channels.DenialReasons() has drifted from store.DenyReasons').toEqual(
+      hubDenyReasons(),
+    );
   });
 
   it('the audit filter accepts every reason the open path can record', () => {
