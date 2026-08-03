@@ -27,22 +27,24 @@ import (
 // about it. Every other driver id comes from the device config file, and
 // `access` is an entirely natural name for a bridge to an access-control
 // system. Naming one that gave its devices derived ownership from the
-// access_points table by string coincidence, with nothing in the config looking
-// wrong.
+// access_points table by string coincidence, and nothing in the config would
+// have looked wrong.
 //
 // This is the end-to-end version of that rule: it goes through the same
 // buildDeviceDriver the hub calls at boot, not through the validator directly,
 // because a rule enforced in a helper nothing calls is not enforced.
 func TestNoConfiguredDriverMayClaimAReservedID(t *testing.T) {
 	for _, reserved := range devices.ReservedDriverIDs {
-		// Minimal-but-valid configs. If one of these were invalid for another
-		// reason the driver would refuse for THAT reason and this test would
-		// pass having proved nothing, which is why the assertion below names
-		// the word "reserved" rather than merely checking for an error.
+		// Configs where the id is meant to be the only thing wrong. Keeping
+		// four of them genuinely valid across four evolving schemas is not
+		// something a fixture can promise, so the assertion below does not
+		// depend on it: it names the word "reserved" rather than merely
+		// checking for an error, and a config that failed for some other
+		// reason reports as such instead of passing having proved nothing.
 		file := deviceFile{
 			HTTP:   &httpdev.Config{ID: reserved, Devices: []httpdev.DeviceConfig{{ID: "d1", Name: "d1", Kind: devices.KindLighting}}},
 			Camera: &camera.Config{ID: reserved},
-			MQTT:   &mqtt.Config{DriverID: reserved, BrokerAddr: "127.0.0.1:1883"},
+			MQTT:   &mqtt.Config{DriverID: reserved, BrokerAddr: "127.0.0.1:1883", CommandQoS: mqtt.QoSAtLeastOnce},
 			Modbus: &modbus.Config{ID: reserved, Devices: []modbus.DeviceConfig{{ID: "d1", Name: "d1", Kind: devices.KindSensor, Address: "127.0.0.1:502"}}},
 		}
 		for _, name := range []string{deviceDriverHTTP, deviceDriverCamera, deviceDriverMQTT, deviceDriverModbus} {
@@ -83,7 +85,7 @@ func TestNoConfiguredDriverAcceptsAColonInItsID(t *testing.T) {
 	file := deviceFile{
 		HTTP:   &httpdev.Config{ID: id, Devices: []httpdev.DeviceConfig{{ID: "d1", Name: "d1", Kind: devices.KindLighting}}},
 		Camera: &camera.Config{ID: id},
-		MQTT:   &mqtt.Config{DriverID: id, BrokerAddr: "127.0.0.1:1883"},
+		MQTT:   &mqtt.Config{DriverID: id, BrokerAddr: "127.0.0.1:1883", CommandQoS: mqtt.QoSAtLeastOnce},
 		Modbus: &modbus.Config{ID: id, Devices: []modbus.DeviceConfig{{ID: "d1", Name: "d1", Kind: devices.KindSensor, Address: "127.0.0.1:502"}}},
 	}
 	for _, name := range []string{deviceDriverHTTP, deviceDriverCamera, deviceDriverMQTT, deviceDriverModbus} {
