@@ -14,6 +14,7 @@ import (
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -141,8 +142,29 @@ func VerifyRaw(pub ed25519.PublicKey, raw []byte) error {
 }
 
 // SignMap canonicalizes the signable map, signs it, adds "sig", and returns
-// the wire JSON. The signable map must not already contain "sig".
+// the wire JSON.
+//
+// The signable map must not already contain "sig", and this now refuses one
+// that does rather than only saying so.
+//
+// The failure it prevents is silent and fail-closed, which is the bad
+// combination. Canonicalizing a map that still carries a "sig" member signs
+// bytes that INCLUDE it, while every verifier canonicalizes the envelope MINUS
+// sig (CanonicalMinusSig) — so the signature covers something no verifier will
+// ever reconstruct and every message of that type is rejected as badsig, on the
+// far side of the link, with nothing at the signer indicating why. The old
+// `signable["sig"] = …` would also have overwritten the caller's value and then
+// the deferred delete would have dropped it.
+//
+// Today the four production callers each build a fresh map from a Signable()
+// constructor with a fixed key set, so the precondition holds by construction —
+// which is exactly why it was worth enforcing: nothing would notice a fifth
+// caller passing a map it parsed from the wire.
 func SignMap(priv ed25519.PrivateKey, signable map[string]any) ([]byte, error) {
+	if _, present := signable["sig"]; present {
+		return nil, errors.New("wire: signable map already contains \"sig\"; the signature " +
+			"would cover bytes no verifier reconstructs and every message would read as badsig")
+	}
 	canonical, err := jcs.Canonicalize(signable)
 	if err != nil {
 		return nil, err
