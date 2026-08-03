@@ -1653,6 +1653,37 @@ export const FEATURES = [
     ],
   },
   {
+    id: 'chat-device-actuation',
+    label: 'Device control from chat, bounded by the tier ladder (reversible runs, consequential confirms, hazardous refused)',
+    docStatus: 'shipped',
+    docRefs: [
+      'site/index.html ledger — "Device control from chat, up to a tier."',
+    ],
+    // This claim spent its life in the "Not built yet" column saying "the hub
+    // drives meters, lights and climate; chat does not. Ask it to turn on a
+    // light and it says so and points at the console." It had been false for
+    // some time: chatActuate runs reversible verbs and audits them, holds
+    // consequential ones behind a single-use token, refuses hazardous motion,
+    // and chatzone fans a verb out across a zone.
+    //
+    // check:claims did not notice because there was no entry — the manifest is
+    // a hand-maintained mirror and nothing compares it to the docs it mirrors.
+    // That is the same undersell direction that hid Slack Socket Mode and
+    // Telegram, and this entry is the half of the link that can be automated.
+    //
+    // The evidence is the TIER BOUNDARY rather than the actuation, because the
+    // boundary is what makes the sentence true: an actuating chat path with no
+    // ceiling would be a different and much worse claim.
+    evidence: [
+      // The trailing \\( matters: without it, `chatActuateRenamed` still matches
+      // and the evidence survives the rename it exists to notice. A tamper
+      // reported NOT CAUGHT on exactly that.
+      { file: 'hub/internal/httpapi/chatactuate.go', pattern: 'func \\(s \\*Server\\) chatActuate\\(' },
+      { file: 'hub/internal/httpapi/chatzone.go', pattern: 'ZoneActuationPartial' },
+      { root: 'hub/internal/httpapi', pattern: 'TierHazardousMotion' },
+    ],
+  },
+  {
     id: 'telegram-polling',
     label: 'Telegram long polling (getUpdates, outbound, zero ingress) — WIRED into the server, not merely implemented',
     docStatus: 'shipped',
