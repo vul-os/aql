@@ -97,6 +97,13 @@ a{color:inherit}
   .brand-docs{display:none}
   .search-wrap{min-width:150px}
 }
+/* …but 150px is still too much to insist on at 320. What is left there —
+   brand 67, search 150, two icon buttons at 28, the Vulos mark 34, plus gaps
+   and padding — comes to 371 against a 320 viewport, and the page scrolled
+   sideways by 37px. Releasing the floor is enough on its own: the search then
+   takes whatever the row has left (~100px, still usable) and nothing has to be
+   hidden to make room. */
+@media(max-width:400px){.search-wrap{min-width:0}}
 .top-links{display:none;align-items:center;gap:18px}
 @media(min-width:900px){.top-links{display:flex}}
 .top-links a{font-size:13.5px;text-decoration:none;color:var(--ink-faint)}
