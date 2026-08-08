@@ -150,9 +150,18 @@ describe('the repo-layout tree', () => {
   it('exempts only build output', () => {
     const entries = Object.keys(NOT_IN_TREE);
     expect(entries.length, 'NOT_IN_TREE is empty — this check has nothing to hold').toBeGreaterThan(1);
+    // Trailing slash, so the question is asked about a DIRECTORY.
+    //
+    // Every entry here names a directory, and .gitignore spells them as
+    // directory patterns (`/test-results/`). `git check-ignore test-results`
+    // — no slash — can only match such a pattern when the directory happens
+    // to exist on disk, so this passed locally, where a Playwright run had
+    // left one behind, and failed in CI, where nothing had created it yet.
+    // The test was reporting "test-results is tracked by git" about a
+    // directory that did not exist and is not tracked anywhere.
     const tracked = entries.filter((d) => {
       try {
-        execFileSync('git', ['check-ignore', '-q', d], { cwd: root });
+        execFileSync('git', ['check-ignore', '-q', `${d}/`], { cwd: root });
         return false;
       } catch {
         return true;
