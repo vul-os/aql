@@ -655,10 +655,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      # `npm ci`, not `npm install`, now that scripts/package-lock.json is
+      # tracked. This directory holds the render gate's own dependencies —
+      # the gate every visual claim about site/ is trusted through — and an
+      # unpinned install meant the thing doing the checking drifted freely
+      # while everything it checked was pinned.
       - name: Install Playwright
         run: |
           cd scripts
-          npm install --silent
+          npm ci --silent
           npx --yes playwright install --with-deps chromium
 
       # Self-test first: it breaks each invariant on purpose and demands the
