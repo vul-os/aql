@@ -375,6 +375,15 @@ code{font-family:var(--font-mono);font-size:.88em}
 .tick-list li{display:flex;gap:12px;font-size:14px;color:var(--ink-soft);line-height:1.6}
 .tick-list li::before{content:"";flex:none;margin-top:9px;width:12px;height:4px;background:var(--terracotta)}
 .phone{position:relative;margin:0 auto;max-width:355px;border-radius:40px;background:var(--band);padding:6px;box-shadow:var(--shadow-deep);transform:rotate(-1.4deg)}
+/* No tilt on a narrow screen. A rotated box's *bounding* width is
+   w·cos θ + h·sin θ — it grows with the element's HEIGHT, not just its
+   width — so this 1.4° tilt added 14px of bounding width at 585px tall and
+   more as the phone mock got taller. That is why it overhung the viewport
+   at 360 in CI and not here: the same markup renders a slightly taller chat
+   body there, and the overhang went with it. Height-dependent overflow
+   cannot be capped with max-width, so below 480 the tilt simply goes; at
+   1.4° it is barely perceptible on a phone anyway. */
+@media(max-width:480px){.phone{transform:none}}
 .phone-screen{border-radius:34px;background:var(--paper-cool);overflow:hidden;border:1px solid var(--paper-edge)}
 .phone-head{display:flex;align-items:center;gap:10px;padding:16px 14px 12px;background:var(--band);color:var(--band-text)}
 .phone-head .avatar{display:grid;place-items:center;width:34px;height:34px;border-radius:999px;background:var(--band-text);color:#141210}
