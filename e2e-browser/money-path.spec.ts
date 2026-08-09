@@ -192,7 +192,24 @@ test('sign up, sign in, create a location + access point, attempt an open, read 
   // fmtDateTime (src/pages/app/admin/shared.tsx) renders "DD Mon HH:MM" —
   // assert the day-of-month is today's, proving this is a real "now"
   // timestamp and not an epoch artifact wearing a plausible-looking format.
-  const todayDay = String(new Date().getDate()).padStart(2, '0');
-  expect(firstRowText).toContain(todayDay);
+  // Tolerate the day boundary. This used to assert exactly today's
+  // day-of-month and failed a run that started at 23:15 UTC: `new Date()`
+  // here is the test process's clock, while the row is formatted by the
+  // browser, so a midnight crossing — or any disagreement between the two
+  // timezones — makes them name different days while both are perfectly
+  // correct. Accepting yesterday, today or tomorrow keeps what the check is
+  // actually for (a real "now" timestamp rather than an epoch artifact
+  // wearing a plausible format — 1970 would render "01 Jan") without tying a
+  // green build to the hour it runs at.
+  const dayOfMonth = (offsetDays: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    return String(d.getDate()).padStart(2, '0');
+  };
+  const acceptableDays = [dayOfMonth(-1), dayOfMonth(0), dayOfMonth(1)];
+  expect(
+    acceptableDays.some((day) => firstRowText.includes(day)),
+    `audit row ${JSON.stringify(firstRowText)} names none of ${acceptableDays.join('/')}`,
+  ).toBe(true);
 });
 
