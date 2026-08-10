@@ -433,10 +433,18 @@ code{font-family:var(--font-mono);font-size:.88em}
 /* Same reason as .ledger, and this one was explicit: align-items:stretch pulled
    the five-step card down to match the phone + status-panel column beside it,
    drawing a 1050px bordered card round 503px of steps — 547px of empty card. */
+/* The outage section pairs the five-step sequence with the screen that runs it.
+   Those two are close in height; the status card and the parallel-hardware note
+   are not — stacking all four in the right-hand column made it 1050px against
+   the sequence's 507px and left 543px of empty gutter beside the card, more
+   dead space than the card itself occupied. The honesty block earns the full
+   measure below both instead, where its list can run two-up. */
 .off-grid{display:grid;gap:32px;align-items:start}
 @media(min-width:1024px){.off-grid{grid-template-columns:6fr 5fr}}
-.off-side{display:flex;flex-direction:column}
-.off-side .off-note{margin-top:auto;padding-top:18px}
+.off-side{display:flex;flex-direction:column;justify-content:center}
+.off-after{margin-top:32px}
+@media(min-width:768px){.off-after .status-card ul{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 26px}}
+.off-after .off-note{margin-top:18px;max-width:64rem}
 .off-seq{border-radius:20px;border:1px solid var(--paper-edge);background:var(--paper-cool);padding:22px 20px}
 .off-seq ol{list-style:none;margin:0;padding:0;display:grid;gap:0}
 .off-seq li{display:grid;grid-template-columns:26px 1fr;gap:14px;padding:0 0 18px}
@@ -1688,31 +1696,34 @@ code{font-family:var(--font-mono);font-size:.88em}
       </div>
 
       <div class="reveal off-side">
-        <div class="phone-shot" style="margin-bottom:20px">
+        <div class="phone-shot">
           <span class="ps-screen">
             <img class="shot-l" src="screenshots/app-emergency.png" width="1170" height="2532" loading="lazy" decoding="async" alt="The Emergency access screen in the Aql app, headed Set this up before you need it, warning that a plain browser tab cannot present a pass at the gate, and offering to fetch one now.">
             <img class="shot-d" src="screenshots/dark/app-emergency.png" width="1170" height="2532" loading="lazy" decoding="async" alt="" aria-hidden="true">
           </span>
         </div>
-        <p class="phone-cap" style="margin-bottom:22px"><b>The screen that does it.</b> It also
+        <p class="phone-cap"><b>The screen that does it.</b> It also
         tells you, on the spot, what this particular build of the app cannot do — which is the
         only kind of warning worth having about an outage.</p>
-        <div class="status-card" style="margin-top:0">
-          <h4>Status — honestly</h4>
-          <ul>
-            <li><i class="i-yes"></i><span><b style="font-weight:600;color:var(--ink)">The pass itself is real.</b> Its format, your hub issuing it, and the gate checking it are built — and checked against fixed test vectors both sides have to agree with independently.</span></li>
-            <li><i class="i-yes"></i><span><b style="font-weight:600;color:var(--ink)">Your phone can hold one.</b> Asking for a pass and keeping it works. Presenting it at the gate works from the desktop app, and from a browser on your own network when the console is served over plain http.</span></li>
-            <li><i class="i-part"></i><span><b style="font-weight:600;color:var(--ink)">Bluetooth is half-done.</b> The exchange is written and tested; the radio has never run on real hardware. A browser tab can't speak Bluetooth or find a gate by name either — that part needs the app.</span></li>
-            <li><i class="i-part"></i><span><b style="font-weight:600;color:var(--ink)">No real gate, yet.</b> Nothing in this repository has been wired to an actual relay or barrier. Everything above it is tested; that last inch is not.</span></li>
-          </ul>
-        </div>
-        <p class="off-note" style="font-size:13px;line-height:1.75;color:var(--ink-faint)">
-          Aql sits in <b style="font-weight:600">parallel</b> with your existing gate hardware, never
-          in series with it — the local button and any code-required fail-safe egress keep
-          working on their own, and are never something this replaces.
-          <a href="docs.html#/emergency-access" style="color:var(--terracotta)">Full status &rarr;</a>
-        </p>
       </div>
+    </div>
+
+    <div class="off-after reveal">
+      <div class="status-card" style="margin-top:0">
+        <h4>Status — honestly</h4>
+        <ul>
+          <li><i class="i-yes"></i><span><b style="font-weight:600;color:var(--ink)">The pass itself is real.</b> Its format, your hub issuing it, and the gate checking it are built — and checked against fixed test vectors both sides have to agree with independently.</span></li>
+          <li><i class="i-yes"></i><span><b style="font-weight:600;color:var(--ink)">Your phone can hold one.</b> Asking for a pass and keeping it works. Presenting it at the gate works from the desktop app, and from a browser on your own network when the console is served over plain http.</span></li>
+          <li><i class="i-part"></i><span><b style="font-weight:600;color:var(--ink)">Bluetooth is half-done.</b> The exchange is written and tested; the radio has never run on real hardware. A browser tab can't speak Bluetooth or find a gate by name either — that part needs the app.</span></li>
+          <li><i class="i-part"></i><span><b style="font-weight:600;color:var(--ink)">No real gate, yet.</b> Nothing in this repository has been wired to an actual relay or barrier. Everything above it is tested; that last inch is not.</span></li>
+        </ul>
+      </div>
+      <p class="off-note" style="font-size:13px;line-height:1.75;color:var(--ink-faint)">
+        Aql sits in <b style="font-weight:600">parallel</b> with your existing gate hardware, never
+        in series with it — the local button and any code-required fail-safe egress keep
+        working on their own, and are never something this replaces.
+        <a href="docs.html#/emergency-access" style="color:var(--terracotta)">Full status &rarr;</a>
+      </p>
     </div>
   </div>
 </section>
