@@ -1529,29 +1529,35 @@ code{font-family:var(--font-mono);font-size:.88em}
         for.</p>
       </li>
     </ol>
-  </div>
 
-      <!-- The one finished feature had no screenshot, while the two shots that
-           show it sat unused. A buyer reading "access control, end to end"
-           should be able to see it. Same pattern as the console section:
-           theme-paired, real pixel dimensions so the ratio holds, lazy. -->
-      <div class="shot-pair" style="margin-top:34px">
-        <div class="reveal">
-          <span class="shot">
-            <img class="shot-l" src="screenshots/portal-locations.png" width="2880" height="1800" loading="lazy" decoding="async" alt="The Access points page: each gate, door and barrier on a location, with the controller paired to it and when it was last seen.">
-            <img class="shot-d" src="screenshots/dark/portal-locations.png" width="2880" height="1800" loading="lazy" decoding="async" alt="" aria-hidden="true">
-          </span>
-          <p class="shot-cap"><b>Every opening, and what drives it.</b> A gate is an access point with a controller paired to it — so the page that lists your gates is also the page that tells you which one has stopped answering.</p>
-        </div>
-        <div class="reveal">
-          <span class="shot">
-            <img class="shot-l" src="screenshots/portal-access-rules.png" width="2880" height="1800" loading="lazy" decoding="async" alt="The Access rules page: geofence rules with a radius and what happens when a request carries no location, alongside weekly time windows.">
-            <img class="shot-d" src="screenshots/dark/portal-access-rules.png" width="2880" height="1800" loading="lazy" decoding="async" alt="" aria-hidden="true">
-          </span>
-          <p class="shot-cap"><b>Rules you can read back.</b> Where someone has to be standing, and when they may come in. Both are checked on your hub, on the way through, not on the phone that asked.</p>
-        </div>
+    <!-- The one finished feature had no screenshot, while the two shots that
+         show it sat unused. A buyer reading "access control, end to end"
+         should be able to see it. Same pattern as the console section:
+         theme-paired, real pixel dimensions so the ratio holds, lazy.
+
+         This pair used to sit OUTSIDE .wrap — the only block on the page that
+         did — so it ignored the 1280px measure and both gutters and ran the
+         full width of the viewport while the steps above it stayed in the
+         column. At 1440 that drew the shots 707px wide against the steps'
+         587px and pushed the captions flat against the window edge. -->
+    <div class="shot-pair" style="margin-top:34px">
+      <div class="reveal">
+        <span class="shot">
+          <img class="shot-l" src="screenshots/portal-locations.png" width="2880" height="1800" loading="lazy" decoding="async" alt="The Access points page: each gate, door and barrier on a location, with the controller paired to it and when it was last seen.">
+          <img class="shot-d" src="screenshots/dark/portal-locations.png" width="2880" height="1800" loading="lazy" decoding="async" alt="" aria-hidden="true">
+        </span>
+        <p class="shot-cap"><b>Every opening, and what drives it.</b> A gate is an access point with a controller paired to it — so the page that lists your gates is also the page that tells you which one has stopped answering.</p>
       </div>
-    </section>
+      <div class="reveal">
+        <span class="shot">
+          <img class="shot-l" src="screenshots/portal-access-rules.png" width="2880" height="1800" loading="lazy" decoding="async" alt="The Access rules page: geofence rules with a radius and what happens when a request carries no location, alongside weekly time windows.">
+          <img class="shot-d" src="screenshots/dark/portal-access-rules.png" width="2880" height="1800" loading="lazy" decoding="async" alt="" aria-hidden="true">
+        </span>
+        <p class="shot-cap"><b>Rules you can read back.</b> Where someone has to be standing, and when they may come in. Both are checked on your hub, on the way through, not on the phone that asked.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- ————————————————— emergency / offline ————————————————— -->
 <section class="section section-warm" id="offline">
