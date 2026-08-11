@@ -804,7 +804,7 @@ code{font-family:var(--font-mono);font-size:.88em}
 
 <!-- ————————————————— hero ————————————————— -->
 <section class="hero">
-  <svg class="starfield" viewBox="0 0 1440 780" preserveAspectRatio="xMidYMin slice" aria-hidden="true">
+  <svg class="starfield" data-full-bleed viewBox="0 0 1440 780" preserveAspectRatio="xMidYMin slice" aria-hidden="true">
     <circle class="tw" cx="90" cy="80" r="1.3"/><circle class="tw" cx="240" cy="180" r="1"/>
     <circle class="tw" cx="410" cy="60" r="1.5"/><circle class="tw" cx="560" cy="140" r="1"/>
     <circle class="tw" cx="700" cy="50" r="1.2"/><circle class="tw" cx="830" cy="120" r="1"/>
@@ -975,7 +975,7 @@ code{font-family:var(--font-mono);font-size:.88em}
     </div>
   </div>
 
-  <div class="strip">
+  <div class="strip" data-full-bleed>
     <div class="wrap">
       <div class="strip-in">
         <span>Vol. 01 &mdash; the one-hub issue</span>
@@ -1866,7 +1866,9 @@ caddy reverse-proxy --to 127.0.0.1:8080
       </p>
     </div>
 
-    <div class="ledger">
+    <!-- data-ragged: the two lists are honestly different lengths and are meant
+         to end unevenly — see the .ledger comment in the stylesheet. -->
+    <div class="ledger" data-ragged>
       <div class="ledger-col reveal">
         <h3>Built &amp; tested <span class="tag tag-shipped">real</span></h3>
         <ul>

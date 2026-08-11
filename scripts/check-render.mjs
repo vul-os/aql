@@ -1011,6 +1011,181 @@ async function checkDeadSpace(browser, base) {
 }
 
 // ---------------------------------------------------------------------------
+// Two blocks in one section measuring to different widths.
+//
+// Every section on the landing puts its content inside a single .wrap, which is
+// what gives the page one left edge and one right edge all the way down. The
+// access-control screenshots were authored one closing </div> too late, so they
+// sat OUTSIDE the wrap: at 1440 they drew 707px wide against the 587px of the
+// steps immediately above them and ran their captions flat into the window
+// edge. Nothing about that is visible in the source — the markup is well-formed
+// and the CSS is correct — and every other check in this file passed while it
+// was on the page: it is not an overflow (the block is inside the viewport),
+// not a distorted image, and not a box drawn round nothing.
+//
+// The rule is structural, so it is checked structurally: a section's content
+// lives in its .wrap. Deliberate full-bleed decoration opts out by NAME, so
+// adding one is a decision someone writes down rather than a silent exemption.
+// ---------------------------------------------------------------------------
+async function checkColumnMeasure(browser, base) {
+  let sections = 0, blocks = 0;
+
+  for (const w of [1440, 1280, 1024, 768]) {
+    const [ctx, page] = await ctxPage(browser, { viewport: { width: w, height: 900 } });
+    await page.goto(`${base}/index.html`, { waitUntil: 'networkidle' });
+    await page.evaluate(() =>
+      document.querySelectorAll('.rv, .reveal, [data-reveal]').forEach(e => e.classList.add('in', 'is-in')));
+    await page.waitForTimeout(400);
+    const where = `index.html @${w}`;
+
+    const r = await page.evaluate(() => {
+      const escaped = [], out = { nSections: 0, nBlocks: 0 };
+      document.querySelectorAll('section').forEach(sec => {
+        const wrap = sec.querySelector(':scope > .wrap');
+        if (!wrap) return;                       // section does not use the column model
+        out.nSections++;
+        const wr = wrap.getBoundingClientRect();
+        [...sec.children].forEach(c => {
+          if (c === wrap) return;
+          if (c.hasAttribute('data-full-bleed')) return;   // declared decoration
+          const cr = c.getBoundingClientRect();
+          if (cr.width < 4 || cr.height < 4) return;
+          if (getComputedStyle(c).display === 'none') return;
+          out.nBlocks++;
+          // Only a block that actually breaks the column is a defect; one that
+          // happens to sit inside the measure is merely unusual markup.
+          if (cr.left < wr.left - 2 || cr.right > wr.right + 2) {
+            escaped.push({
+              sec: sec.id || String(sec.className).slice(0, 20),
+              el: c.tagName.toLowerCase() + '.' + String(c.className).trim().split(/\s+/)[0],
+              got: `${Math.round(cr.left)}→${Math.round(cr.right)}`,
+              want: `${Math.round(wr.left)}→${Math.round(wr.right)}`,
+            });
+          }
+        });
+      });
+      return { escaped, ...out };
+    });
+
+    sections += r.nSections; blocks += r.nBlocks;
+    r.escaped.forEach(e => fail('measure-escape', where,
+      `#${e.sec}: ${e.el} spans ${e.got} while the section's column is ${e.want} — ` +
+      `it is not inside the .wrap, so it measures to the viewport instead of the page`));
+    await ctx.close();
+  }
+
+  // A structural rule checked over zero sections passes exactly like one that
+  // works, so the section count is asserted rather than assumed.
+  if (sections < 32) fail('measure-escape', 'coverage',
+    `only ${sections} section-instances with a .wrap examined over four widths`);
+  note(`column measure: ${sections} section-instances checked at 1440/1280/1024/768; ` +
+       `${blocks} non-wrap block(s) examined, all inside the column`);
+}
+
+// ---------------------------------------------------------------------------
+// Side-by-side columns that end nowhere near each other.
+//
+// "The gate still opens" stacked a phone shot, its caption, a status card and a
+// footnote into the right-hand column of a two-column row, which made that
+// column 1050px tall against the five-step sequence's 507px — more empty gutter
+// beside the sequence than the sequence itself occupied. checkDeadSpace() could
+// not see it: it only looks at PAINTED surfaces with a tail of nothing inside
+// their own border, and at .section-head. Here neither column is painted and
+// the emptiness is between siblings, not inside one.
+//
+// Ink is measured rather than boxes, and only rows whose children genuinely sit
+// side by side (a shared top) are considered, so a stacked grid at a narrow
+// width is not accused of anything. A deliberately ragged pair opts out by NAME
+// — the status ledger is two lists of honestly different lengths and is
+// supposed to end unevenly.
+// ---------------------------------------------------------------------------
+const MAX_COLUMN_SPREAD = 320;
+
+async function checkColumnBalance(browser, base) {
+  let rows = 0;
+
+  for (const w of [1440, 1280, 1024]) {
+    const [ctx, page] = await ctxPage(browser, { viewport: { width: w, height: 900 } });
+    await page.goto(`${base}/index.html`, { waitUntil: 'networkidle' });
+    await page.evaluate(() =>
+      document.querySelectorAll('.rv, .reveal, [data-reveal]').forEach(e => e.classList.add('in', 'is-in')));
+    await page.waitForTimeout(500);
+    const where = `index.html @${w}`;
+
+    const r = await page.evaluate((LIMIT) => {
+      const inkBottom = (el) => {
+        let b = -Infinity;
+        const walk = n => {
+          for (const c of n.childNodes) {
+            if (c.nodeType === 3) {
+              if (!c.textContent.trim()) continue;
+              const rg = document.createRange(); rg.selectNodeContents(c);
+              for (const rr of rg.getClientRects()) if (rr.height > 0) b = Math.max(b, rr.bottom);
+            } else if (c.nodeType === 1) {
+              const cs = getComputedStyle(c);
+              if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+              if (/^(IMG|CANVAS|VIDEO|HR)$/.test(c.tagName) || c.tagName === 'svg') {
+                b = Math.max(b, c.getBoundingClientRect().bottom);
+              } else {
+                const bg = cs.backgroundColor;
+                if ((bg && bg !== 'rgba(0, 0, 0, 0)') || parseFloat(cs.borderTopWidth) > 0) {
+                  b = Math.max(b, c.getBoundingClientRect().bottom);
+                }
+              }
+              walk(c);
+            }
+          }
+        };
+        walk(el);
+        return b;
+      };
+
+      const bad = []; let n = 0;
+      document.querySelectorAll('div, section, ul, ol').forEach(el => {
+        if (el.hasAttribute('data-ragged')) return;          // declared uneven by design
+        const cs = getComputedStyle(el);
+        if (cs.display !== 'grid' && cs.display !== 'flex') return;
+        if (cs.display === 'flex' && cs.flexDirection.startsWith('column')) return;
+        const rect = el.getBoundingClientRect();
+        if (rect.width < 320 || rect.height < 260) return;
+        const kids = [...el.children].filter(k => {
+          const kr = k.getBoundingClientRect();
+          return kr.height > 20 && kr.width > 20 && getComputedStyle(k).display !== 'none';
+        });
+        if (kids.length < 2) return;
+        // Genuinely side by side: one row, sharing a top. A stacked grid at a
+        // narrow width has many tops and must not be measured as a row.
+        const tops = kids.map(k => Math.round(k.getBoundingClientRect().top));
+        if (new Set(tops).size !== 1) return;
+        const bots = kids.map(inkBottom).filter(isFinite);
+        if (bots.length < 2) return;
+        n++;
+        const spread = Math.max(...bots) - Math.min(...bots);
+        if (spread > LIMIT) {
+          bad.push({
+            sel: el.tagName.toLowerCase() + '.' + (String(el.className).trim().split(/\s+/)[0] || '?'),
+            sec: (el.closest('section') || {}).id || '?',
+            spread: Math.round(spread), h: Math.round(rect.height),
+          });
+        }
+      });
+      return { bad, n };
+    }, MAX_COLUMN_SPREAD);
+
+    rows += r.n;
+    r.bad.forEach(e => fail('column-imbalance', where,
+      `#${e.sec} ${e.sel}: the columns end ${e.spread}px apart in a ${e.h}px row — ` +
+      `the short one is left beside a column of empty gutter`));
+    await ctx.close();
+  }
+
+  if (rows < 12) fail('column-imbalance', 'coverage',
+    `only ${rows} side-by-side row(s) examined over three widths`);
+  note(`column balance: ${rows} side-by-side row-instances measured at 1440/1280/1024, ` +
+       `none ending more than ${MAX_COLUMN_SPREAD}px apart`);
+}
+
+// ---------------------------------------------------------------------------
 // Self-test: break each invariant on purpose and demand the check notices.
 // A gate that has quietly stopped failing looks exactly like one that works.
 //
@@ -1160,6 +1335,21 @@ async function selftest(browser, base) {
       inject: { css: '@media(min-width:900px){.ledger{align-items:stretch !important}}' } },
     { name: 'head-imbalance', run: checkDeadSpace,
       inject: { css: '@media(min-width:1024px){.section-head>.lede{line-height:5.2 !important}}' } },
+
+    // --- a block measuring to the viewport instead of the page --------------
+    // The access-control shot pair sat outside its .wrap and drew full-bleed.
+    // Re-parenting one block out of the wrap IS the bug, not a stand-in for it.
+    { name: 'measure-escape', run: checkColumnMeasure,
+      inject: { js: "var w=document.querySelector('#access .wrap');var p=w&&w.querySelector('.shot-pair');if(p)w.parentElement.appendChild(p);" } },
+
+    // --- one column of a side-by-side row left far short of the other -------
+    // Exactly the outage-section shape: the right column grows and the left is
+    // stranded beside an empty gutter.
+    // The check measures INK, so the mutation has to add ink: a tall margin
+    // moves the box and nothing else, and grading that as "caught" would have
+    // meant the check was passing on geometry it does not actually read.
+    { name: 'column-imbalance', run: checkColumnBalance,
+      inject: { js: "var s=document.querySelector('.off-grid > .off-side');if(s){var d=document.createElement('div');d.style.cssText='height:900px;border:1px solid #888;background:#eee';d.textContent='x';s.appendChild(d);}" } },
   ];
 
   const runIsolated = async (inject, fn) => {
@@ -1177,6 +1367,8 @@ async function selftest(browser, base) {
     await checkFigureAffordance(b, base);
     await checkLabelHalos(b, base);
     await checkDeadSpace(b, base);
+    await checkColumnMeasure(b, base);
+    await checkColumnBalance(b, base);
   });
   if (control.length) {
     console.log(`  MISSED   control — the docs checks fire on the UNBROKEN page: ${[...new Set(control)].join(', ')}`);
@@ -1232,6 +1424,8 @@ async function main() {
     await checkFigureAffordance(browser, base);
     await checkLabelHalos(browser, base);
     await checkDeadSpace(browser, base);
+    await checkColumnMeasure(browser, base);
+    await checkColumnBalance(browser, base);
 
     console.log(`\nchecked ${VIEWPORTS.length} viewports × 2 themes × 2 pages; ` +
                 `${sampled} rendered images measured\n`);
