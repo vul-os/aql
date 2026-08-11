@@ -303,7 +303,13 @@ a{color:inherit}
 }
 .doc .mermaid svg{max-width:none;height:auto;flex:0 0 auto;display:block}
 /* A card that pans is only obviously pannable if the scrollbar is visible, and
-   the overlay scrollbars macOS defaults to are not. */
+   the overlay scrollbars macOS defaults to are not. Honest limit: this is NOT
+   a verified claim. Headless Chromium reports a 0px scrollbar gutter even for a
+   bare ::-webkit-scrollbar{height:10px}, so no check in this repo can confirm
+   the bar is painted, and none pretends to. The affordance that IS measured is
+   the Expand pill — always painted, never hover-only, and asserted present on
+   exactly the diagrams that overflow and absent on the ones that fit. Treat
+   these three rules as belt to that braces, not as the thing being relied on. */
 .doc .mermaid::-webkit-scrollbar{height:10px}
 .doc .mermaid::-webkit-scrollbar-thumb{background:var(--ink-whisper);border-radius:6px}
 .doc .mermaid::-webkit-scrollbar-track{background:transparent}
@@ -784,11 +790,19 @@ a{color:inherit}
   }
 
   /* ---------- mermaid diagrams ----------
-     Several chapters used to carry hand-drawn ASCII box art inside a plain
-     fence. Those are mermaid now, which buys three things a fence cannot: the
-     drawing follows the theme, it is drawn at whatever size it needs rather
-     than at whatever a monospace grid allowed, and the source says what the
-     shapes MEAN instead of where the pipes go.
+     THIS FIXES A SHIPPED DEFECT, it does not merely add a feature. architecture.md
+     carried a committed ```mermaid fence that nothing in this file rendered, so
+     readers of the Architecture chapter were served a wall of `flowchart TB`
+     source inside a code card — highlighted, with a Copy button, as if the
+     diagram source were the content. Nothing looked wrong in the markdown, which
+     is exactly why it survived: the fence was correct, the renderer was absent,
+     and no check compared the two. Diagram fences are painted from here now.
+
+     Several chapters also carried hand-drawn ASCII box art inside a plain fence.
+     Those are mermaid too, which buys three things a fence cannot: the drawing
+     follows the theme, it is drawn at whatever size it needs rather than at
+     whatever a monospace grid allowed, and the source says what the shapes MEAN
+     instead of where the pipes go.
 
      Colours are NOT written into the markdown. A hex baked into a .md file
      cannot follow the theme toggle, so the sources name semantic classes
@@ -896,13 +910,32 @@ a{color:inherit}
       .concat(lines.slice(i + 1)).join('\n');
   }
 
+  /* ON THE 3.5MB — read this before deleting mermaid over its size, because
+     somebody will propose it and beepbite already did it once (dropping mermaid
+     rather than ship 3.5MB for a single chart).
+
+     The bundle is LAZY. paintMermaid() returns before ensureMermaid() is ever
+     reached unless the chapter actually holds a diagram, so the landing, the
+     overview, the FAQ and the eight other diagram-free chapters fetch exactly
+     zero extra bytes. The cost is paid once, only by a reader who opened one of
+     the nine chapters that has a drawing, and ten diagrams is what buys it.
+     That laziness is the whole argument — take it away and the argument goes
+     with it, so do not hoist this load to page start.
+
+     The obvious shrink is mermaid's ESM build, which code-splits per diagram
+     type. It is the wrong trade HERE: site/ is deliberately buildless (see the
+     language policy — landing and docs scripts stay plain JS in every repo
+     precisely because there is no bundler), and the ESM build wants a bundler
+     and a tree of chunk files. Vendoring one UMD file is what the no-build
+     constraint permits, and it matches diwan. */
   var mermaidLoad = null;
   function ensureMermaid(){
     if (mermaidLoad) return mermaidLoad;
     mermaidLoad = new Promise(function(ok, no){
       var s = document.createElement('script');
       // Same directory as marked and highlight.js. Vendored, never a CDN:
-      // docs.html makes zero off-origin requests and that is a checked property.
+      // docs.html makes zero off-origin requests, and scripts/check-mermaid.mjs
+      // asserts it with a request listener rather than trusting this comment.
       s.src = 'docs/vendor/mermaid.min.js';
       s.onload = function(){ ok(); };
       s.onerror = function(){ no(new Error('mermaid failed to load')); };
