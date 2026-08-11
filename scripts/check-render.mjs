@@ -443,6 +443,61 @@ async function checkDocs(browser, base) {
     fail('doc-route-collapsed', 'docs.html',
       `${pages.length} chapters requested but only ${seenTitles.size} distinct pages rendered`);
   }
+
+  // Overflow, per chapter, at the widths where it actually bites.
+  //
+  // checkPage() renders `docs.html` with no hash, and the router serves the
+  // first chapter for that. So every per-viewport check above it — overflow
+  // included — has only ever examined `overview`, while the run reported
+  // "docs.html" as covered. Seventeen of eighteen chapters were unmeasured.
+  //
+  // That is not hypothetical: it is why a `/v1/accounts/{id}/energy/{…}` chip
+  // bleeding 376px inside a 390px viewport lived in `api` until someone
+  // measured it by hand. Narrow widths only — this is 18 chapters and a full
+  // matrix would be 288 renders for a defect class that does not appear at
+  // 1440. The count is asserted so a router regression that collapses every
+  // route to one page cannot pass this as coverage.
+  const NARROW = [{ w: 390, h: 844, label: 'phone' }, { w: 320, h: 640, label: 'phone-min' }];
+  let scanned = 0;
+  for (const vp of NARROW) {
+    await page.setViewportSize({ width: vp.w, height: vp.h });
+    for (const p of pages) {
+      await page.goto(`${base}/docs.html#/${p.id}`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(250);
+      const r = await page.evaluate(() => {
+        const out = [];
+        for (const el of document.querySelectorAll('body *')) {
+          const cs = getComputedStyle(el);
+          if (cs.position === 'fixed') continue;
+          const b = el.getBoundingClientRect();
+          if (b.width <= 0 || b.right <= 0) continue;
+          let a = el.parentElement, contained = false;
+          while (a && a !== document.body) {
+            if (/auto|scroll|hidden|clip/.test(getComputedStyle(a).overflowX)) { contained = true; break; }
+            a = a.parentElement;
+          }
+          if (contained) continue;
+          if (b.right > window.innerWidth + 1 || b.left < -1) {
+            out.push(`${el.tagName}.${String(el.className).slice(0, 40)} [${Math.round(b.left)}→${Math.round(b.right)}]`);
+          }
+        }
+        return { bleed: out.slice(0, 4), title: (document.querySelector('#content h1') || {}).textContent || '' };
+      });
+      scanned++;
+      if (r.bleed.length) {
+        fail('h-overflow', `docs.html#/${p.id} ${vp.label}(${vp.w})`,
+          'elements pushing past the viewport: ' + r.bleed.join('; '));
+      }
+    }
+  }
+  const wantScans = NARROW.length * pages.length;
+  if (scanned !== wantScans) {
+    fail('doc-overflow-coverage', 'docs.html',
+      `swept ${scanned} chapter/width pairs, expected ${wantScans}`);
+  }
+  note(`docs overflow: ${scanned} chapter×width pair(s) swept at ${NARROW.map(v => v.w).join('/')}px — ` +
+       `every chapter, not just the default route`);
+
   await ctx.close();
 }
 
