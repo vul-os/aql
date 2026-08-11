@@ -36,6 +36,21 @@ acting on anything (`hub/internal/channels/channels.go:194`), so a compromised o
 third-party-operated ingress can drop or delay messages but cannot forge an open. That
 reasoning, in full, is in [Reachability](reachability.md#whatever-you-put-there-is-a-dumb-pipe-not-a-gateway).
 
+```mermaid
+flowchart TB
+    META["Meta's servers — the one caller that<br>has to be able to reach in"] -- "HTTPS, from the public internet" --> PIPE
+    PIPE["<b>A dumb pipe</b> — your own reverse proxy,<br>or a tunnel someone else operates.<br>Holds the TLS certificate.<br>Holds no Aql key. Decides nothing"]
+    PIPE -- "plain HTTP, on your own network" --> HUB["The hub's listener. There is no TLS or<br>ACME code in the binary, so it binds<br><tt>127.0.0.1</tt> unless you pass <tt>-behind-proxy</tt>"]
+    HUB --> VER{"Verify Meta's<br><tt>X-Hub-Signature-256</tt>"}
+    VER -- "missing or wrong" --> DROP["Dropped. Fail closed"]
+    VER -- "good" --> ACT["Now, and only now, the message<br>enters the open path"]
+
+    class META entry
+    class PIPE muted
+    class HUB,ACT subject
+    class DROP hardware
+```
+
 ## (a) Public bind + your own reverse proxy — no tunnel, no third party
 
 The simplest option if you already have a VPS, a static IP, or a router you can

@@ -131,6 +131,24 @@ The model is `trigger → condition → action`, evaluated against live device s
 scheduling and run history persisted. It is built (`hub/internal/automations/`) and
 managed over `/v1/accounts/{id}/automations`.
 
+```mermaid
+flowchart TB
+    SCH["<tt>schedule</tt><br>a minute of the day, on chosen<br>weekdays, in a named timezone"] --> TRIG
+    THR["<tt>threshold</tt><br>a metric CROSSING a bound —<br>edge-triggered, so a tank already<br>low at boot does not fire"] --> TRIG
+    EVT["<tt>event</tt><br>a device changing availability"] --> TRIG["Trigger fires"]
+    TRIG --> COND{"Condition — a reading OR<br>a state, never both"}
+    COND -- "false" --> SKIP["No run"]
+    COND -- "cannot be evaluated" --> REFUSE["Run refused.<br>Silence is not <i>off</i>"]
+    COND -- "true" --> TIER{"Is the action at or below<br><tt>MaxActionTier</tt>?"}
+    TIER -- "no" --> BLOCK["Refused when the rule is saved,<br>and again immediately before the<br>driver call. No flag, request or<br>config file can raise the ceiling —<br><b>an automation cannot open a gate</b>,<br>and cannot spin a mower's blades"]
+    TIER -- "yes" --> ACT["The driver call runs"]
+    ACT --> HIST["Run history persisted. A rule that<br>keeps failing disables itself,<br>and records why"]
+
+    class SCH,THR,EVT entry
+    class BLOCK subject
+    class SKIP,REFUSE muted
+```
+
 Triggers are `schedule` (a minute of the day on chosen weekdays, in a named timezone, so
 a rule written as "at seven" still means seven after a DST shift), `threshold` (a device
 metric *crossing* a bound — edge-triggered, so a tank already below 20% at boot does not

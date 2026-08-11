@@ -25,25 +25,29 @@ decentralization, made visible.
 
 ## The system at a glance
 
-```
-resident ── "open" ──► chat rail (WhatsApp / Slack / Telegram)
-                              │ adapters in hub/internal/channels/
-                              ▼
-        ┌──────────────── HUB — one Go binary · SQLite ────────────────┐
-        │  input seam → open-path choke point → device hub → audit     │
-        │               (membership · rate limits ·     (Ed25519 sign) │
-        │                quotas · visitor grants)                      │
-        │  embedded web console + app API                              │
-        │  ─────────────────────────────────────────────────────────   │
-        │  device engine — camera · lighting · robot · climate ·       │
-        │  energy · sensor drivers, telemetry, automations: NOT BUILT  │
-        └───────────────────────┬──────────────────────────────────────┘
-              outbound wss ⇦ dial-out (no inbound ports at the gate)
-                              │
-                     controller (Wi-Fi / GSM)   ← the "access" kind, today
-                              │ verifies pinned-key signature
-                              ▼
-                     relay closes → 🚧 gate opens
+```mermaid
+flowchart TB
+    R["Resident<br>texts “open”"] --> RAIL["Chat rail<br>WhatsApp · Slack · Telegram"]
+    OP["Operator<br>browser or desktop app"] --> API
+
+    subgraph HUB["THE HUB — one Go binary · SQLite · no cloud centre"]
+        direction TB
+        ADPT["Channel adapters<br><tt>hub/internal/channels/</tt>"] --> SEAM["Input seam"]
+        API["Embedded web console<br>+ app API"] --> SEAM
+        SEAM --> CHOKE["Open-path choke point<br>rate limits · quotas · visitor grants<br>(membership is checked just above it)"]
+        CHOKE --> DH["Device hub"]
+        CHOKE --> AUD["Audit row — Ed25519-signed,<br>same transaction as the decision"]
+        ENG["Device engine — camera · lighting · robot ·<br>climate · energy · sensor<br>telemetry and automations: NOT BUILT"]
+    end
+
+    RAIL --> ADPT
+    DH -- "signed command, sent down a socket<br>the controller dialled OUT<br>(no inbound ports at the gate)" --> CTL["Controller · Wi-Fi or GSM<br>the “access” kind, today"]
+    CTL -- "verifies the pinned hub key" --> GATE["Relay closes<br>the gate opens"]
+
+    class R,OP,RAIL entry
+    class ADPT,API,SEAM,CHOKE,DH,AUD subject
+    class ENG muted
+    class CTL,GATE hardware
 ```
 
 > **The chat adapters are in the hub and stay there.** WhatsApp, Slack and Telegram are

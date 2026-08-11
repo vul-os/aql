@@ -20,6 +20,37 @@ them.
 `close` commands are **never** limited: closing a gate is the safe direction and is
 never refused.
 
+The order is fixed, and so is every way out of it:
+
+```mermaid
+flowchart TB
+    IN["A command arrives —<br>chat, portal or API,<br>all one door"] --> VERB{"open<br>or close?"}
+    VERB -- "close" --> SAFE["Always allowed"]
+    VERB -- "open" --> AP["Resolve the<br>access point"]
+    AP --> SUS{"Account<br>suspended?"}
+    SUS -- "yes" --> DENY
+    SUS -- "no" --> DIS{"User<br>disabled?"}
+    DIS -- "yes" --> DENY
+    DIS -- "no" --> RL{"Within the<br>rate limits?"}
+    RL -- "no" --> DENY
+    RL -- "store<br>errored" --> DEGRADED
+    RL -- "yes" --> Q{"Within the<br>quotas?"}
+    Q -- "no" --> DENY
+    Q -- "yes" --> OK["Sign the command,<br>open the gate"]
+
+    DENY["<b>Denied</b> — with the reason, how long<br>until a retry works, and any<br>visitor pass refunded"]
+    DEGRADED["<b>Allowed anyway</b> — availability wins.<br>Tagged <tt>rate_limit_check_failed</tt>,<br>so the degraded call stays findable"]
+
+    SAFE --> AUD["Audit row, in the same<br>transaction as the decision"]
+    DENY --> AUD
+    DEGRADED --> AUD
+    OK --> AUD
+
+    class IN entry
+    class OK,AUD subject
+    class DEGRADED muted
+```
+
 ## Built-in rate limits
 
 | Limit | Env var | Default | What it protects against |

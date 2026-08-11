@@ -126,6 +126,22 @@ out, if any — and the CLI form works **against a cold backup, without booting
 the server at all**, which is the point: you can ask "was this tampered with?"
 of a copy sitting on a shelf.
 
+```mermaid
+flowchart TB
+    A["Row n − 1<br><tt>hash = H(content ‖ hash of row n − 2)</tt>"]
+    B["Row n<br><tt>hash = H(content ‖ hash of row n − 1)</tt>"]
+    C["Row n + 1<br><tt>hash = H(content ‖ hash of row n)</tt>"]
+    A --> B --> C
+    COV["Covered by the hash: what happened, plus a<br>permanent snapshot of the account, location<br>and user ids taken at insert time"] -.-> B
+    EXC["NOT covered: the live foreign-key columns.<br><tt>ON DELETE SET NULL</tt> is designed to mutate them,<br>so hashing one would make an ordinary delete<br>indistinguishable from tampering"] -.-> B
+    C --> V["<tt>aql-hub verify-audit</tt> walks the chain and names<br>the first row that does not check out — against a<br>cold backup, with no server running at all"]
+
+    class A,B,C subject
+    class COV entry
+    class EXC muted
+    class V hardware
+```
+
 What's covered is deliberately not the live foreign-key columns
 (`account_id`/`location_id`/`access_point_id`/`user_id`) themselves — this schema
 already nulls those via `ON DELETE SET NULL` so a row's history survives an

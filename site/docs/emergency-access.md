@@ -11,13 +11,24 @@ short-lived signed statement of that user's rights — which locations, which ac
 points, until when — bound to the app's own keypair. Think of it as a signed hall pass
 that the controller can check without phoning anyone.
 
-```
-online, earlier:            hub ── signs ──► grant (rights + expiry + app key)
-internet down, at the gate: app ◄── mDNS / BLE ──► controller
-                            controller: verify grant sig  (pinned hub key)
-                                        verify nonce sig  (app key)
-                                        check rights + expiry
-                                        ✓ open · queue audit event
+```mermaid
+sequenceDiagram
+    autonumber
+    participant H as Hub
+    participant A as Aql app
+    participant C as Controller
+
+    Note over H,A: Online, earlier — the internet is up
+    A->>H: Ask for an offline grant
+    H-->>A: Grant: rights + expiry + the app's public key,<br>Ed25519-signed by the hub
+
+    Note over A,C: Internet down, at the gate — no hub, no Meta, no network at all
+    A->>C: Present the grant over mDNS (LAN) or BLE
+    C-->>A: A random nonce
+    A->>C: sign(grant ‖ nonce) with the app's own key
+    C->>C: Verify the grant signature against the PINNED hub key<br>verify the nonce signature against the app key<br>check rights, expiry and lockdown
+    C-->>A: Opened
+    Note right of C: Audit event queued on the controller,<br>uploaded when connectivity returns
 ```
 
 ## What happens at the gate

@@ -7,6 +7,34 @@ replies. Everything behind the seam (the open-path checks, signing, audit) is
 channel-agnostic, and a channel decides how to ask and how to reply — never whether the
 gate may open.
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant M as Member
+    participant P as Chat platform
+    participant H as Hub
+    participant C as Controller
+
+    M->>P: “open”
+    P->>H: Webhook POST — or an envelope down<br>a socket the hub dialled out
+    H->>H: Verify the platform's signature<br>(fail closed)
+    H->>H: Resolve (channel, external id)<br>→ a VERIFIED identity
+    Note over H: Not linked yet? The message is<br>ignored, never refused — no reply
+    H->>H: Message → intent, then the<br>open-path choke point
+    H->>H: Audit row, same transaction<br>as the decision
+    alt Several access points here
+        H-->>P: Numbered picker
+        P-->>M: “1 Main gate · 2 Pedestrian”
+        M->>P: “1”
+        P->>H: The reply, same path again
+    end
+    H->>C: Ed25519-signed command,<br>nonce + expiry
+    C->>C: Verify against the PINNED key,<br>then pulse the relay
+    C-->>H: Result event
+    H-->>P: “Gate opened · 1.8 s”
+    P-->>M: The reply, in thread
+```
+
 Today the only intent the seam resolves to is opening or closing an access point,
 because that is the only device class the hub drives. Texting a light or a mower is the
 design intent, not a shipped capability — see
@@ -293,6 +321,25 @@ from: `Channel` for a webhook-shaped provider (the hub verifies an inbound POST)
 `DialChannel` for a subscribe-shaped one where the hub dials out instead — Slack Socket
 Mode is the worked example of the second. If you want Signal, SMS or another rail, copy
 whichever shape matches.
+
+The whole difference between the two is which end dials, and that is also what decides
+whether the rail needs you to be reachable at all:
+
+```mermaid
+flowchart TB
+    subgraph WH["<tt>Channel</tt> — webhook-shaped"]
+        direction LR
+        P1["Platform<br>WhatsApp · Telegram<br>Slack Events API"] -- "POSTs IN — so this rail<br>needs a public HTTPS URL" --> H1["Hub<br>verifies the signature itself"]
+    end
+    subgraph DL["<tt>DialChannel</tt> — subscribe-shaped"]
+        direction LR
+        H2["Hub<br>holds the connection open"] -- "dials OUT — no inbound port,<br>fine behind NAT or CGNAT" --> P2["Platform<br>Slack Socket Mode · Discord<br>Telegram long polling"]
+    end
+    WH ~~~ DL
+
+    class P1,P2 entry
+    class H1,H2 subject
+```
 
 (A separate, unbuilt design puts rail termination in an external coordinator instead —
 [`docs/PIER-CHAT-SEAM.md`](https://github.com/vul-os/aql/blob/main/docs/PIER-CHAT-SEAM.md).

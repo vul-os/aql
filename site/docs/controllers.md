@@ -83,6 +83,26 @@ gate motor        COM ──┬── existing receiver relay
 Pairing binds a controller to one access point on one hub, and — critically — pins
 that hub's public signing key in the controller's storage. The flow:
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant AD as Admin<br>in the portal
+    participant C as Controller<br>at the gate
+    participant H as Hub
+
+    AD->>H: Create a claim for one access point
+    H-->>AD: A short-lived claim token,<br>as a QR code and as text
+    AD->>C: Scan or paste the token
+    C->>H: Redeem the claim, offering<br>the controller's own public key
+    H->>H: The claim token dies here.<br>It is single-use
+    H-->>C: The hub's public signing key
+    C->>C: PIN that key on disk
+    Note over C,H: From here the controller accepts only commands<br>signed by the pinned key — a hostile network,<br>a DNS hijack or a malicious tunnel cannot forge an open
+    AD->>H: Send test pulse
+    H->>C: Signed command
+    C-->>AD: The gate moves — the wiring is proven
+```
+
 1. **Admin creates a claim.** Portal → Devices → *Pair new*. Pick the access point
    (e.g. *Oakridge · Main gate*). The portal shows a short-lived claim token, as a QR
    code and as text.

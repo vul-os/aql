@@ -15,9 +15,14 @@ Slack — minutes, not days — and add WhatsApp when the WABA clears.)
 Once linked, the flow is simple: residents text your number, Meta's Cloud API delivers
 the webhook, and the hub routes each message by its sender:
 
-```
-resident's message → Meta Cloud API → your hub
-                     └─ resolve (whatsapp, +27…) → memberships → location
+```mermaid
+flowchart TB
+    R["Resident's message"] --> M["Meta Cloud API"] --> H["Your hub"]
+    H --> RES["Resolve <tt>(whatsapp, +27…)</tt>"] --> MEM["Memberships"] --> LOC["The location to act on"]
+
+    class R entry
+    class M muted
+    class H,RES,MEM,LOC subject
 ```
 
 Invite a member by phone number, then have them **verify** it: the console mints a
