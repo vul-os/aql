@@ -675,6 +675,21 @@ jobs:
       - name: Render checks
         run: node scripts/check-render.mjs
 
+      # The docs' diagrams get their own gate, for a defect the render gate
+      # cannot see: mermaid's default caps the svg at its natural width, so the
+      # browser scales the whole drawing — glyphs included — into the column and
+      # a declared 15px label paints at 4px. The stylesheet still says 15px and
+      # so does getComputedStyle, so only a measurement through the screen CTM
+      # catches it. Three sibling repos shipped that bug on one day.
+      #
+      # Self-test first, same reasoning as above: it caps an svg on purpose,
+      # strips the expand-clone's id on purpose, and demands the checks notice.
+      - name: Diagram gate self-test
+        run: node scripts/check-mermaid.mjs --selftest
+
+      - name: Diagram checks
+        run: node scripts/check-mermaid.mjs
+
   # Aql's docs cite line ranges inside two sibling repos (pier/, kotva/). Nothing
   # in this checkout can validate them, so they were unverified for their whole
   # life. Both siblings are public, so CI clones them beside the workspace and
