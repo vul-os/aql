@@ -184,11 +184,17 @@ a{color:inherit}
 .doc a{color:var(--terracotta);text-decoration:underline;text-underline-offset:3px;text-decoration-color:color-mix(in srgb,var(--terracotta) 45%,transparent)}
 .doc a:hover{color:var(--terracotta-deep)}
 .doc strong{color:var(--ink);font-weight:600}
-.doc code{font-family:var(--font-mono);font-size:.85em;background:var(--code-bg);border:1px solid var(--paper-edge);padding:1px 5px;border-radius:5px}
+/* overflow-wrap:anywhere, because inline code is regularly one unbreakable token
+   longer than a phone is wide — `/v1/accounts/{id}/energy/{channels,series,mix}`
+   measured 376px inside a 390px viewport, and a setWebhook URL in the Telegram
+   chapter reached past the right edge with nothing clipping it. Prose has no
+   scroller of its own to escape into, so the token has to break. `pre code` opts
+   back out below: a fence keeps its lines intact and pans instead. */
+.doc code{font-family:var(--font-mono);font-size:.85em;background:var(--code-bg);border:1px solid var(--paper-edge);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
 .doc table code{font-size:12px}
 .doc pre{background:var(--code-block);color:var(--code-block-text);border-radius:12px;padding:16px 18px;overflow-x:auto;
   margin:0 0 18px;box-shadow:var(--shadow-paper)}
-.doc pre code{background:transparent;border:0;padding:0;font-size:12.5px;line-height:1.7;color:inherit}
+.doc pre code{background:transparent;border:0;padding:0;font-size:12.5px;line-height:1.7;color:inherit;overflow-wrap:normal}
 
 /* ————— code blocks: chrome ————— */
 .codewrap{position:relative;margin:0 0 18px;border-radius:12px;background:var(--code-block);
@@ -268,6 +274,94 @@ a{color:inherit}
 .doc td{padding:9px 12px;border-bottom:1px solid var(--paper-edge);color:var(--ink-soft);vertical-align:top}
 .doc img{max-width:100%;height:auto;border-radius:12px;border:1px solid var(--paper-edge);box-shadow:var(--shadow-paper);margin:4px 0 8px}
 .doc hr{border:0;height:1px;background:var(--ink-whisper);margin:32px 0}
+
+/* ————— mermaid diagrams —————
+   The drawing keeps its NATURAL size and the card scrolls under it. It does not
+   get scaled down to fit the column, and that distinction is the whole rule
+   here: mermaid's default useMaxWidth:true puts `max-width:<natural>px` on the
+   svg, so a 900px drawing in a 736px measure is squeezed by the browser to 0.82
+   — and a 700px drawing on a 320px phone by 0.40, which turns a declared 15px
+   label into 6px of actual glyph. Nothing in the source says so; the CSS
+   font-size still reads 15px, and only a measurement through getScreenCTM ever
+   catches it. So: useMaxWidth:false in mermaidConfig(), svg{max-width:none}
+   here, and this box pans.
+
+   min-width:0 keeps the card from claiming the drawing's width as its own floor
+   — .content is a grid child and would otherwise push the whole page sideways.
+
+   Centring is `justify-content:safe center`, NOT text-align:center and NOT
+   margin-inline:auto. Those two centre by overhanging BOTH edges, and the
+   overhang past the left edge lands before scrollLeft:0 where no amount of
+   scrolling can reach it. `safe` degrades to flex-start exactly when centring
+   would overflow; the bare flex-start declaration in front of it is the
+   fallback for engines that drop the keyword. */
+.doc .mermaid{
+  background:var(--paper-cool);border:1px solid var(--paper-edge);border-radius:12px;
+  padding:20px;margin:0 0 18px;box-shadow:var(--shadow-paper);
+  overflow-x:auto;overscroll-behavior-x:contain;min-width:0;
+  display:flex;align-items:flex-start;justify-content:flex-start;justify-content:safe center;
+}
+.doc .mermaid svg{max-width:none;height:auto;flex:0 0 auto;display:block}
+/* A card that pans is only obviously pannable if the scrollbar is visible, and
+   the overlay scrollbars macOS defaults to are not. */
+.doc .mermaid::-webkit-scrollbar{height:10px}
+.doc .mermaid::-webkit-scrollbar-thumb{background:var(--ink-whisper);border-radius:6px}
+.doc .mermaid::-webkit-scrollbar-track{background:transparent}
+/* mermaid.run() reads the source out of the node's own textContent, so the
+   source is briefly IN the document. Hide it for exactly that window rather
+   than flashing a wall of `flowchart TB` at the reader — and note this is a
+   class the painter toggles, not `:not(:has(svg))`: with the latter, a mermaid
+   bundle that failed to load would leave a permanently empty box instead of a
+   readable fallback. See the catch in paintMermaid(). */
+.doc .mermaid.is-painting{min-height:72px;color:transparent;font-size:0}
+.doc .mermaid-fallback{margin:0 0 18px}
+
+/* The Expand control sits ON the card rather than after it, so it reads as part
+   of the diagram. The wrapper exists only to give it something positioned to
+   anchor to, and it inherits the card's bottom margin so the rhythm is unchanged. */
+.mermaid-wrap{position:relative;margin:0 0 18px}
+.mermaid-wrap > .mermaid{margin-bottom:0}
+.mermaid-open{
+  position:absolute;top:12px;right:12px;z-index:1;
+  font-family:var(--font-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-faint);background:var(--paper);border:1px solid var(--ink-whisper);
+  border-radius:999px;padding:5px 11px;cursor:pointer;
+  transition:color .15s,border-color .15s;
+}
+.mermaid-open:hover,.mermaid-open:focus-visible{color:var(--terracotta);border-color:var(--terracotta)}
+/* Same reasoning as .cw-copy: a hover-revealed control does not exist at all on
+   a touch screen, so this one is always painted. */
+@media(hover:none){.mermaid-open{color:var(--ink-soft)}}
+
+.diagram-dialog{
+  position:fixed;border:0;background:transparent;padding:0;
+  width:min(96vw,1600px);max-width:96vw;max-height:92vh;
+}
+.diagram-dialog::backdrop{background:rgba(14,12,10,.74)}
+/* align-items:flex-start is NOT cosmetic, it is the same tiny-label bug wearing a
+   different hat. A flex container's default is `stretch`, so the svg's height was
+   being stretched to the line's cross size — which this box caps at 82vh. An svg
+   with a viewBox honours preserveAspectRatio, so clamping its height scales the
+   WHOLE drawing, glyphs included: the limits ladder is ~3400px tall, so it came
+   back 0.44x and its 15px labels painted at 6.63px inside the very dialog that
+   exists to show them bigger. The declared font-size read 15px throughout.
+   flex-start lets the svg keep its natural height and the box scroll instead. */
+.diagram-stage{
+  background:var(--paper-cool);border:1px solid var(--paper-edge);border-radius:14px;
+  padding:26px;overflow:auto;max-height:82vh;box-shadow:0 30px 70px -20px rgba(0,0,0,.5);
+  display:flex;align-items:flex-start;justify-content:flex-start;justify-content:safe center;
+}
+.diagram-stage svg{max-width:none;height:auto;flex:0 0 auto;display:block}
+/* Anchored to the stage, not floating under it: centred below, the pill landed
+   on the page's own copy of the diagram showing through the backdrop and read
+   as part of the page rather than part of the dialog. */
+.diagram-dialog form{position:absolute;top:12px;right:12px;margin:0}
+.diagram-close{
+  font-family:var(--font-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--band-text);background:var(--band);border:1px solid var(--band);
+  border-radius:999px;padding:7px 14px;cursor:pointer;
+}
+:root[data-theme='dark'] .diagram-close{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 
 /* prev / next */
 .pager{display:flex;gap:12px;justify-content:space-between;margin-top:56px;padding-top:24px;border-top:1px solid var(--paper-edge);max-width:46rem}
@@ -392,6 +486,9 @@ a{color:inherit}
     var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     root.setAttribute('data-theme', next);
     try { localStorage.setItem('aql.theme', next); localStorage.setItem('lintel.theme', next); } catch(e){}
+    // Diagrams are painted svg, not CSS: a custom property cannot reach inside
+    // one, so they are re-initialised and re-run against the new palette.
+    repaintMermaid();
   });
 
   /* ---------- mobile sidebar ---------- */
@@ -536,9 +633,17 @@ a{color:inherit}
       var m = href && href.match(/^([a-z0-9-]+)\.md(#.*)?$/i);
       if (m) a.setAttribute('href', '#/' + m[1] + (m[2] || ''));
     });
+    /* Order matters and is load-bearing: liftMermaid() REMOVES the <pre> that
+       carried each ```mermaid fence before decorateCode() ever sees it. If a
+       mermaid fence survived as a `pre > code`, decorateCode would wrap it in a
+       code card with a Copy button over a drawing — and scripts/check-render's
+       checkDocs() asserts .codewrap count === `pre > code` count per chapter,
+       so it would catch the half-done version either way. */
+    liftMermaid(art);
     decorateCode(art);
     decorateTables(art);
     syncFigs();
+    paintMermaid();
   }
 
   /* Tables get the same affordance as code fences. .doc table is itself the
@@ -613,6 +718,9 @@ a{color:inherit}
       Array.prototype.forEach.call(code.classList, function(c){
         if (c.indexOf('language-') === 0) raw = c.slice(9).toLowerCase();
       });
+      // Belt and braces to liftMermaid()'s ordering above: a diagram fence is
+      // never a code card, whoever gets here first.
+      if (raw === 'mermaid') return;
       var lang = LANG_ALIAS[raw] || raw;
       var known = haveHljs && lang && hljs.getLanguage(lang);
 
@@ -673,6 +781,274 @@ a{color:inherit}
         }
       });
     });
+  }
+
+  /* ---------- mermaid diagrams ----------
+     Several chapters used to carry hand-drawn ASCII box art inside a plain
+     fence. Those are mermaid now, which buys three things a fence cannot: the
+     drawing follows the theme, it is drawn at whatever size it needs rather
+     than at whatever a monospace grid allowed, and the source says what the
+     shapes MEAN instead of where the pipes go.
+
+     Colours are NOT written into the markdown. A hex baked into a .md file
+     cannot follow the theme toggle, so the sources name semantic classes
+     (entry / subject / hardware / muted) and the palette below resolves them
+     against the current theme on every paint. */
+  var MERMAID_FONT = "'Inter', ui-sans-serif, system-ui, sans-serif";
+
+  /* Node fills and strokes, straight off the same tokens the prose uses — but
+     the STROKES are deliberately a shade or two stronger than --paper-edge.
+     A rule between paragraphs only has to be findable; a node border has to
+     hold a box together against a fill that is barely off the card behind it,
+     and at --paper-edge (7% ink) those borders measure ~1.1:1 and the boxes
+     read as smudges rather than as shapes. */
+  var MERMAID_CLASSES = {
+    light: [
+      'classDef entry fill:#fafaf8,stroke:#b3aa9c,color:#141210',
+      'classDef subject fill:#f7e4da,stroke:#a24f32,color:#78331b',
+      'classDef hardware fill:#f2ede6,stroke:#bcb2a2,color:#141210',
+      'classDef muted fill:#f4f2ee,stroke:#c4bdb1,color:#4d4740,stroke-dasharray:4 3'
+    ],
+    dark: [
+      'classDef entry fill:#17150f,stroke:#6d6558,color:#ebe4d8',
+      'classDef subject fill:#7d3a22,stroke:#f0a484,color:#ffefe6',
+      'classDef hardware fill:#26221c,stroke:#7d7466,color:#f5efe6',
+      'classDef muted fill:#1b1916,stroke:#5a544c,color:#b3aa9e,stroke-dasharray:4 3'
+    ]
+  };
+  var MERMAID_VARS = {
+    light: {
+      background:'#fdfdfc', primaryColor:'#f2ede6', primaryTextColor:'#141210',
+      primaryBorderColor:'#c3bbae', secondaryColor:'#f7e4da', tertiaryColor:'#fafaf8',
+      mainBkg:'#f2ede6', nodeBorder:'#c3bbae', lineColor:'#6d665e', textColor:'#141210',
+      nodeTextColor:'#141210', titleColor:'#141210',
+      clusterBkg:'#fafaf8', clusterBorder:'#cbc3b6', edgeLabelBackground:'#fdfdfc',
+      errorBkgColor:'#f7e4da', errorTextColor:'#a24f32',
+      /* sequence diagrams keep their own knobs; left at the defaults they paint
+         a lavender actor box that belongs to no theme in this repo. */
+      actorBkg:'#f2ede6', actorBorder:'#a24f32', actorTextColor:'#141210',
+      actorLineColor:'#8c857b', signalColor:'#302c28', signalTextColor:'#302c28',
+      labelBoxBkgColor:'#f7e4da', labelBoxBorderColor:'#a24f32', labelTextColor:'#141210',
+      loopTextColor:'#302c28', activationBkgColor:'#f7e4da', activationBorderColor:'#a24f32',
+      noteBkgColor:'#fbf1d9', noteBorderColor:'#b8914a', noteTextColor:'#141210',
+      sequenceNumberColor:'#fafaf8', altBackground:'#fafaf8'
+    },
+    dark: {
+      background:'#131210', primaryColor:'#221e19', primaryTextColor:'#f5efe6',
+      primaryBorderColor:'#4c453c', secondaryColor:'#33241d', tertiaryColor:'#0f0e0c',
+      mainBkg:'#221e19', nodeBorder:'#4c453c', lineColor:'#9c9488', textColor:'#f5efe6',
+      nodeTextColor:'#f5efe6', titleColor:'#f5efe6',
+      clusterBkg:'#191713', clusterBorder:'#3b352d', edgeLabelBackground:'#131210',
+      errorBkgColor:'#33241d', errorTextColor:'#e0896a',
+      actorBkg:'#221e19', actorBorder:'#e0896a', actorTextColor:'#f5efe6',
+      actorLineColor:'#7d7466', signalColor:'#d8cfbf', signalTextColor:'#d8cfbf',
+      labelBoxBkgColor:'#33241d', labelBoxBorderColor:'#e0896a', labelTextColor:'#f5efe6',
+      loopTextColor:'#d8cfbf', activationBkgColor:'#33241d', activationBorderColor:'#e0896a',
+      noteBkgColor:'#2a2318', noteBorderColor:'#d4ae6a', noteTextColor:'#f5efe6',
+      sequenceNumberColor:'#131210', altBackground:'#191713'
+    }
+  };
+
+  function mermaidTheme(){
+    return root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  }
+  function mermaidConfig(theme){
+    var vars = {};
+    var src = MERMAID_VARS[theme] || MERMAID_VARS.light;
+    Object.keys(src).forEach(function(k){ vars[k] = src[k]; });
+    vars.fontFamily = MERMAID_FONT;
+    vars.fontSize = '15px';
+    return {
+      startOnLoad: false, theme: 'base', securityLevel: 'loose',
+      fontFamily: MERMAID_FONT,
+      /* useMaxWidth:false, on EVERY diagram type this file can render, is the
+         one setting the whole feature turns on. True — the default — caps the
+         svg at its natural width, which makes the browser scale the entire
+         drawing (glyphs included) down into the column; the declared font-size
+         stays 15px while the painted glyph is 6px, so reading the source can
+         never catch it. False keeps the drawing at its drawn size and lets
+         .doc .mermaid pan instead. scripts/measure-* asserts the effective
+         size through getScreenCTM, not the CSS value. */
+      flowchart: { useMaxWidth: false, htmlLabels: true, padding: 14, nodeSpacing: 46, rankSpacing: 54, curve: 'basis' },
+      sequence: { useMaxWidth: false, actorFontSize: 15, actorFontFamily: MERMAID_FONT,
+                  messageFontSize: 14, messageFontFamily: MERMAID_FONT,
+                  noteFontSize: 14, noteFontFamily: MERMAID_FONT,
+                  wrap: false, boxMargin: 12, width: 172, height: 54, mirrorActors: true },
+      state: { useMaxWidth: false },
+      er: { useMaxWidth: false },
+      themeVariables: vars
+    };
+  }
+
+  /* Inject the palette immediately after the diagram-type line, so the class
+     names the markdown already uses resolve against the live theme. Diagram
+     types with no classDef concept (sequence) are left exactly as written. */
+  function withMermaidClasses(src, theme){
+    var defs = MERMAID_CLASSES[theme] || MERMAID_CLASSES.light;
+    var lines = src.split('\n');
+    var i = -1;
+    for (var n = 0; n < lines.length; n++) {
+      if (/^\s*(flowchart|graph)\b/.test(lines[n])) { i = n; break; }
+    }
+    if (i < 0) return src;
+    return lines.slice(0, i + 1)
+      .concat(defs.map(function(d){ return '    ' + d; }))
+      .concat(lines.slice(i + 1)).join('\n');
+  }
+
+  var mermaidLoad = null;
+  function ensureMermaid(){
+    if (mermaidLoad) return mermaidLoad;
+    mermaidLoad = new Promise(function(ok, no){
+      var s = document.createElement('script');
+      // Same directory as marked and highlight.js. Vendored, never a CDN:
+      // docs.html makes zero off-origin requests and that is a checked property.
+      s.src = 'docs/vendor/mermaid.min.js';
+      s.onload = function(){ ok(); };
+      s.onerror = function(){ no(new Error('mermaid failed to load')); };
+      document.head.appendChild(s);
+    });
+    return mermaidLoad;
+  }
+
+  /* Step one, SYNCHRONOUS: take the fence out of the document before anything
+     else looks at it. The source moves onto the node as data-src so a later
+     theme toggle can repaint from it. */
+  function liftMermaid(scope){
+    Array.prototype.forEach.call(scope.querySelectorAll('pre > code.language-mermaid'), function(code){
+      var div = document.createElement('div');
+      div.className = 'mermaid is-painting';
+      div.setAttribute('data-src', code.textContent);
+      code.parentNode.replaceWith(div);
+    });
+  }
+
+  function paintMermaid(){
+    var nodes = Array.prototype.slice.call(contentEl.querySelectorAll('.mermaid[data-src]'));
+    if (!nodes.length) return Promise.resolve();
+    return ensureMermaid().then(function(){
+      return renderMermaid(nodes);
+    }).catch(function(){
+      // Honest degradation: the reader gets the diagram source as text rather
+      // than an empty card. A bare <pre> carries no `code` child, so the code
+      // chrome invariants in check-render still hold.
+      nodes.forEach(function(n){
+        var pre = document.createElement('pre');
+        pre.className = 'mermaid-fallback';
+        pre.textContent = n.getAttribute('data-src');
+        n.replaceWith(pre);
+      });
+    });
+  }
+
+  function renderMermaid(nodes){
+    var theme = mermaidTheme();
+    mermaid.initialize(mermaidConfig(theme));
+    nodes.forEach(function(n){
+      n.classList.add('is-painting');
+      n.removeAttribute('data-processed');
+      n.removeAttribute('id');
+      n.textContent = withMermaidClasses(n.getAttribute('data-src'), theme);
+    });
+    return mermaid.run({ nodes: nodes, suppressErrors: true }).then(function(){
+      nodes.forEach(function(n){
+        n.classList.remove('is-painting');
+        /* A flowchart draws its spine down the middle of its own canvas, so a
+           card narrower than the drawing opens on an empty left margin and the
+           reader sees a blank box. Open on the middle instead; both edges stay
+           reachable, which is what centring in CSS would have cost.
+
+           ORDER IS LOAD-BEARING. markExpandable() moves this node into a fresh
+           .mermaid-wrap the first time a diagram overflows, and re-parenting a
+           scroll container resets its scrollLeft to 0. Setting the offset first
+           and wrapping second — which is what this did — silently threw the
+           offset away on every diagram wide enough to need it, i.e. on exactly
+           the ones it was written for. Wrap first, scroll second. */
+        var slack = n.scrollWidth - n.clientWidth;
+        markExpandable(n, slack > 0);
+        if (slack > 0) n.scrollLeft = Math.round(slack / 2);
+      });
+    });
+  }
+
+  function repaintMermaid(){
+    var nodes = Array.prototype.slice.call(contentEl.querySelectorAll('.mermaid[data-src]'));
+    if (!nodes.length || typeof mermaid === 'undefined') return;
+    renderMermaid(nodes).catch(function(){});
+  }
+
+  /* ---------- oversized diagrams open full-bleed ----------
+     Keeping the drawing at its natural size is what fixed the tiny labels, but
+     the widest of these is ~980px against an 736px measure, so a desktop reader
+     would be left panning through a diagram their screen could show twice over.
+     The prose column cannot widen — the third grid track is the on-this-page
+     rail — so the diagram borrows the viewport instead, on demand.
+
+     Only diagrams that ACTUALLY overflow get the control; one that already fits
+     would gain a button that does nothing. The pannable card underneath is
+     untouched, so this is purely additive: with JS off, or <dialog> unsupported,
+     the reader still gets a full-size diagram they can pan. */
+  function markExpandable(node, overflows){
+    var wrap = node.parentNode && node.parentNode.classList.contains('mermaid-wrap') ? node.parentNode : null;
+    var existing = wrap ? wrap.querySelector(':scope > .mermaid-open') : null;
+    if (!overflows) {
+      if (existing) existing.remove();
+      return;
+    }
+    if (existing) return;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'mermaid-open';
+    btn.textContent = 'Expand';
+    btn.setAttribute('aria-label', 'Open this diagram at full size');
+    btn.addEventListener('click', function(){ openDiagram(node); });
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.className = 'mermaid-wrap';
+      node.parentNode.insertBefore(wrap, node);
+      wrap.appendChild(node);
+    }
+    wrap.appendChild(btn);
+  }
+
+  var diagramDialog = null;
+  function openDiagram(node){
+    var svg = node.querySelector('svg');
+    if (!svg) return;
+    if (!diagramDialog) {
+      diagramDialog = document.createElement('dialog');
+      diagramDialog.className = 'diagram-dialog';
+      diagramDialog.innerHTML =
+        '<div class="diagram-stage"></div>' +
+        '<form method="dialog"><button class="diagram-close" aria-label="Close this diagram">Close</button></form>';
+      document.body.appendChild(diagramDialog);
+      // The stage is the only child that fills the dialog, so a click landing
+      // on the dialog element itself is a backdrop click.
+      diagramDialog.addEventListener('click', function(e){
+        if (e.target === diagramDialog) diagramDialog.close();
+      });
+    }
+    var stage = diagramDialog.querySelector('.diagram-stage');
+    var copy = svg.cloneNode(true);
+    /* Mermaid emits a <style> INSIDE each svg and scopes every rule to that
+       svg's own id — `#mermaid-7 .node rect{fill:…}`. So the clone's id is not
+       decoration: dropping it (which is what this did) leaves the copied style
+       block matching nothing, and every node falls back to the SVG defaults —
+       black fills, black-filled link paths. The dialog opened on a silhouette.
+       Nothing numeric catches it either: the labels are still 15px and still
+       the right colour, so the size gate passes a drawing that has turned into
+       ink blots. Re-scope instead of stripping: give the clone a fresh id and
+       rewrite the style block to match it, so the copy carries its own palette
+       and no duplicate id ever enters the document. */
+    var oldId = svg.getAttribute('id');
+    var newId = 'diagram-stage-svg';
+    copy.setAttribute('id', newId);
+    var styleEl = copy.querySelector('style');
+    if (styleEl && oldId) {
+      styleEl.textContent = styleEl.textContent.split('#' + oldId).join('#' + newId);
+    }
+    stage.replaceChildren(copy);
+    if (typeof diagramDialog.showModal === 'function') diagramDialog.showModal();
   }
 
   function buildToc(){
