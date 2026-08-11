@@ -323,6 +323,18 @@ code{font-family:var(--font-mono);font-size:.88em}
   .section-head.has-note>.lede{grid-column:2;grid-row:1/span 2;align-self:start}
   .section-head.has-note>.head-note{grid-column:1;grid-row:2;margin-top:0}
 }
+/* Below 1024 the head collapses to ONE column, and the lede stops being a 5fr
+   track and becomes the whole measure — but it kept the 30rem cap that was
+   sized for that track, and .head-note its 34rem. At 1000px that left the lede
+   485px wide in a 920px column, hugging the left edge with roughly 480px of
+   empty gutter beside it, while the device cards directly below ran the full
+   width. The head read as belonging to a different page than its own section.
+   44rem is still a comfortable measure and fills the column at every width
+   between the phone stack and the two-column head. */
+@media(max-width:1023.98px){
+  .section-head .lede,
+  .head-note{max-width:44rem}
+}
 .kicker{display:block;margin-bottom:12px}
 
 /* status tags — the honesty vocabulary, used everywhere on this page */
